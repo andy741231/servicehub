@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -12,13 +13,13 @@ async function main() {
     create: { name: 'admin' },
   });
 
-  const editorRole = await prisma.role.upsert({
+  await prisma.role.upsert({
     where: { name: 'editor' },
     update: {},
     create: { name: 'editor' },
   });
 
-  const viewerRole = await prisma.role.upsert({
+  await prisma.role.upsert({
     where: { name: 'viewer' },
     update: {},
     create: { name: 'viewer' },
@@ -26,52 +27,36 @@ async function main() {
 
   console.log('Roles seeded.');
 
-  // Create admin user
+  // Create admin user with a properly hashed password
+  const hashedPassword = await bcrypt.hash('Admin@2024!', 10);
+
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
+    where: { email: 'admin@servicehub.com' },
     update: {},
     create: {
-      email: 'admin@example.com',
-      password: 'hashed_password_placeholder', // To be replaced when Auth is implemented
+      email: 'admin@servicehub.com',
+      password: hashedPassword,
       name: 'System Admin',
     },
   });
 
-  // Assign admin role to admin user
+  // Assign admin role
   await prisma.userRole.upsert({
-    where: {
-      userId_roleId: {
-        userId: adminUser.id,
-        roleId: adminRole.id,
-      },
-    },
+    where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
     update: {},
-    create: {
-      userId: adminUser.id,
-      roleId: adminRole.id,
-    },
+    create: { userId: adminUser.id, roleId: adminRole.id },
   });
 
-  // Grant admin user access to all apps
-  const apps = ['web', 'forms', 'email'];
-  for (const appId of apps) {
+  // Grant access to all apps
+  for (const appId of ['web', 'forms', 'email']) {
     await prisma.appPermission.upsert({
-      where: {
-        userId_appId: {
-          userId: adminUser.id,
-          appId,
-        },
-      },
+      where: { userId_appId: { userId: adminUser.id, appId } },
       update: { canAccess: true },
-      create: {
-        userId: adminUser.id,
-        appId,
-        canAccess: true,
-      },
+      create: { userId: adminUser.id, appId, canAccess: true },
     });
   }
 
-  console.log('Admin user and permissions seeded.');
+  console.log('Admin user seeded: admin@servicehub.com / Admin@2024!');
 }
 
 main()

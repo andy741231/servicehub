@@ -1,53 +1,244 @@
-# Service Hub: AI Startup Guide
+# Service Hub: Developer Setup Guide
 
-Welcome to the **Service Hub** project! If you are an AI coding assistant, follow these exact instructions to set up the development environment for the user.
+Welcome to **Service Hub**! This guide covers everything a new developer needs to get the app running locally and connected to Azure SQL.
 
-## Prerequisites Verification
-Before modifying any code, ensure the following are installed on the user's system:
-1. **Node.js** (v18 or higher)
-2. **Docker Desktop** (must be running to start the database)
+---
 
-If they are not installed or running, pause and kindly ask the user to install/start them before continuing.
+## Architecture Overview
 
-## Step-by-Step Installation
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Frontend | React + Vite | Runs on `localhost:3000` in dev |
+| Backend | Node.js + Express | Runs on `localhost:4000` in dev |
+| Database | Azure SQL (SQL Server) | Cloud-hosted — no local DB needed |
+| ORM | Prisma | Schema at `prisma/schema.prisma` |
+| Monorepo | npm Workspaces + Turborepo | Single `npm install` at root |
+| Production | Azure App Service | `houstonservicehub.azurewebsites.net` |
+| CI/CD | GitHub Actions | Auto-deploys on push to `main` |
 
-### Step 1: Install Dependencies
-This project uses an NPM Workspace Monorepo (powered by Turborepo).
-Run the following in the project root:
+> **No Docker required.** The database runs on Azure SQL and is accessed directly over the internet. Both local dev and production share the same Azure SQL server but use separate databases.
+
+---
+
+## Prerequisites
+
+Before starting, ensure you have installed:
+
+1. **Node.js v20+** — [nodejs.org](https://nodejs.org)
+2. **npm v9+** — bundled with Node.js
+3. **Git** — [git-scm.com](https://git-scm.com)
+4. **Azure CLI** (`az`) — only needed for infrastructure tasks, not day-to-day dev
+
+Verify with:
+```bash
+node -v   # should print v20.x or higher
+npm -v    # should print 9.x or higher
+```
+
+---
+
+## Step-by-Step Local Setup
+
+### Step 1: Clone the repository
+
+```bash
+git clone https://github.com/andy741231/servicehub.git
+cd servicehub
+```
+
+### Step 2: Install dependencies
+
+This project uses npm Workspaces + Turborepo. Run once from the project root:
+
 ```bash
 npm install
 ```
 
-### Step 2: Start the Database
-The project uses PostgreSQL. Start the database container in the background using Docker Compose:
-```bash
-docker-compose up -d db
-```
-Wait a few seconds to ensure the database initializes properly.
+This installs dependencies for all packages: `client/`, `server/`, and `shared/`.
 
-### Step 3: Setup Environment Variables
-If a `.env` file does not exist in the project root, create one by copying the example file:
+### Step 3: Configure environment variables
+
+Copy the example file:
+
 ```bash
 cp .env.example .env
 ```
-*(Ensure the `DATABASE_URL` matches the credentials defined in `docker-compose.yml`)*.
 
-### Step 4: Initialize the Database Schema & Data
-Push the Prisma schema to the database and seed the initial roles and admin user:
+Then open `.env` and fill in the values. Ask a team member for the `DATABASE_URL`, `JWT_SECRET`, and `JWT_REFRESH_SECRET` values, or see the section below.
+
+**Required variables:**
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Azure SQL connection string for `free-test-servicehub` (dev DB) |
+| `JWT_SECRET` | Secret for signing access tokens |
+| `JWT_REFRESH_SECRET` | Secret for signing refresh tokens |
+| `CLIENT_URL` | `http://localhost:3000` (for local dev CORS) |
+
+The `DATABASE_URL` format for Azure SQL (SQL Server via Prisma):
+```
+sqlserver://houstonservice-test.database.windows.net:1433;database=free-test-servicehub;user=servicehub_dev;password=<ask team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30
+```
+
+> **Note:** The `.env` file is gitignored — never commit it.
+
+### Step 4: Push schema & seed the database
+
+The test database (`free-test-servicehub`) already has the schema applied and seed data. You only need to run these commands if:
+- Setting up a **fresh** database
+- The schema has changed (after pulling new Prisma model changes)
+
 ```bash
+# Apply schema to the database
 npx prisma db push
+
+# Seed roles and default admin user
 npx prisma db seed
 ```
 
-### Step 5: Start the Development Server
-Start the Turborepo development server, which will run both the Vite frontend (`localhost:3000`) and the Express backend (`localhost:4000`) concurrently:
+> **Schema changes:** Always run `npx prisma db push` after pulling changes that include `prisma/schema.prisma` modifications.
+
+### Step 5: Start the development server
+
 ```bash
 npm run dev
 ```
 
-## Success Check
-Once the server is running without errors, inform the user they can access:
-- **Public Website:** `http://localhost:3000/`
-- **Admin Dashboard:** `http://localhost:3000/web` (Login using the admin credentials defined in `prisma/seed.js`)
+Turborepo starts both apps in parallel:
+- **Frontend (React/Vite):** `http://localhost:3000`
+- **Backend (Express API):** `http://localhost:4000`
 
-**You are now ready to begin coding and expanding the Service Hub!** Please refer to `SKILL.md` for architectural guidelines.
+---
+
+## Login Credentials
+
+### Default Admin Account
+| Field | Value |
+|-------|-------|
+| Email | `admin@servicehub.com` |
+| Password | `Admin@2024!` |
+| Role | `admin` (access to all apps) |
+
+> This account exists in **both** the test and production databases.
+
+---
+
+## Database Overview
+
+| Database | Purpose | User |
+|----------|---------|------|
+| `free-test-servicehub` | Local development | `servicehub_dev` |
+| `free-production-servicehub` | Live production | `servicehub_prod` |
+
+Both databases live on the Azure SQL server `houstonservice-test.database.windows.net`.
+
+**To re-seed after database changes:**
+```bash
+# Seed test DB (uses DATABASE_URL from .env)
+npx prisma db seed
+
+# Seed prod DB (for admins only)
+DATABASE_URL="<prod connection string>" npx prisma db seed
+```
+
+---
+
+## Deployment
+
+Deployment is fully automated. Push to `main` and GitHub Actions handles the rest:
+
+1. Installs all dependencies
+2. Builds the React frontend (`client/dist/`)
+3. Generates Prisma client with Windows + Linux binaries
+4. Assembles a self-contained deployment package
+5. Deploys to Azure App Service via Kudu ZIP API
+
+**Production URL:** `https://houstonservicehub.azurewebsites.net`
+
+To trigger a manual deploy without a code change:
+```bash
+# Go to GitHub → Actions → "Build and Deploy to Azure" → Run workflow
+```
+
+### Production environment variables
+
+Production env vars are set on the Azure App Service directly (not in any file). To view or change them:
+```bash
+az webapp config appsettings list \
+  --name houstonservicehub \
+  --resource-group App-Services-And-Related \
+  -o table
+```
+
+---
+
+## Project Structure
+
+```
+servicehub/
+├── client/          # React + Vite frontend
+├── server/          # Express backend
+│   ├── src/
+│   │   ├── routes/      # API route handlers
+│   │   ├── controllers/ # Business logic
+│   │   ├── middleware/  # Auth, permissions
+│   │   └── db/          # Prisma client singleton
+│   └── app.cjs      # CJS entry-point for iisnode (Azure)
+├── shared/          # Shared constants (app IDs, etc.)
+├── prisma/
+│   ├── schema.prisma    # Database schema
+│   └── seed.js          # Seed script
+├── .github/
+│   └── workflows/
+│       └── azure-deploy.yml  # CI/CD pipeline
+├── web.config       # IIS config for Azure App Service
+├── .env             # Local secrets — DO NOT COMMIT
+└── .env.example     # Template — safe to commit
+```
+
+---
+
+## Common Tasks
+
+### Adding a new sub-app
+
+See the `Adding a New Sub-App` checklist in `SKILL.md`.
+
+### Inspecting the database
+
+Use Azure Data Studio or the Azure portal query editor to connect to either database.
+
+### Resetting your local dev database schema
+
+```bash
+npx prisma db push --force-reset
+npx prisma db seed
+```
+
+> This only affects the test database (per your `DATABASE_URL` in `.env`).
+
+### Checking production logs
+
+```bash
+az webapp log tail \
+  --name houstonservicehub \
+  --resource-group App-Services-And-Related
+```
+
+---
+
+## Useful Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `npm install` | Install all workspace dependencies |
+| `npm run dev` | Start frontend + backend in development mode |
+| `npm run build` | Build the React frontend for production |
+| `npx prisma db push` | Apply schema changes to the database |
+| `npx prisma db seed` | Seed roles and admin user |
+| `npx prisma studio` | Open Prisma's visual DB browser |
+| `npx prisma generate` | Regenerate Prisma client after schema changes |
+
+---
+
+Please refer to `SKILL.md` for full architectural guidelines and patterns.

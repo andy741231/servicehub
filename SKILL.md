@@ -3,9 +3,9 @@ name: service-hub
 description: >
   Master blueprint for building Service Hub — a multi-purpose web platform with pluggable sub-apps.
   Use this skill whenever working on any part of the Service Hub project: scaffolding, adding a new
-  sub-app, wiring permissions, setting up auth, building UI shells, writing API routes, configuring
-  Docker, or preparing for Azure deployment. Trigger this skill at the start of every Service Hub coding
-  session to stay consistent with the architecture.
+  sub-app, wiring permissions, setting up auth, building UI shells, writing API routes, or preparing
+  for Azure deployment. Trigger this skill at the start of every Service Hub coding session to stay
+  consistent with the architecture.
 ---
 
 # Service Hub — Multi-App Platform
@@ -14,10 +14,12 @@ description: >
 
 Service Hub is a **monorepo, single-backend, multi-frontend** web platform. All sub-apps share one auth system, one database, and one shell UI. New sub-apps plug in with minimal changes.
 
-**Stack:** Node.js · React · PostgreSQL · Tailwind CSS  
-**Local:** Docker Compose (localhost)  
-**Deploy:** Azure (future)  
-**Version Control:** GitHub
+**Stack:** Node.js · React · Azure SQL (SQL Server) · Tailwind CSS  
+**Local dev DB:** Azure SQL `free-test-servicehub` (remote, no local DB needed)  
+**Production DB:** Azure SQL `free-production-servicehub`  
+**Deploy:** Azure App Service (`houstonservicehub.azurewebsites.net`)  
+**CI/CD:** GitHub Actions → Azure (push to `main` auto-deploys)  
+**Version Control:** GitHub (`github.com/andy741231/servicehub`)
 
 ---
 
@@ -62,23 +64,25 @@ service-hub/
 │   │   ├── controllers/            # Business logic, one file per domain
 │   │   ├── models/                 # Prisma schema / query helpers
 │   │   └── db/
-│   │       ├── client.js           # Prisma client singleton
-│   │       └── migrations/
-│   └── index.js                    # Express entry point
+│   │       └── client.js           # Prisma client singleton
+│   ├── app.cjs                     # CJS entry-point shim for iisnode
+│   └── package.json
 │
 ├── shared/                         # Shared constants (app IDs, roles, etc.)
 │   └── constants.js
 │
 ├── prisma/
-│   └── schema.prisma               # Single source of truth for DB schema
+│   ├── schema.prisma               # Single source of truth for DB schema
+│   └── seed.js                     # Seeds roles + admin user
 │
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml              # CI/CD (GitHub Actions → Azure)
+│       └── azure-deploy.yml        # CI/CD: build → zip → Kudu deploy on push to main
 │
-├── docker-compose.yml              # Local Postgres + optional services
-├── .env.example                    # Template — never commit real .env
-└── README.md
+├── web.config                      # IIS/iisnode config for Azure App Service (Windows)
+├── .env                            # Local dev secrets — never commit
+├── .env.example                    # Template — safe to commit
+└── .env.production.example         # Production env var reference
 ```
 
 ---
@@ -270,66 +274,25 @@ Work through these in order. Complete each phase before moving to the next.
 
 | Phase | Focus | Key Deliverables |
 |-------|-------|-----------------|
-| **1** | Monorepo scaffold | Folder structure, `package.json` workspaces, Turborepo setup, `.env.example`, `docker-compose.yml` |
-| **2** | Database | `prisma/schema.prisma` (core tables + soft delete patterns), migrations, seed script |
+| **1** | Monorepo scaffold | Folder structure, `package.json` workspaces, Turborepo setup, `.env.example` |
+| **2** | Database | `prisma/schema.prisma` (core tables + soft delete patterns), `prisma db push`, seed script |
 | **3** | Auth & Security | Register, login, logout, JWT & CSRF middlewares, refresh token |
 | **4** | User Management | User CRUD, role assignment, app permission toggles (`/admin/users`) |
 | **5** | App Shell | React Router v6, lazy-loaded routes, sidebar from `APPS` registry, permission guards |
 | **6** | App 1 — CMS | Block editor UI, public homepage render, image upload |
 | **7** | App 2 — Forms | Drag-and-drop builder, submission inbox, CSV export |
 | **8** | App 3 — Email | Template builder, mailing lists, campaign scheduler, send logs |
-| **9** | Azure Deploy | Dockerfile, GitHub Actions CI/CD, env secrets in Azure Key Vault |
-
----
-
-## Docker Compose (Local Dev)
-
-```yaml
-# docker-compose.yml
-version: '3.9'
-services:
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: service_hub
-      POSTGRES_USER: service_hub_user
-      POSTGRES_PASSWORD: service_hub_pass
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  server:
-    build: ./server
-    ports:
-      - '4000:4000'
-    env_file: .env
-    depends_on:
-      - db
-    volumes:
-      - ./server:/app
-
-  client:
-    build: ./client
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./client:/app
-
-volumes:
-  pgdata:
-```
+| **9** | Azure Deploy | GitHub Actions CI/CD, env secrets on Azure App Service |
 
 ---
 
 ## Environment Variables
 
 ```bash
-# .env.example
-DATABASE_URL=postgresql://service_hub_user:service_hub_pass@localhost:5432/service_hub
+# .env (local dev — never commit this file)
+DATABASE_URL="sqlserver://houstonservice-test.database.windows.net;database=free-test-servicehub;user=servicehub_dev;password=Sh@Dev2024!;encrypt=true;trustServerCertificate=false;"
 JWT_SECRET=change_me_in_production
 JWT_REFRESH_SECRET=change_me_too
-PORT=4000
 CLIENT_URL=http://localhost:3000
 
 # Email (App 3)
@@ -338,9 +301,31 @@ SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
 
-# Azure (future)
+# Azure Storage (future)
 AZURE_STORAGE_CONNECTION_STRING=
 ```
+
+Production env vars are set directly on the Azure App Service (not in any committed file).
+
+---
+
+## Azure Deployment
+
+| Azure Resource | Purpose |
+|----------------|---------|
+| App Service `houstonservicehub` | Hosts Express server + built React frontend (Windows, iisnode) |
+| Azure SQL `free-test-servicehub` | Development database |
+| Azure SQL `free-production-servicehub` | Production database |
+| GitHub Actions `azure-deploy.yml` | CI/CD: builds, assembles self-contained package, deploys via Kudu ZIP API |
+
+**Deploy flow on push to `main`:**
+1. Install all dependencies (`npm ci`)
+2. Build React frontend (`npm run build`)
+3. Generate Prisma client with Windows + Linux binaries (`npx prisma generate`)
+4. Assemble a self-contained `deploy/` folder (no workspace symlinks — Windows compatible)
+5. Upload via Kudu ZIP Deploy API using `AZURE_DEPLOY_USER` / `AZURE_DEPLOY_PWD` secrets
+
+**iisnode note:** The entry point is `server/app.cjs` (a CJS shim that dynamically imports the ESM `src/index.js`). The `web.config` at root configures IIS to route all traffic through iisnode.
 
 ---
 
@@ -353,24 +338,10 @@ When you're ready to add App 4, 5, etc.:
 - [ ] Create `client/src/pages/<appname>/` (copy from `_template/`)
 - [ ] Create `server/src/routes/<appname>.js`
 - [ ] Register route in `server/src/routes/index.js`
-- [ ] Add Prisma models to `schema.prisma`, run migration
+- [ ] Add Prisma models to `schema.prisma`, run `npx prisma db push`
 - [ ] Seed default `AppPermission` rows for existing users
 
 That's it. Auth, permissions, sidebar, and nav update automatically.
-
----
-
-## Azure Deployment (Future Reference)
-
-| Azure Service | Maps To |
-|---------------|---------|
-| App Service (Linux) | Node.js Express server |
-| Static Web Apps | React frontend (Vite build) |
-| Azure Database for PostgreSQL Flexible Server | Postgres |
-| Azure Blob Storage | File/image uploads |
-| Azure Communication Services | Email sending (App 3) |
-| Azure Key Vault | Secrets (replaces `.env`) |
-| GitHub Actions | CI/CD on push to `main` |
 
 ---
 
@@ -388,5 +359,6 @@ That's it. Auth, permissions, sidebar, and nav update automatically.
 
 ## References
 
-- See `references/azure.md` (create when starting Phase 9) for Azure-specific deployment steps.
-- See `references/app-template.md` (create when starting Phase 5) for the boilerplate new sub-app pages.
+- See `.env.example` for all required environment variable keys.
+- See `.env.production.example` for production-specific variable reference.
+- See `prisma/seed.js` to understand the default roles and admin user.
