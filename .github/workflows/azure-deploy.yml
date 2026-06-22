@@ -43,6 +43,8 @@ jobs:
           cp -r prisma deploy/
           cp -r node_modules/@prisma deploy/node_modules/@prisma
           cp -r node_modules/.prisma deploy/node_modules/.prisma
+          # Copy web.config for IIS/iisnode on Windows Azure App Service
+          cp web.config deploy/
           # Install server production dependencies standalone (no workspaces)
           cd deploy
           npm install --omit=dev --ignore-scripts
