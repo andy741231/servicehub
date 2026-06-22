@@ -67,7 +67,7 @@ model WebBlock {
   pageId   String
   type     String  // "hero" | "text" | "image" | "features"
   order    Int
-  content  String
+  content  String  // JSON serialized — parsed/serialized in controller
   page     WebPage @relation(fields: [pageId], references: [id])
 }
 
@@ -78,7 +78,7 @@ model WebBlock {
 model Form {
   id          String           @id @default(uuid())
   title       String
-  schema      String           // field definitions
+  schema      String           // JSON serialized — parsed/serialized in controller
   createdAt   DateTime         @default(now())
   deletedAt   DateTime?        // Soft delete support
   submissions FormSubmission[]
@@ -87,7 +87,7 @@ model Form {
 model FormSubmission {
   id        String   @id @default(uuid())
   formId    String
-  data      String
+  data      String  // JSON serialized — parsed/serialized in controller
   createdAt DateTime @default(now())
   form      Form @relation(fields: [formId], references: [id])
 }
