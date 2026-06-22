@@ -31,9 +31,24 @@ jobs:
       - name: Run Prisma generate
         run: npx prisma generate
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'houstonservicehub'
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+      - name: Create deployment zip
+        run: |
+          # Exclude dev-only dirs to keep zip smaller
+          zip -r deploy.zip . \
+            -x "*.git*" \
+            -x "client/node_modules/*" \
+            -x "shared/node_modules/*" \
+            -x "node_modules/.cache/*" \
+            -x ".github/*"
+          echo "Zip size: $(du -sh deploy.zip | cut -f1)"
+
+      - name: Deploy via Kudu Zip Deploy API
+        run: |
+          curl -X POST \
+            --fail \
+            -u "${{ secrets.AZURE_DEPLOY_USER }}:${{ secrets.AZURE_DEPLOY_PWD }}" \
+            "https://houstonservicehub.scm.azurewebsites.net/api/zipdeploy?isAsync=false" \
+            --data-binary @deploy.zip \
+            -H "Content-Type: application/zip" \
+            --max-time 300 \
+            -v
