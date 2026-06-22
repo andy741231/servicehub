@@ -345,12 +345,30 @@ That's it. Auth, permissions, sidebar, and nav update automatically.
 
 ---
 
+## Design System
+
+**Always read `THEME.md` before writing any UI code.**
+
+The project uses a semantic token design system. All visual decisions (colors, spacing, radius, shadows, typography) are defined in `THEME.md` and implemented in:
+- `client/src/index.css` — CSS variable values + base styles + utility classes
+- `client/tailwind.config.js` — Tailwind token names that map to the CSS variables
+
+**Rules:**
+- Use token class names only: `bg-primary`, `text-text-muted`, `border-border`, `rounded-card`, `shadow-card`
+- Never use raw Tailwind color values: no `bg-blue-600`, `text-gray-400`, `border-gray-200`
+- Use typography utilities: `.text-display`, `.text-heading`, `.text-body`, `.text-label`
+- Use `.card` utility class for all card containers
+- Use `.badge`, `.badge-success`, etc. for status indicators
+- Changing the theme = edit `THEME.md` and update CSS variables in `index.css` only
+
+---
+
 ## Coding Conventions
 
 - **React:** functional components + hooks only. No class components.
 - **State:** Zustand for global state (auth, permissions) instead of React Context providers. Local `useState` for component state.
 - **API calls:** centralized `client/src/utils/api.js` (axios instance with base URL + interceptors, handles CSRF header attachment automatically).
-- **Styling:** Tailwind utility classes only. No custom CSS files unless unavoidable.
+- **Styling:** Tailwind utility classes only, using semantic token names from `THEME.md`. No raw color values.
 - **Backend:** async/await throughout. No callbacks. Errors bubble to a global Express error handler.
 - **ORM:** Prisma for all DB access. No raw SQL except for complex reports.
 - **Commits:** conventional commits (`feat:`, `fix:`, `chore:`) on feature branches. PRs to `main`.

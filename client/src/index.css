@@ -1,78 +1,177 @@
 @import "tailwindcss";
 
+/* ============================================================
+   SERVICE HUB — DESIGN SYSTEM TOKENS
+   Source of truth: THEME.md at the project root.
+   To change the theme: edit THEME.md and update the values below.
+   ============================================================ */
+
 @theme {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-
-  --color-primary: hsl(var(--primary));
+  /* --- Colors --- */
+  --color-primary:            hsl(var(--primary));
+  --color-primary-hover:      hsl(var(--primary-hover));
+  --color-primary-light:      hsl(var(--primary-light));
   --color-primary-foreground: hsl(var(--primary-foreground));
 
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-background:         hsl(var(--background));
+  --color-surface:            hsl(var(--surface));
+  --color-surface-raised:     hsl(var(--surface-raised));
 
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border:             hsl(var(--border));
+  --color-border-strong:      hsl(var(--border-strong));
 
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-text-base:          hsl(var(--text-base));
+  --color-text-muted:         hsl(var(--text-muted));
+  --color-text-subtle:        hsl(var(--text-subtle));
+  --color-text-inverse:       hsl(var(--text-inverse));
 
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-success:            hsl(var(--success));
+  --color-success-light:      hsl(var(--success-light));
+  --color-warning:            hsl(var(--warning));
+  --color-warning-light:      hsl(var(--warning-light));
+  --color-danger:             hsl(var(--danger));
+  --color-danger-light:       hsl(var(--danger-light));
+  --color-info:               hsl(var(--info));
+  --color-info-light:         hsl(var(--info-light));
 
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
+  /* --- Radius --- */
+  --radius-sm:   var(--radius-sm-value);
+  --radius-base: var(--radius-base-value);
+  --radius-card: var(--radius-card-value);
+  --radius-lg:   var(--radius-lg-value);
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* --- Shadows --- */
+  --shadow-card:     var(--shadow-card-value);
+  --shadow-dropdown: var(--shadow-dropdown-value);
+  --shadow-modal:    var(--shadow-modal-value);
+
+  /* --- Typography scale --- */
+  --font-size-display:    1.875rem;
+  --font-size-heading:    1.25rem;
+  --font-size-subheading: 1rem;
+  --font-size-body:       0.875rem;
+  --font-size-small:      0.75rem;
+  --font-size-label:      0.75rem;
+  --font-size-code:       0.8125rem;
+
+  --line-height-display:    1.2;
+  --line-height-heading:    1.3;
+  --line-height-body:       1.5;
+  --line-height-label:      1;
 }
 
+/* ============================================================
+   LIGHT MODE VARIABLE VALUES
+   To retheme: update these values.
+   Colors are in HSL format: H S% L%
+   ============================================================ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Brand / Accent — blue-600 */
+    --primary:            221 83% 53%;   /* #2563EB */
+    --primary-hover:      224 71% 47%;   /* #1D4ED8 */
+    --primary-light:      214 100% 97%;  /* #EFF6FF */
+    --primary-foreground: 0 0% 100%;     /* #FFFFFF */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Neutrals */
+    --background:         210 20% 98%;   /* #F9FAFB */
+    --surface:            0 0% 100%;     /* #FFFFFF */
+    --surface-raised:     220 14% 96%;   /* #F3F4F6 */
+    --border:             220 13% 91%;   /* #E5E7EB */
+    --border-strong:      216 12% 84%;   /* #D1D5DB */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Text */
+    --text-base:          222 47% 11%;   /* #111827 */
+    --text-muted:         220 9% 46%;    /* #6B7280 */
+    --text-subtle:        218 11% 65%;   /* #9CA3AF */
+    --text-inverse:       0 0% 100%;     /* #FFFFFF */
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    /* Semantic states */
+    --success:            142 72% 37%;   /* #16A34A */
+    --success-light:      138 76% 97%;   /* #F0FDF4 */
+    --warning:            32 95% 44%;    /* #D97706 */
+    --warning-light:      48 100% 96%;   /* #FFFBEB */
+    --danger:             0 72% 51%;     /* #DC2626 */
+    --danger-light:       0 86% 97%;     /* #FEF2F2 */
+    --info:               192 91% 37%;   /* #0891B2 */
+    --info-light:         183 100% 96%;  /* #ECFEFF */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Radius */
+    --radius-sm-value:   4px;
+    --radius-base-value: 6px;
+    --radius-card-value: 8px;
+    --radius-lg-value:   12px;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
-    --radius: 0.5rem;
+    /* Shadows */
+    --shadow-card-value:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-dropdown-value: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
+    --shadow-modal-value:    0 20px 25px -5px rgba(0,0,0,0.10), 0 10px 10px -5px rgba(0,0,0,0.04);
   }
 }
 
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
 @layer base {
   * {
-    @apply border-border;
+    box-sizing: border-box;
   }
+
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--text-base));
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.875rem; /* text-body default */
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Focus ring — consistent across all interactive elements */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================================
+   UTILITY CLASSES FOR THEME TOKENS
+   Use these in components instead of raw Tailwind values.
+   ============================================================ */
+@layer utilities {
+  /* Typography */
+  .text-display    { font-size: 1.875rem; font-weight: 700; line-height: 1.2; }
+  .text-heading    { font-size: 1.25rem;  font-weight: 600; line-height: 1.3; }
+  .text-subheading { font-size: 1rem;     font-weight: 600; line-height: 1.4; }
+  .text-body       { font-size: 0.875rem; font-weight: 400; line-height: 1.5; }
+  .text-small      { font-size: 0.75rem;  font-weight: 400; line-height: 1.4; }
+  .text-label      { font-size: 0.75rem;  font-weight: 500; line-height: 1; }
+  .text-code       { font-size: 0.8125rem; font-family: ui-monospace, monospace; line-height: 1.5; }
+
+  /* Card container */
+  .card {
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-card-value);
+    box-shadow: var(--shadow-card-value);
+    padding: 1.25rem; /* 20px */
+  }
+
+  /* Status badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-sm-value);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .badge-success { background-color: hsl(var(--success-light)); color: hsl(var(--success)); }
+  .badge-warning { background-color: hsl(var(--warning-light)); color: hsl(var(--warning)); }
+  .badge-danger  { background-color: hsl(var(--danger-light));  color: hsl(var(--danger));  }
+  .badge-info    { background-color: hsl(var(--info-light));    color: hsl(var(--info));    }
+  .badge-neutral { background-color: hsl(var(--surface-raised)); color: hsl(var(--text-muted)); }
+  .badge-primary { background-color: hsl(var(--primary-light)); color: hsl(var(--primary)); }
 }
