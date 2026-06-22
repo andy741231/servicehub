@@ -33,7 +33,7 @@ jobs:
 
       - name: Assemble self-contained deployment folder
         run: |
-          mkdir -p deploy/client
+          mkdir -p deploy/client deploy/node_modules
           # Copy server source
           cp -r server/src deploy/
           cp server/package.json deploy/
