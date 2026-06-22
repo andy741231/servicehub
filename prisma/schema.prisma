@@ -1,0 +1,131 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Core (shared across all apps)
+// ----------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  name         String
+  isActive     Boolean  @default(true)
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  roles        UserRole[]
+  permissions  AppPermission[]
+}
+
+model Role {
+  id    String     @id @default(uuid())
+  name  String     @unique   // "admin" | "editor" | "viewer"
+  users UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id])
+  role   Role @relation(fields: [roleId], references: [id])
+  @@id([userId, roleId])
+}
+
+model AppPermission {
+  id        String  @id @default(uuid())
+  userId    String
+  appId     String  // matches APPS[].id
+  canAccess Boolean @default(false)
+  user      User @relation(fields: [userId], references: [id])
+  @@unique([userId, appId])
+}
+
+// ----------------------------------------------------------------------------
+// App 1 — Web Builder
+// ----------------------------------------------------------------------------
+
+model WebPage {
+  id        String     @id @default(uuid())
+  slug      String     @unique
+  title     String
+  template  String     @default("modern")
+  blocks    WebBlock[]
+  updatedAt DateTime   @updatedAt
+}
+
+model WebBlock {
+  id       String  @id @default(uuid())
+  pageId   String
+  type     String  // "hero" | "text" | "image" | "features"
+  order    Int
+  content  String
+  page     WebPage @relation(fields: [pageId], references: [id])
+}
+
+// ----------------------------------------------------------------------------
+// App 2 — Form Builder
+// ----------------------------------------------------------------------------
+
+model Form {
+  id          String           @id @default(uuid())
+  title       String
+  schema      String           // field definitions
+  createdAt   DateTime         @default(now())
+  deletedAt   DateTime?        // Soft delete support
+  submissions FormSubmission[]
+}
+
+model FormSubmission {
+  id        String   @id @default(uuid())
+  formId    String
+  data      String
+  createdAt DateTime @default(now())
+  form      Form @relation(fields: [formId], references: [id])
+}
+
+// ----------------------------------------------------------------------------
+// App 3 — Email Sender
+// ----------------------------------------------------------------------------
+
+model EmailCampaign {
+  id          String       @id @default(uuid())
+  name        String
+  subject     String
+  bodyHtml    String
+  status      String       // "draft" | "scheduled" | "sent"
+  scheduledAt DateTime?
+  createdAt   DateTime     @default(now())
+  deletedAt   DateTime?    // Soft delete support
+  logs        EmailLog[]
+}
+
+model MailingList {
+  id         String      @id @default(uuid())
+  name       String
+  recipients Recipient[]
+}
+
+model Recipient {
+  id            String      @id @default(uuid())
+  email         String
+  name          String?
+  mailingListId String
+  list          MailingList @relation(fields: [mailingListId], references: [id])
+}
+
+model EmailLog {
+  id         String        @id @default(uuid())
+  campaignId String
+  recipient  String
+  status     String        // "sent" | "failed" | "opened"
+  sentAt     DateTime      @default(now())
+  campaign   EmailCampaign @relation(fields: [campaignId], references: [id])
+}
