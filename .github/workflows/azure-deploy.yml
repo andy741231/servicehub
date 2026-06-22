@@ -31,24 +31,30 @@ jobs:
       - name: Run Prisma generate
         run: npx prisma generate
 
-      - name: Create deployment zip
+      - name: Create deployment zip (source + built client, no node_modules)
         run: |
-          # Exclude dev-only dirs to keep zip smaller
           zip -r deploy.zip . \
             -x "*.git*" \
+            -x "node_modules/*" \
             -x "client/node_modules/*" \
+            -x "server/node_modules/*" \
             -x "shared/node_modules/*" \
-            -x "node_modules/.cache/*" \
-            -x ".github/*"
+            -x ".github/*" \
+            -x "*.env"
+          # Include root node_modules/@prisma/client (generated, needed at runtime)
+          zip -ur deploy.zip node_modules/@prisma node_modules/.prisma
           echo "Zip size: $(du -sh deploy.zip | cut -f1)"
 
       - name: Deploy via Kudu Zip Deploy API
+        env:
+          KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER }}
+          KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD }}
         run: |
           curl -X POST \
             --fail \
-            -u "${{ secrets.AZURE_DEPLOY_USER }}:${{ secrets.AZURE_DEPLOY_PWD }}" \
+            -u "${KUDU_USER}:${KUDU_PWD}" \
             "https://houstonservicehub.scm.azurewebsites.net/api/zipdeploy?isAsync=false" \
             --data-binary @deploy.zip \
             -H "Content-Type: application/zip" \
-            --max-time 300 \
-            -v
+            --max-time 300
+          echo "Deploy complete"
