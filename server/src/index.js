@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
@@ -38,8 +37,9 @@ app.get('/api/csrf-token', (req, res) => {
 app.use('/api', routes);
 
 // Serve built React frontend in production
+// Deploy layout: src/ and client/dist/ are siblings under the deploy root
 if (isProd) {
-  const clientDist = join(__dirname, '../../../client/dist');
+  const clientDist = join(__dirname, '../client/dist');
   if (existsSync(clientDist)) {
     app.use(express.static(clientDist));
     // SPA fallback — all non-API routes return index.html

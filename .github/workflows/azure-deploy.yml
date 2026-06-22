@@ -20,7 +20,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install all workspace dependencies
         run: npm ci
 
       - name: Build client (React/Vite)
@@ -31,18 +31,40 @@ jobs:
       - name: Run Prisma generate
         run: npx prisma generate
 
-      - name: Create deployment zip (source + built client, no node_modules)
+      - name: Assemble self-contained deployment folder
         run: |
-          zip -r deploy.zip . \
-            -x "*.git*" \
-            -x "node_modules/*" \
-            -x "client/node_modules/*" \
-            -x "server/node_modules/*" \
-            -x "shared/node_modules/*" \
-            -x ".github/*" \
-            -x "*.env"
-          # Include root node_modules/@prisma/client (generated, needed at runtime)
-          zip -ur deploy.zip node_modules/@prisma node_modules/.prisma
+          mkdir -p deploy/client
+          # Copy server source
+          cp -r server/src deploy/
+          cp server/package.json deploy/
+          # Copy built React frontend
+          cp -r client/dist deploy/client/dist
+          # Copy prisma schema and generated client
+          cp -r prisma deploy/
+          cp -r node_modules/@prisma deploy/node_modules/@prisma
+          cp -r node_modules/.prisma deploy/node_modules/.prisma
+          # Install server production dependencies standalone (no workspaces)
+          cd deploy
+          npm install --omit=dev --ignore-scripts
+          # Remove workspace ref to 'shared' if present
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json'));
+            delete pkg.dependencies?.shared;
+            delete pkg.devDependencies?.shared;
+            delete pkg.workspaces;
+            pkg.scripts = { start: 'node src/index.js' };
+            pkg.engines = { node: '>=20' };
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+          cd ..
+          echo "Deploy folder size: $(du -sh deploy | cut -f1)"
+
+      - name: Create deployment zip
+        run: |
+          cd deploy
+          zip -r ../deploy.zip . -x "*.git*"
+          cd ..
           echo "Zip size: $(du -sh deploy.zip | cut -f1)"
 
       - name: Deploy via Kudu Zip Deploy API
@@ -50,11 +72,17 @@ jobs:
           KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER }}
           KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD }}
         run: |
-          curl -X POST \
-            --fail \
+          # isAsync=true so we don't time out waiting — deployment continues server-side
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -u "${KUDU_USER}:${KUDU_PWD}" \
-            "https://houstonservicehub.scm.azurewebsites.net/api/zipdeploy?isAsync=false" \
+            "https://houstonservicehub.scm.azurewebsites.net/api/zipdeploy?isAsync=true" \
             --data-binary @deploy.zip \
             -H "Content-Type: application/zip" \
-            --max-time 300
-          echo "Deploy complete"
+            --max-time 300)
+          HTTP=$(echo "$RESPONSE" | tail -1)
+          echo "Kudu response: HTTP $HTTP"
+          if [ "$HTTP" != "202" ] && [ "$HTTP" != "200" ]; then
+            echo "Deploy request failed with HTTP $HTTP"
+            exit 1
+          fi
+          echo "Deployment accepted by Azure (async). Check https://houstonservicehub.scm.azurewebsites.net/api/deployments for status."
