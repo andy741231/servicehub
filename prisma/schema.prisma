@@ -54,12 +54,18 @@ model AppPermission {
 // ----------------------------------------------------------------------------
 
 model WebPage {
-  id        String     @id @default(uuid())
-  slug      String     @unique
-  title     String
-  template  String     @default("modern")
-  blocks    WebBlock[]
-  updatedAt DateTime   @updatedAt
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  title       String
+  template    String     @default("modern")
+  header      String?    // JSON serialized — parsed/serialized in controller
+  footer      String?    // JSON serialized — parsed/serialized in controller
+  isPublished Boolean    @default(true)
+  navLabel    String?
+  href        String?    // for external link nav items
+  parentId    String?    // self-referencing for sub-menu items
+  blocks      WebBlock[]
+  updatedAt   DateTime   @updatedAt
 }
 
 model WebBlock {
@@ -129,4 +135,24 @@ model EmailLog {
   status     String        // "sent" | "failed" | "opened"
   sentAt     DateTime      @default(now())
   campaign   EmailCampaign @relation(fields: [campaignId], references: [id])
+}
+
+// ----------------------------------------------------------------------------
+// App 1 — Web Builder (extended)
+// ----------------------------------------------------------------------------
+
+model WebSiteStyle {
+  id        String   @id @default(uuid())
+  tokens    String   // JSON: { colors: { primary, secondary, accent, background, text }, fonts: { heading, body }, spacing: { base } }
+  updatedAt DateTime @updatedAt
+}
+
+model WebAsset {
+  id           String   @id @default(uuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String   // relative path like /uploads/filename
+  createdAt    DateTime @default(now())
 }

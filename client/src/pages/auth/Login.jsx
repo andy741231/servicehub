@@ -13,7 +13,7 @@ export default function Login() {
     e.preventDefault();
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/hub-admin/web');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
     }
@@ -57,7 +57,7 @@ export default function Login() {
           </button>
         </div>
         <div className="text-sm text-center">
-          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/hub-admin/register" className="font-medium text-blue-600 hover:text-blue-500">
             Don't have an account? Register
           </Link>
         </div>

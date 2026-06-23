@@ -137,8 +137,8 @@ Both databases live on the Azure SQL server `houstonservice-test.database.window
 # Seed test DB (uses DATABASE_URL from .env)
 npx prisma db seed
 
-# Seed prod DB (for admins only)
-DATABASE_URL="<prod connection string>" npx prisma db seed
+# Seed prod DB (for admins only — ensure DATABASE_URL_PROD is set in .env)
+export $(grep DATABASE_URL_PROD .env | xargs) && DATABASE_URL="$DATABASE_URL_PROD" npx prisma db seed
 ```
 
 ---
@@ -155,10 +155,39 @@ Deployment is fully automated. Push to `main` and GitHub Actions handles the res
 
 **Production URL:** `https://houstonservicehub.azurewebsites.net`
 
+### Deploy code changes
+
+After committing your local changes, push to `main` to trigger the deploy:
+
+```bash
+git add .
+git commit -m "describe your update"
+git push origin main
+```
+
+Then watch the deployment progress at **GitHub → Actions → "Build and Deploy to Azure"**.
+
 To trigger a manual deploy without a code change:
 ```bash
 # Go to GitHub → Actions → "Build and Deploy to Azure" → Run workflow
 ```
+
+### Promoting database changes to production
+
+Code deploys automatically, but **database schema changes do not**. The project uses Prisma `db push` rather than migrations, so you must apply the schema to the production database separately after deploying the code.
+
+1. **Back up production first** (recommended before any schema change).
+2. **Ensure `DATABASE_URL_PROD` is set in your `.env`** (see `.env.example` for the format).
+3. **Apply the schema to the production database** from the project root:
+
+```bash
+# Prisma's dotenv loader overrides inline env vars, so source .env first
+export $(grep DATABASE_URL_PROD .env | xargs) && DATABASE_URL="$DATABASE_URL_PROD" npx prisma db push
+```
+
+4. **Verify the change** by checking the app logs or running a quick smoke test.
+
+> **Important:** The deploy workflow builds a new Prisma client with the updated schema, so the production database must be updated before or immediately after the new code is live. Always test schema changes on `free-test-servicehub` first.
 
 ### Production environment variables
 

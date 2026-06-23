@@ -7,15 +7,16 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Users from './pages/admin/Users';
 import WebIndex from './pages/web/index';
-
+import WebPages from './pages/web/Pages';
+import WebStyles from './pages/web/Styles';
+import WebAssets from './pages/web/Assets';
+import WebHeaderFooter from './pages/web/HeaderFooter';
 import PublicHome from './pages/public/Home';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuthStore();
-  
   if (isLoading) return <div>Loading...</div>;
-  if (!isAuthenticated) return <Navigate to="/web/login" />;
-  
+  if (!isAuthenticated) return <Navigate to="/hub-admin" />;
   return children;
 }
 
@@ -27,26 +28,35 @@ export default function App() {
   }, [checkAuth]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
-        {/* Public Routes */}
+        {/* ── Public site routes ── */}
         <Route path="/" element={<PublicHome />} />
+        <Route path="/:slug" element={<PublicHome />} />
 
-        {/* Admin Backend Routes */}
-        <Route path="/web">
-          {/* Auth Routes */}
+        {/* ── Admin backend (/hub-admin/*) ── */}
+        <Route path="/hub-admin">
+          {/* Login / Register at /hub-admin and /hub-admin/register */}
           <Route element={<AuthLayout />}>
-            <Route path="login" element={<Login />} />
+            <Route index         element={<Login />} />
             <Route path="register" element={<Register />} />
           </Route>
 
-          {/* Protected App Routes */}
+          {/* Protected sub-apps */}
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-            <Route index element={<WebIndex />} />
-            <Route path="forms" element={<div className="p-4 bg-white rounded shadow"><h1>Forms Builder Placeholder</h1></div>} />
-            <Route path="email" element={<div className="p-4 bg-white rounded shadow"><h1>Email Sender Placeholder</h1></div>} />
-            
-            {/* Admin Routes */}
+            {/* Web builder */}
+            <Route path="web"              element={<WebIndex />} />
+            <Route path="web/pages"         element={<WebPages />} />
+            <Route path="web/header-footer" element={<WebHeaderFooter />} />
+            <Route path="web/styles"        element={<WebStyles />} />
+            <Route path="web/assets"        element={<WebAssets />} />
+            <Route path="web/editor/:slug" element={<WebIndex />} />
+
+            {/* Other sub-apps (placeholders) */}
+            <Route path="forms" element={<div className="p-8"><h1 className="text-2xl font-bold">Forms Builder</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+            <Route path="email" element={<div className="p-8"><h1 className="text-2xl font-bold">Email Sender</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+
+            {/* Admin */}
             <Route path="admin/users" element={<Users />} />
           </Route>
         </Route>

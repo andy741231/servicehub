@@ -25,6 +25,9 @@ if (!isProd) {
 app.use(express.json());
 app.use(cookieParser());
 
+// Serve uploaded assets (images, docs, etc.) from the project-root /uploads folder
+app.use('/uploads', express.static(join(__dirname, '../../../uploads')));
+
 // Simple CSRF token generation endpoint
 app.get('/api/csrf-token', (req, res) => {
   // In a real app with more strict CSRF, we'd use csurf package or double submit cookies

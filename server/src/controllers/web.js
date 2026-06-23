@@ -2,6 +2,16 @@ import prisma from '../db/client.js';
 
 // Azure SQL doesn't support Prisma's Json type — content is stored as a JSON string.
 // These helpers handle serialization/deserialization at the controller boundary.
+const parseJsonField = (value) => {
+  if (value == null) return null;
+  return typeof value === 'string' ? JSON.parse(value) : value;
+};
+
+const stringifyJsonField = (value) => {
+  if (value == null) return null;
+  return typeof value === 'string' ? value : JSON.stringify(value);
+};
+
 const parseBlock = (block) => ({
   ...block,
   content: typeof block.content === 'string' ? JSON.parse(block.content) : block.content,
@@ -45,7 +55,48 @@ export const getPageBySlug = async (req, res) => {
       });
     }
 
-    res.json({ ...page, blocks: page.blocks.map(parseBlock) });
+    // ── Shared header/footer: always read from the "home" page ──────────────
+    let sharedHeader = parseJsonField(page.header);
+    let sharedFooter = parseJsonField(page.footer);
+
+    if (slug !== 'home') {
+      // For non-home pages, fetch the home page's header/footer
+      const homePage = await prisma.webPage.findUnique({
+        where: { slug: 'home' },
+        select: { header: true, footer: true },
+      });
+      if (homePage) {
+        sharedHeader = parseJsonField(homePage.header) || sharedHeader;
+        sharedFooter = parseJsonField(homePage.footer) || sharedFooter;
+      }
+    }
+
+    // ── Build nav from Pages list ─────────────────────────────────────────
+    const allNavPages = await prisma.webPage.findMany({
+      where: { isPublished: true },
+      select: { id: true, slug: true, title: true, navLabel: true, href: true, parentId: true },
+      orderBy: { updatedAt: 'asc' },
+    });
+
+    const topLevel = allNavPages.filter(p => !p.parentId);
+    const navItems = topLevel.map(p => ({
+      label:    p.navLabel || p.title,
+      href:     p.href || (p.slug === 'home' ? '/' : `/${p.slug}`),
+      children: allNavPages
+        .filter(c => c.parentId === p.id)
+        .map(c => ({
+          label: c.navLabel || c.title,
+          href:  c.href || (c.slug === 'home' ? '/' : `/${c.slug}`),
+        })),
+    }));
+
+    res.json({
+      ...page,
+      header: sharedHeader,
+      footer: sharedFooter,
+      blocks: page.blocks.map(parseBlock),
+      nav: navItems,
+    });
   } catch (error) {
     console.error('Error fetching web page:', error);
     res.status(500).json({ error: 'Failed to fetch web page' });
@@ -55,7 +106,7 @@ export const getPageBySlug = async (req, res) => {
 export const updatePage = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { template, blocks } = req.body;
+    const { template, header, footer, blocks } = req.body;
 
     const existingPage = await prisma.webPage.findUnique({ where: { slug } });
     if (!existingPage) {
@@ -65,7 +116,11 @@ export const updatePage = async (req, res) => {
     const updatedPage = await prisma.$transaction(async (tx) => {
       const page = await tx.webPage.update({
         where: { slug },
-        data: { template }
+        data: {
+          template,
+          header: stringifyJsonField(header),
+          footer: stringifyJsonField(footer),
+        }
       });
 
       await tx.webBlock.deleteMany({ where: { pageId: page.id } });
@@ -82,7 +137,12 @@ export const updatePage = async (req, res) => {
       });
     });
 
-    res.json({ ...updatedPage, blocks: updatedPage.blocks.map(parseBlock) });
+    res.json({
+      ...updatedPage,
+      header: parseJsonField(updatedPage.header),
+      footer: parseJsonField(updatedPage.footer),
+      blocks: updatedPage.blocks.map(parseBlock),
+    });
   } catch (error) {
     console.error('Error updating web page:', error);
     res.status(500).json({ error: 'Failed to update web page' });

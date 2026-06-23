@@ -14,7 +14,7 @@ export default function Register() {
     e.preventDefault();
     try {
       await register(name, email, password);
-      navigate('/');
+      navigate('/hub-admin/web');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
     }
@@ -68,7 +68,7 @@ export default function Register() {
           </button>
         </div>
         <div className="text-sm text-center">
-          <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/hub-admin" className="font-medium text-blue-600 hover:text-blue-500">
             Already have an account? Sign in
           </Link>
         </div>
