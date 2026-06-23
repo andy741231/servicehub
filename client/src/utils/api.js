@@ -17,8 +17,7 @@ api.interceptors.response.use(
           await axios.post('/api/auth/refresh', {}, { withCredentials: true });
           return api(originalRequest);
         } catch (refreshError) {
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
+          useAuthStore.getState().setSessionExpired(true);
           return Promise.reject(refreshError);
         }
       }

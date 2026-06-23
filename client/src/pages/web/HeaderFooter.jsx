@@ -4,15 +4,30 @@
  * All public pages read header/footer from the home page record, so changes
  * here propagate everywhere automatically.
  */
-import { useState, useEffect } from 'react';
-import { Save, Check, AlertCircle, Plus, Trash2, GripVertical, Globe, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Save, Check, AlertCircle, Plus, Trash2, GripVertical, Globe, RefreshCw, Upload } from 'lucide-react';
 import api from '../../utils/api';
 import { useToast } from '../../components/Toast';
+
+const resolveUrl = (url) => {
+  if (!url) return '';
+  url = url.replace(/['"]/g, ''); // Strip quotes
+  // Convert same-origin absolute URLs to relative paths
+  if (url.startsWith('http')) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === window.location.hostname) return parsed.pathname + parsed.search + parsed.hash;
+    } catch (e) { /* fall through */ }
+    return url;
+  }
+  if (url.startsWith('/')) return url;
+  return `/uploads/${url}`;
+};
 
 // ── Default shapes ──────────────────────────────────────────────────────────
 
 const DEFAULT_HEADER = {
-  logo:       { text: '', imageUrl: '' },
+  logo:       { text: '', imageUrl: '', width: '', height: '' },
   styles:     { backgroundColor: '#ffffff', textColor: '#111827' },
 };
 
@@ -165,6 +180,9 @@ export default function HeaderFooter() {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [tab,      setTab]      = useState('header'); // 'header' | 'footer'
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState('');
+  const logoFileInput = useRef(null);
 
   const { toast, ToastMount } = useToast();
 
@@ -176,6 +194,9 @@ export default function HeaderFooter() {
         header: { ...DEFAULT_HEADER, ...h, logo: { ...DEFAULT_HEADER.logo, ...(h.logo||{}) }, styles: { ...DEFAULT_HEADER.styles, ...(h.styles||{}) } },
         footer: { ...DEFAULT_FOOTER, ...f, styles: { ...DEFAULT_FOOTER.styles, ...(f.styles||{}) }, sections: f.sections || [] },
       };
+      // Ensure logo width/height exist on legacy records
+      merged.header.logo.width  = merged.header.logo.width  ?? '';
+      merged.header.logo.height = merged.header.logo.height ?? '';
       setHeader(merged.header);
       setFooter(merged.footer);
       setOriginal(merged);
@@ -208,6 +229,25 @@ export default function HeaderFooter() {
 
   const updateHeader = (key, val) => setHeader(h => ({ ...h, [key]: val }));
   const updateFooter = (key, val) => setFooter(f => ({ ...f, [key]: val }));
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLogoUploading(true);
+    setLogoUploadError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await api.post('/web/assets', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      updateHeader('logo', { ...header.logo, imageUrl: res.data.url });
+      toast('Logo uploaded.');
+    } catch (err) {
+      setLogoUploadError(err?.response?.data?.error || 'Upload failed.');
+    } finally {
+      setLogoUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const updateSection = (i, val) => setFooter(f => {
     const sections = [...f.sections];
@@ -279,8 +319,20 @@ export default function HeaderFooter() {
             style={{ backgroundColor: header.styles?.backgroundColor, color: header.styles?.textColor }}
           >
             <div className="flex items-center gap-2 font-bold text-lg">
-              <Globe className="w-5 h-5 opacity-60" />
-              {header.logo?.text || <span className="opacity-40 italic text-sm font-normal">Site name</span>}
+              {header.logo?.imageUrl ? (
+                <img
+                  src={resolveUrl(header.logo.imageUrl)}
+                  alt={header.logo?.text || 'Logo'}
+                  style={{
+                    width: header.logo?.width ? `${header.logo.width}px` : 'auto',
+                    height: header.logo?.height ? `${header.logo.height}px` : '32px',
+                  }}
+                  className="w-auto object-contain"
+                />
+              ) : (
+                <Globe className="w-5 h-5 opacity-60" />
+              )}
+              {header.logo?.text || ''}
             </div>
             <div className="flex items-center gap-5 text-sm opacity-70">
               <span>Home</span><span>About</span><span>Contact</span>
@@ -297,14 +349,65 @@ export default function HeaderFooter() {
                   placeholder="My Company"
                 />
               </Field>
-              <Field label="Logo Image URL" hint="Optional. Use an image instead of text.">
-                <TextInput
-                  value={header.logo?.imageUrl || ''}
-                  onChange={v => updateHeader('logo', { ...header.logo, imageUrl: v })}
-                  placeholder="https://…"
-                  mono
-                />
+              <Field label="Logo Image" hint="Upload a file or paste a URL. When set, the image is used instead of the site name.">
+                <div className="flex items-center gap-2">
+                  <TextInput
+                    value={header.logo?.imageUrl || ''}
+                    onChange={v => updateHeader('logo', { ...header.logo, imageUrl: v })}
+                    placeholder="https://…"
+                    mono
+                  />
+                  <input
+                    ref={logoFileInput}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => logoFileInput.current?.click()}
+                    disabled={logoUploading}
+                    className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1.5"
+                    title="Upload logo"
+                  >
+                    {logoUploading ? <AlertCircle className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {logoUploading ? 'Uploading…' : 'Upload'}
+                  </button>
+                </div>
+                {logoUploadError && <p className="text-xs text-red-500 mt-1">{logoUploadError}</p>}
+                {header.logo?.imageUrl && (
+                  <img
+                    src={resolveUrl(header.logo.imageUrl)}
+                    alt="Logo preview"
+                    className="mt-2 h-8 w-auto object-contain rounded border border-gray-200"
+                    onError={e => { e.target.style.display = 'none'; }}
+                    onLoad={e => { e.target.style.display = ''; }}
+                  />
+                )}
               </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Logo Width" hint="Optional. Pixels.">
+                  <input
+                    type="number"
+                    min={0}
+                    value={header.logo?.width ?? ''}
+                    onChange={e => updateHeader('logo', { ...header.logo, width: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                    placeholder="Auto"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </Field>
+                <Field label="Logo Height" hint="Optional. Pixels.">
+                  <input
+                    type="number"
+                    min={0}
+                    value={header.logo?.height ?? ''}
+                    onChange={e => updateHeader('logo', { ...header.logo, height: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                    placeholder="Auto"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </Field>
+              </div>
             </div>
 
             <div className="px-5 py-4 space-y-3">

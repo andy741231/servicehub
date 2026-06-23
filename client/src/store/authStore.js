@@ -5,6 +5,7 @@ const useAuthStore = create((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  sessionExpired: false,
   
   checkAuth: async () => {
     try {
@@ -28,7 +29,10 @@ const useAuthStore = create((set) => ({
   logout: async () => {
     await api.post('/auth/logout');
     set({ user: null, isAuthenticated: false });
-  }
+  },
+
+  setSessionExpired: (expired = true) => set({ sessionExpired: expired }),
+  clearSessionExpired: () => set({ sessionExpired: false }),
 }));
 
 export default useAuthStore;

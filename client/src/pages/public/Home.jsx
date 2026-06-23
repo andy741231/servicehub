@@ -4,6 +4,21 @@ import { marked } from 'marked';
 import api from '../../utils/api';
 import { Globe, Star, Image as ImageIcon, Check, Settings, MessageCircle, RefreshCw, Wrench } from 'lucide-react';
 
+const resolveUrl = (url) => {
+  if (!url) return '';
+  url = url.replace(/['"]/g, ''); // Strip quotes
+  // Convert same-origin absolute URLs to relative paths
+  if (url.startsWith('http')) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === window.location.hostname) return parsed.pathname + parsed.search + parsed.hash;
+    } catch (e) { /* fall through */ }
+    return url;
+  }
+  if (url.startsWith('/')) return url;
+  return `/uploads/${url}`;
+};
+
 // Simple icon map for the features block
 const IconMap = {
   'lucide-star':     Star,
@@ -85,18 +100,25 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
   };
 
   const renderHeader = () => {
-    const logoText  = header?.logo?.text || pageData.title;
-    const logoImage = header?.logo?.imageUrl;
+    const logoText  = header?.logo?.text ?? pageData.title;
+    const logoImage = resolveUrl(header?.logo?.imageUrl);
+    const logoWidth = header?.logo?.width;
+    const logoHeight = header?.logo?.height;
     // Use the Pages-list nav injected by the server; fall back to legacy header.navigation
     const nav       = pageData.nav?.length ? pageData.nav : (header?.navigation || []);
     const hStyle    = { backgroundColor: header?.styles?.backgroundColor, color: header?.styles?.textColor };
+
+    const logoStyle = {
+      width: logoWidth ? `${logoWidth}px` : 'auto',
+      height: logoHeight ? `${logoHeight}px` : '32px',
+    };
 
     return (
       <header className="bg-white border-b border-gray-200 py-4 px-6" style={hStyle}>
         <div className="flex justify-between items-center max-w-7xl mx-auto">
           <div className="text-xl font-bold flex items-center gap-2">
             {logoImage
-              ? <img src={logoImage} alt={logoText} className="h-8" />
+              ? <img src={logoImage} alt={logoText} className="w-auto object-contain" style={logoStyle} />
               : <Globe className="w-6 h-6 text-blue-500" />}
             <a href="/">{logoText}</a>
           </div>
@@ -176,9 +198,47 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       const cc = cs.className || '';
 
       if (block.type === 'hero') return (
-        <section key={block.id} className={`py-20 px-6 max-w-5xl mx-auto text-center ${cc}`} style={sStyle}>
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900 mb-6">{block.content.title}</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">{block.content.subtitle}</p>
+        <section
+          key={block.id}
+          className={`py-20 px-6 text-center relative bg-cover bg-center bg-no-repeat ${block.content.backgroundImage ? 'w-full' : 'max-w-5xl mx-auto'} ${cc}`}
+          style={{
+            ...sStyle,
+            backgroundImage: block.content.backgroundImage ? `url(${resolveUrl(block.content.backgroundImage)})` : sStyle?.backgroundImage,
+          }}
+        >
+          {/* Subtle overlay for text readability */}
+          {block.content.backgroundImage && (
+            <div className="absolute inset-0 bg-black/30 pointer-events-none" />
+          )}
+
+          <div className="relative z-10">
+            <h1
+              className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6"
+              style={{
+                color: sStyle?.color || (block.content.backgroundImage ? '#ffffff' : '#111827'),
+                fontFamily: cs.titleFontFamily || undefined,
+                fontSize: cs.titleFontSize ? `${cs.titleFontSize}px` : undefined,
+                textAlign: cs.titleTextAlign || undefined,
+                fontWeight: cs.titleFontWeight || undefined,
+                fontStyle: cs.titleFontStyle || undefined,
+              }}
+            >
+              {block.content.title}
+            </h1>
+            <p
+              className="text-xl max-w-2xl mx-auto"
+              style={{
+                color: sStyle?.color || (block.content.backgroundImage ? '#e5e7eb' : '#4b5563'),
+                fontFamily: cs.subtitleFontFamily || undefined,
+                fontSize: cs.subtitleFontSize ? `${cs.subtitleFontSize}px` : undefined,
+                textAlign: cs.subtitleTextAlign || undefined,
+                fontWeight: cs.subtitleFontWeight || undefined,
+                fontStyle: cs.subtitleFontStyle || undefined,
+              }}
+            >
+              {block.content.subtitle}
+            </p>
+          </div>
         </section>
       );
 

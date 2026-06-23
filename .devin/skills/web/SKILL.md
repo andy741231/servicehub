@@ -531,3 +531,8 @@ Before considering a Web sub-app change complete:
 8. All existing block types still render on the public site.
 9. Existing templates still work.
 10. The Escape Velocity template visually matches `html5up-escape-velocity/index.html`.
+
+## 15. Tailwind CSS Gotchas
+
+- **Tailwind v4 `bg-opacity-*` Deprecation**: The project uses Tailwind CSS v4, where `bg-opacity-*` classes are deprecated and no longer modify the opacity of preceding background colors. For example, `<div className="bg-black bg-opacity-30">` will result in a 100% solid black background.
+- **Fix**: Always use the opacity modifier syntax (e.g., `bg-black/30`, `bg-black/50`) to create semi-transparent backgrounds and overlays.

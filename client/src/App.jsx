@@ -12,6 +12,7 @@ import WebStyles from './pages/web/Styles';
 import WebAssets from './pages/web/Assets';
 import WebHeaderFooter from './pages/web/HeaderFooter';
 import PublicHome from './pages/public/Home';
+import SessionExpiredModal from './components/SessionExpiredModal';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -29,6 +30,7 @@ export default function App() {
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <SessionExpiredModal />
       <Routes>
         {/* ── Public site routes ── */}
         <Route path="/" element={<PublicHome />} />

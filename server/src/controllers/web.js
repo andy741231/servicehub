@@ -123,12 +123,13 @@ export const updatePage = async (req, res) => {
         }
       });
 
-      await tx.webBlock.deleteMany({ where: { pageId: page.id } });
-
-      if (blocks?.length > 0) {
-        await tx.webBlock.createMany({
-          data: blocks.map((block, i) => serializeBlock({ ...block, pageId: page.id }, i))
-        });
+      if (Array.isArray(blocks)) {
+        await tx.webBlock.deleteMany({ where: { pageId: page.id } });
+        if (blocks.length > 0) {
+          await tx.webBlock.createMany({
+            data: blocks.map((block, i) => serializeBlock({ ...block, pageId: page.id }, i))
+          });
+        }
       }
 
       return tx.webPage.findUnique({

@@ -4,11 +4,26 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
   Plus, Trash2, GripVertical, Image as ImageIcon, Eye, Monitor, Smartphone, Tablet, 
   Palette, Type, Settings, Save, X, Check, AlertCircle, ChevronDown, ChevronUp,
-  Link as LinkIcon, Edit3, Move, Copy,
-  Zap, AlignLeft, Hand, Star, Sparkles, LayoutGrid, MessageSquare, Mail, Video, Columns
+  Link as LinkIcon, Edit3, Move, Copy, Upload,
+  Zap, AlignLeft, AlignCenter, AlignRight, AlignJustify, Hand, Star, Sparkles, LayoutGrid, MessageSquare, Mail, Video, Columns,
+  Bold, Italic
 } from 'lucide-react';
 import { marked } from 'marked';
 import api from '../../utils/api';
+
+const resolveUrl = (url) => {
+  if (!url) return '';
+  // Convert same-origin absolute URLs to relative paths
+  if (url.startsWith('http')) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === window.location.hostname) return parsed.pathname + parsed.search + parsed.hash;
+    } catch (e) { /* fall through */ }
+    return url;
+  }
+  if (url.startsWith('/')) return url;
+  return `/uploads/${url}`;
+};
 
 const BLOCK_TYPES = [
   { id: 'hero',         name: 'Hero',         Icon: Zap,          description: 'Large hero section with title and subtitle' },
@@ -31,6 +46,7 @@ const BaseEditableText = ({
   onEditingEnd,
   placeholder = 'Click to edit',
   className = '',
+  style = {},
   multiline = false,
   tag = 'span'
 }) => {
@@ -62,9 +78,9 @@ const BaseEditableText = ({
     }, 0);
   };
 
-  const handleBlur = async () => {
+  const handleBlur = async (e) => {
     setIsEditing(false);
-    onEditingEnd?.();
+    onEditingEnd?.(e);
     if (value !== content) {
       setIsSaving(true);
       try {
@@ -104,6 +120,7 @@ const BaseEditableText = ({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           className={`${className} border-2 border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white`}
+          style={style}
           placeholder={placeholder}
           {...(multiline ? { rows: 3 } : {})}
         />
@@ -125,7 +142,8 @@ const BaseEditableText = ({
 
   return (
     <Tag 
-      className={`${className} cursor-text hover:bg-blue-50 hover:rounded hover:px-1 transition-colors group relative focus:outline-none focus:ring-2 focus:ring-blue-300 rounded`}
+      className={`${className} cursor-text hover:bg-white/10 hover:rounded hover:px-1 transition-colors group relative focus:outline-none focus:ring-2 focus:ring-blue-300 rounded`}
+      style={style}
       onClick={handleClick}
       role="button"
       tabIndex={0}
@@ -137,9 +155,261 @@ const BaseEditableText = ({
       }}
       aria-label={`Edit ${placeholder.toLowerCase()}`}
     >
-      {content || <span className="text-gray-400 italic">{placeholder}</span>}
+      {content || <span className="opacity-50 italic">{placeholder}</span>}
       <Edit3 className="w-3 h-3 absolute -top-4 right-0 opacity-0 group-hover:opacity-50 text-blue-500" />
     </Tag>
+  );
+};
+
+// Inline formatting toolbar for editable text inside a block
+const TextToolbar = ({ format = {}, onChange, onDelete, position = 'top' }) => {
+  const {
+    fontFamily = '',
+    fontSize = '',
+    textAlign = 'left',
+    fontWeight = 'normal',
+    fontStyle = 'normal',
+  } = format;
+
+  const update = (key, value) => onChange({ ...format, [key]: value });
+
+  const alignOptions = [
+    { id: 'left', Icon: AlignLeft },
+    { id: 'center', Icon: AlignCenter },
+    { id: 'right', Icon: AlignRight },
+    { id: 'justify', Icon: AlignJustify },
+  ];
+
+  const toggleBold = () => { console.log('toggleBold'); update('fontWeight', fontWeight === 'bold' ? 'normal' : 'bold'); };
+  const toggleItalic = () => update('fontStyle', fontStyle === 'italic' ? 'normal' : 'italic');
+
+  return (
+    <div
+      className={`absolute left-1/2 -translate-x-1/2 ${
+        position === 'top' ? '-top-11' : 'bottom-full mb-2'
+      } flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-md p-1 z-40`}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      <select
+        value={fontFamily}
+        onMouseDown={(e) => e.preventDefault()}
+        onChange={(e) => update('fontFamily', e.target.value)}
+        title="Font family"
+        className="h-7 px-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+      >
+        <option value="">Default</option>
+        <option value="Arial, sans-serif">Arial</option>
+        <option value="Georgia, serif">Georgia</option>
+        <option value="Times New Roman, serif">Times New Roman</option>
+        <option value="Courier New, monospace">Courier New</option>
+        <option value="Verdana, sans-serif">Verdana</option>
+      </select>
+
+      <input
+        type="number"
+        min={8}
+        max={120}
+        value={fontSize || ''}
+        onMouseDown={(e) => e.preventDefault()}
+        onChange={(e) => update('fontSize', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+        placeholder="Size"
+        title="Font size (px)"
+        className="w-14 h-7 px-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+      />
+
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+
+      {alignOptions.map(({ id, Icon }) => (
+        <button
+          key={id}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => update('textAlign', id)}
+          className={`p-1 rounded ${textAlign === id ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+          title={`Align ${id}`}
+        >
+          <Icon className="w-3.5 h-3.5" />
+        </button>
+      ))}
+
+      <div className="w-px h-4 bg-gray-300 mx-1" />
+
+      <button
+        onMouseDown={(e) => { console.log('Bold mousedown'); e.preventDefault(); }}
+        onClick={toggleBold}
+        className={`p-1 rounded ${fontWeight === 'bold' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+        title="Bold"
+      >
+        <Bold className="w-3.5 h-3.5" />
+      </button>
+      <button
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggleItalic}
+        className={`p-1 rounded ${fontStyle === 'italic' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+        title="Italic"
+      >
+        <Italic className="w-3.5 h-3.5" />
+      </button>
+
+      {onDelete && (
+        <>
+          <div className="w-px h-4 bg-gray-300 mx-1" />
+          <button
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onDelete}
+            className="p-1 hover:bg-red-100 text-red-600 rounded"
+            title="Delete"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+
+// Dedicated hero block editor with per-field formatting toolbars
+const HeroBlock = ({ block, index, updateBlockContent, updateBlock, EditableText }) => {
+  const [activeField, setActiveField] = useState(null); // 'title' | 'subtitle' | null
+  const [hoverField, setHoverField] = useState(null);
+  const hoverTimeout = useRef(null);
+
+  const setHover = (field) => {
+    clearTimeout(hoverTimeout.current);
+    setHoverField(field);
+  };
+  const clearHover = () => {
+    hoverTimeout.current = setTimeout(() => setHoverField(null), 200);
+  };
+
+  useEffect(() => () => clearTimeout(hoverTimeout.current), []);
+
+  const endEditing = (_e, _field) => {
+    // Toolbar has onMouseDown={e => e.preventDefault()} to keep focus in the input,
+    // so this fires only when focus truly leaves to somewhere outside the toolbar.
+    setActiveField(null);
+  };
+
+  const titleColor = block.style?.color || (block.content.backgroundImage ? '#ffffff' : '#1e3a8a');
+  const subtitleColor = block.style?.color || (block.content.backgroundImage ? '#e2e8f0' : '#475569');
+
+  const titleFormat = {
+    fontFamily: block.style?.titleFontFamily || '',
+    fontSize: block.style?.titleFontSize || '',
+    textAlign: block.style?.titleTextAlign || 'left',
+    fontWeight: block.style?.titleFontWeight || 'normal',
+    fontStyle: block.style?.titleFontStyle || 'normal',
+  };
+  const subtitleFormat = {
+    fontFamily: block.style?.subtitleFontFamily || '',
+    fontSize: block.style?.subtitleFontSize || '',
+    textAlign: block.style?.subtitleTextAlign || 'left',
+    fontWeight: block.style?.subtitleFontWeight || 'normal',
+    fontStyle: block.style?.subtitleFontStyle || 'normal',
+  };
+
+  const titleStyle = {
+    color: titleColor,
+    fontFamily: titleFormat.fontFamily || undefined,
+    fontSize: titleFormat.fontSize ? `${titleFormat.fontSize}px` : undefined,
+    textAlign: titleFormat.textAlign,
+    fontWeight: titleFormat.fontWeight,
+    fontStyle: titleFormat.fontStyle,
+  };
+  const subtitleStyle = {
+    color: subtitleColor,
+    fontFamily: subtitleFormat.fontFamily || undefined,
+    fontSize: subtitleFormat.fontSize ? `${subtitleFormat.fontSize}px` : undefined,
+    textAlign: subtitleFormat.textAlign,
+    fontWeight: subtitleFormat.fontWeight,
+    fontStyle: subtitleFormat.fontStyle,
+  };
+
+  const updateTitleFormat = (fmt) => updateBlock(index, {
+    style: {
+      ...block.style,
+      titleFontFamily: fmt.fontFamily,
+      titleFontSize: fmt.fontSize,
+      titleTextAlign: fmt.textAlign,
+      titleFontWeight: fmt.fontWeight,
+      titleFontStyle: fmt.fontStyle,
+    }
+  });
+  const updateSubtitleFormat = (fmt) => updateBlock(index, {
+    style: {
+      ...block.style,
+      subtitleFontFamily: fmt.fontFamily,
+      subtitleFontSize: fmt.fontSize,
+      subtitleTextAlign: fmt.textAlign,
+      subtitleFontWeight: fmt.fontWeight,
+      subtitleFontStyle: fmt.fontStyle,
+    }
+  });
+
+  return (
+    <div
+      className={`text-center py-20 px-6 relative bg-cover bg-center bg-no-repeat ${block.content.backgroundImage ? 'min-h-[400px] flex flex-col justify-center' : ''}`}
+      style={{
+        backgroundImage: block.content.backgroundImage ? `url(${resolveUrl(block.content.backgroundImage)})` : undefined,
+        backgroundColor: block.style?.backgroundColor || undefined,
+      }}
+    >
+      {block.content.backgroundImage && (
+        <div className="absolute inset-0 bg-black/30 pointer-events-none" />
+      )}
+
+      <div className="relative z-10">
+        <div className="relative inline-block w-full">
+          {(activeField === 'title' || hoverField === 'title') && (
+            <div
+              onMouseEnter={() => setHover('title')}
+              onMouseLeave={clearHover}
+            >
+              <TextToolbar
+                format={titleFormat}
+                onChange={updateTitleFormat}
+                onDelete={() => updateBlockContent(index, { title: '' })}
+              />
+            </div>
+          )}
+          <EditableText
+            content={block.content.title}
+            onChange={(value) => updateBlockContent(index, { title: value })}
+            placeholder="Hero Title"
+            className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 block"
+            style={titleStyle}
+            tag="h1"
+            onEditingStart={() => setActiveField('title')}
+            onEditingEnd={(e) => endEditing(e, 'title')}
+          />
+        </div>
+        <div className="relative inline-block w-full">
+          {(activeField === 'subtitle' || hoverField === 'subtitle') && (
+            <div
+              onMouseEnter={() => setHover('subtitle')}
+              onMouseLeave={clearHover}
+            >
+              <TextToolbar
+                format={subtitleFormat}
+                onChange={updateSubtitleFormat}
+                onDelete={() => updateBlockContent(index, { subtitle: '' })}
+              />
+            </div>
+          )}
+          <EditableText
+            content={block.content.subtitle}
+            onChange={(value) => updateBlockContent(index, { subtitle: value })}
+            placeholder="Hero Subtitle"
+            className="text-xl max-w-2xl mx-auto block"
+            style={subtitleStyle}
+            tag="p"
+            multiline
+            onEditingStart={() => setActiveField('subtitle')}
+            onEditingEnd={(e) => endEditing(e, 'subtitle')}
+          />
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -242,7 +512,7 @@ const BaseEditableImage = ({
 
       {/* Hover controls */}
       {src && showControls && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center gap-2">
+        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center gap-2">
           <button
             onClick={() => setShowUrlDialog(true)}
             className="px-3 py-2 bg-white text-gray-800 rounded hover:bg-gray-100 flex items-center gap-1"
@@ -269,7 +539,7 @@ const BaseEditableImage = ({
 
       {/* URL dialog */}
       {showUrlDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4">Edit Image</h3>
             <div className="space-y-4">
@@ -384,7 +654,7 @@ const BaseEditableButton = ({
 
       {/* Edit dialog */}
       {showEditDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4">Edit Button</h3>
             <div className="space-y-4">
@@ -442,6 +712,155 @@ const BaseEditableButton = ({
 };
 
 // Block wrapper for hover effects and actions
+// Background Image Dialog Component
+const BackgroundImageDialog = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  currentUrl = '',
+}) => {
+  const [url, setUrl] = useState(currentUrl);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUrl(currentUrl);
+      setUploadError('');
+    }
+  }, [isOpen, currentUrl]);
+
+  const handleSave = async () => {
+    if (!url.trim()) return;
+    await onSave(url.trim());
+    onClose();
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/web/assets', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setUrl(res.data.url);
+    } catch (err) {
+      setUploadError('Upload failed. Please try a URL instead.');
+      console.error('Asset upload error:', err);
+    } finally {
+      setUploading(false);
+      // Reset file input so same file can be selected again
+      e.target.value = '';
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300]">
+      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Background Image</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {/* File upload */}
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-blue-400 hover:bg-blue-50 flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+            >
+              {uploading ? (
+                <>
+                  <AlertCircle className="w-4 h-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Upload from computer
+                </>
+              )}
+            </button>
+            {uploadError && <p className="text-red-500 text-sm mt-1">{uploadError}</p>}
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">OR paste a URL</span>
+            </div>
+          </div>
+
+          <div>
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setUploadError(''); }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
+
+          {url && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
+              <img 
+                src={url} 
+                alt="Preview" 
+                className="w-full h-32 object-cover rounded border border-gray-300"
+                onError={(e) => { e.target.style.display = 'none'; }}
+                onLoad={(e) => { e.target.style.display = ''; }}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!url.trim() || uploading}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            {uploading ? (
+              <>
+                <AlertCircle className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const EditableBlock = ({ 
   block, 
   index, 
@@ -450,6 +869,8 @@ const EditableBlock = ({
   onMoveUp, 
   onMoveDown, 
   onDuplicate,
+  updateBlockContent,
+  saveRef,
   isDragging,
   children 
 }) => {
@@ -457,6 +878,7 @@ const EditableBlock = ({
   const [isSelected, setIsSelected] = useState(false);
   const [showBlockMenu, setShowBlockMenu] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
+  const [showBackgroundImageDialog, setShowBackgroundImageDialog] = useState(false);
   const blockRef = useRef(null);
 
   const showActions = isHovered || isSelected;
@@ -479,8 +901,12 @@ const EditableBlock = ({
   };
 
   const handleStyleUpdate = (styleUpdates) => {
-    onUpdate(index, { style: { ...block.style, ...styleUpdates } });
+    const currentStyle = block.style || {};
+    const updatedStyle = { ...currentStyle, ...styleUpdates };
+    onUpdate(index, { style: updatedStyle });
   };
+
+  
 
   return (
     <div
@@ -551,7 +977,7 @@ const EditableBlock = ({
       {/* Style panel — fixed centered modal so it's always in-viewport */}
       {showStylePanel && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[200]"
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
           onMouseDown={(e) => { if (e.target === e.currentTarget) setShowStylePanel(false); }}
         >
           <div className="bg-white rounded-xl shadow-2xl w-96 max-h-[85vh] flex flex-col" onMouseDown={(e) => e.stopPropagation()}>
@@ -564,12 +990,63 @@ const EditableBlock = ({
             </div>
 
             <div className="overflow-y-auto p-5 space-y-5">
+              {/* Background Image - Only for hero blocks */}
+              {block.type === 'hero' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Background Image</label>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={block.content.backgroundImage || ''} 
+                        onChange={(e) => updateBlockContent(index, { backgroundImage: e.target.value })} 
+                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded" 
+                        placeholder="Enter image URL..." 
+                      />
+                      <button
+                        onClick={() => setShowBackgroundImageDialog(true)}
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        Browse
+                      </button>
+                    </div>
+                    {block.content.backgroundImage && (
+                      <div className="mt-2">
+                        <img 
+                          src={resolveUrl(block.content.backgroundImage)} 
+                          alt="Background preview" 
+                          className="w-full h-20 object-cover rounded border border-gray-300"
+                        />
+                        <button
+                          onClick={() => updateBlockContent(index, { backgroundImage: null })}
+                          className="mt-1 text-xs text-red-600 hover:text-red-800"
+                        >
+                          Remove background image
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Background Color */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Background Color</label>
                 <div className="flex gap-2">
-                  <input type="color" value={block.style?.backgroundColor || '#ffffff'} onChange={(e) => handleStyleUpdate({ backgroundColor: e.target.value })} className="w-12 h-8 border border-gray-300 rounded cursor-pointer" />
-                  <input type="text" value={block.style?.backgroundColor || '#ffffff'} onChange={(e) => handleStyleUpdate({ backgroundColor: e.target.value })} className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded" placeholder="#ffffff" />
+                  <input 
+                    type="color" 
+                    value={block.style?.backgroundColor || '#ffffff'} 
+                    onChange={(e) => handleStyleUpdate({ backgroundColor: e.target.value })} 
+                    className="w-12 h-8 border border-gray-300 rounded cursor-pointer" 
+                  />
+                  <input 
+                    type="text" 
+                    value={block.style?.backgroundColor || '#ffffff'} 
+                    onChange={(e) => handleStyleUpdate({ backgroundColor: e.target.value })} 
+                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded" 
+                    placeholder="#ffffff" 
+                  />
                 </div>
               </div>
 
@@ -577,8 +1054,19 @@ const EditableBlock = ({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Text Color</label>
                 <div className="flex gap-2">
-                  <input type="color" value={block.style?.color || '#000000'} onChange={(e) => handleStyleUpdate({ color: e.target.value })} className="w-12 h-8 border border-gray-300 rounded cursor-pointer" />
-                  <input type="text" value={block.style?.color || '#000000'} onChange={(e) => handleStyleUpdate({ color: e.target.value })} className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded" placeholder="#000000" />
+                  <input 
+                    type="color" 
+                    value={block.style?.color || '#000000'} 
+                    onChange={(e) => handleStyleUpdate({ color: e.target.value })} 
+                    className="w-12 h-8 border border-gray-300 rounded cursor-pointer" 
+                  />
+                  <input 
+                    type="text" 
+                    value={block.style?.color || '#000000'} 
+                    onChange={(e) => handleStyleUpdate({ color: e.target.value })} 
+                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded" 
+                    placeholder="#000000" 
+                  />
                 </div>
               </div>
 
@@ -668,7 +1156,7 @@ const EditableBlock = ({
       {/* Block settings (gear) — fixed centered modal */}
       {showBlockMenu && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[200]"
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
           onMouseDown={(e) => { if (e.target === e.currentTarget) setShowBlockMenu(false); }}
         >
           <div className="bg-white rounded-xl shadow-2xl w-80" onMouseDown={(e) => e.stopPropagation()}>
@@ -726,6 +1214,18 @@ const EditableBlock = ({
         </div>
       )}
 
+      {/* Background Image Dialog */}
+      <BackgroundImageDialog
+        isOpen={showBackgroundImageDialog}
+        onClose={() => setShowBackgroundImageDialog(false)}
+        onSave={(url) => {
+          updateBlockContent(index, { backgroundImage: url });
+          // Trigger an immediate save to persist to database
+          setTimeout(() => saveRef.current?.(), 200);
+        }}
+        currentUrl={block.content.backgroundImage || ''}
+      />
+
       {/* Block content */}
       <div className="relative">
         {children}
@@ -772,7 +1272,11 @@ export default function InlineEditor() {
 
   // Wrapper components that notify parent of editing state
   const EditableText = useCallback((props) => (
-    <BaseEditableText {...props} onEditingStart={() => setIsEditing(true)} onEditingEnd={() => setIsEditing(false)} />
+    <BaseEditableText
+      {...props}
+      onEditingStart={() => { setIsEditing(true); props.onEditingStart?.(); }}
+      onEditingEnd={(e) => { setIsEditing(false); props.onEditingEnd?.(e); }}
+    />
   ), []);
 
   const EditableImage = useCallback((props) => (
@@ -1007,23 +1511,13 @@ export default function InlineEditor() {
   const renderEditableBlock = (block, index) => {
     const blockComponents = {
       hero: () => (
-        <div className="text-center py-20 px-6">
-          <EditableText
-            content={block.content.title}
-            onChange={(value) => updateBlockContent(index, { title: value })}
-            placeholder="Hero Title"
-            className="text-5xl md:text-6xl font-extrabold tracking-tight text-blue-900 mb-6 block"
-            tag="h1"
-          />
-          <EditableText
-            content={block.content.subtitle}
-            onChange={(value) => updateBlockContent(index, { subtitle: value })}
-            placeholder="Hero Subtitle"
-            className="text-xl text-slate-600 max-w-2xl mx-auto block"
-            tag="p"
-            multiline
-          />
-        </div>
+        <HeroBlock
+          block={block}
+          index={index}
+          updateBlockContent={updateBlockContent}
+          updateBlock={updateBlock}
+          EditableText={EditableText}
+        />
       ),
       text: () => (
         <div className="py-12 px-6 max-w-3xl mx-auto">
@@ -1556,6 +2050,8 @@ export default function InlineEditor() {
                               onMoveUp={(i) => i > 0 && moveBlock(i, i - 1)}
                               onMoveDown={(i) => i < blocks.length - 1 && moveBlock(i, i + 1)}
                               onDuplicate={duplicateBlock}
+                              updateBlockContent={updateBlockContent}
+                              saveRef={saveRef}
                               isDragging={snapshot.isDragging}
                             >
                               {/* Drag handle */}
@@ -1595,7 +2091,7 @@ export default function InlineEditor() {
 
       {/* Block palette modal */}
       {showBlockPalette && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -1638,7 +2134,7 @@ export default function InlineEditor() {
 
       {/* Keyboard shortcuts help modal */}
       {showKeyboardHelp && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
