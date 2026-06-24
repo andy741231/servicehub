@@ -10,6 +10,7 @@ import WebPages from './pages/web/Pages';
 import WebStyles from './pages/web/Styles';
 import WebAssets from './pages/web/Assets';
 import WebHeaderFooter from './pages/web/HeaderFooter';
+import WebShell from './pages/web/WebShell';
 import FormsIndex from './pages/forms/index';
 import FormsBuilder from './pages/forms/FormsBuilder';
 import Submissions from './pages/forms/Submissions';
@@ -50,13 +51,15 @@ export default function App() {
 
           {/* Protected sub-apps */}
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-            {/* Web builder */}
-            <Route path="web"              element={<WebIndex />} />
-            <Route path="web/pages"         element={<WebPages />} />
-            <Route path="web/header-footer" element={<WebHeaderFooter />} />
-            <Route path="web/styles"        element={<WebStyles />} />
-            <Route path="web/assets"        element={<WebAssets />} />
-            <Route path="web/editor/:slug" element={<WebIndex />} />
+            {/* Web builder — nested under WebShell for tab nav */}
+            <Route path="web" element={<WebShell />}>
+              <Route index                  element={<WebPages />} />
+              <Route path="pages"           element={<WebPages />} />
+              <Route path="header-footer"   element={<WebHeaderFooter />} />
+              <Route path="styles"          element={<WebStyles />} />
+              <Route path="assets"          element={<WebAssets />} />
+              <Route path="editor/:slug"    element={<WebIndex />} />
+            </Route>
 
             {/* Other sub-apps */}
             <Route path="forms" element={<FormsIndex />} />

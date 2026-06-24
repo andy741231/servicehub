@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import { APPS } from '../../layouts/AppShell';
+
+function getFirstAccessiblePath(user) {
+  const hasAdminRole = user?.roles?.includes('admin');
+  const accessibleApp = APPS.find((app) => user?.permissions?.includes(app.id) || hasAdminRole);
+  return accessibleApp?.path || '/hub-admin';
+}
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -8,13 +15,20 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const login = useAuthStore((state) => state.login);
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const navigate = useNavigate();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (isAuthenticated) return <Navigate to={getFirstAccessiblePath(user)} replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await login(username, password, rememberMe);
-      navigate('/hub-admin/web');
+      const updatedUser = useAuthStore.getState().user;
+      navigate(getFirstAccessiblePath(updatedUser));
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
     }

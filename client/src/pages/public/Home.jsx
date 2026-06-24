@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { marked } from 'marked';
 import api from '../../utils/api';
-import { Globe, Star, Image as ImageIcon, Check, Settings, MessageCircle, RefreshCw, Wrench } from 'lucide-react';
+import { Globe, Star, Image as ImageIcon, Check, Settings, MessageCircle, RefreshCw, Wrench, ChevronDown, Menu, X } from 'lucide-react';
 
 const resolveUrl = (url) => {
   if (!url) return '';
@@ -33,8 +33,16 @@ const IconMap = {
 export default function PublicHome({ previewData = null, previewMode = false }) {
   const { slug } = useParams();           // undefined on /, set on /:slug
 
-  const [loading,  setLoading]  = useState(!previewMode);
-  const [pageData, setPageData] = useState(null);
+  const [loading,   setLoading]   = useState(!previewMode);
+  const [pageData,  setPageData]  = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled,   setScrolled]   = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (previewMode && previewData) {
@@ -75,56 +83,155 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  const renderNavItems = (items) => {
-    if (!items?.length) return null;
-    return (
-      <nav className="flex gap-6 text-sm">
-        {items.map((item, i) => (
-          <div key={i} className="relative group">
-            {item.children?.length ? (
-              <>
-                <button className="hover:text-blue-600 transition">{item.label}</button>
-                <div className="absolute left-0 top-full hidden group-hover:block bg-white shadow-lg border rounded-md py-2 min-w-[160px] z-10">
-                  {item.children.map((child, ci) => (
-                    <a key={ci} href={child.href || '#'} className="block px-4 py-2 text-sm hover:bg-gray-100">{child.label}</a>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <a href={item.href || '#'} className="hover:text-blue-600 transition">{item.label}</a>
-            )}
-          </div>
-        ))}
-      </nav>
-    );
-  };
+  const currentPath = window.location.pathname;
 
   const renderHeader = () => {
-    const logoText  = header?.logo?.text ?? pageData.title;
-    const logoImage = resolveUrl(header?.logo?.imageUrl);
-    const logoWidth = header?.logo?.width;
+    const logoText   = header?.logo?.text ?? pageData.title;
+    const logoImage  = resolveUrl(header?.logo?.imageUrl);
+    const logoWidth  = header?.logo?.width;
     const logoHeight = header?.logo?.height;
-    // Use the Pages-list nav injected by the server; fall back to legacy header.navigation
-    const nav       = pageData.nav?.length ? pageData.nav : (header?.navigation || []);
-    const hStyle    = { backgroundColor: header?.styles?.backgroundColor, color: header?.styles?.textColor };
+    const nav        = pageData.nav?.length ? pageData.nav : (header?.navigation || []);
+    const hasBg      = header?.styles?.backgroundColor;
+    const hStyle     = hasBg
+      ? { backgroundColor: header.styles.backgroundColor, color: header.styles.textColor }
+      : {};
 
     const logoStyle = {
-      width: logoWidth ? `${logoWidth}px` : 'auto',
+      width:  logoWidth  ? `${logoWidth}px`  : 'auto',
       height: logoHeight ? `${logoHeight}px` : '32px',
+      padding: `${header?.logo?.padding?.top ?? 0}px ${header?.logo?.padding?.right ?? 0}px ${header?.logo?.padding?.bottom ?? 0}px ${header?.logo?.padding?.left ?? 0}px`,
+      margin: `${header?.logo?.margin?.top ?? 0}px ${header?.logo?.margin?.right ?? 0}px ${header?.logo?.margin?.bottom ?? 0}px ${header?.logo?.margin?.left ?? 0}px`,
+    };
+
+    const isActive = (href) => {
+      if (!href) return false;
+      if (href === '/') return currentPath === '/';
+      return currentPath.startsWith(href);
     };
 
     return (
-      <header className="bg-white border-b border-gray-200 py-4 px-6" style={hStyle}>
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <div className="text-xl font-bold flex items-center gap-2">
-            {logoImage
-              ? <img src={logoImage} alt={logoText} className="w-auto object-contain" style={logoStyle} />
-              : <Globe className="w-6 h-6 text-blue-500" />}
-            <a href="/">{logoText}</a>
+      <>
+        <header
+          className={`sticky top-0 z-50 transition-all duration-200 ${
+            hasBg ? '' : scrolled
+              ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100'
+              : 'bg-white/80 backdrop-blur-sm border-b border-gray-100/60'
+          }`}
+          style={hStyle}
+        >
+          <div
+            className="flex items-center justify-between max-w-7xl mx-auto px-6"
+            style={{ height: logoHeight ? `${logoHeight}px` : '32px' }}
+          >
+            {/* Logo */}
+            <a
+              href="/"
+              className="flex items-center gap-2.5 font-bold text-lg shrink-0 hover:opacity-75 transition-opacity"
+              style={hasBg ? {} : { color: 'inherit' }}
+            >
+              {logoImage
+                ? <img src={logoImage} alt={logoText} className="object-contain" style={logoStyle} />
+                : <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <Globe className="w-4.5 h-4.5 text-white" />
+                  </div>}
+              <span>{logoText}</span>
+            </a>
+
+            {/* Desktop nav */}
+            {nav.length > 0 && (
+              <nav className="hidden md:flex items-center gap-1">
+                {nav.map((item, i) => {
+                  const active = isActive(item.href);
+                  if (item.children?.length) {
+                    return (
+                      <div key={i} className="relative group">
+                        <button
+                          className={`flex items-center gap-1 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            active
+                              ? 'text-blue-600 bg-blue-50'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                        >
+                          {item.label}
+                          <ChevronDown className="w-3.5 h-3.5 opacity-60 group-hover:rotate-180 transition-transform duration-200" />
+                        </button>
+                        <div className="absolute left-0 top-[calc(100%+4px)] hidden group-hover:block">
+                          <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 min-w-[180px] overflow-hidden">
+                            {item.children.map((child, ci) => (
+                              <a
+                                key={ci}
+                                href={child.href || '#'}
+                                className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                              >
+                                {child.label}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <a
+                      key={i}
+                      href={item.href || '#'}
+                      className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        active
+                          ? 'text-blue-600 bg-blue-50'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      {item.label}
+                    </a>
+                  );
+                })}
+              </nav>
+            )}
+
+            {/* Mobile hamburger */}
+            {nav.length > 0 && (
+              <button
+                className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition"
+                onClick={() => setMobileOpen(o => !o)}
+                aria-label="Toggle menu"
+              >
+                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            )}
           </div>
-          {renderNavItems(nav)}
-        </div>
-      </header>
+
+          {/* Mobile drawer */}
+          {mobileOpen && nav.length > 0 && (
+            <div className="md:hidden border-t border-gray-100 bg-white px-4 pb-4 pt-2 space-y-1">
+              {nav.map((item, i) => (
+                <div key={i}>
+                  <a
+                    href={item.href || '#'}
+                    className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      isActive(item.href)
+                        ? 'text-blue-600 bg-blue-50'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                  {item.children?.map((child, ci) => (
+                    <a
+                      key={ci}
+                      href={child.href || '#'}
+                      className="block pl-8 py-2 text-sm text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      {child.label}
+                    </a>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </header>
+      </>
     );
   };
 

@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { getPageBySlug, updatePage } from '../controllers/web.js';
-import { listPages, createPage, updatePageMeta, deletePage } from '../controllers/webPages.js';
+import { listPages, createPage, updatePageMeta, deletePage, reorderPages } from '../controllers/webPages.js';
 import { getSiteStyles, updateSiteStyles } from '../controllers/webStyles.js';
 import { listAssets, uploadAsset, deleteAsset } from '../controllers/webAssets.js';
 import { verifyToken } from '../middleware/auth.js';
@@ -47,6 +47,7 @@ router.get('/pages', ...protect, listPages);
 router.post('/pages', ...protect, createPage);
 router.patch('/pages/:id', ...protect, updatePageMeta);
 router.delete('/pages/:id', ...protect, deletePage);
+router.put('/pages/reorder', ...protect, reorderPages);
 
 // Site styles
 router.get('/styles', ...protect, getSiteStyles);

@@ -1,17 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
-import { LogOut, Globe, ClipboardList, Mail, Users, ChevronDown, ChevronRight, FileText, Palette, Image, Layout, BookOpen, UserPlus } from 'lucide-react';
+import { LogOut, Globe, ClipboardList, Mail, Users, ChevronDown, ChevronRight, BookOpen, UserPlus } from 'lucide-react';
 import { APP_IDS } from 'shared';
 import LoggedOutBanner from '../components/LoggedOutBanner';
-
-// Web Builder sub-menu items
-const WEB_SUB_ITEMS = [
-  { label: 'Pages',          path: '/hub-admin/web/pages',          Icon: FileText },
-  { label: 'Header & Footer', path: '/hub-admin/web/header-footer',  Icon: Layout   },
-  { label: 'Styles',         path: '/hub-admin/web/styles',         Icon: Palette  },
-  { label: 'Assets',         path: '/hub-admin/web/assets',         Icon: Image    },
-];
 
 // Email sub-menu items
 const EMAIL_SUB_ITEMS = [
@@ -20,51 +12,53 @@ const EMAIL_SUB_ITEMS = [
 ];
 
 export const APPS = [
-  { id: APP_IDS.WEB,   label: 'Website',      path: '/hub-admin/web',        Icon: Globe,         sub: WEB_SUB_ITEMS },
-  { id: APP_IDS.FORMS, label: 'Form Builder',  path: '/hub-admin/forms',      Icon: ClipboardList, sub: null },
-  { id: APP_IDS.EMAIL, label: 'Email Sender',  path: '/hub-admin/email',      Icon: Mail,          sub: EMAIL_SUB_ITEMS },
-  { id: APP_IDS.DIRECTORY, label: 'Directory',  path: '/hub-admin/directory',  Icon: BookOpen,       sub: null },
+  { id: APP_IDS.WEB,       label: 'Website',      path: '/hub-admin/web/pages',  Icon: Globe,         sub: null },
+  { id: APP_IDS.FORMS,     label: 'Form Builder',  path: '/hub-admin/forms',      Icon: ClipboardList, sub: null },
+  { id: APP_IDS.EMAIL,     label: 'Email Sender',  path: '/hub-admin/email',      Icon: Mail,          sub: EMAIL_SUB_ITEMS },
+  { id: APP_IDS.DIRECTORY, label: 'Directory',     path: '/hub-admin/directory',  Icon: BookOpen,      sub: null },
 ];
 
 function NavItem({ app, location }) {
   const isRootActive  = location.pathname === app.path;
-  const isSubActive   = app.sub?.some(s => location.pathname.startsWith(s.path));
-  const isActive      = isRootActive || isSubActive;
+  const isSubActive   = app.sub?.some(s => location.pathname === s.path || (s.path !== app.path && location.pathname.startsWith(s.path + '/')));
+  // For Website, treat any /hub-admin/web/* path as active
+  const isActive      = app.id === 'web'
+    ? location.pathname.startsWith('/hub-admin/web')
+    : isRootActive;
+  const shouldExpand  = isRootActive || isSubActive;
 
   // Web Builder: always show sub-items expanded when on any /web path
-  const [open, setOpen] = useState(isActive);
+  const [open, setOpen] = useState(shouldExpand);
+
+  // Sync open state with location changes
+  useEffect(() => {
+    setOpen(shouldExpand);
+  }, [shouldExpand]);
 
   if (app.sub) {
     return (
       <div>
-        {/* Parent row — label is a link, chevron toggles sub-items */}
-        <div className={`flex items-center justify-between rounded-base transition-colors duration-150 ${
-          isActive ? 'bg-primary-light' : 'hover:bg-surface-raised'
-        }`}>
-          <Link
-            to={app.path}
-            className={`flex-1 flex items-center gap-3 px-3 py-2.5 text-body font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
-              isActive ? 'text-primary' : 'text-muted hover:text-base'
-            }`}
-          >
+        {/* Parent row — entire item toggles sub-items */}
+        <button
+          onClick={() => setOpen(o => !o)}
+          className={`w-full flex items-center justify-between px-3 py-2.5 text-body font-medium rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+            isActive ? 'bg-primary-light text-primary' : 'text-muted hover:text-base hover:bg-surface-raised'
+          }`}
+          aria-label={open ? 'Collapse' : 'Expand'}
+          aria-expanded={open}
+        >
+          <div className="flex items-center gap-3">
             <app.Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-subtle'}`} />
             {app.label}
-          </Link>
-          <button
-            onClick={() => setOpen(o => !o)}
-            className="px-2 py-2.5 min-h-[44px] text-subtle hover:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors duration-150"
-            aria-label={open ? 'Collapse' : 'Expand'}
-            title={open ? 'Collapse' : 'Expand'}
-          >
-            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </button>
-        </div>
+          </div>
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
 
         {/* Sub-items */}
         {open && (
           <div className="mt-1 ml-8 space-y-0.5">
             {app.sub.map(({ label, path, Icon }) => {
-              const active = location.pathname.startsWith(path);
+              const active = location.pathname === path || (path !== app.path && location.pathname.startsWith(path + '/'));
               return (
                 <Link
                   key={path}
@@ -116,7 +110,9 @@ export default function AppShell() {
       {/* Sidebar */}
       <div className="w-[240px] bg-surface border-r border-border flex flex-col">
         <div className="h-14 flex items-center px-6 border-b border-border">
-          <h1 className="text-lg font-bold text-primary">Service Hub</h1>
+          <Link to="/hub-admin/" className="text-lg font-bold text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-base transition-colors duration-150">
+            Service Hub
+          </Link>
         </div>
 
         <div className="flex-1 overflow-y-auto py-4">

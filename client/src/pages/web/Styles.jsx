@@ -105,7 +105,7 @@ export default function Styles() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-2xl">
+      <div className="p-8 max-w-4xl mx-auto">
         <div className="space-y-4 animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-32" />
           <div className="h-64 bg-gray-100 rounded-xl" />
@@ -115,7 +115,7 @@ export default function Styles() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

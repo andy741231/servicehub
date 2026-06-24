@@ -109,7 +109,7 @@ export default function Assets() {
   const docs   = assets.filter(a => !isImage(a.mimeType));
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

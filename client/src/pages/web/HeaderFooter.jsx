@@ -27,7 +27,7 @@ const resolveUrl = (url) => {
 // ── Default shapes ──────────────────────────────────────────────────────────
 
 const DEFAULT_HEADER = {
-  logo:       { text: '', imageUrl: '', width: '', height: '' },
+  logo:       { text: '', imageUrl: '', width: '', height: '', padding: { top: 0, right: 0, bottom: 0, left: 0 }, margin: { top: 0, right: 0, bottom: 0, left: 0 } },
   styles:     { backgroundColor: 'hsl(var(--surface))', textColor: 'hsl(var(--text-base))' },
 };
 
@@ -194,9 +194,11 @@ export default function HeaderFooter() {
         header: { ...DEFAULT_HEADER, ...h, logo: { ...DEFAULT_HEADER.logo, ...(h.logo||{}) }, styles: { ...DEFAULT_HEADER.styles, ...(h.styles||{}) } },
         footer: { ...DEFAULT_FOOTER, ...f, styles: { ...DEFAULT_FOOTER.styles, ...(f.styles||{}) }, sections: f.sections || [] },
       };
-      // Ensure logo width/height exist on legacy records
+      // Ensure logo width/height and spacing exist on legacy records
       merged.header.logo.width  = merged.header.logo.width  ?? '';
       merged.header.logo.height = merged.header.logo.height ?? '';
+      merged.header.logo.padding = { top: 0, right: 0, bottom: 0, left: 0, ...(merged.header.logo.padding || {}) };
+      merged.header.logo.margin  = { top: 0, right: 0, bottom: 0, left: 0, ...(merged.header.logo.margin  || {}) };
       setHeader(merged.header);
       setFooter(merged.footer);
       setOriginal(merged);
@@ -259,7 +261,7 @@ export default function HeaderFooter() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-4 max-w-2xl animate-pulse">
+      <div className="p-8 space-y-4 max-w-4xl mx-auto animate-pulse">
         <div className="h-8 bg-gray-200 rounded w-40" />
         <div className="h-64 bg-gray-100 rounded-xl" />
       </div>
@@ -267,7 +269,7 @@ export default function HeaderFooter() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-4xl mx-auto">
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -326,6 +328,8 @@ export default function HeaderFooter() {
                   style={{
                     width: header.logo?.width ? `${header.logo.width}px` : 'auto',
                     height: header.logo?.height ? `${header.logo.height}px` : '32px',
+                    padding: `${header.logo?.padding?.top ?? 0}px ${header.logo?.padding?.right ?? 0}px ${header.logo?.padding?.bottom ?? 0}px ${header.logo?.padding?.left ?? 0}px`,
+                    margin: `${header.logo?.margin?.top ?? 0}px ${header.logo?.margin?.right ?? 0}px ${header.logo?.margin?.bottom ?? 0}px ${header.logo?.margin?.left ?? 0}px`,
                   }}
                   className="w-auto object-contain"
                 />
@@ -333,9 +337,6 @@ export default function HeaderFooter() {
                 <Globe className="w-5 h-5 opacity-60" />
               )}
               {header.logo?.text || ''}
-            </div>
-            <div className="flex items-center gap-5 text-sm opacity-70">
-              <span>Home</span><span>About</span><span>Contact</span>
             </div>
           </div>
 
@@ -406,6 +407,48 @@ export default function HeaderFooter() {
                     placeholder="Auto"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </Field>
+              </div>
+
+              <div className="space-y-3">
+                <Field label="Logo Padding" hint="Pixels. Top, right, bottom, left.">
+                  <div className="grid grid-cols-4 gap-2">
+                    {['top', 'right', 'bottom', 'left'].map(side => (
+                      <div key={side}>
+                        <label className="block text-[10px] uppercase text-gray-500 tracking-wide mb-0.5">{side}</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={header.logo?.padding?.[side] ?? 0}
+                          onChange={e => updateHeader('logo', {
+                            ...header.logo,
+                            padding: { ...header.logo.padding, [side]: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }
+                          })}
+                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label="Logo Margin" hint="Pixels. Top, right, bottom, left.">
+                  <div className="grid grid-cols-4 gap-2">
+                    {['top', 'right', 'bottom', 'left'].map(side => (
+                      <div key={side}>
+                        <label className="block text-[10px] uppercase text-gray-500 tracking-wide mb-0.5">{side}</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={header.logo?.margin?.[side] ?? 0}
+                          onChange={e => updateHeader('logo', {
+                            ...header.logo,
+                            margin: { ...header.logo.margin, [side]: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }
+                          })}
+                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </Field>
               </div>
             </div>

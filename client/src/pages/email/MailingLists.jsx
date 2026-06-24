@@ -460,7 +460,7 @@ export default function MailingLists() {
       )}
       
       {/* Confirm Dialog Mount */}
-      <ConfirmDialogMount />
+      {ConfirmDialogMount}
     </div>
   );
 }

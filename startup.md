@@ -56,9 +56,19 @@ npm install
 
 This installs dependencies for all packages: `client/`, `server/`, and `shared/`.
 
-### Step 3: Configure environment variables
+### Step 2.5: Download UI/UX Pro Max skill
 
-Copy the example file:
+Download the UI/UX Pro Max skill for advanced design guidance:
+
+```bash
+# Download the skill to .devin/skills/
+curl -o .devin/skills/ui-ux-pro-max.md https://raw.githubusercontent.com/your-repo/ui-ux-pro-max/main/skill.md
+```
+
+This skill provides accessibility best practices, interaction patterns, animation guidelines, and UX validation for UI components.
+
+### Step 3: Configure environment variables
+if you dont have a .env file, copy the example file:
 
 ```bash
 cp .env.example .env

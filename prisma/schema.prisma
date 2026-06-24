@@ -65,6 +65,9 @@ model WebPage {
   navLabel    String?
   href        String?    // for external link nav items
   parentId    String?    // self-referencing for sub-menu items
+  order       Int        @default(0) // for drag-and-drop reordering
+  isReserved  Boolean    @default(false) // reserved for system use
+  hideFromNav Boolean    @default(false) // hide from main navigation
   blocks      WebBlock[]
   updatedAt   DateTime   @updatedAt
 }

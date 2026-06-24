@@ -6,6 +6,9 @@ description: >
   sub-app, wiring permissions, setting up auth, building UI shells, writing API routes, or preparing
   for Azure deployment. Trigger this skill at the start of every Service Hub coding session to stay
   consistent with the architecture.
+
+  **For UI/UX work:** Also invoke the `ui-ux-pro-max` skill for advanced design guidance, accessibility
+  best practices, interaction patterns, and UX validation when building or reviewing UI components.
 ---
 
 # Service Hub — Multi-App Platform

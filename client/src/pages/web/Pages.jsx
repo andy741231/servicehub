@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 // ─── Focus trap hook ────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ function useFocusTrap(isActive) {
 }
 import {
   Plus, ExternalLink, Trash2, Pencil, Globe, Link as LinkIcon,
-  X, Check, AlertCircle, ChevronRight, ChevronDown, GripVertical, FolderPlus
+  X, Check, AlertCircle, ChevronRight, ChevronDown, GripVertical, FolderPlus, Settings
 } from 'lucide-react';
 import api from '../../utils/api';
 import { useConfirm } from '../../components/Dialog';
@@ -85,6 +86,7 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
   const [navLabel,   setNavLabel]   = useState(initial?.navLabel || '');
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? true);
   const [isReserved, setIsReserved] = useState(initial?.isReserved ?? false);
+  const [hideFromNav, setHideFromNav] = useState(initial?.hideFromNav ?? false);
   const [error,      setError]      = useState('');
   const [saving,     setSaving]     = useState(false);
 
@@ -126,6 +128,7 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
         isPublished,
         parentId,
         isReserved,
+        hideFromNav,
       });
       onClose();
     } catch (e) {
@@ -222,6 +225,20 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
             </div>
           )}
 
+          {/* Hide from main nav toggle (pages only) */}
+          {type === 'page' && (
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Hide from Main Nav</label>
+              <button
+                onClick={() => setHideFromNav(p => !p)}
+                className={`relative w-10 h-6 rounded-full transition-colors ${hideFromNav ? 'bg-blue-500' : 'bg-gray-300'}`}
+                aria-label={hideFromNav ? 'Show in nav' : 'Hide from nav'}
+              >
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${hideFromNav ? 'left-5' : 'left-1'}`} />
+              </button>
+            </div>
+          )}
+
           {/* Reserved path toggle (pages only) */}
           {type === 'page' && (
             <div className="flex items-center justify-between">
@@ -282,22 +299,22 @@ function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLin
   return (
     <div>
       <div
-        className={`flex items-center gap-2 group rounded-lg px-2 py-2 hover:bg-gray-50 transition-colors ${depth > 0 ? 'ml-6' : ''}`}
+        className={`flex items-center gap-2 group rounded-xl px-3 py-2.5 hover:bg-gray-50/80 transition-colors border border-transparent hover:border-gray-100 ${depth > 0 ? 'ml-7' : ''}`}
       >
         {/* Drag handle */}
-        <GripVertical className="w-4 h-4 text-gray-300 group-hover:text-gray-400 cursor-grab flex-shrink-0" />
+        <GripVertical className="w-4 h-4 text-gray-200 group-hover:text-gray-400 cursor-grab flex-shrink-0 transition-colors" />
 
-        {/* Expand chevron (only if has or can have children) */}
+        {/* Expand chevron */}
         <button
           onClick={() => setOpen(o => !o)}
-          className={`w-5 h-5 flex items-center justify-center flex-shrink-0 ${hasChildren ? 'text-gray-400 hover:text-gray-600' : 'invisible'}`}
+          className={`w-5 h-5 flex items-center justify-center flex-shrink-0 rounded transition-colors ${hasChildren ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'invisible'}`}
           aria-label={open ? 'Collapse' : 'Expand'}
         >
           {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         </button>
 
         {/* Icon */}
-        <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${isLink ? 'bg-purple-50' : 'bg-blue-50'}`}>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${isLink ? 'bg-purple-50 ring-1 ring-purple-100' : 'bg-blue-50 ring-1 ring-blue-100'}`}>
           {isLink
             ? <LinkIcon className="w-3.5 h-3.5 text-purple-500" />
             : <Globe    className="w-3.5 h-3.5 text-blue-500" />}
@@ -305,75 +322,87 @@ function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLin
 
         {/* Label + path */}
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium text-gray-800">{page.navLabel || page.title}</span>
-          <span className="ml-2 text-xs text-gray-400 font-mono">
-            {isLink ? (page.href || 'external') : `/${page.slug}`}
-          </span>
-          {!isLink && (
-            <>
-              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${page.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                {page.isPublished ? 'Published' : 'Draft'}
-              </span>
-              {page.isReserved && (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                  Reserved
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-gray-800">{page.navLabel || page.title}</span>
+            {!isLink && (
+              <>
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${page.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {page.isPublished ? 'Published' : 'Draft'}
                 </span>
-              )}
-            </>
-          )}
+                {page.isReserved && (
+                  <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">Reserved</span>
+                )}
+                {page.hideFromNav && (
+                  <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">Hidden</span>
+                )}
+              </>
+            )}
+          </div>
+          <span className="text-xs text-gray-400 font-mono leading-tight">
+            {isLink ? (page.href || 'external link') : `/${page.slug}`}
+          </span>
         </div>
 
-        {/* Actions — visible on hover */}
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Add sub-item (only top-level items) */}
-          {depth === 0 && (
+        {/* Primary CTA buttons — always visible */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {!isLink && (
+            <>
+              <Link
+                to={`/hub-admin/web/editor/${page.slug}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                title="Open in page editor"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </Link>
+              <a
+                href={page.slug === 'home' ? '/' : `/${page.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 active:scale-95 transition-all shadow-sm"
+                title="View live page"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                View
+              </a>
+            </>
+          )}
+
+          {/* Secondary icon actions — on hover */}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+            {depth === 0 && (
+              <button
+                onClick={() => onAddChild(page.id)}
+                className="p-1.5 hover:bg-blue-50 text-blue-400 hover:text-blue-600 rounded-lg transition-colors"
+                aria-label="Add sub-menu item"
+                title="Add sub-menu item"
+              >
+                <FolderPlus className="w-4 h-4" />
+              </button>
+            )}
             <button
-              onClick={() => onAddChild(page.id)}
-              className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-md"
-              aria-label="Add sub-menu item"
-              title="Add sub-menu item"
+              onClick={() => onEdit(page)}
+              className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-700 rounded-lg transition-colors"
+              aria-label="Page settings"
+              title="Page settings"
             >
-              <FolderPlus className="w-4 h-4" />
+              <Settings className="w-4 h-4" />
             </button>
-          )}
-          {/* Edit page in builder */}
-          {!isLink && (
-            <Link
-              to={`/hub-admin/web/editor/${page.slug}`}
-              className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-md"
-              aria-label="Edit page content"
-              title="Edit page content"
+            <button
+              onClick={() => onDelete(page.id)}
+              className="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+              aria-label="Delete"
+              title="Delete"
             >
-              <Pencil className="w-4 h-4" />
-            </Link>
-          )}
-          {/* View public */}
-          {!isLink && (
-            <a
-              href={page.slug === 'home' ? '/' : `/${page.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="p-1.5 hover:bg-gray-100 text-gray-400 rounded-md"
-              aria-label="View on site"
-              title="View on site"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          )}
-          {/* Settings */}
-          <button onClick={() => onEdit(page)} className="p-1.5 hover:bg-gray-100 text-gray-400 rounded-md" aria-label="Settings" title="Settings">
-            <Pencil className="w-4 h-4" />
-          </button>
-          {/* Delete */}
-          <button onClick={() => onDelete(page.id)} className="p-1.5 hover:bg-red-50 text-red-400 rounded-md" aria-label="Delete" title="Delete">
-            <Trash2 className="w-4 h-4" />
-          </button>
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Children */}
       {open && hasChildren && (
-        <div className="mt-0.5 space-y-0.5 border-l-2 border-gray-100 ml-[26px]">
+        <div className="mt-0.5 space-y-0.5 border-l-2 border-gray-100 ml-[30px]">
           {children.map(child => (
             <NavRow
               key={child.id}
@@ -421,9 +450,9 @@ export default function Pages() {
 
   useEffect(() => { load(); }, []);
 
-  const handleSave = async ({ type, title, slug, href, navLabel, isPublished, parentId, isReserved }) => {
+  const handleSave = async ({ type, title, slug, href, navLabel, isPublished, parentId, isReserved, hideFromNav }) => {
     if (modal?.mode === 'edit' && modal.page) {
-      await api.patch(`/web/pages/${modal.page.id}`, { title, navLabel, slug, isPublished, href, isReserved });
+      await api.patch(`/web/pages/${modal.page.id}`, { title, navLabel, slug, isPublished, href, isReserved, hideFromNav });
       toast('Item updated.');
     } else {
       await api.post('/web/pages', {
@@ -434,6 +463,7 @@ export default function Pages() {
         href: href || null,
         parentId: parentId || null,
         isReserved,
+        hideFromNav,
       });
       toast('Item added.');
     }
@@ -453,23 +483,66 @@ export default function Pages() {
     await load();
   };
 
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+    const { source, destination, draggableId } = result;
+    
+    // Only allow reordering within the same list (same parent)
+    if (source.droppableId !== destination.droppableId) return;
+
+    const listId = source.droppableId;
+    const isRegular = listId === 'regular';
+    const filteredList = isRegular 
+      ? topLevel.filter(p => !p.isReserved)
+      : topLevel.filter(p => p.isReserved);
+
+    const newOrder = Array.from(filteredList);
+    const [moved] = newOrder.splice(source.index, 1);
+    newOrder.splice(destination.index, 0, moved);
+
+    // Update local state optimistically
+    const reorderedPages = newOrder.map((page, index) => ({
+      ...page,
+      order: index,
+    }));
+
+    // Merge back with the other list
+    const otherList = isRegular
+      ? topLevel.filter(p => p.isReserved)
+      : topLevel.filter(p => !p.isReserved);
+    
+    setPages([...reorderedPages, ...otherList]);
+
+    // Send to API
+    try {
+      await api.put('/web/pages/reorder', {
+        items: reorderedPages.map((p, i) => ({ id: p.id, order: i })),
+      });
+      toast('Order updated.');
+    } catch (e) {
+      console.error(e);
+      toast('Failed to update order.', 'error');
+      await load(); // Revert on error
+    }
+  };
+
   // Build tree: top-level items + their children
   const topLevel = pages.filter(p => !p.parentId);
   const childrenOf = (id) => pages.filter(p => p.parentId === id);
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Navigation</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Pages & Navigation</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Manage your site's main menu. Items appear in the order shown.
+            Drag to reorder · Items appear in the order shown on the public site.
           </p>
         </div>
         <button
           onClick={() => setModal({ mode: 'add' })}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Add Item
@@ -477,14 +550,14 @@ export default function Pages() {
       </div>
 
       {/* Nav preview bar */}
-      {!loading && topLevel.length > 0 && (
-        <div className="mb-6 bg-gray-900 rounded-xl px-5 py-3 flex items-center gap-1 overflow-x-auto">
-          <span className="text-white text-sm font-bold mr-4 flex-shrink-0">Site Name</span>
-          {topLevel.map(page => {
+      {!loading && topLevel.filter(p => !p.hideFromNav).length > 0 && (
+        <div className="mb-6 bg-gray-900 rounded-xl px-5 py-3 flex items-center gap-1 overflow-x-auto shadow-inner">
+          <span className="text-white text-sm font-bold mr-4 flex-shrink-0 opacity-70">Preview</span>
+          {topLevel.filter(p => !p.hideFromNav).map(page => {
             const kids = childrenOf(page.id);
             return (
               <div key={page.id} className="relative group/nav flex-shrink-0">
-                <span className="text-gray-300 hover:text-white text-sm px-3 py-1.5 rounded-md hover:bg-white/10 cursor-default flex items-center gap-1">
+                <span className="text-gray-300 hover:text-white text-sm px-3 py-1.5 rounded-md hover:bg-white/10 cursor-default flex items-center gap-1 transition-colors">
                   {page.navLabel || page.title}
                   {kids.length > 0 && <ChevronDown className="w-3 h-3 opacity-60" />}
                 </span>
@@ -506,72 +579,127 @@ export default function Pages() {
       {/* List */}
       {loading ? (
         <div className="space-y-2">
-          {[1,2,3].map(i => <div key={i} className="h-14 bg-gray-100 rounded-lg animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
         </div>
       ) : topLevel.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl">
-          <Globe className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">No navigation items yet</p>
+        <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+          <Globe className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-600 font-semibold">No navigation items yet</p>
           <p className="text-gray-400 text-sm mt-1">Add a page or link to build your nav bar.</p>
+          <button
+            onClick={() => setModal({ mode: 'add' })}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-4 h-4" /> Add your first item
+          </button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {/* Regular Pages */}
-          {topLevel.filter(p => !p.isReserved).length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2 px-2">Regular Pages</h3>
-              <div className="space-y-1 bg-white border border-gray-200 rounded-xl p-3">
-                {topLevel.filter(p => !p.isReserved).map(page => (
-                  <NavRow
-                    key={page.id}
-                    page={page}
-                    depth={0}
-                    isLink={page.slug?.startsWith('__link_')}
-                    children={childrenOf(page.id)}
-                    onEdit={p => setModal({ mode: 'edit', page: p })}
-                    onDelete={handleDelete}
-                    onAddChild={parentId => setModal({ mode: 'add', parentId })}
-                  />
-                ))}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="space-y-5">
+            {/* Regular Pages */}
+            {topLevel.filter(p => !p.isReserved).length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pages</h3>
+                  <div className="flex-1 h-px bg-gray-100" />
+                </div>
+                <Droppable droppableId="regular">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`space-y-1 bg-white border border-gray-200 rounded-2xl p-2 shadow-sm transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50 border-blue-200' : ''}`}
+                    >
+                      {topLevel.filter(p => !p.isReserved).map((page, index) => (
+                        <Draggable key={page.id} draggableId={page.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
+                            >
+                              <NavRow
+                                page={page}
+                                depth={0}
+                                isLink={page.slug?.startsWith('__link_')}
+                                children={childrenOf(page.id)}
+                                onEdit={p => setModal({ mode: 'edit', page: p })}
+                                onDelete={handleDelete}
+                                onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Reserved Pages */}
-          {topLevel.filter(p => p.isReserved).length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2 px-2 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-500" />
-                Reserved Paths
-              </h3>
-              <div className="space-y-1 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                {topLevel.filter(p => p.isReserved).map(page => (
-                  <NavRow
-                    key={page.id}
-                    page={page}
-                    depth={0}
-                    isLink={page.slug?.startsWith('__link_')}
-                    children={childrenOf(page.id)}
-                    onEdit={p => setModal({ mode: 'edit', page: p })}
-                    onDelete={handleDelete}
-                    onAddChild={parentId => setModal({ mode: 'add', parentId })}
-                  />
-                ))}
+            {/* Reserved Pages */}
+            {topLevel.filter(p => p.isReserved).length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                  <h3 className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Reserved Paths</h3>
+                  <div className="flex-1 h-px bg-amber-100" />
+                </div>
+                <Droppable droppableId="reserved">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`space-y-1 bg-amber-50/60 border border-amber-200 rounded-2xl p-2 transition-colors ${snapshot.isDraggingOver ? 'bg-amber-100 border-amber-300' : ''}`}
+                    >
+                      {topLevel.filter(p => p.isReserved).map((page, index) => (
+                        <Draggable key={page.id} draggableId={page.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
+                            >
+                              <NavRow
+                                page={page}
+                                depth={0}
+                                isLink={page.slug?.startsWith('__link_')}
+                                children={childrenOf(page.id)}
+                                onEdit={p => setModal({ mode: 'edit', page: p })}
+                                onDelete={handleDelete}
+                                onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+                <p className="mt-2 text-xs text-amber-600/80 px-2 flex items-center gap-1.5">
+                  <AlertCircle className="w-3 h-3" />
+                  Reserved for system use — may conflict with built-in routes.
+                </p>
               </div>
-              <p className="mt-2 text-xs text-amber-700 px-2">
-                These paths are reserved for system use and may conflict with built-in features.
-              </p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </DragDropContext>
       )}
 
-      {/* Footer note */}
+      {/* Footer hint */}
       {!loading && topLevel.length > 0 && (
-        <p className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
-          <FolderPlus className="w-3.5 h-3.5" />
-          Click the folder icon on any top-level item to add a sub-menu dropdown.
-        </p>
+        <div className="mt-4 flex items-center gap-4 text-xs text-gray-400 px-1">
+          <span className="flex items-center gap-1.5">
+            <GripVertical className="w-3.5 h-3.5" /> Drag rows to reorder
+          </span>
+          <span className="flex items-center gap-1.5">
+            <FolderPlus className="w-3.5 h-3.5" /> Folder icon adds a sub-menu
+          </span>
+        </div>
       )}
 
       {/* Modal */}

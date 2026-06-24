@@ -302,7 +302,7 @@ export default function Submissions() {
         )}
         
         {/* Confirm Dialog Mount */}
-        <ConfirmDialogMount />
+        {ConfirmDialogMount}
       </div>
     </div>
   );

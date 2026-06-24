@@ -73,9 +73,9 @@ export const getPageBySlug = async (req, res) => {
 
     // ── Build nav from Pages list ─────────────────────────────────────────
     const allNavPages = await prisma.webPage.findMany({
-      where: { isPublished: true },
-      select: { id: true, slug: true, title: true, navLabel: true, href: true, parentId: true },
-      orderBy: { updatedAt: 'asc' },
+      where: { isPublished: true, hideFromNav: false },
+      select: { id: true, slug: true, title: true, navLabel: true, href: true, parentId: true, order: true },
+      orderBy: { order: 'asc' },
     });
 
     const topLevel = allNavPages.filter(p => !p.parentId);
