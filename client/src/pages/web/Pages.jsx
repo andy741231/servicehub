@@ -1,5 +1,62 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+
+// ─── Focus trap hook ────────────────────────────────────────────────────────
+
+function useFocusTrap(isActive) {
+  const containerRef = useRef(null);
+  const previousActiveElementRef = useRef(null);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    // Store the previously focused element
+    previousActiveElementRef.current = document.activeElement;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Focus the first focusable element
+    const focusableElements = container.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (firstElement) {
+      firstElement.focus();
+    }
+
+    // Handle Tab key to trap focus
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return;
+
+      if (e.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    container.addEventListener('keydown', handleTab);
+
+    // Cleanup: restore focus when modal closes
+    return () => {
+      container.removeEventListener('keydown', handleTab);
+      previousActiveElementRef.current?.focus();
+    };
+  }, [isActive]);
+
+  return containerRef;
+}
 import {
   Plus, ExternalLink, Trash2, Pencil, Globe, Link as LinkIcon,
   X, Check, AlertCircle, ChevronRight, ChevronDown, GripVertical, FolderPlus
@@ -8,7 +65,7 @@ import api from '../../utils/api';
 import { useConfirm } from '../../components/Dialog';
 import { useToast } from '../../components/Toast';
 
-const RESERVED_SLUGS = ['hub-admin'];
+const RESERVED_SLUGS = ['hub-admin', 'form', 'f', 'forms'];
 
 function slugify(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -19,6 +76,7 @@ function slugify(text) {
 // ─────────────────────────────────────────────
 function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages = [] }) {
   const isEdit = !!initial;
+  const containerRef = useFocusTrap(true);
   const [type,       setType]       = useState(initial?.href ? 'link' : 'page');
   const [title,      setTitle]      = useState(initial?.title || '');
   const [slug,       setSlug]       = useState(initial?.slug?.startsWith('__link_') ? '' : (initial?.slug || ''));
@@ -26,8 +84,16 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
   const [href,       setHref]       = useState(initial?.href || '');
   const [navLabel,   setNavLabel]   = useState(initial?.navLabel || '');
   const [isPublished, setIsPublished] = useState(initial?.isPublished ?? true);
+  const [isReserved, setIsReserved] = useState(initial?.isReserved ?? false);
   const [error,      setError]      = useState('');
   const [saving,     setSaving]     = useState(false);
+
+  // Update isReserved when slug changes
+  useEffect(() => {
+    if (type === 'page' && !slugManual) {
+      setIsReserved(RESERVED_SLUGS.includes(slugify(slug)));
+    }
+  }, [slug, slugManual, type]);
 
   const handleTitleChange = (val) => {
     setTitle(val);
@@ -35,13 +101,18 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
     if (!navLabel)   setNavLabel(val);
   };
 
+  const handleSlugChange = (val) => {
+    setSlug(slugify(val));
+    setSlugManual(true);
+    // Auto-set reserved flag if slug matches reserved paths
+    setIsReserved(RESERVED_SLUGS.includes(slugify(val)));
+  };
+
   const handleSubmit = async () => {
     setError('');
     if (!title.trim()) return setError('Label is required.');
     if (type === 'page') {
       if (!slug.trim()) return setError('URL path is required.');
-      if (RESERVED_SLUGS.includes(slug.trim()))
-        return setError(`"${slug.trim()}" is a reserved path and cannot be used.`);
     }
     if (type === 'link' && !href.trim()) return setError('URL is required.');
     setSaving(true);
@@ -54,6 +125,7 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
         navLabel:   navLabel || title,
         isPublished,
         parentId,
+        isReserved,
       });
       onClose();
     } catch (e) {
@@ -68,13 +140,13 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-xl shadow-2xl w-[440px]" onMouseDown={e => e.stopPropagation()}>
+      <div ref={containerRef} className="bg-white rounded-xl shadow-2xl w-[440px]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900">
             {isEdit ? 'Edit Item' : parentId ? 'Add Sub-menu Item' : 'Add Navigation Item'}
           </h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-3 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded" aria-label="Close"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-6 space-y-4">
@@ -116,7 +188,7 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
                 <input
                   type="text"
                   value={slug}
-                  onChange={e => { setSlug(slugify(e.target.value)); setSlugManual(true); }}
+                  onChange={e => handleSlugChange(e.target.value)}
                   className="flex-1 px-3 py-2 text-sm focus:outline-none"
                   placeholder="about-us"
                 />
@@ -143,9 +215,37 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
               <button
                 onClick={() => setIsPublished(p => !p)}
                 className={`relative w-10 h-6 rounded-full transition-colors ${isPublished ? 'bg-blue-500' : 'bg-gray-300'}`}
+                aria-label={isPublished ? 'Unpublish' : 'Publish'}
               >
                 <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${isPublished ? 'left-5' : 'left-1'}`} />
               </button>
+            </div>
+          )}
+
+          {/* Reserved path toggle (pages only) */}
+          {type === 'page' && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Reserved Path</label>
+                <span className="text-xs text-gray-400">(System use)</span>
+              </div>
+              <button
+                onClick={() => setIsReserved(p => !p)}
+                className={`relative w-10 h-6 rounded-full transition-colors ${isReserved ? 'bg-amber-500' : 'bg-gray-300'}`}
+                aria-label={isReserved ? 'Unmark as reserved' : 'Mark as reserved'}
+              >
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${isReserved ? 'left-5' : 'left-1'}`} />
+              </button>
+            </div>
+          )}
+
+          {/* Reserved path warning */}
+          {type === 'page' && isReserved && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">
+                <strong>Reserved path:</strong> This path is reserved for system use and will be shown in a separate group.
+              </div>
             </div>
           )}
 
@@ -157,11 +257,11 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
         </div>
 
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 active:bg-gray-200 active:scale-95 transition-transform rounded-lg">Cancel</button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform disabled:opacity-50 flex items-center gap-2"
           >
             {saving ? <AlertCircle className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {isEdit ? 'Save Changes' : 'Add Item'}
@@ -191,6 +291,7 @@ function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLin
         <button
           onClick={() => setOpen(o => !o)}
           className={`w-5 h-5 flex items-center justify-center flex-shrink-0 ${hasChildren ? 'text-gray-400 hover:text-gray-600' : 'invisible'}`}
+          aria-label={open ? 'Collapse' : 'Expand'}
         >
           {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         </button>
@@ -209,9 +310,16 @@ function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLin
             {isLink ? (page.href || 'external') : `/${page.slug}`}
           </span>
           {!isLink && (
-            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${page.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-              {page.isPublished ? 'Published' : 'Draft'}
-            </span>
+            <>
+              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${page.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                {page.isPublished ? 'Published' : 'Draft'}
+              </span>
+              {page.isReserved && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                  Reserved
+                </span>
+              )}
+            </>
           )}
         </div>
 
@@ -222,6 +330,7 @@ function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLin
             <button
               onClick={() => onAddChild(page.id)}
               className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-md"
+              aria-label="Add sub-menu item"
               title="Add sub-menu item"
             >
               <FolderPlus className="w-4 h-4" />
@@ -232,6 +341,7 @@ function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLin
             <Link
               to={`/hub-admin/web/editor/${page.slug}`}
               className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-md"
+              aria-label="Edit page content"
               title="Edit page content"
             >
               <Pencil className="w-4 h-4" />
@@ -244,17 +354,18 @@ function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLin
               target="_blank"
               rel="noreferrer"
               className="p-1.5 hover:bg-gray-100 text-gray-400 rounded-md"
+              aria-label="View on site"
               title="View on site"
             >
               <ExternalLink className="w-4 h-4" />
             </a>
           )}
           {/* Settings */}
-          <button onClick={() => onEdit(page)} className="p-1.5 hover:bg-gray-100 text-gray-400 rounded-md" title="Settings">
+          <button onClick={() => onEdit(page)} className="p-1.5 hover:bg-gray-100 text-gray-400 rounded-md" aria-label="Settings" title="Settings">
             <Pencil className="w-4 h-4" />
           </button>
           {/* Delete */}
-          <button onClick={() => onDelete(page.id)} className="p-1.5 hover:bg-red-50 text-red-400 rounded-md" title="Delete">
+          <button onClick={() => onDelete(page.id)} className="p-1.5 hover:bg-red-50 text-red-400 rounded-md" aria-label="Delete" title="Delete">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -295,7 +406,12 @@ export default function Pages() {
     try {
       setLoading(true);
       const { data } = await api.get('/web/pages');
-      setPages(Array.isArray(data) ? data : []);
+      // Auto-set isReserved flag based on slug for existing pages
+      const pagesWithReserved = Array.isArray(data) ? data.map(page => ({
+        ...page,
+        isReserved: page.isReserved || RESERVED_SLUGS.includes(page.slug)
+      })) : [];
+      setPages(pagesWithReserved);
     } catch (e) {
       console.error(e);
     } finally {
@@ -305,9 +421,9 @@ export default function Pages() {
 
   useEffect(() => { load(); }, []);
 
-  const handleSave = async ({ type, title, slug, href, navLabel, isPublished, parentId }) => {
+  const handleSave = async ({ type, title, slug, href, navLabel, isPublished, parentId, isReserved }) => {
     if (modal?.mode === 'edit' && modal.page) {
-      await api.patch(`/web/pages/${modal.page.id}`, { title, navLabel, slug, isPublished, href });
+      await api.patch(`/web/pages/${modal.page.id}`, { title, navLabel, slug, isPublished, href, isReserved });
       toast('Item updated.');
     } else {
       await api.post('/web/pages', {
@@ -317,6 +433,7 @@ export default function Pages() {
         isPublished,
         href: href || null,
         parentId: parentId || null,
+        isReserved,
       });
       toast('Item added.');
     }
@@ -398,19 +515,54 @@ export default function Pages() {
           <p className="text-gray-400 text-sm mt-1">Add a page or link to build your nav bar.</p>
         </div>
       ) : (
-        <div className="space-y-1 bg-white border border-gray-200 rounded-xl p-3">
-          {topLevel.map(page => (
-            <NavRow
-              key={page.id}
-              page={page}
-              depth={0}
-              isLink={page.slug?.startsWith('__link_')}
-              children={childrenOf(page.id)}
-              onEdit={p => setModal({ mode: 'edit', page: p })}
-              onDelete={handleDelete}
-              onAddChild={parentId => setModal({ mode: 'add', parentId })}
-            />
-          ))}
+        <div className="space-y-4">
+          {/* Regular Pages */}
+          {topLevel.filter(p => !p.isReserved).length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 px-2">Regular Pages</h3>
+              <div className="space-y-1 bg-white border border-gray-200 rounded-xl p-3">
+                {topLevel.filter(p => !p.isReserved).map(page => (
+                  <NavRow
+                    key={page.id}
+                    page={page}
+                    depth={0}
+                    isLink={page.slug?.startsWith('__link_')}
+                    children={childrenOf(page.id)}
+                    onEdit={p => setModal({ mode: 'edit', page: p })}
+                    onDelete={handleDelete}
+                    onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reserved Pages */}
+          {topLevel.filter(p => p.isReserved).length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 px-2 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500" />
+                Reserved Paths
+              </h3>
+              <div className="space-y-1 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                {topLevel.filter(p => p.isReserved).map(page => (
+                  <NavRow
+                    key={page.id}
+                    page={page}
+                    depth={0}
+                    isLink={page.slug?.startsWith('__link_')}
+                    children={childrenOf(page.id)}
+                    onEdit={p => setModal({ mode: 'edit', page: p })}
+                    onDelete={handleDelete}
+                    onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-amber-700 px-2">
+                These paths are reserved for system use and may conflict with built-in features.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

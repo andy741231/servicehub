@@ -31,9 +31,10 @@ async function main() {
   const hashedPassword = await bcrypt.hash('Admin@2024!', 10);
 
   const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@servicehub.com' },
+    where: { username: 'admin' },
     update: {},
     create: {
+      username: 'admin',
       email: 'admin@servicehub.com',
       password: hashedPassword,
       name: 'System Admin',
@@ -56,7 +57,42 @@ async function main() {
     });
   }
 
-  console.log('Admin user seeded: admin@servicehub.com / Admin@2024!');
+  console.log('Admin user seeded: admin / Admin@2024!');
+
+  // Create test user with simple credentials
+  const testHashedPassword = await bcrypt.hash('123', 10);
+
+  const testUser = await prisma.user.upsert({
+    where: { username: 'testuser' },
+    update: {},
+    create: {
+      username: 'testuser',
+      email: 'user@test.com',
+      password: testHashedPassword,
+      name: 'user',
+    },
+  });
+
+  // Assign viewer role to test user
+  const viewerRole = await prisma.role.findUnique({ where: { name: 'viewer' } });
+  if (viewerRole) {
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: testUser.id, roleId: viewerRole.id } },
+      update: {},
+      create: { userId: testUser.id, roleId: viewerRole.id },
+    });
+  }
+
+  // Grant access to all apps for testing
+  for (const appId of ['web', 'forms', 'email']) {
+    await prisma.appPermission.upsert({
+      where: { userId_appId: { userId: testUser.id, appId } },
+      update: { canAccess: true },
+      create: { userId: testUser.id, appId, canAccess: true },
+    });
+  }
+
+  console.log('Test user seeded: testuser / 123');
 }
 
 main()

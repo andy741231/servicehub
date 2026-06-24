@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await login(email, password);
+      await login(username, password, rememberMe);
       navigate('/hub-admin/web');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
@@ -25,16 +26,16 @@ export default function Login() {
         <h2 className="text-center text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
       </div>
       <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-        {error && <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</div>}
+        {error && <div role="alert" aria-live="polite" className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</div>}
         <div className="rounded-md shadow-sm -space-y-px">
           <div>
             <input
-              type="email"
+              type="text"
               required
               className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
           </div>
           <div>
@@ -48,18 +49,26 @@ export default function Login() {
             />
           </div>
         </div>
+        <div className="flex items-center">
+          <input
+            id="remember-me"
+            name="remember-me"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+            Trust this computer, remember me
+          </label>
+        </div>
         <div>
           <button
             type="submit"
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Sign in
           </button>
-        </div>
-        <div className="text-sm text-center">
-          <Link to="/hub-admin/register" className="font-medium text-blue-600 hover:text-blue-500">
-            Don't have an account? Register
-          </Link>
         </div>
       </form>
     </div>

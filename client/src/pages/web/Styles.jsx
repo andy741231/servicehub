@@ -150,7 +150,7 @@ export default function Styles() {
           </div>
           <div className="px-5 py-2">
             {Object.entries(colorLabels).map(([key, label]) => (
-              <ColorSwatch key={key} label={label} value={tokens.colors[key] || '#000000'} onChange={v => setColor(key, v)} />
+              <ColorSwatch key={key} label={label} value={tokens.colors[key] || '#2563eb'} onChange={v => setColor(key, v)} />
             ))}
           </div>
 

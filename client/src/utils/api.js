@@ -11,15 +11,16 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (error.response?.data?.expired) {
-        originalRequest._retry = true;
-        try {
-          await axios.post('/api/auth/refresh', {}, { withCredentials: true });
-          return api(originalRequest);
-        } catch (refreshError) {
-          useAuthStore.getState().setSessionExpired(true);
-          return Promise.reject(refreshError);
-        }
+      originalRequest._retry = true;
+      try {
+        await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+        return api(originalRequest);
+      } catch (refreshError) {
+        useAuthStore.getState().setSessionExpired(true);
+        // Also trigger the logged out message for admin pages
+        const authStore = useAuthStore.getState();
+        authStore.setState({ wasLoggedIn: true, showLoggedOutMessage: true });
+        return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);

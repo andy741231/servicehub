@@ -16,7 +16,8 @@ datasource db {
 
 model User {
   id           String   @id @default(uuid())
-  email        String   @unique
+  username     String   @unique
+  email        String
   password     String
   name         String
   isActive     Boolean  @default(true)
@@ -103,38 +104,66 @@ model FormSubmission {
 // ----------------------------------------------------------------------------
 
 model EmailCampaign {
-  id          String       @id @default(uuid())
-  name        String
-  subject     String
-  bodyHtml    String
-  status      String       // "draft" | "scheduled" | "sent"
-  scheduledAt DateTime?
-  createdAt   DateTime     @default(now())
-  deletedAt   DateTime?    // Soft delete support
-  logs        EmailLog[]
+  id             String             @id @default(uuid())
+  name           String
+  subject        String
+  bodyHtml       String
+  status         String             // "draft" | "scheduled" | "sent" | "paused"
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  mailingListId  String?
+  mailingList    MailingList?       @relation(fields: [mailingListId], references: [id])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?          // Soft delete support
+  logs           EmailLog[]
+  metrics        CampaignMetrics?
 }
 
 model MailingList {
-  id         String      @id @default(uuid())
-  name       String
-  recipients Recipient[]
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  recipients  Recipient[]
+  campaigns   EmailCampaign[]
 }
 
 model Recipient {
   id            String      @id @default(uuid())
   email         String
-  name          String?
+  firstName     String?
+  lastName      String?
+  customFields  String?     // JSON serialized for custom contact fields
+  status        String      @default("active") // "active" | "unsubscribed" | "bounced" | "complained"
   mailingListId String
   list          MailingList @relation(fields: [mailingListId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model EmailLog {
   id         String        @id @default(uuid())
   campaignId String
   recipient  String
-  status     String        // "sent" | "failed" | "opened"
+  status     String        // "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "unsubscribed"
   sentAt     DateTime      @default(now())
+  metadata   String?       // JSON serialized for additional event data
   campaign   EmailCampaign @relation(fields: [campaignId], references: [id])
+}
+
+model CampaignMetrics {
+  id          String        @id @default(uuid())
+  campaignId  String        @unique
+  sent        Int           @default(0)
+  delivered   Int           @default(0)
+  opened      Int           @default(0)
+  clicked     Int           @default(0)
+  bounced     Int           @default(0)
+  unsubscribed Int          @default(0)
+  complained  Int           @default(0)
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id])
 }
 
 // ----------------------------------------------------------------------------

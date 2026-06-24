@@ -28,12 +28,12 @@ const resolveUrl = (url) => {
 
 const DEFAULT_HEADER = {
   logo:       { text: '', imageUrl: '', width: '', height: '' },
-  styles:     { backgroundColor: '#ffffff', textColor: '#111827' },
+  styles:     { backgroundColor: 'hsl(var(--surface))', textColor: 'hsl(var(--text-base))' },
 };
 
 const DEFAULT_FOOTER = {
   copyright:  '',
-  styles:     { backgroundColor: '#f3f4f6', textColor: '#374151' },
+  styles:     { backgroundColor: 'hsl(var(--surface-raised))', textColor: 'hsl(var(--text-muted))' },
   sections:   [],
 };
 
@@ -108,7 +108,7 @@ function FooterSectionEditor({ section, onChange, onDelete }) {
             {SECTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
           </select>
         </div>
-        <button onClick={onDelete} className="p-1 hover:bg-red-50 text-red-400 rounded-lg">
+        <button onClick={onDelete} className="p-3 min-w-[44px] min-h-[44px] hover:bg-red-50 text-red-400 rounded-lg" aria-label="Delete">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
@@ -296,7 +296,7 @@ export default function HeaderFooter() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
+      <div className="flex gap-2 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
         {[{ id: 'header', label: 'Header' }, { id: 'footer', label: 'Footer' }].map(t => (
           <button
             key={t.id}
@@ -414,12 +414,12 @@ export default function HeaderFooter() {
               <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Colors</h2>
               <ColorRow
                 label="Background"
-                value={header.styles?.backgroundColor || '#ffffff'}
+                value={header.styles?.backgroundColor || 'hsl(var(--surface))'}
                 onChange={v => updateHeader('styles', { ...header.styles, backgroundColor: v })}
               />
               <ColorRow
                 label="Text / Links"
-                value={header.styles?.textColor || '#111827'}
+                value={header.styles?.textColor || 'hsl(var(--text-base))'}
                 onChange={v => updateHeader('styles', { ...header.styles, textColor: v })}
               />
             </div>
@@ -445,12 +445,12 @@ export default function HeaderFooter() {
               <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Colors</h2>
               <ColorRow
                 label="Background"
-                value={footer.styles?.backgroundColor || '#f3f4f6'}
+                value={footer.styles?.backgroundColor || 'hsl(var(--surface-raised))'}
                 onChange={v => updateFooter('styles', { ...footer.styles, backgroundColor: v })}
               />
               <ColorRow
                 label="Text"
-                value={footer.styles?.textColor || '#374151'}
+                value={footer.styles?.textColor || 'hsl(var(--text-muted))'}
                 onChange={v => updateFooter('styles', { ...footer.styles, textColor: v })}
               />
             </div>

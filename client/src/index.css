@@ -122,16 +122,30 @@
     color: hsl(var(--text-base));
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
       "Helvetica Neue", Arial, sans-serif;
-    font-size: 0.875rem; /* text-body default */
+    font-size: 1rem; /* text-body default - changed from 0.875rem for accessibility */
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* Focus ring — consistent across all interactive elements */
   :focus-visible {
     outline: 2px solid hsl(var(--primary));
     outline-offset: 2px;
+  }
+
+  /* Reduced motion support for users with vestibular disorders */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -174,4 +188,10 @@
   .badge-info    { background-color: hsl(var(--info-light));    color: hsl(var(--info));    }
   .badge-neutral { background-color: hsl(var(--surface-raised)); color: hsl(var(--text-muted)); }
   .badge-primary { background-color: hsl(var(--primary-light)); color: hsl(var(--primary)); }
+
+  /* Safe area utilities for modern phones with notches and gesture bars */
+  .safe-top { padding-top: max(16px, env(safe-area-inset-top)); }
+  .safe-bottom { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  .safe-left { padding-left: max(16px, env(safe-area-inset-left)); }
+  .safe-right { padding-right: max(16px, env(safe-area-inset-right)); }
 }

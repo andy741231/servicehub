@@ -119,7 +119,7 @@ export default function Assets() {
         <button
           onClick={() => fileInput.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform disabled:opacity-50"
         >
           {uploading ? <AlertCircle className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
           {uploading ? 'Uploading…' : 'Upload'}
@@ -188,14 +188,16 @@ export default function Assets() {
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => copyUrl(asset.url, asset.id)}
-                          className="p-1.5 bg-white/20 hover:bg-white/30 rounded text-white"
+                          className="p-3 min-w-[44px] min-h-[44px] bg-white/20 hover:bg-white/30 rounded text-white"
+                          aria-label="Copy URL"
                           title="Copy URL"
                         >
                           {copiedId === asset.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                         <button
                           onClick={() => handleDelete(asset.id)}
-                          className="p-1.5 bg-white/20 hover:bg-red-500/80 rounded text-white"
+                          className="p-3 min-w-[44px] min-h-[44px] bg-white/20 hover:bg-red-500/80 rounded text-white"
+                          aria-label="Delete"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -226,13 +228,13 @@ export default function Assets() {
                         <p className="text-xs text-gray-400">{formatSize(asset.size)}</p>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => copyUrl(asset.url, asset.id)} className="p-1.5 hover:bg-gray-100 rounded text-gray-500" title="Copy URL">
+                        <button onClick={() => copyUrl(asset.url, asset.id)} className="p-3 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded text-gray-500" aria-label="Copy URL" title="Copy URL">
                           {copiedId === asset.id ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                         </button>
-                        <a href={asset.url} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-gray-100 rounded text-gray-500" title="Open">
+                        <a href={asset.url} target="_blank" rel="noreferrer" className="p-3 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded text-gray-500" aria-label="Open" title="Open">
                           <File className="w-4 h-4" />
                         </a>
-                        <button onClick={() => handleDelete(asset.id)} className="p-1.5 hover:bg-red-50 rounded text-red-500" title="Delete">
+                        <button onClick={() => handleDelete(asset.id)} className="p-3 min-w-[44px] min-h-[44px] hover:bg-red-50 rounded text-red-500" aria-label="Delete" title="Delete">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>

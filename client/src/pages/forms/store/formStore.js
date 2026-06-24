@@ -1,0 +1,132 @@
+import { create } from 'zustand';
+
+const useFormStore = create((set) => ({
+  // Current form being edited
+  fields: [],
+  selectedField: null,
+  currentFormId: null,
+  
+  // All saved forms
+  forms: [
+    {
+      id: 'form-1',
+      title: 'Contact Form',
+      description: 'Basic contact information collection',
+      fields: [
+        { id: 'field-1', type: 'text', label: 'Name', placeholder: 'Your name', required: true },
+        { id: 'field-2', type: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+        { id: 'field-3', type: 'textarea', label: 'Message', placeholder: 'Your message', required: true },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'form-2',
+      title: 'Survey Form',
+      description: 'Customer satisfaction survey',
+      fields: [
+        { id: 'field-4', type: 'text', label: 'Company Name', placeholder: 'Company name', required: true },
+        { id: 'field-5', type: 'select', label: 'Industry', placeholder: 'Select industry', required: true, options: ['Technology', 'Healthcare', 'Finance', 'Other'] },
+        { id: 'field-6', type: 'number', label: 'Employees', placeholder: 'Number of employees', required: false },
+      ],
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+  ],
+
+  addField: (field) => set((state) => ({ fields: [...state.fields, field] })),
+  
+  removeField: (fieldId) => set((state) => ({
+    fields: state.fields.filter((f) => f.id !== fieldId),
+  })),
+  
+  duplicateField: (fieldId) => set((state) => {
+    const fieldToDuplicate = state.fields.find((f) => f.id === fieldId);
+    if (!fieldToDuplicate) return state;
+    
+    const duplicatedField = {
+      ...fieldToDuplicate,
+      id: `field-${Date.now()}`,
+      label: `${fieldToDuplicate.label} (copy)`,
+    };
+    
+    const index = state.fields.findIndex((f) => f.id === fieldId);
+    const newFields = [...state.fields];
+    newFields.splice(index + 1, 0, duplicatedField);
+    
+    return { fields: newFields };
+  }),
+  
+  updateField: (fieldId, updates) => set((state) => ({
+    fields: state.fields.map((f) =>
+      f.id === fieldId ? { ...f, ...updates } : f
+    ),
+  })),
+  
+  reorderFields: (fromIndex, toIndex) => set((state) => {
+    const newFields = [...state.fields];
+    const [movedField] = newFields.splice(fromIndex, 1);
+    newFields.splice(toIndex, 0, movedField);
+    return { fields: newFields };
+  }),
+  
+  setSelectedField: (fieldId) => set({ selectedField: fieldId }),
+  
+  setCurrentForm: (formId) => set((state) => {
+    const form = state.forms.find((f) => f.id === formId);
+    if (form) {
+      return {
+        currentFormId: formId,
+        fields: form.fields,
+        selectedField: null,
+      };
+    }
+    return state;
+  }),
+  
+  createNewForm: () => {
+    const newForm = {
+      id: `form-${Date.now()}`,
+      title: 'Untitled Form',
+      description: '',
+      fields: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      forms: [...state.forms, newForm],
+      currentFormId: newForm.id,
+      fields: [],
+      selectedField: null,
+    }));
+    return newForm.id;
+  },
+  
+  saveCurrentForm: (title, description) => set((state) => {
+    if (!state.currentFormId) return state;
+    
+    const updatedForms = state.forms.map((form) =>
+      form.id === state.currentFormId
+        ? {
+            ...form,
+            title: title || form.title,
+            description: description || form.description,
+            fields: state.fields,
+            updatedAt: new Date().toISOString(),
+          }
+        : form
+    );
+    
+    return { forms: updatedForms };
+  }),
+  
+  deleteForm: (formId) => set((state) => ({
+    forms: state.forms.filter((f) => f.id !== formId),
+    currentFormId: state.currentFormId === formId ? null : state.currentFormId,
+    fields: state.currentFormId === formId ? [] : state.fields,
+  })),
+  
+  resetForm: () => set({ fields: [], selectedField: null, currentFormId: null }),
+}));
+
+export default useFormStore;

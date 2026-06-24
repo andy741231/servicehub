@@ -4,14 +4,18 @@ import useAuthStore from './store/authStore';
 import AuthLayout from './layouts/AuthLayout';
 import AppShell from './layouts/AppShell';
 import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
 import Users from './pages/admin/Users';
 import WebIndex from './pages/web/index';
 import WebPages from './pages/web/Pages';
 import WebStyles from './pages/web/Styles';
 import WebAssets from './pages/web/Assets';
 import WebHeaderFooter from './pages/web/HeaderFooter';
+import FormsIndex from './pages/forms/index';
+import FormsBuilder from './pages/forms/FormsBuilder';
+import Submissions from './pages/forms/Submissions';
+import EmailIndex from './pages/email/index';
 import PublicHome from './pages/public/Home';
+import FormView from './pages/public/FormView';
 import SessionExpiredModal from './components/SessionExpiredModal';
 
 function ProtectedRoute({ children }) {
@@ -34,14 +38,14 @@ export default function App() {
       <Routes>
         {/* ── Public site routes ── */}
         <Route path="/" element={<PublicHome />} />
+        <Route path="/form/:formId" element={<FormView />} />
         <Route path="/:slug" element={<PublicHome />} />
 
         {/* ── Admin backend (/hub-admin/*) ── */}
         <Route path="/hub-admin">
-          {/* Login / Register at /hub-admin and /hub-admin/register */}
+          {/* Login at /hub-admin */}
           <Route element={<AuthLayout />}>
-            <Route index         element={<Login />} />
-            <Route path="register" element={<Register />} />
+            <Route index element={<Login />} />
           </Route>
 
           {/* Protected sub-apps */}
@@ -54,9 +58,12 @@ export default function App() {
             <Route path="web/assets"        element={<WebAssets />} />
             <Route path="web/editor/:slug" element={<WebIndex />} />
 
-            {/* Other sub-apps (placeholders) */}
-            <Route path="forms" element={<div className="p-8"><h1 className="text-2xl font-bold">Forms Builder</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
-            <Route path="email" element={<div className="p-8"><h1 className="text-2xl font-bold">Email Sender</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+            {/* Other sub-apps */}
+            <Route path="forms" element={<FormsIndex />} />
+            <Route path="forms/builder/:formId?" element={<FormsBuilder />} />
+            <Route path="forms/submissions" element={<Submissions />} />
+            <Route path="email/*" element={<EmailIndex />} />
+            <Route path="directory" element={<div className="p-8"><h1 className="text-2xl font-bold">Directory</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
 
             {/* Admin */}
             <Route path="admin/users" element={<Users />} />

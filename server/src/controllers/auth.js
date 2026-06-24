@@ -2,43 +2,17 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../db/client.js';
 
-const generateTokens = (userId) => {
+const generateTokens = (userId, rememberMe = false) => {
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-  return { token, refreshToken };
-};
-
-export const register = async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) return res.status(400).json({ error: 'User already exists' });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const user = await prisma.user.create({
-      data: { email, password: hashedPassword, name }
-    });
-
-    const { token, refreshToken } = generateTokens(user.id);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken }
-    });
-
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 15 * 60 * 1000 });
-    res.json({ user: { id: user.id, email: user.email, name: user.name } });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error during registration' });
-  }
+  const refreshTokenExpiry = rememberMe ? '7d' : '1d';
+  const refreshToken = jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: refreshTokenExpiry });
+  return { token, refreshToken, refreshTokenExpiry };
 };
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const { username, password, rememberMe = false } = req.body;
+    const user = await prisma.user.findUnique({ where: { username } });
     
     // For seeded admin users, bypass bcrypt if password starts with 'hashed_' to make local dev easier, 
     // but typically we should seed actual hashed passwords. We'll do a simple check.
@@ -47,10 +21,14 @@ export const login = async (req, res) => {
     if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
     if (!user.isActive) return res.status(403).json({ error: 'Account is deactivated' });
 
-    const { token, refreshToken } = generateTokens(user.id);
+    const { token, refreshToken, refreshTokenExpiry } = generateTokens(user.id, rememberMe);
     await prisma.user.update({ where: { id: user.id }, data: { refreshToken } });
 
+    // Calculate refresh token maxAge in milliseconds
+    const refreshMaxAge = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
     res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: refreshMaxAge });
     
     // Get roles to send with response
     const roles = await prisma.userRole.findMany({ where: { userId: user.id }, include: { role: true }});
@@ -58,7 +36,7 @@ export const login = async (req, res) => {
 
     res.json({ 
       user: { 
-        id: user.id, email: user.email, name: user.name, 
+        id: user.id, username: user.username, email: user.email, name: user.name, 
         roles: roles.map(r => r.role.name),
         permissions: permissions.map(p => p.appId)
       } 
@@ -74,6 +52,7 @@ export const logout = async (req, res) => {
       await prisma.user.update({ where: { id: req.user.id }, data: { refreshToken: null } });
     }
     res.clearCookie('token');
+    res.clearCookie('refreshToken');
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Server error during logout' });
@@ -82,7 +61,7 @@ export const logout = async (req, res) => {
 
 export const refresh = async (req, res) => {
   try {
-    const { refreshToken } = req.body; // or could be a cookie too
+    const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) return res.status(401).json({ error: 'Refresh token required' });
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
@@ -92,11 +71,21 @@ export const refresh = async (req, res) => {
       return res.status(403).json({ error: 'Invalid refresh token' });
     }
 
-    const tokens = generateTokens(user.id);
-    await prisma.user.update({ where: { id: user.id }, data: { refreshToken: tokens.refreshToken } });
+    // Determine if this was a "remember me" session by checking the original token's expiry
+    const originalExpiry = decoded.exp * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const daysUntilExpiry = (originalExpiry - now) / (1000 * 60 * 60 * 24);
+    const rememberMe = daysUntilExpiry > 2; // If more than 2 days left, it was a remember me session
 
-    res.cookie('token', tokens.token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 15 * 60 * 1000 });
-    res.json({ refreshToken: tokens.refreshToken });
+    const { token, refreshToken: newRefreshToken, refreshTokenExpiry } = generateTokens(user.id, rememberMe);
+    await prisma.user.update({ where: { id: user.id }, data: { refreshToken: newRefreshToken } });
+
+    // Calculate refresh token maxAge in milliseconds
+    const refreshMaxAge = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
+    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', newRefreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: refreshMaxAge });
+    res.json({ refreshToken: newRefreshToken });
   } catch (error) {
     res.status(403).json({ error: 'Invalid or expired refresh token' });
   }
@@ -112,7 +101,7 @@ export const me = async (req, res) => {
 
     res.json({ 
       user: { 
-        id: user.id, email: user.email, name: user.name, 
+        id: user.id, username: user.username, email: user.email, name: user.name, 
         roles: roles.map(r => r.role.name),
         permissions: permissions.map(p => p.appId)
       } 

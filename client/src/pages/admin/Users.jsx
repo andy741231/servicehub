@@ -27,6 +27,7 @@ export default function Users() {
 
   // Form state
   const [formData, setFormData] = useState({
+    username: '',
     name: '',
     email: '',
     password: '',
@@ -56,6 +57,7 @@ export default function Users() {
   const openCreateModal = () => {
     setSelectedUser(null);
     setFormData({
+      username: '',
       name: '',
       email: '',
       password: '',
@@ -70,6 +72,7 @@ export default function Users() {
   const openEditModal = (user) => {
     setSelectedUser(user);
     setFormData({
+      username: user.username,
       name: user.name,
       email: user.email,
       password: '', // Password is not modified on edit
@@ -188,7 +191,7 @@ export default function Users() {
         </div>
         <button
           onClick={openCreateModal}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
         >
           <Plus className="h-5 w-5 mr-1.5" />
           Add User
@@ -203,7 +206,7 @@ export default function Users() {
         </div>
       )}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm">
+        <div role="alert" aria-live="polite" className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm">
           <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
           {error}
         </div>
@@ -232,7 +235,8 @@ export default function Users() {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-semibold text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm text-gray-500">@{user.username}</div>
+                        <div className="text-xs text-gray-400">{user.email}</div>
                       </div>
                     </div>
                   </td>
@@ -287,9 +291,9 @@ export default function Users() {
                       <button
                         onClick={() => openDeleteModal(user)}
                         className="text-red-600 hover:text-red-900 flex items-center gap-1 transition-colors"
-                        disabled={user.email === 'admin@example.com'}
+                        disabled={user.username === 'admin'}
                       >
-                        <Trash2 className={`h-4 w-4 ${user.email === 'admin@example.com' ? 'opacity-30' : ''}`} />
+                        <Trash2 className={`h-4 w-4 ${user.username === 'admin' ? 'opacity-30' : ''}`} />
                         Delete
                       </button>
                     </div>
@@ -316,6 +320,24 @@ export default function Users() {
 
             <form onSubmit={handleSubmit}>
               <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                {/* Username */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Username</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="username"
+                      required
+                      disabled={!!selectedUser}
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                      placeholder="jane_doe"
+                    />
+                  </div>
+                </div>
+
                 {/* Name */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Full Name</label>

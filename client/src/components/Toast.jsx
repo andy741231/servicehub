@@ -49,7 +49,8 @@ function ToastItem({ id, message, type = 'success', onDismiss }) {
       <span className="flex-1 text-sm font-medium">{message}</span>
       <button
         onClick={() => { setVisible(false); setTimeout(() => onDismiss(id), 300); }}
-        className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+        className="flex-shrink-0 p-3 min-w-[44px] min-h-[44px] opacity-60 hover:opacity-100 transition-opacity"
+        aria-label="Dismiss"
       >
         <X className="w-4 h-4" />
       </button>

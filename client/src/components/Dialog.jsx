@@ -20,20 +20,82 @@
  *   await alertDialog({ title: 'Saved!', message: 'Your changes have been saved.' });
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { X, Trash2, AlertTriangle, Info } from 'lucide-react';
+
+// ─── Focus trap hook ────────────────────────────────────────────────────────
+
+function useFocusTrap(isActive) {
+  const containerRef = useRef(null);
+  const previousActiveElementRef = useRef(null);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    // Store the previously focused element
+    previousActiveElementRef.current = document.activeElement;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Focus the first focusable element
+    const focusableElements = container.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (firstElement) {
+      firstElement.focus();
+    }
+
+    // Handle Tab key to trap focus
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return;
+
+      if (e.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    container.addEventListener('keydown', handleTab);
+
+    // Cleanup: restore focus when modal closes
+    return () => {
+      container.removeEventListener('keydown', handleTab);
+      previousActiveElementRef.current?.focus();
+    };
+  }, [isActive]);
+
+  return containerRef;
+}
 
 // ─── Base modal shell ────────────────────────────────────────────────────────
 
 function ModalShell({ onClose, children }) {
+  const containerRef = useFocusTrap(true);
+
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
+        ref={containerRef}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out]"
         onMouseDown={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         {children}
       </div>
@@ -79,7 +141,7 @@ function ConfirmDialog({ title, message, confirmLabel = 'Confirm', cancelLabel =
             <h3 className="text-base font-semibold text-gray-900">{title}</h3>
             {message && <p className="mt-1 text-sm text-gray-500 leading-relaxed">{message}</p>}
           </div>
-          <button onClick={onCancel} className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+          <button onClick={onCancel} className="flex-shrink-0 p-3 min-w-[44px] min-h-[44px] text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Close">
             <X className="w-4 h-4" />
           </button>
         </div>

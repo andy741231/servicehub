@@ -4,6 +4,10 @@ This file is the **single source of truth** for all visual design decisions.
 
 **For AI assistants:** Read this file at the start of every session. Every UI component must use the semantic token names defined here — never raw Tailwind values like `bg-blue-600` or `text-gray-400`. To change the theme, update this file and regenerate `tailwind.config.js`.
 
+**For advanced UI/UX guidance:** Invoke the `ui-ux-pro-max` skill for additional design intelligence, including accessibility best practices, interaction patterns, animation guidelines, and UX validation when building or reviewing UI components.
+
+**Priority:** When there are conflicts between this file and UI/UX Pro Max guidelines, UI/UX Pro Max takes precedence for accessibility, touch targets, and usability standards.
+
 ---
 
 ## Design Personality
@@ -69,26 +73,26 @@ This file is the **single source of truth** for all visual design decisions.
 ### Scale
 | Token | Size | Weight | Line Height | Usage |
 |-------|------|--------|-------------|-------|
-| `text-display` | 30px / 1.875rem | 700 | 1.2 | Page titles |
-| `text-heading` | 20px / 1.25rem | 600 | 1.3 | Section headings, card titles |
-| `text-subheading` | 16px / 1rem | 600 | 1.4 | Sub-section labels |
-| `text-body` | 14px / 0.875rem | 400 | 1.5 | All body copy (default) |
-| `text-small` | 12px / 0.75rem | 400 | 1.4 | Metadata, timestamps, captions |
-| `text-label` | 12px / 0.75rem | 500 | 1 | Form labels, table headers |
-| `text-code` | 13px / 0.8125rem | 400 | 1.5 | Code, IDs, monospace values |
+| `text-display` | 32px / 2rem | 700 | 1.2 | Page titles |
+| `text-heading` | 22px / 1.375rem | 600 | 1.3 | Section headings, card titles |
+| `text-subheading` | 18px / 1.125rem | 600 | 1.4 | Sub-section labels |
+| `text-body` | 16px / 1rem | 400 | 1.5 | All body copy (default) |
+| `text-small` | 14px / 0.875rem | 400 | 1.4 | Metadata, timestamps, captions |
+| `text-label` | 14px / 0.875rem | 500 | 1 | Form labels, table headers |
+| `text-code` | 14px / 0.875rem | 400 | 1.5 | Code, IDs, monospace values |
 
 ---
 
 ## Spacing
 
-Base unit: `4px`. All spacing uses multiples of 4.
+Base unit: `8px`. All spacing uses multiples of 8.
 
 | Token | Value | Usage |
 |-------|-------|-------|
 | `spacing-page` | `32px` (p-8) | Page outer padding |
 | `spacing-section` | `24px` (p-6) | Between major sections |
-| `spacing-card` | `20px` (p-5) | Card internal padding |
-| `spacing-compact` | `12px` (p-3) | Tight areas, table cells |
+| `spacing-card` | `24px` (p-6) | Card internal padding |
+| `spacing-compact` | `16px` (p-4) | Tight areas, table cells |
 
 ---
 
@@ -127,26 +131,26 @@ Base unit: `4px`. All spacing uses multiples of 4.
 | `danger-ghost` | transparent | `danger` | none | Destructive option in menu |
 
 **Button sizes:**
-- `sm`: `h-7 px-3 text-small`
-- `md` (default): `h-9 px-4 text-body`
-- `lg`: `h-11 px-6 text-subheading`
+- `sm`: `h-11 px-4 text-body` (minimum touch target)
+- `md` (default): `h-12 px-5 text-body`
+- `lg`: `h-14 px-6 text-subheading`
 
 All buttons: `rounded-base font-medium transition-colors duration-150`
 
 ### Inputs / Form Fields
 
-- Height: `h-9` (36px)
+- Height: `h-11` (44px, minimum touch target)
 - Border: `border border-strong rounded-base`
 - Background: `surface`
 - Focus ring: `outline-none ring-2 ring-primary ring-offset-1`
 - Placeholder: `text-subtle`
-- Label: `text-label text-muted mb-1` (above the input)
+- Label: `text-label text-muted mb-2` (above the input)
 - Error state: `border-danger` + error message in `text-small text-danger` below
 
 ### Cards
 
 ```
-bg-surface border border-border rounded-card shadow-card p-5
+bg-surface border border-border rounded-card shadow-card p-6
 ```
 
 Card header (when present): `pb-4 mb-4 border-b border-border`
@@ -156,7 +160,7 @@ Card header (when present): `pb-4 mb-4 border-b border-border`
 - Container: `bg-surface border border-border rounded-card overflow-hidden`
 - Header row: `bg-surface-raised text-label text-muted uppercase tracking-wide`
 - Body rows: `border-t border-border hover:bg-surface-raised transition-colors`
-- Cell padding: `px-4 py-3`
+- Cell padding: `px-4 py-4`
 
 ### Badges / Status Pills
 

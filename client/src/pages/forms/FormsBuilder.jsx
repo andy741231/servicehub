@@ -1,0 +1,261 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Save, Eye, Download, Settings, ArrowLeft, Share2, Copy, Check } from 'lucide-react';
+import FormCanvas from './components/FormCanvas';
+import FieldPalette from './components/FieldPalette';
+import PropertiesPanel from './components/PropertiesPanel';
+import useFormStore from './store/formStore';
+
+export default function FormsBuilder() {
+  const navigate = useNavigate();
+  const { formId } = useParams();
+  const [selectedField, setSelectedField] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [formTitle, setFormTitle] = useState('Untitled Form');
+  const [formDescription, setFormDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  
+  const { 
+    fields, 
+    addField, 
+    removeField, 
+    duplicateField, 
+    currentFormId,
+    forms,
+    setCurrentForm,
+    saveCurrentForm,
+    createNewForm
+  } = useFormStore();
+
+  useEffect(() => {
+    if (formId) {
+      setCurrentForm(formId);
+      const form = forms.find(f => f.id === formId);
+      if (form) {
+        setFormTitle(form.title);
+        setFormDescription(form.description);
+      }
+    } else if (!currentFormId) {
+      // Creating a new form
+      createNewForm();
+    }
+  }, [formId, currentFormId, forms, setCurrentForm, createNewForm]);
+
+  const handleAddField = (type) => {
+    const newField = {
+      id: `field-${Date.now()}`,
+      type,
+      label: '',
+      placeholder: '',
+      required: false,
+      options: type === 'select' || type === 'checkbox' ? [''] : [],
+    };
+    addField(newField);
+  };
+
+  const handleSelectField = (fieldId) => {
+    setSelectedField(fieldId);
+  };
+
+  const handleDeleteField = (fieldId) => {
+    removeField(fieldId);
+    if (selectedField === fieldId) {
+      setSelectedField(null);
+    }
+  };
+
+  const handleDuplicateField = (fieldId) => {
+    duplicateField(fieldId);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      saveCurrentForm(formTitle, formDescription);
+      // Simulate save delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleExport = () => {
+    const formSchema = JSON.stringify({ 
+      title: formTitle,
+      description: formDescription,
+      fields 
+    }, null, 2);
+    const blob = new Blob([formSchema], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${formTitle.replace(/\s+/g, '-').toLowerCase()}-schema.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBackToDashboard = () => {
+    navigate('/hub-admin/forms');
+  };
+
+  const handleShareForm = () => {
+    const formUrl = `${window.location.origin}/form/${currentFormId}`;
+    navigator.clipboard.writeText(formUrl).then(() => {
+      setCopiedToClipboard(true);
+      setTimeout(() => setCopiedToClipboard(false), 2000);
+    });
+  };
+
+  if (showPreview) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-2xl mx-auto p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-base">Form Preview</h2>
+            <button
+              onClick={() => setShowPreview(false)}
+              className="px-4 py-2 bg-surface-raised border border-border rounded-base text-body hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+            >
+              Back to Editor
+            </button>
+          </div>
+          <FormCanvas
+            fields={fields}
+            onSelectField={() => {}}
+            onDeleteField={() => {}}
+            onDuplicateField={() => {}}
+            isPreview
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Left Sidebar - Field Palette */}
+      <aside className="w-64 bg-surface border-r border-border flex flex-col" aria-label="Field palette">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-lg font-bold text-base">Form Builder</h2>
+          <p className="text-small text-muted mt-1">Drag fields to canvas</p>
+        </div>
+        <FieldPalette onAddField={handleAddField} />
+      </aside>
+
+      {/* Main Canvas Area */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Toolbar */}
+        <header className="h-14 bg-surface border-b border-border flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBackToDashboard}
+              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+              title="Back to dashboard"
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-base hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Save form"
+              aria-label="Save form"
+            >
+              <Save className="h-4 w-4" aria-hidden="true" />
+              <span className="text-body">{isSaving ? 'Saving...' : 'Save'}</span>
+            </button>
+            <button
+              onClick={handleShareForm}
+              className="flex items-center gap-2 px-3 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+              title="Share form"
+              aria-label="Share form"
+            >
+              {copiedToClipboard ? (
+                <>
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  <span className="text-body">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="h-4 w-4" aria-hidden="true" />
+                  <span className="text-body">Share</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-3 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+              title="Export JSON schema"
+              aria-label="Export form schema"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              <span className="text-body">Export</span>
+            </button>
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+              title="Preview form"
+              aria-label="Preview form"
+            >
+              <Eye className="h-4 w-4" aria-hidden="true" />
+              <span className="text-body">Preview</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Canvas */}
+        <div className="flex-1 overflow-y-auto p-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-surface-raised border border-border rounded-lg p-6">
+              <div className="mb-6">
+                <label htmlFor="form-title" className="sr-only">Form title</label>
+                <input
+                  id="form-title"
+                  type="text"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="Form Title"
+                  className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-base placeholder:text-muted"
+                  aria-label="Form title"
+                />
+                <label htmlFor="form-description" className="sr-only">Form description</label>
+                <textarea
+                  id="form-description"
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Form description"
+                  className="w-full mt-2 text-body bg-transparent border-none focus:outline-none focus:ring-0 text-muted placeholder:text-muted resize-none"
+                  rows={2}
+                  aria-label="Form description"
+                />
+              </div>
+              <FormCanvas
+                fields={fields}
+                onSelectField={handleSelectField}
+                onDeleteField={handleDeleteField}
+                onDuplicateField={handleDuplicateField}
+                selectedField={selectedField}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Right Sidebar - Properties Panel */}
+      <aside className="w-80 bg-surface border-l border-border flex flex-col" aria-label="Field properties">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-lg font-bold text-base">Properties</h2>
+          <p className="text-small text-muted mt-1">
+            {selectedField ? 'Edit field properties' : 'Select a field to edit'}
+          </p>
+        </div>
+        <PropertiesPanel
+          selectedField={selectedField}
+          onUpdateField={() => {}}
+        />
+      </aside>
+    </div>
+  );
+}

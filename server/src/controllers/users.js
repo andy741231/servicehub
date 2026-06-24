@@ -12,6 +12,7 @@ export const listUsers = async (req, res) => {
     
     const formatted = users.map(u => ({
       id: u.id,
+      username: u.username,
       email: u.email,
       name: u.name,
       isActive: u.isActive,
@@ -27,13 +28,17 @@ export const listUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { email, password, name, roles = [], permissions = [] } = req.body;
+    const { username, email, password, name, roles = [], permissions = [] } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
     
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const user = await prisma.user.create({
       data: {
-        email, name, password: hashedPassword,
+        username, email, name, password: hashedPassword,
       }
     });
     
@@ -54,6 +59,7 @@ export const createUser = async (req, res) => {
 
     res.json({ message: 'User created' });
   } catch (error) {
+    console.error('Error creating user:', error);
     res.status(500).json({ error: 'Failed to create user' });
   }
 };

@@ -17,7 +17,13 @@ const isProd = process.env.NODE_ENV === 'production';
 // In dev, Vite runs separately on port 3000
 if (!isProd) {
   app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      // Allow any localhost origin for development
+      if (origin.startsWith('http://localhost:')) return callback(null, true);
+      callback(null, true);
+    },
     credentials: true
   }));
 }

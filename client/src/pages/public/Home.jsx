@@ -215,7 +215,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
             <h1
               className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6"
               style={{
-                color: sStyle?.color || (block.content.backgroundImage ? '#ffffff' : '#111827'),
+                color: sStyle?.color || (block.content.backgroundImage ? 'hsl(var(--text-inverse))' : 'hsl(var(--text-base))'),
                 fontFamily: cs.titleFontFamily || undefined,
                 fontSize: cs.titleFontSize ? `${cs.titleFontSize}px` : undefined,
                 textAlign: cs.titleTextAlign || undefined,
@@ -228,7 +228,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
             <p
               className="text-xl max-w-2xl mx-auto"
               style={{
-                color: sStyle?.color || (block.content.backgroundImage ? '#e5e7eb' : '#4b5563'),
+                color: sStyle?.color || (block.content.backgroundImage ? 'hsl(var(--text-muted))' : 'hsl(var(--text-muted))'),
                 fontFamily: cs.subtitleFontFamily || undefined,
                 fontSize: cs.subtitleFontSize ? `${cs.subtitleFontSize}px` : undefined,
                 textAlign: cs.subtitleTextAlign || undefined,

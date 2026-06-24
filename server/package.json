@@ -8,9 +8,11 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "csv-parser": "^3.2.1",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
