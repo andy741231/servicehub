@@ -226,27 +226,29 @@ You do not need to apply migrations manually.
 
 #### Required GitHub secrets
 
-| Secret | Description |
-|--------|-------------|
-| `DATABASE_URL_PROD` | Production Azure SQL connection string |
-| `DATABASE_URL_STAGING` | Staging Azure SQL connection string |
-| `AZURE_DEPLOY_USER` | Kudu publishing username (production) |
-| `AZURE_DEPLOY_PWD` | Kudu publishing password (production) |
-| `AZURE_DEPLOY_USER_STAGING` | Kudu publishing username (staging slot) |
-| `AZURE_DEPLOY_PWD_STAGING` | Kudu publishing password (staging slot) |
-| `AZURE_CREDENTIALS` | Service principal JSON for `az login` (slot swap) |
+> **Already configured** — all secrets were set on 2026-06-25. No action needed unless credentials change.
 
-To add or update secrets: **GitHub → Repository → Settings → Secrets and variables → Actions**
+| Secret | Description | Status |
+|--------|-------------|--------|
+| `DATABASE_URL_PROD` | Production Azure SQL connection string | ✓ Set |
+| `DATABASE_URL_STAGING` | Staging Azure SQL (`free-test-servicehub`) | ✓ Set |
+| `AZURE_DEPLOY_USER` | Kudu publishing username (production slot) | ✓ Set |
+| `AZURE_DEPLOY_PWD` | Kudu publishing password (production slot) | ✓ Set |
+| `AZURE_DEPLOY_USER_STAGING` | Kudu publishing username (staging slot) | ✓ Set |
+| `AZURE_DEPLOY_PWD_STAGING` | Kudu publishing password (staging slot) | ✓ Set |
 
-To generate the `AZURE_CREDENTIALS` service principal:
+> **Note:** No `AZURE_CREDENTIALS` service principal is needed. The slot swap is handled by Azure's **auto-swap** feature (configured on the staging slot). The `swap-production` job applies DB migrations then polls `/api/health` to confirm production is live.
+
+To rotate Kudu credentials (e.g. after a publish profile reset):
 ```bash
-az ad sp create-for-rbac \
-  --name "github-actions-servicehub" \
-  --role contributor \
-  --scopes /subscriptions/<subscription-id>/resourceGroups/App-Services-And-Related \
-  --sdk-auth
+# Get fresh staging publish profile
+SUB_ID=$(az account show --query id -o tsv)
+ACCESS_TOKEN=$(az account get-access-token --resource https://management.azure.com/ --query accessToken -o tsv)
+curl -s -o /tmp/pubprofile_staging.xml -X POST \
+  -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Length: 0" \
+  "https://management.azure.com/subscriptions/$SUB_ID/resourceGroups/App-Services-And-Related/providers/Microsoft.Web/sites/houstonservicehub/slots/staging/publishxml?api-version=2022-03-01"
+# Then extract ZipDeploy userName/userPWD and update the GitHub secrets
 ```
-Copy the full JSON output as the value of `AZURE_CREDENTIALS`.
 
 ### One-time Azure CLI setup (staging slot)
 
