@@ -394,3 +394,32 @@ az webapp log tail \
 ---
 
 Please refer to `SKILL.md` for full architectural guidelines and patterns.
+
+---
+
+## Known Limitations / Future Work
+
+### Uploaded images are stored on local disk (not shared across slots)
+
+**Current behavior:** Uploaded images (web builder assets, etc.) are saved to an `/uploads` folder on the App Service instance's local disk via `multer`. Each deployment slot has its own separate disk, so:
+
+- Images uploaded to production are not visible on staging
+- Images uploaded to staging are not carried over during a slot swap — only code moves
+- If the App Service is restarted or redeployed, files in `/uploads` **may be wiped**
+
+**Correct fix (not yet implemented):** Migrate file storage to **Azure Blob Storage**.
+
+Files affected:
+- `server/src/routes/web.js` — multer `diskStorage` config
+- `server/src/controllers/webAssets.js` — upload/delete logic
+- `server/src/index.js` — `/uploads` static file serving
+
+Implementation plan when ready:
+1. Create an Azure Storage Account and a `uploads` container (public blob access)
+2. Add `AZURE_STORAGE_CONNECTION_STRING` and `AZURE_STORAGE_CONTAINER` to App Service app settings (both slots) and GitHub secrets
+3. Replace `multer.diskStorage` with [`multer-azure-blob-storage`](https://www.npmjs.com/package/multer-azure-blob-storage) or upload manually via `@azure/storage-blob`
+4. Update `uploadAsset` controller to store the blob URL instead of `/uploads/<filename>`
+5. Remove the `app.use('/uploads', express.static(...))` line from `index.js` — files are served directly from Azure CDN URLs
+6. Run a one-time migration script to move existing `/uploads` files to the blob container
+
+**Cost:** ~$0.018/GB/month (Hot tier, LRS). Negligible for typical image usage.
