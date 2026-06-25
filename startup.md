@@ -92,21 +92,21 @@ sqlserver://houstonservice-test.database.windows.net:1433;database=free-test-ser
 
 > **Note:** The `.env` file is gitignored — never commit it.
 
-### Step 4: Push schema & seed the database
+### Step 4: Apply migrations & seed the database
 
-The test database (`free-test-servicehub`) already has the schema applied and seed data. You only need to run these commands if:
+The test database (`free-test-servicehub`) already has migrations applied and seed data. You only need to run these commands if:
 - Setting up a **fresh** database
 - The schema has changed (after pulling new Prisma model changes)
 
 ```bash
-# Apply schema to the database
-npx prisma db push
+# Apply all pending migrations to the dev database
+npx prisma migrate deploy
 
 # Seed roles and default admin user
 npx prisma db seed
 ```
 
-> **Schema changes:** Always run `npx prisma db push` after pulling changes that include `prisma/schema.prisma` modifications.
+> **Schema changes:** Always run `npx prisma migrate deploy` after pulling changes that include `prisma/schema.prisma` modifications. To create a new migration after editing the schema, run `npx prisma migrate dev --name describe_your_change` locally first.
 
 ### Step 5: Start the development server
 
@@ -184,20 +184,32 @@ To trigger a manual deploy without a code change:
 
 ### Promoting database changes to production
 
-Code deploys automatically, but **database schema changes do not**. The project uses Prisma `db push` rather than migrations, so you must apply the schema to the production database separately after deploying the code.
+Code deploys automatically via GitHub Actions, and **database migrations now run automatically as part of the deploy pipeline** via `npx prisma migrate deploy`. You do not need to apply them manually.
 
-1. **Back up production first** (recommended before any schema change).
-2. **Ensure `DATABASE_URL_PROD` is set in your `.env`** (see `.env.example` for the format).
-3. **Apply the schema to the production database** from the project root:
+The pipeline order is:
+1. Build frontend
+2. Generate Prisma client
+3. **Apply pending migrations to production DB** (`prisma migrate deploy`)
+4. Deploy code to Azure
 
-```bash
-# Prisma's dotenv loader overrides inline env vars, so source .env first
-export $(grep DATABASE_URL_PROD .env | xargs) && DATABASE_URL="$DATABASE_URL_PROD" npx prisma db push
-```
+> **Important:** `prisma migrate deploy` only applies new migrations — it never drops or recreates tables. It is safe to run against a live production database.
 
-4. **Verify the change** by checking the app logs or running a quick smoke test.
+#### Creating a new schema change
 
-> **Important:** The deploy workflow builds a new Prisma client with the updated schema, so the production database must be updated before or immediately after the new code is live. Always test schema changes on `free-test-servicehub` first.
+1. Edit `prisma/schema.prisma` locally.
+2. Generate the migration file:
+   ```bash
+   npx prisma migrate dev --name describe_your_change
+   ```
+3. Commit both `schema.prisma` and the new file in `prisma/migrations/`.
+4. Push to `main` — the CI pipeline will apply the migration to production automatically.
+
+> **Always test migrations on `free-test-servicehub` first.** Never use `db push` on production — it can silently drop data.
+
+#### Required GitHub secret
+
+The pipeline reads `DATABASE_URL_PROD` from GitHub Actions secrets. Ensure it is set:
+**GitHub → Repository → Settings → Secrets and variables → Actions → `DATABASE_URL_PROD`**
 
 ### Production environment variables
 
@@ -250,11 +262,11 @@ Use Azure Data Studio or the Azure portal query editor to connect to either data
 ### Resetting your local dev database schema
 
 ```bash
-npx prisma db push --force-reset
+npx prisma migrate reset
 npx prisma db seed
 ```
 
-> This only affects the test database (per your `DATABASE_URL` in `.env`).
+> This only affects the test database (per your `DATABASE_URL` in `.env`). `migrate reset` drops and recreates tables then re-runs all migrations — **never run this against production**.
 
 ### Checking production logs
 
@@ -273,7 +285,8 @@ az webapp log tail \
 | `npm install` | Install all workspace dependencies |
 | `npm run dev` | Start frontend + backend in development mode |
 | `npm run build` | Build the React frontend for production |
-| `npx prisma db push` | Apply schema changes to the database |
+| `npx prisma migrate dev --name <name>` | Create a new migration from schema changes (dev only) |
+| `npx prisma migrate deploy` | Apply pending migrations to the database (safe for prod) |
 | `npx prisma db seed` | Seed roles and admin user |
 | `npx prisma studio` | Open Prisma's visual DB browser |
 | `npx prisma generate` | Regenerate Prisma client after schema changes |
