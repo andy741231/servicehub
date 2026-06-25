@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { FileText, Layout, Palette, Image, ExternalLink } from 'lucide-react';
+import { FileText, Layout, Palette, Image, ExternalLink, FileX } from 'lucide-react';
 
 const TABS = [
-  { label: 'Pages',          path: '/hub-admin/web/pages',          Icon: FileText },
+  { label: 'Pages',           path: '/hub-admin/web/pages',          Icon: FileText },
   { label: 'Header & Footer', path: '/hub-admin/web/header-footer',  Icon: Layout   },
-  { label: 'Styles',         path: '/hub-admin/web/styles',         Icon: Palette  },
-  { label: 'Assets',         path: '/hub-admin/web/assets',         Icon: Image    },
+  { label: 'Styles',          path: '/hub-admin/web/styles',         Icon: Palette  },
+  { label: 'Assets',          path: '/hub-admin/web/assets',         Icon: Image    },
+  { label: 'Draft Templates', path: '/hub-admin/web/templates',      Icon: FileX    },
 ];
 
 export default function WebShell() {

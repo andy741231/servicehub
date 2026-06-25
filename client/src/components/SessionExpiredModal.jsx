@@ -61,7 +61,7 @@ function useFocusTrap(isActive) {
 }
 
 export default function SessionExpiredModal() {
-  const { sessionExpired, clearSessionExpired, logout } = useAuthStore();
+  const { sessionExpired, clearSessionExpired } = useAuthStore();
   const navigate = useNavigate();
   const containerRef = useFocusTrap(sessionExpired);
 
@@ -69,14 +69,17 @@ export default function SessionExpiredModal() {
 
   if (!sessionExpired) return null;
 
-  const handleLogin = async () => {
-    try {
-      await logout();
-    } catch {
-      // Token may already be expired; still clear local state and redirect.
-    }
-    clearSessionExpired();
-    navigate('/hub-admin');
+  const handleLogin = () => {
+    // The session is already known to be expired; don't waste a round-trip to
+    // the server logout endpoint (it would only 401 and delay the redirect).
+    // Clear local auth state and redirect immediately.
+    useAuthStore.getState().setState({
+      user: null,
+      isAuthenticated: false,
+      sessionExpired: false,
+      showLoggedOutMessage: false,
+    });
+    navigate('/hub-admin', { replace: true });
   };
 
   return (

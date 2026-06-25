@@ -58,7 +58,11 @@ const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
-    await api.post('/auth/logout');
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      // Server may reject an expired access token; still clear local state.
+    }
     set({ user: null, isAuthenticated: false, wasLoggedIn: true, showLoggedOutMessage: true });
     savePersistedState(get());
   },

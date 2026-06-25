@@ -10,6 +10,7 @@ import WebPages from './pages/web/Pages';
 import WebStyles from './pages/web/Styles';
 import WebAssets from './pages/web/Assets';
 import WebHeaderFooter from './pages/web/HeaderFooter';
+import WebDraftTemplates from './pages/web/DraftTemplates';
 import WebShell from './pages/web/WebShell';
 import FormsIndex from './pages/forms/index';
 import FormsBuilder from './pages/forms/FormsBuilder';
@@ -58,6 +59,7 @@ export default function App() {
               <Route path="header-footer"   element={<WebHeaderFooter />} />
               <Route path="styles"          element={<WebStyles />} />
               <Route path="assets"          element={<WebAssets />} />
+              <Route path="templates"       element={<WebDraftTemplates />} />
               <Route path="editor/:slug"    element={<WebIndex />} />
             </Route>
 

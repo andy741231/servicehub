@@ -53,7 +53,8 @@ section wrappers, feature grids, highlights, and footer.
 
 ```
 client/src/pages/web/
-├── index.jsx            # Web Builder admin UI
+├── index.jsx            # Web Builder admin UI (re-exports InlineEditor)
+├── InlineEditor.jsx     # Main editor: SectionWrapper, AddSectionModal, block palette
 client/src/pages/public/
 ├── Home.jsx             # Public dynamic renderer
 server/src/controllers/
@@ -62,34 +63,80 @@ server/src/routes/
 ├── web.js               # Route wiring + auth/permission guards
 prisma/schema.prisma
 ├── WebPage              # slug, title, template, header, footer
-├── WebBlock             # pageId, type, order, content (String)
+├── WebSection           # pageId, order, columns, gap, padding, margin, backgroundColor
+├── WebBlock             # pageId, sectionId (FK), type, order, content (String)
 html5up-escape-velocity/
 ├── index.html           # Reference design for the escape-velocity theme
 ```
 
 ## 4. Data Model
 
+### Architecture: Page → Sections → Blocks
+
+A **page** is composed of an ordered list of **sections**. Each section is a
+full-width container with its own layout (1–6 columns), spacing, and background.
+Blocks live inside sections, not directly on the page.
+
 ### Prisma schema
 
 ```prisma
 model WebPage {
-  id        String     @id @default(uuid())
-  slug      String     @unique
-  title     String
-  template  String     @default("modern")
-  header    String?    // JSON string
-  footer    String?    // JSON string
-  blocks    WebBlock[]
-  updatedAt DateTime   @updatedAt
+  id          String       @id @default(uuid())
+  slug        String       @unique
+  title       String
+  template    String       @default("modern")
+  header      String?      // JSON string
+  footer      String?      // JSON string
+  blocks      WebBlock[]   // legacy; new saves go via sections
+  sections    WebSection[]
+  updatedAt   DateTime     @updatedAt
+}
+
+model WebSection {
+  id             String     @id @default(uuid())
+  pageId         String
+  order          Int
+  columns        Int        @default(1)   // 1 = full-width, 2-6 = multi-column
+  gap            Int        @default(24)  // px gap between columns
+  paddingTop     Int        @default(48)
+  paddingBottom  Int        @default(48)
+  paddingLeft    Int        @default(0)
+  paddingRight   Int        @default(0)
+  marginTop      Int        @default(0)
+  marginBottom   Int        @default(0)
+  backgroundColor String?               // optional hex / CSS colour
+  page           WebPage    @relation(fields: [pageId], references: [id])
+  blocks         WebBlock[]
 }
 
 model WebBlock {
-  id      String  @id @default(uuid())
-  pageId  String
-  type    String  // hero | text | intro | features | highlights | gallery | testimonials | contact | video | grid | header | footer
-  order   Int
-  content String  // JSON string
-  page    WebPage @relation(fields: [pageId], references: [id])
+  id        String      @id @default(uuid())
+  pageId    String
+  sectionId String?
+  type      String      // hero | text | intro | features | highlights | gallery | testimonials | contact | video | grid
+  order     Int
+  content   String      // JSON string
+  page      WebPage     @relation(fields: [pageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  section   WebSection? @relation(fields: [sectionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+```
+
+### Runtime section shape
+
+```js
+{
+  id:              'uuid',
+  order:           0,
+  columns:         1,        // 1 = full-width, 2-6 = multi-column grid
+  gap:             24,       // px between columns
+  paddingTop:      48,
+  paddingBottom:   48,
+  paddingLeft:     0,
+  paddingRight:    0,
+  marginTop:       0,
+  marginBottom:    0,
+  backgroundColor: '#f9fafb', // or null
+  blocks: [/* WebBlock objects */]
 }
 ```
 

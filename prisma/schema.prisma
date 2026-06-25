@@ -69,16 +69,36 @@ model WebPage {
   isReserved  Boolean    @default(false) // reserved for system use
   hideFromNav Boolean    @default(false) // hide from main navigation
   blocks      WebBlock[]
+  sections    WebSection[]
   updatedAt   DateTime   @updatedAt
 }
 
+model WebSection {
+  id             String     @id @default(uuid())
+  pageId         String
+  order          Int
+  columns        Int        @default(1)   // 1 = full-width, 2-6 = multi-column
+  gap            Int        @default(24)  // px gap between columns
+  paddingTop     Int        @default(48)
+  paddingBottom  Int        @default(48)
+  paddingLeft    Int        @default(0)
+  paddingRight   Int        @default(0)
+  marginTop      Int        @default(0)
+  marginBottom   Int        @default(0)
+  backgroundColor String?               // optional hex / CSS colour
+  page           WebPage    @relation(fields: [pageId], references: [id])
+  blocks         WebBlock[]
+}
+
 model WebBlock {
-  id       String  @id @default(uuid())
-  pageId   String
-  type     String  // "hero" | "text" | "image" | "features"
-  order    Int
-  content  String  // JSON serialized — parsed/serialized in controller
-  page     WebPage @relation(fields: [pageId], references: [id])
+  id        String      @id @default(uuid())
+  pageId    String
+  sectionId String?
+  type      String      // "hero" | "text" | "image" | "features" | ...
+  order     Int
+  content   String      // JSON serialized — parsed/serialized in controller
+  page      WebPage     @relation(fields: [pageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  section   WebSection? @relation(fields: [sectionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 // ----------------------------------------------------------------------------
@@ -174,9 +194,10 @@ model CampaignMetrics {
 // ----------------------------------------------------------------------------
 
 model WebSiteStyle {
-  id        String   @id @default(uuid())
-  tokens    String   // JSON: { colors: { primary, secondary, accent, background, text }, fonts: { heading, body }, spacing: { base } }
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  tokens         String   // JSON: { colors: { primary, secondary, accent, background, text }, fonts: { heading, body }, spacing: { base } }
+  draftTemplates String?  // JSON: { homeDraft: {...}, pageDraft: {...} }
+  updatedAt      DateTime @updatedAt
 }
 
 model WebAsset {

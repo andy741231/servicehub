@@ -6,6 +6,7 @@ import fs from 'fs';
 import { getPageBySlug, updatePage } from '../controllers/web.js';
 import { listPages, createPage, updatePageMeta, deletePage, reorderPages } from '../controllers/webPages.js';
 import { getSiteStyles, updateSiteStyles } from '../controllers/webStyles.js';
+import { getDraftTemplates, updateDraftTemplates } from '../controllers/webDraftTemplates.js';
 import { listAssets, uploadAsset, deleteAsset } from '../controllers/webAssets.js';
 import { verifyToken } from '../middleware/auth.js';
 import { requireAppAccess } from '../middleware/permissions.js';
@@ -53,10 +54,17 @@ router.put('/pages/reorder', ...protect, reorderPages);
 router.get('/styles', ...protect, getSiteStyles);
 router.put('/styles', ...protect, updateSiteStyles);
 
+// Draft page templates (GET is public so the 404/draft page can fetch it without auth)
+router.get('/draft-templates', getDraftTemplates);
+router.put('/draft-templates', ...protect, updateDraftTemplates);
+
 // Assets
 router.get('/assets', ...protect, listAssets);
 router.post('/assets', ...protect, upload.single('file'), uploadAsset);
 router.delete('/assets/:id', ...protect, deleteAsset);
+
+// ── Admin page fetch (bypasses draft check) ──
+router.get('/admin/:slug([a-z0-9-]+)', ...protect, getPageBySlug);
 
 // ── Page-by-slug (catch-all — must be LAST) ──
 router.get('/page/:slug', getPageBySlug);

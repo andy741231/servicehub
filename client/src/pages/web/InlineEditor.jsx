@@ -6,7 +6,7 @@ import {
   Palette, Type, Settings, Save, X, Check, AlertCircle, ChevronDown, ChevronUp,
   Link as LinkIcon, Edit3, Move, Copy, Upload,
   Zap, AlignLeft, AlignCenter, AlignRight, AlignJustify, Hand, Star, Sparkles, LayoutGrid, MessageSquare, Mail, Video, Columns,
-  Bold, Italic
+  Bold, Italic, Rows3
 } from 'lucide-react';
 import { marked } from 'marked';
 import api from '../../utils/api';
@@ -871,7 +871,7 @@ const EditableBlock = ({
   onMoveUp, 
   onMoveDown, 
   onDuplicate,
-  updateBlockContent,
+  onUpdateContent,   // pre-bound: (contentUpdates) => void
   saveRef,
   isDragging,
   children 
@@ -1038,7 +1038,7 @@ const EditableBlock = ({
                         <input 
                           type="text" 
                           value={block.content.backgroundImage || ''} 
-                          onChange={(e) => updateBlockContent(index, { backgroundImage: e.target.value })} 
+                          onChange={(e) => onUpdateContent({ backgroundImage: e.target.value })} 
                           className="flex-1 px-3 py-2.5 text-small border border-border-strong rounded-base focus:ring-2 focus:ring-primary focus:ring-offset-1" 
                           placeholder="Enter image URL..." 
                         />
@@ -1058,7 +1058,7 @@ const EditableBlock = ({
                             className="w-full h-24 object-cover rounded-base border border-border"
                           />
                           <button
-                            onClick={() => updateBlockContent(index, { backgroundImage: null })}
+                            onClick={() => onUpdateContent({ backgroundImage: null })}
                             className="absolute top-2 right-2 p-1.5 bg-surface/90 backdrop-blur-sm rounded-base shadow-card hover:bg-danger-light text-danger transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1"
                             title="Remove image"
                           >
@@ -1345,7 +1345,7 @@ const EditableBlock = ({
         isOpen={showBackgroundImageDialog}
         onClose={() => setShowBackgroundImageDialog(false)}
         onSave={(url) => {
-          updateBlockContent(index, { backgroundImage: url });
+          onUpdateContent({ backgroundImage: url });
           // Trigger an immediate save to persist to database
           setTimeout(() => saveRef.current?.(), 200);
         }}
@@ -1359,21 +1359,335 @@ const EditableBlock = ({
 
       </div>{/* end inner block div */}
 
-      {/* Add block below button */}
-      {showActions && (
-        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-          <button
-            onClick={() => {}} // Will be handled by parent
-            className="bg-primary text-primary-foreground px-3 py-2 min-h-[44px] rounded-full text-small hover:bg-primary-hover shadow-dropdown flex items-center gap-1 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
-          >
-            <Plus className="w-3 h-3" />
-            Add Block
-          </button>
-        </div>
-      )}
+      {/* Block-level actions are now handled at section level */}
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_SECTION = {
+  columns: 1,
+  gap: 24,
+  paddingTop: 48,
+  paddingBottom: 48,
+  paddingLeft: 0,
+  paddingRight: 0,
+  marginTop: 0,
+  marginBottom: 0,
+  backgroundColor: null,
+};
+
+const makeDefaultBlockContent = (type) => {
+  switch (type) {
+    case 'hero':         return { title: 'Your Hero Title', subtitle: 'Add a compelling subtitle here' };
+    case 'text':         return { content: 'Start writing your content here...' };
+    case 'intro':        return { title: 'Introduction', content: 'Add your introduction text here...', buttonText: 'Learn More', buttonLink: '#' };
+    case 'features':     return { title: 'Key Features', subtitle: 'Highlight what makes you unique', items: [] };
+    case 'highlights':   return { title: 'Highlights', items: [] };
+    case 'gallery':      return { title: 'Gallery', images: [] };
+    case 'testimonials': return { title: 'Testimonials', testimonials: [] };
+    case 'contact':      return { title: 'Contact Us', subtitle: 'Get in touch with our team', email: 'contact@example.com', phone: '+1 (555) 123-4567', address: '123 Main St, City, State 12345' };
+    case 'video':        return { title: 'Featured Video', videoUrl: '', description: 'Add a video description...' };
+    case 'grid':         return { columns: 3, gap: 24, items: [{ width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }] };
+    default:             return {};
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AddSectionModal — visual layout picker
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SECTION_LAYOUTS = [
+  { columns: 1, label: 'Full Width',  preview: [100] },
+  { columns: 2, label: '2 Columns',   preview: [50, 50] },
+  { columns: 3, label: '3 Columns',   preview: [33, 33, 33] },
+  { columns: 4, label: '4 Columns',   preview: [25, 25, 25, 25] },
+  { columns: 5, label: '5 Columns',   preview: [20, 20, 20, 20, 20] },
+  { columns: 6, label: '6 Columns',   preview: [17, 17, 17, 17, 17, 17] },
+];
+
+const SPACING_PRESETS = [
+  { label: 'None',   value: 0 },
+  { label: 'SM',     value: 24 },
+  { label: 'MD',     value: 48 },
+  { label: 'LG',     value: 80 },
+  { label: 'XL',     value: 120 },
+];
+
+const AddSectionModal = ({ onClose, onAdd }) => {
+  const [selectedLayout, setSelectedLayout] = useState(SECTION_LAYOUTS[0]);
+  const [paddingPreset, setPaddingPreset] = useState('MD');
+  const [paddingCustomTop, setPaddingCustomTop] = useState('');
+  const [paddingCustomBottom, setPaddingCustomBottom] = useState('');
+  const [marginTop, setMarginTop] = useState(0);
+  const [marginBottom, setMarginBottom] = useState(0);
+  const [bgColor, setBgColor] = useState('');
+
+  const resolvedPaddingV = () => {
+    if (paddingCustomTop !== '' || paddingCustomBottom !== '') return null;
+    return SPACING_PRESETS.find(p => p.label === paddingPreset)?.value ?? 48;
+  };
+
+  const handleAdd = () => {
+    const pv = resolvedPaddingV();
+    onAdd({
+      ...DEFAULT_SECTION,
+      columns:         selectedLayout.columns,
+      paddingTop:      paddingCustomTop    !== '' ? parseInt(paddingCustomTop, 10)    : (pv ?? 48),
+      paddingBottom:   paddingCustomBottom !== '' ? parseInt(paddingCustomBottom, 10) : (pv ?? 48),
+      paddingLeft:     0,
+      paddingRight:    0,
+      marginTop:       marginTop,
+      marginBottom:    marginBottom,
+      backgroundColor: bgColor || null,
+      blocks:          [],
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Rows3 className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Add Section</h3>
+              <p className="text-sm text-gray-500">Choose a layout for your new section</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Layout picker */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Layout</h4>
+            <div className="grid grid-cols-3 gap-3">
+              {SECTION_LAYOUTS.map(layout => (
+                <button
+                  key={layout.columns}
+                  onClick={() => setSelectedLayout(layout)}
+                  className={`p-4 border-2 rounded-xl text-left transition-all duration-150 ${selectedLayout.columns === layout.columns ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                >
+                  {/* Mini column preview */}
+                  <div className="flex gap-1 mb-2 h-8">
+                    {layout.preview.map((w, i) => (
+                      <div key={i} className={`rounded h-full ${selectedLayout.columns === layout.columns ? 'bg-blue-300' : 'bg-gray-200'}`} style={{ flex: w }} />
+                    ))}
+                  </div>
+                  <div className={`text-sm font-medium ${selectedLayout.columns === layout.columns ? 'text-blue-700' : 'text-gray-700'}`}>{layout.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Padding */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Vertical Padding</h4>
+            <div className="flex gap-2 mb-3">
+              {SPACING_PRESETS.map(p => (
+                <button
+                  key={p.label}
+                  onClick={() => { setPaddingPreset(p.label); setPaddingCustomTop(''); setPaddingCustomBottom(''); }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${paddingPreset === p.label && paddingCustomTop === '' && paddingCustomBottom === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">Top (px)</label>
+                <input type="number" value={paddingCustomTop} onChange={e => setPaddingCustomTop(e.target.value)} placeholder={String(SPACING_PRESETS.find(p => p.label === paddingPreset)?.value ?? 48)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">Bottom (px)</label>
+                <input type="number" value={paddingCustomBottom} onChange={e => setPaddingCustomBottom(e.target.value)} placeholder={String(SPACING_PRESETS.find(p => p.label === paddingPreset)?.value ?? 48)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          {/* Margin */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Vertical Margin</h4>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">Top (px)</label>
+                <input type="number" value={marginTop} onChange={e => setMarginTop(Number(e.target.value))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">Bottom (px)</label>
+                <input type="number" value={marginBottom} onChange={e => setMarginBottom(Number(e.target.value))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          {/* Background color */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Background Color</h4>
+            <div className="flex items-center gap-3">
+              <input type="color" value={bgColor || '#ffffff'} onChange={e => setBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5" />
+              <input type="text" value={bgColor} onChange={e => setBgColor(e.target.value)} placeholder="e.g. #f9fafb or transparent" className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              {bgColor && <button onClick={() => setBgColor('')} className="text-sm text-gray-500 hover:text-gray-700">Clear</button>}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <button onClick={onClose} className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium">Cancel</button>
+          <button onClick={handleAdd} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Add Section
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SectionWrapper — hover UI for sections
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSection, onDuplicateSection, onUpdateSection, children }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const sectionStyle = {
+    paddingTop:      section.paddingTop     ?? 48,
+    paddingBottom:   section.paddingBottom  ?? 48,
+    paddingLeft:     section.paddingLeft    ?? 0,
+    paddingRight:    section.paddingRight   ?? 0,
+    marginTop:       section.marginTop      ?? 0,
+    marginBottom:    section.marginBottom   ?? 0,
+    backgroundColor: section.backgroundColor || undefined,
+  };
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Section hover outline */}
+      <div className={`absolute inset-0 border-2 border-dashed pointer-events-none transition-opacity duration-150 z-10 ${isHovered ? 'border-blue-400 opacity-100' : 'border-transparent opacity-0'}`} />
+
+      {/* Section actions toolbar — top-left on hover */}
+      <div className={`absolute top-2 left-2 z-20 flex items-center gap-1 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-1 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        <span className="px-2 text-xs font-medium text-gray-500 border-r border-gray-200 mr-1">Section {sectionIndex + 1}</span>
+        <button
+          onClick={() => setShowSettings(s => !s)}
+          title="Section settings"
+          className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-800 transition-colors"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => onDuplicateSection(sectionIndex)}
+          title="Duplicate section"
+          className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-800 transition-colors"
+        >
+          <Copy className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => onDeleteSection(sectionIndex)}
+          title="Delete section"
+          className="p-1.5 hover:bg-red-50 rounded text-gray-500 hover:text-red-600 transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Inline settings panel */}
+      {showSettings && (
+        <div className="absolute top-10 left-2 z-30 bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-72" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-800">Section Settings</h4>
+            <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-4 h-4 text-gray-500" /></button>
+          </div>
+          <div className="space-y-3">
+            {/* Columns */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Columns</label>
+              <div className="flex gap-1">
+                {[1,2,3,4,5,6].map(n => (
+                  <button key={n} onClick={() => onUpdateSection(sectionIndex, { columns: n })}
+                    className={`flex-1 py-1 text-xs rounded ${section.columns === n ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{n === 1 ? 'Full' : n}</button>
+                ))}
+              </div>
+            </div>
+            {/* Padding */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Padding Top</label>
+                <input type="number" value={section.paddingTop ?? 48} onChange={e => onUpdateSection(sectionIndex, { paddingTop: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Padding Bottom</label>
+                <input type="number" value={section.paddingBottom ?? 48} onChange={e => onUpdateSection(sectionIndex, { paddingBottom: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Margin Top</label>
+                <input type="number" value={section.marginTop ?? 0} onChange={e => onUpdateSection(sectionIndex, { marginTop: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Margin Bottom</label>
+                <input type="number" value={section.marginBottom ?? 0} onChange={e => onUpdateSection(sectionIndex, { marginBottom: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+            </div>
+            {/* Background color */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Background Color</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={section.backgroundColor || '#ffffff'} onChange={e => onUpdateSection(sectionIndex, { backgroundColor: e.target.value })} className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5" />
+                <input type="text" value={section.backgroundColor || ''} onChange={e => onUpdateSection(sectionIndex, { backgroundColor: e.target.value || null })} placeholder="transparent" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section content */}
+      <div style={sectionStyle}>
+        {children}
+      </div>
+
+      {/* "Add Section" button — appears at the bottom of this section on hover */}
+      <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        <button
+          onClick={() => onAddSectionBelow(sectionIndex)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-full text-xs font-semibold shadow-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Section
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AddBlockButton — small "+" button inside a section column
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AddBlockButton = ({ onClick }) => (
+  <button
+    onClick={onClick}
+    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150 text-sm font-medium group"
+  >
+    <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+    Add Block
+  </button>
+);
 
 export default function InlineEditor() {
   const { slug: routeSlug } = useParams();
@@ -1382,13 +1696,18 @@ export default function InlineEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pageData, setPageData] = useState(null);
-  const [blocks, setBlocks] = useState([]);
+  // sections is the canonical top-level state; blocks is kept only for legacy grid nested blocks
+  const [sections, setSections] = useState([]);
   const [header, setHeader] = useState({ logo: { text: '', imageUrl: '' }, navigation: [], styles: {} });
   const [footer, setFooter] = useState({ sections: [], copyright: '', styles: {} });
   const [previewDevice, setPreviewDevice] = useState('desktop');
-  const [showBlockPalette, setShowBlockPalette] = useState(false);
-  const [addBlockIndex, setAddBlockIndex] = useState(null);
+  // Block palette: { sectionIndex, colIndex (for multi-col) }
+  const [blockPaletteTarget, setBlockPaletteTarget] = useState(null);
+  // Section modal: null = closed, number = insert after that index (-1 = at top)
+  const [addSectionAfterIndex, setAddSectionAfterIndex] = useState(null);
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
+  const [isPublished, setIsPublished] = useState(true);
+  const [publishSaving, setPublishSaving] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
@@ -1422,18 +1741,20 @@ export default function InlineEditor() {
   const fetchPage = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await api.get(`/web/${pageSlug}`);
+      const { data } = await api.get(`/web/admin/${pageSlug}`);
       setPageData(data);
-      setBlocks(data.blocks || []);
+      const loadedSections = data.sections && data.sections.length > 0
+        ? data.sections
+        : (data.blocks && data.blocks.length > 0)
+          // Legacy: wrap flat blocks into a single section
+          ? [{ ...DEFAULT_SECTION, id: 'legacy', order: 0, blocks: data.blocks }]
+          : [];
+      setSections(loadedSections);
       setHeader(data.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} });
       setFooter(data.footer || { sections: [], copyright: '', styles: {} });
-      
-      // Initialize history
-      const initialState = {
-        blocks: data.blocks || [],
-        header: data.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} },
-        footer: data.footer || { sections: [], copyright: '', styles: {} },
-      };
+      setIsPublished(data.isPublished ?? true);
+
+      const initialState = { sections: loadedSections, header: data.header || {}, footer: data.footer || {} };
       setHistory([initialState]);
       setHistoryIndex(0);
     } catch (error) {
@@ -1451,13 +1772,17 @@ export default function InlineEditor() {
   // Save function ref to avoid stale closures and dependency issues
   saveRef.current = async () => {
     if (saveStatus === 'saving') return;
-    
+
     try {
       setSaveStatus('saving');
       const { data } = await api.put(`/web/${pageSlug}`, {
         header,
         footer,
-        blocks: blocks.map((b, i) => ({ ...b, order: i }))
+        sections: sections.map((sec, sIdx) => ({
+          ...sec,
+          order: sIdx,
+          blocks: (sec.blocks || []).map((b, bIdx) => ({ ...b, order: bIdx })),
+        })),
       });
       setPageData(data);
       setSaveStatus('saved');
@@ -1487,7 +1812,7 @@ export default function InlineEditor() {
         e.preventDefault();
         if (historyIndex > 0) {
           const previousState = history[historyIndex - 1];
-          setBlocks(previousState.blocks);
+          setSections(previousState.sections);
           setHeader(previousState.header);
           setFooter(previousState.footer);
           setHistoryIndex(historyIndex - 1);
@@ -1500,7 +1825,7 @@ export default function InlineEditor() {
         e.preventDefault();
         if (historyIndex < history.length - 1) {
           const nextState = history[historyIndex + 1];
-          setBlocks(nextState.blocks);
+          setSections(nextState.sections);
           setHeader(nextState.header);
           setFooter(nextState.footer);
           setHistoryIndex(historyIndex + 1);
@@ -1510,8 +1835,8 @@ export default function InlineEditor() {
 
       // Escape: Close modals/dropdowns
       if (e.key === 'Escape') {
-        setShowBlockPalette(false);
-        setAddBlockIndex(null);
+        setBlockPaletteTarget(null);
+        setAddSectionAfterIndex(null);
       }
 
       // Ctrl/Cmd + P: Preview
@@ -1520,11 +1845,10 @@ export default function InlineEditor() {
         window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank');
       }
 
-      // + or A: Add block
-      if (e.key === '+' || (e.ctrlKey || e.metaKey) && e.key === 'a') {
+      // + : Add section
+      if (e.key === '+') {
         e.preventDefault();
-        setAddBlockIndex(blocks.length);
-        setShowBlockPalette(true);
+        setAddSectionAfterIndex(sections.length - 1);
       }
 
       // ?: Show keyboard shortcuts
@@ -1536,7 +1860,7 @@ export default function InlineEditor() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [history, historyIndex, blocks]);
+  }, [history, historyIndex, sections]);
 
   // Auto-save with debounce - only when user is not actively editing and changes have been made
   useEffect(() => {
@@ -1548,106 +1872,127 @@ export default function InlineEditor() {
     return () => clearTimeout(timer);
   }, [isEditing, historyIndex, lastChangeTime]);
 
-  const saveToHistory = (newBlocks, newHeader, newFooter) => {
+  const saveToHistory = (newSections, newHeader, newFooter) => {
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push({ blocks: newBlocks, header: newHeader, footer: newFooter });
+    newHistory.push({ sections: newSections, header: newHeader, footer: newFooter });
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     setLastChangeTime(Date.now());
   };
 
-  const updateBlock = (index, updates) => {
-    const updated = [...blocks];
-    updated[index] = { ...updated[index], ...updates };
-    setBlocks(updated);
-    saveToHistory(updated, header, footer);
+  // ── Section-level operations ────────────────────────────────────────────────
+
+  const addSection = (sectionConfig, afterIndex) => {
+    const newSection = { ...DEFAULT_SECTION, ...sectionConfig, blocks: sectionConfig.blocks || [] };
+    const insertAt = afterIndex == null ? sections.length : afterIndex + 1;
+    const newSections = [...sections.slice(0, insertAt), newSection, ...sections.slice(insertAt)];
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
+    setAddSectionAfterIndex(null);
   };
 
-  const updateBlockContent = (index, contentUpdates) => {
-    const updated = [...blocks];
-    updated[index].content = { ...updated[index].content, ...contentUpdates };
-    setBlocks(updated);
-    saveToHistory(updated, header, footer);
+  const deleteSection = (sIdx) => {
+    const newSections = sections.filter((_, i) => i !== sIdx);
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
   };
 
-  const addBlock = (type, index = null) => {
-    let content = {};
-    if (type === 'hero') content = { title: 'Your Hero Title', subtitle: 'Add a compelling subtitle here' };
-    if (type === 'text') content = { content: 'Start writing your content here...' };
-    if (type === 'intro') content = { title: 'Introduction', content: 'Add your introduction text here...', buttonText: 'Learn More', buttonLink: '#' };
-    if (type === 'features') content = { title: 'Key Features', subtitle: 'Highlight what makes you unique', items: [] };
-    if (type === 'highlights') content = { title: 'Highlights', items: [] };
-    if (type === 'gallery') content = { title: 'Gallery', images: [] };
-    if (type === 'testimonials') content = { title: 'Testimonials', testimonials: [] };
-    if (type === 'contact') content = { title: 'Contact Us', subtitle: 'Get in touch with our team', email: 'contact@example.com', phone: '+1 (555) 123-4567', address: '123 Main St, City, State 12345' };
-    if (type === 'video') content = { title: 'Featured Video', videoUrl: '', description: 'Add a video description...' };
-    if (type === 'grid') content = { columns: 3, gap: 24, items: [{ width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }] };
-
-    const newBlock = { type, content };
-    const newBlocks = index !== null ? [...blocks.slice(0, index), newBlock, ...blocks.slice(index)] : [...blocks, newBlock];
-    setBlocks(newBlocks);
-    saveToHistory(newBlocks, header, footer);
-    setShowBlockPalette(false);
-    setAddBlockIndex(null);
+  const duplicateSection = (sIdx) => {
+    const sec = sections[sIdx];
+    const newSec = JSON.parse(JSON.stringify(sec));
+    delete newSec.id; // let backend generate a new id
+    const newSections = [...sections.slice(0, sIdx + 1), newSec, ...sections.slice(sIdx + 1)];
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
   };
 
-  const deleteBlock = (index) => {
-    const newBlocks = blocks.filter((_, i) => i !== index);
-    setBlocks(newBlocks);
-    saveToHistory(newBlocks, header, footer);
+  const updateSection = (sIdx, updates) => {
+    const newSections = sections.map((s, i) => i === sIdx ? { ...s, ...updates } : s);
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
   };
 
-  const moveBlock = (fromIndex, toIndex) => {
-    const newBlocks = [...blocks];
+  // ── Block-level operations (within a section) ───────────────────────────────
+
+  const updateSectionBlocks = (sIdx, newBlocks) => {
+    const newSections = sections.map((s, i) => i === sIdx ? { ...s, blocks: newBlocks } : s);
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
+  };
+
+  const addBlockToSection = (sIdx, type) => {
+    const sec = sections[sIdx];
+    const newBlock = { type, content: makeDefaultBlockContent(type) };
+    updateSectionBlocks(sIdx, [...(sec.blocks || []), newBlock]);
+    setBlockPaletteTarget(null);
+  };
+
+  const updateBlock = (sIdx, bIdx, updates) => {
+    const sec = sections[sIdx];
+    const newBlocks = (sec.blocks || []).map((b, i) => i === bIdx ? { ...b, ...updates } : b);
+    updateSectionBlocks(sIdx, newBlocks);
+  };
+
+  const updateBlockContent = (sIdx, bIdx, contentUpdates) => {
+    const sec = sections[sIdx];
+    const newBlocks = (sec.blocks || []).map((b, i) => {
+      if (i !== bIdx) return b;
+      return { ...b, content: { ...b.content, ...contentUpdates } };
+    });
+    updateSectionBlocks(sIdx, newBlocks);
+  };
+
+  const deleteBlock = (sIdx, bIdx) => {
+    const sec = sections[sIdx];
+    updateSectionBlocks(sIdx, (sec.blocks || []).filter((_, i) => i !== bIdx));
+  };
+
+  const moveBlock = (sIdx, fromIndex, toIndex) => {
+    const sec = sections[sIdx];
+    const newBlocks = [...(sec.blocks || [])];
     const [moved] = newBlocks.splice(fromIndex, 1);
     newBlocks.splice(toIndex, 0, moved);
-    setBlocks(newBlocks);
-    saveToHistory(newBlocks, header, footer);
+    updateSectionBlocks(sIdx, newBlocks);
   };
 
-  const duplicateBlock = (index) => {
-    const block = blocks[index];
+  const duplicateBlock = (sIdx, bIdx) => {
+    const sec = sections[sIdx];
+    const block = sec.blocks[bIdx];
     const newBlock = { ...block, content: JSON.parse(JSON.stringify(block.content)) };
-    const newBlocks = [...blocks.slice(0, index + 1), newBlock, ...blocks.slice(index + 1)];
-    setBlocks(newBlocks);
-    saveToHistory(newBlocks, header, footer);
+    delete newBlock.id;
+    const newBlocks = [...sec.blocks.slice(0, bIdx + 1), newBlock, ...sec.blocks.slice(bIdx + 1)];
+    updateSectionBlocks(sIdx, newBlocks);
   };
 
-  const addNestedBlock = (parentIndex, colIndex, type) => {
-    const block = blocks[parentIndex];
+  const addNestedBlock = (sIdx, parentBIdx, colIndex, type) => {
+    const sec = sections[sIdx];
+    const block = sec.blocks[parentBIdx];
     const items = [...(block.content.items || [])];
     const column = items[colIndex] || { width: '33.33%', blocks: [] };
-    
-    let content = {};
-    if (type === 'hero') content = { title: 'Hero Title', subtitle: 'Hero Subtitle' };
-    if (type === 'text') content = { content: 'Text block' };
-    if (type === 'intro') content = { title: 'Intro', content: 'Intro content', buttonText: 'Learn More', buttonLink: '#' };
-    if (type === 'features') content = { title: 'Features', subtitle: 'Subtitle', items: [] };
-    if (type === 'highlights') content = { title: 'Highlights', items: [] };
-    if (type === 'gallery') content = { title: 'Gallery', images: [] };
-    if (type === 'testimonials') content = { title: 'Testimonials', testimonials: [] };
-    if (type === 'contact') content = { title: 'Contact', subtitle: 'Get in touch', email: '', phone: '', address: '' };
-    if (type === 'video') content = { title: 'Video', videoUrl: '', description: '' };
-    
-    column.blocks = [...column.blocks, { type, content }];
+    column.blocks = [...column.blocks, { type, content: makeDefaultBlockContent(type) }];
     items[colIndex] = column;
-    updateBlockContent(parentIndex, { items });
+    updateBlockContent(sIdx, parentBIdx, { items });
   };
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
-    moveBlock(result.source.index, result.destination.index);
+    const sIdx = parseInt(result.source.droppableId.replace('section-', ''), 10);
+    moveBlock(sIdx, result.source.index, result.destination.index);
   };
 
   // Custom renderer for editable blocks
-  const renderEditableBlock = (block, index) => {
+  // sIdx = section index, bIdx = block index within that section
+  const renderEditableBlock = (block, sIdx, bIdx) => {
+    // Local shorthand so all block JSX below uses ubc/ub instead of spelling out sIdx/bIdx
+    const ubc = (updates) => updateBlockContent(sIdx, bIdx, updates);
+    const ub  = (updates) => updateBlock(sIdx, bIdx, updates);
     const blockComponents = {
       hero: () => (
         <HeroBlock
           block={block}
-          index={index}
-          updateBlockContent={updateBlockContent}
-          updateBlock={updateBlock}
+          index={bIdx}
+          updateBlockContent={(idx, updates) => updateBlockContent(sIdx, idx, updates)}
+          updateBlock={(idx, updates) => updateBlock(sIdx, idx, updates)}
           EditableText={EditableText}
         />
       ),
@@ -1655,7 +2000,7 @@ export default function InlineEditor() {
         <div className="py-12 px-6 max-w-3xl mx-auto">
           <EditableText
             content={block.content.content}
-            onChange={(value) => updateBlockContent(index, { content: value })}
+            onChange={(value) => updateBlockContent(sIdx, bIdx, { content: value })}
             placeholder="Start typing your content here... (Markdown supported)"
             className="text-body text-base leading-relaxed block min-h-[120px]"
             tag="div"
@@ -1667,14 +2012,14 @@ export default function InlineEditor() {
         <div className="py-20 px-6 text-center bg-surface-raised">
           <EditableText
             content={block.content.title}
-            onChange={(value) => updateBlockContent(index, { title: value })}
+            onChange={(value) => updateBlockContent(sIdx, bIdx, { title: value })}
             placeholder="Introduction Title"
             className="text-4xl font-bold mb-6 block"
             tag="h2"
           />
           <EditableText
             content={block.content.content}
-            onChange={(value) => updateBlockContent(index, { content: value })}
+            onChange={(value) => updateBlockContent(sIdx, bIdx, { content: value })}
             placeholder="Introduction content"
             className="text-xl max-w-3xl mx-auto font-light leading-relaxed mb-8 block text-muted"
             tag="div"
@@ -1683,7 +2028,7 @@ export default function InlineEditor() {
           <EditableButton
             text={block.content.buttonText}
             href={block.content.buttonLink}
-            onChange={({ text, href }) => updateBlockContent(index, { buttonText: text, buttonLink: href })}
+            onChange={({ text, href }) => updateBlockContent(sIdx, bIdx, { buttonText: text, buttonLink: href })}
             placeholder="Button Text"
             className="inline-block bg-primary text-primary-foreground font-bold px-8 py-4 rounded-base hover:bg-primary-hover transition-colors duration-150"
           />
@@ -1693,14 +2038,14 @@ export default function InlineEditor() {
         <div className="py-20 px-6 max-w-6xl mx-auto text-center">
           <EditableText
             content={block.content.title}
-            onChange={(value) => updateBlockContent(index, { title: value })}
+            onChange={(value) => ubc({ title: value })}
             placeholder="Features Title"
             className="text-3xl font-bold text-base mb-2 block"
             tag="h2"
           />
           <EditableText
             content={block.content.subtitle}
-            onChange={(value) => updateBlockContent(index, { subtitle: value })}
+            onChange={(value) => ubc({ subtitle: value })}
             placeholder="Features Subtitle"
             className="text-xl text-muted font-light mb-12 block"
             tag="div"
@@ -1716,7 +2061,7 @@ export default function InlineEditor() {
                   onChange={(value) => {
                     const items = [...(block.content.items || [])];
                     items[i] = { ...items[i], title: value };
-                    updateBlockContent(index, { items });
+                    ubc({ items });
                   }}
                   placeholder="Feature Title"
                   className="text-xl font-semibold text-gray-900 mb-2 block"
@@ -1727,7 +2072,7 @@ export default function InlineEditor() {
                   onChange={(value) => {
                     const items = [...(block.content.items || [])];
                     items[i] = { ...items[i], description: value };
-                    updateBlockContent(index, { items });
+                    ubc({ items });
                   }}
                   placeholder="Feature Description"
                   className="text-gray-600 block"
@@ -1744,7 +2089,7 @@ export default function InlineEditor() {
           <div className="max-w-6xl mx-auto text-center">
             <EditableText
               content={block.content.title}
-              onChange={(value) => updateBlockContent(index, { title: value })}
+              onChange={(value) => ubc({ title: value })}
               placeholder="Highlights Title"
               className="text-3xl font-bold text-base mb-12 block"
               tag="h2"
@@ -1758,12 +2103,12 @@ export default function InlineEditor() {
                     onChange={(url) => {
                       const items = [...(block.content.items || [])];
                       items[i] = { ...items[i], imageUrl: url };
-                      updateBlockContent(index, { items });
+                      ubc({ items });
                     }}
                     onRemove={() => {
                       const items = [...(block.content.items || [])];
                       items[i] = { ...items[i], imageUrl: '' };
-                      updateBlockContent(index, { items });
+                      ubc({ items });
                     }}
                     className="w-full h-48 object-cover"
                     placeholder="Click to add image"
@@ -1774,7 +2119,7 @@ export default function InlineEditor() {
                       onChange={(value) => {
                         const items = [...(block.content.items || [])];
                         items[i] = { ...items[i], title: value };
-                        updateBlockContent(index, { items });
+                        ubc({ items });
                       }}
                       placeholder="Highlight Title"
                       className="text-xl font-semibold text-base mb-2 block"
@@ -1785,7 +2130,7 @@ export default function InlineEditor() {
                       onChange={(value) => {
                         const items = [...(block.content.items || [])];
                         items[i] = { ...items[i], description: value };
-                        updateBlockContent(index, { items });
+                        ubc({ items });
                       }}
                       placeholder="Highlight Description"
                       className="text-muted block"
@@ -1804,7 +2149,7 @@ export default function InlineEditor() {
           <div className="max-w-6xl mx-auto">
             <EditableText
               content={block.content.title}
-              onChange={(value) => updateBlockContent(index, { title: value })}
+              onChange={(value) => ubc({ title: value })}
               placeholder="Gallery Title"
               className="text-3xl font-bold text-gray-800 mb-12 text-center block"
               tag="h2"
@@ -1818,11 +2163,11 @@ export default function InlineEditor() {
                     onChange={(url) => {
                       const images = [...(block.content.images || [])];
                       images[i] = { ...images[i], url };
-                      updateBlockContent(index, { images });
+                      ubc({ images });
                     }}
                     onRemove={() => {
                       const images = (block.content.images || []).filter((_, idx) => idx !== i);
-                      updateBlockContent(index, { images });
+                      ubc({ images });
                     }}
                     className="w-full h-64 object-cover rounded-base"
                     placeholder="Click to add image"
@@ -1834,7 +2179,7 @@ export default function InlineEditor() {
                         onChange={(value) => {
                           const images = [...(block.content.images || [])];
                           images[i] = { ...images[i], caption: value };
-                          updateBlockContent(index, { images });
+                          ubc({ images });
                         }}
                         placeholder="Image Caption"
                         className="text-small text-muted block"
@@ -1853,7 +2198,7 @@ export default function InlineEditor() {
           <div className="max-w-4xl mx-auto">
             <EditableText
               content={block.content.title}
-              onChange={(value) => updateBlockContent(index, { title: value })}
+              onChange={(value) => ubc({ title: value })}
               placeholder="Testimonials Title"
               className="text-3xl font-bold text-base mb-12 text-center block"
               tag="h2"
@@ -1866,7 +2211,7 @@ export default function InlineEditor() {
                     onChange={(value) => {
                       const testimonials = [...(block.content.testimonials || [])];
                       testimonials[i] = { ...testimonials[i], quote: value };
-                      updateBlockContent(index, { testimonials });
+                      ubc({ testimonials });
                     }}
                     placeholder="Customer testimonial quote"
                     className="text-xl text-muted italic mb-6 block"
@@ -1880,7 +2225,7 @@ export default function InlineEditor() {
                         onChange={(value) => {
                           const testimonials = [...(block.content.testimonials || [])];
                           testimonials[i] = { ...testimonials[i], author: value };
-                          updateBlockContent(index, { testimonials });
+                          ubc({ testimonials });
                         }}
                         placeholder="Author Name"
                         className="font-semibold text-base block"
@@ -1891,7 +2236,7 @@ export default function InlineEditor() {
                         onChange={(value) => {
                           const testimonials = [...(block.content.testimonials || [])];
                           testimonials[i] = { ...testimonials[i], role: value };
-                          updateBlockContent(index, { testimonials });
+                          ubc({ testimonials });
                         }}
                         placeholder="Author Role"
                         className="text-muted block"
@@ -1910,14 +2255,14 @@ export default function InlineEditor() {
           <div className="max-w-2xl mx-auto text-center">
             <EditableText
               content={block.content.title}
-              onChange={(value) => updateBlockContent(index, { title: value })}
+              onChange={(value) => ubc({ title: value })}
               placeholder="Contact Title"
               className="text-3xl font-bold text-base mb-2 block"
               tag="h2"
             />
             <EditableText
               content={block.content.subtitle}
-              onChange={(value) => updateBlockContent(index, { subtitle: value })}
+              onChange={(value) => ubc({ subtitle: value })}
               placeholder="Contact Subtitle"
               className="text-xl text-muted mb-12 block"
               tag="div"
@@ -1928,7 +2273,7 @@ export default function InlineEditor() {
                   <label className="block text-label text-muted mb-2">Email</label>
                   <EditableText
                     content={block.content.email}
-                    onChange={(value) => updateBlockContent(index, { email: value })}
+                    onChange={(value) => ubc({ email: value })}
                     placeholder="contact@example.com"
                     className="text-lg text-primary block"
                     tag="a"
@@ -1938,7 +2283,7 @@ export default function InlineEditor() {
                   <label className="block text-label text-muted mb-2">Phone</label>
                   <EditableText
                     content={block.content.phone}
-                    onChange={(value) => updateBlockContent(index, { phone: value })}
+                    onChange={(value) => ubc({ phone: value })}
                     placeholder="+1 (555) 123-4567"
                     className="text-lg text-base block"
                     tag="div"
@@ -1948,7 +2293,7 @@ export default function InlineEditor() {
                   <label className="block text-label text-muted mb-2">Address</label>
                   <EditableText
                     content={block.content.address}
-                    onChange={(value) => updateBlockContent(index, { address: value })}
+                    onChange={(value) => ubc({ address: value })}
                     placeholder="123 Main St, City, State 12345"
                     className="text-lg text-base block"
                     tag="div"
@@ -1965,7 +2310,7 @@ export default function InlineEditor() {
           <div className="max-w-4xl mx-auto text-center">
             <EditableText
               content={block.content.title}
-              onChange={(value) => updateBlockContent(index, { title: value })}
+              onChange={(value) => ubc({ title: value })}
               placeholder="Video Title"
               className="text-3xl font-bold text-base mb-8 block"
               tag="h2"
@@ -1990,7 +2335,7 @@ export default function InlineEditor() {
             )}
             <EditableText
               content={block.content.description}
-              onChange={(value) => updateBlockContent(index, { description: value })}
+              onChange={(value) => ubc({ description: value })}
               placeholder="Video description"
               className="text-lg text-muted block"
               tag="div"
@@ -2001,7 +2346,7 @@ export default function InlineEditor() {
               <input
                 type="url"
                 value={block.content.videoUrl || ''}
-                onChange={(e) => updateBlockContent(index, { videoUrl: e.target.value })}
+                onChange={(e) => ubc({ videoUrl: e.target.value })}
                 className="w-full px-3 py-2.5 border border-border-strong rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                 placeholder="https://www.youtube.com/embed/..."
               />
@@ -2028,7 +2373,7 @@ export default function InlineEditor() {
                       </div>
                     ))}
                     <button
-                      onClick={() => addNestedBlock(index, colIndex, 'text')}
+                      onClick={() => addNestedBlock(sIdx, bIdx, colIndex, 'text')}
                       className="w-full px-3 py-2.5 min-h-[44px] border border-border rounded text-primary hover:bg-primary-light text-small transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                     >
                       + Add Block
@@ -2114,8 +2459,34 @@ export default function InlineEditor() {
               </button>
             </div>
 
-            {/* Save status - more prominent */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-raised border border-border">
+            {/* Publish / Draft toggle */}
+            <button
+              onClick={async () => {
+                if (!pageData?.id || publishSaving) return;
+                setPublishSaving(true);
+                try {
+                  await api.patch(`/web/pages/${pageData.id}`, { isPublished: !isPublished });
+                  setIsPublished(p => !p);
+                } catch (e) {
+                  console.error('Failed to toggle publish status:', e);
+                } finally {
+                  setPublishSaving(false);
+                }
+              }}
+              disabled={publishSaving}
+              className={`px-4 py-2.5 min-h-[44px] rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed ${
+                isPublished
+                  ? 'bg-success/10 text-success hover:bg-success/20'
+                  : 'bg-surface-raised text-muted hover:bg-border'
+              }`}
+              title={isPublished ? 'Page is published — click to set to Draft' : 'Page is a draft — click to Publish'}
+            >
+              <div className={`w-2 h-2 rounded-full ${isPublished ? 'bg-success' : 'bg-muted'}`} />
+              {publishSaving ? 'Updating...' : isPublished ? 'Published' : 'Draft'}
+            </button>
+
+            {/* Save status */}
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-raised border border-border min-w-[120px] justify-center">
               {saveStatus === 'saving' && (
                 <div className="flex items-center gap-2 text-small text-primary font-medium">
                   <AlertCircle className="w-4 h-4 animate-spin" />
@@ -2138,6 +2509,12 @@ export default function InlineEditor() {
                 <div className="flex items-center gap-2 text-small text-muted">
                   <div className="w-2 h-2 rounded-full bg-border" />
                   Unsaved changes
+                </div>
+              )}
+              {saveStatus === 'idle' && (
+                <div className="flex items-center gap-2 text-small text-muted">
+                  <Check className="w-4 h-4 opacity-40" />
+                  Saved
                 </div>
               )}
             </div>
@@ -2172,80 +2549,181 @@ export default function InlineEditor() {
         </div>
       </div>
 
-      {/* Main editor area — full width, no sidebar */}
+      {/* Main editor area — sections */}
       <div className="flex">
         <div className="flex-1">
           <div className={`min-h-screen ${previewDevice === 'desktop' ? 'bg-surface' : 'bg-surface-raised py-8'}`}>
             <div className={`${deviceClasses[previewDevice]} bg-surface min-h-screen ${previewDevice !== 'desktop' ? 'rounded-xl overflow-hidden' : ''}`}>
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="blocks">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef}>
-                    {blocks.map((block, index) => (
-                      <Draggable key={index} draggableId={`block-${index}`} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            className="mb-4"
-                          >
-                            <EditableBlock
-                              block={block}
-                              index={index}
-                              onUpdate={updateBlock}
-                              onDelete={deleteBlock}
-                              onMoveUp={(i) => i > 0 && moveBlock(i, i - 1)}
-                              onMoveDown={(i) => i < blocks.length - 1 && moveBlock(i, i + 1)}
-                              onDuplicate={duplicateBlock}
-                              updateBlockContent={updateBlockContent}
-                              saveRef={saveRef}
-                              isDragging={snapshot.isDragging}
-                            >
-                              {/* Drag handle */}
-                              <div 
-                                {...provided.dragHandleProps} 
-                                className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto p-2 cursor-grab active:cursor-grabbing"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <GripVertical className="w-5 h-5 text-subtle" />
-                              </div>
-                              
-                              {/* Block content */}
-                              {renderEditableBlock(block, index)}
-                            </EditableBlock>
+
+              {/* Empty state */}
+              {sections.length === 0 && (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+                  <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center">
+                    <Rows3 className="w-10 h-10 text-blue-400" />
+                  </div>
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Start building your page</h2>
+                    <p className="text-gray-500 mb-6">Add your first section to get started</p>
+                    <button
+                      onClick={() => setAddSectionAfterIndex(-1)}
+                      className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg font-semibold text-lg"
+                    >
+                      <Plus className="w-6 h-6" />
+                      Add Section
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Sections list */}
+              {sections.map((section, sIdx) => (
+                <SectionWrapper
+                  key={section.id || sIdx}
+                  section={section}
+                  sectionIndex={sIdx}
+                  onAddSectionBelow={(i) => setAddSectionAfterIndex(i)}
+                  onDeleteSection={deleteSection}
+                  onDuplicateSection={duplicateSection}
+                  onUpdateSection={updateSection}
+                >
+                  {/* Blocks inside section — multi-column grid if columns > 1 */}
+                  {section.columns > 1 ? (
+                    <div
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: `repeat(${section.columns}, 1fr)`,
+                        gap: `${section.gap ?? 24}px`,
+                      }}
+                    >
+                      {Array.from({ length: section.columns }).map((_, colIdx) => {
+                        // Distribute blocks across columns in order
+                        const colBlocks = (section.blocks || []).filter((_, bi) => bi % section.columns === colIdx);
+                        const colBlockIndices = (section.blocks || []).reduce((acc, _, bi) => {
+                          if (bi % section.columns === colIdx) acc.push(bi);
+                          return acc;
+                        }, []);
+                        return (
+                          <div key={colIdx} className="min-h-[60px]">
+                            <DragDropContext onDragEnd={handleDragEnd}>
+                              <Droppable droppableId={`section-${sIdx}`}>
+                                {(provided) => (
+                                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                                    {colBlocks.map((block, i) => {
+                                      const bIdx = colBlockIndices[i];
+                                      return (
+                                        <Draggable key={bIdx} draggableId={`s${sIdx}-b${bIdx}`} index={bIdx}>
+                                          {(provided, snapshot) => (
+                                            <div ref={provided.innerRef} {...provided.draggableProps} className="mb-2">
+                                              <EditableBlock
+                                                block={block}
+                                                index={bIdx}
+                                                onUpdate={(idx, updates) => updateBlock(sIdx, idx, updates)}
+                                                onDelete={(idx) => deleteBlock(sIdx, idx)}
+                                                onMoveUp={(idx) => idx > 0 && moveBlock(sIdx, idx, idx - 1)}
+                                                onMoveDown={(idx) => idx < section.blocks.length - 1 && moveBlock(sIdx, idx, idx + 1)}
+                                                onDuplicate={(idx) => duplicateBlock(sIdx, idx)}
+                                                onUpdateContent={(updates) => updateBlockContent(sIdx, bIdx, updates)}
+                                                saveRef={saveRef}
+                                                isDragging={snapshot.isDragging}
+                                              >
+                                                <div {...provided.dragHandleProps} className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto p-2 cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
+                                                  <GripVertical className="w-5 h-5 text-subtle" />
+                                                </div>
+                                                {renderEditableBlock(block, sIdx, bIdx)}
+                                              </EditableBlock>
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      );
+                                    })}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </Droppable>
+                            </DragDropContext>
+                            <AddBlockButton onClick={() => setBlockPaletteTarget({ sectionIndex: sIdx })} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Single-column: blocks stacked vertically */
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                      <Droppable droppableId={`section-${sIdx}`}>
+                        {(provided) => (
+                          <div {...provided.droppableProps} ref={provided.innerRef}>
+                            {(section.blocks || []).map((block, bIdx) => (
+                              <Draggable key={bIdx} draggableId={`s${sIdx}-b${bIdx}`} index={bIdx}>
+                                {(provided, snapshot) => (
+                                  <div ref={provided.innerRef} {...provided.draggableProps} className="mb-2">
+                                    <EditableBlock
+                                      block={block}
+                                      index={bIdx}
+                                      onUpdate={(idx, updates) => updateBlock(sIdx, idx, updates)}
+                                      onDelete={(idx) => deleteBlock(sIdx, idx)}
+                                      onMoveUp={(idx) => idx > 0 && moveBlock(sIdx, idx, idx - 1)}
+                                      onMoveDown={(idx) => idx < section.blocks.length - 1 && moveBlock(sIdx, idx, idx + 1)}
+                                      onDuplicate={(idx) => duplicateBlock(sIdx, idx)}
+                                      onUpdateContent={(updates) => updateBlockContent(sIdx, bIdx, updates)}
+                                      saveRef={saveRef}
+                                      isDragging={snapshot.isDragging}
+                                    >
+                                      <div {...provided.dragHandleProps} className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto p-2 cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
+                                        <GripVertical className="w-5 h-5 text-subtle" />
+                                      </div>
+                                      {renderEditableBlock(block, sIdx, bIdx)}
+                                    </EditableBlock>
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
                           </div>
                         )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+                      </Droppable>
+                    </DragDropContext>
+                  )}
 
-            {/* Improved add block section */}
-            <div className="p-8 text-center border-t border-gray-200 bg-gradient-to-b from-white to-gray-50">
-              <button
-                onClick={() => {
-                  setAddBlockIndex(blocks.length);
-                  setShowBlockPalette(true);
-                }}
-                className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 font-semibold text-lg"
-              >
-                <Plus className="w-6 h-6" />
-                Add Block
-              </button>
-              <p className="mt-3 text-sm text-gray-500">
-                or press <kbd className="px-2 py-0.5 bg-gray-200 rounded text-xs font-mono">+</kbd> to add a block
-              </p>
-            </div>
+                  {/* Add Block button — always visible inside section */}
+                  {section.columns <= 1 && (
+                    <div className="px-6 py-3">
+                      <AddBlockButton onClick={() => setBlockPaletteTarget({ sectionIndex: sIdx })} />
+                    </div>
+                  )}
+                </SectionWrapper>
+              ))}
+
+              {/* Bottom "Add Section" button — shown when page has sections */}
+              {sections.length > 0 && (
+                <div className="p-8 text-center border-t border-gray-200 bg-gradient-to-b from-white to-gray-50">
+                  <button
+                    onClick={() => setAddSectionAfterIndex(sections.length - 1)}
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 font-semibold text-lg"
+                  >
+                    <Plus className="w-6 h-6" />
+                    Add Section
+                  </button>
+                  <p className="mt-3 text-sm text-gray-500">
+                    or press <kbd className="px-2 py-0.5 bg-gray-200 rounded text-xs font-mono">+</kbd> to add a section
+                  </p>
+                </div>
+              )}
+
             </div>
           </div>
         </div>
       </div>
 
-      {/* Improved block palette modal */}
-      {showBlockPalette && (
+      {/* Add Section modal */}
+      {addSectionAfterIndex !== null && (
+        <AddSectionModal
+          onClose={() => setAddSectionAfterIndex(null)}
+          onAdd={(sectionConfig) => addSection(sectionConfig, addSectionAfterIndex)}
+        />
+      )}
+
+      {/* Block palette modal — for adding blocks inside a section */}
+      {blockPaletteTarget !== null && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
             <div className="p-6 border-b border-gray-200 bg-gray-50">
@@ -2256,14 +2734,11 @@ export default function InlineEditor() {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900">Add Block</h3>
-                    <p className="text-sm text-gray-500">Choose a block type to add to your page</p>
+                    <p className="text-sm text-gray-500">Choose a block type to add to this section</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setShowBlockPalette(false);
-                    setAddBlockIndex(null);
-                  }}
+                  onClick={() => setBlockPaletteTarget(null)}
                   className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                   title="Close (Esc)"
                 >
@@ -2276,7 +2751,7 @@ export default function InlineEditor() {
                 {BLOCK_TYPES.map(({ id, name, Icon, description }) => (
                   <button
                     key={id}
-                    onClick={() => addBlock(id, addBlockIndex)}
+                    onClick={() => addBlockToSection(blockPaletteTarget.sectionIndex, id)}
                     className="p-5 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 text-left group"
                   >
                     <div className="flex items-start gap-4">
@@ -2328,7 +2803,7 @@ export default function InlineEditor() {
                     { action: 'Undo', shortcut: 'Ctrl/Cmd + Z' },
                     { action: 'Redo', shortcut: 'Ctrl/Cmd + Shift + Z' },
                     { action: 'Preview', shortcut: 'Ctrl/Cmd + P' },
-                    { action: 'Add Block', shortcut: '+' },
+                    { action: 'Add Section', shortcut: '+' },
                     { action: 'Close Dialog', shortcut: 'Esc' },
                     { action: 'Show Help', shortcut: '?' },
                   ].map(({ action, shortcut }) => (
