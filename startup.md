@@ -399,6 +399,24 @@ Please refer to `SKILL.md` for full architectural guidelines and patterns.
 
 ## Known Limitations / Future Work
 
+### ⚠️ Before going live — set up App Service backups
+
+> **Reminder:** Do this when the app is ready for real users.
+
+Azure SQL database backups are automatic and already active. App Service backups are **not configured**.
+
+To enable:
+1. Create an Azure Storage Account (or reuse one when Blob Storage is set up for uploads)
+2. In Azure Portal → App Service (`houstonservicehub`) → Backups → Configure
+3. Set a daily schedule and 30-day retention
+
+**Cost:** Free on S1. You only pay for the Storage Account space used (~$0.018/GB/month).
+
+What gets backed up: deployed code, app settings, `/uploads` folder.
+What doesn't need backing up: database (Azure SQL handles it), code (Git).
+
+---
+
 ### Uploaded images are stored on local disk (not shared across slots)
 
 **Current behavior:** Uploaded images (web builder assets, etc.) are saved to an `/uploads` folder on the App Service instance's local disk via `multer`. Each deployment slot has its own separate disk, so:
