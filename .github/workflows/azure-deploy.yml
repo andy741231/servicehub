@@ -7,7 +7,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. BUILD
+  # Compile the client, generate Prisma, and assemble a self-contained
+  # deploy.zip that is shared with every downstream job.
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,11 +35,6 @@ jobs:
 
       - name: Run Prisma generate (with Windows binary for Azure)
         run: npx prisma generate
-
-      - name: Apply database migrations to production
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 
       - name: Assemble self-contained deployment folder
         run: |
@@ -75,22 +75,179 @@ jobs:
           cd ..
           echo "Zip size: $(du -sh deploy.zip | cut -f1)"
 
-      - name: Deploy via Kudu Zip Deploy API
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-zip
+          path: deploy.zip
+          retention-days: 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. DEPLOY TO STAGING
+  # Push the zip to the staging slot via Kudu Zip Deploy API.
+  # The staging slot URL is:  houstonservicehub-staging.azurewebsites.net
+  # ──────────────────────────────────────────────────────────────────────────
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-zip
+
+      - name: Apply database migrations to staging
+        run: npx prisma migrate deploy
         env:
-          KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER }}
-          KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+
+      - name: Deploy to staging slot via Kudu
+        env:
+          KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER_STAGING }}
+          KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD_STAGING }}
         run: |
-          # isAsync=true so we don't time out waiting — deployment continues server-side
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -u "${KUDU_USER}:${KUDU_PWD}" \
-            "https://houstonservicehub.scm.azurewebsites.net/api/zipdeploy?isAsync=true" \
+            "https://houstonservicehub-staging.scm.azurewebsites.net/api/zipdeploy?isAsync=true" \
             --data-binary @deploy.zip \
             -H "Content-Type: application/zip" \
             --max-time 300)
           HTTP=$(echo "$RESPONSE" | tail -1)
-          echo "Kudu response: HTTP $HTTP"
+          echo "Kudu staging response: HTTP $HTTP"
           if [ "$HTTP" != "202" ] && [ "$HTTP" != "200" ]; then
-            echo "Deploy request failed with HTTP $HTTP"
+            echo "Staging deploy request failed with HTTP $HTTP"
             exit 1
           fi
-          echo "Deployment accepted by Azure (async). Check https://houstonservicehub.scm.azurewebsites.net/api/deployments for status."
+          echo "Staging deployment accepted by Azure (async)."
+
+      - name: Wait for staging deployment to finish
+        env:
+          KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER_STAGING }}
+          KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD_STAGING }}
+        run: |
+          echo "Polling Kudu for deployment status..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s \
+              -u "${KUDU_USER}:${KUDU_PWD}" \
+              "https://houstonservicehub-staging.scm.azurewebsites.net/api/deployments/latest" \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',0))" 2>/dev/null || echo "0")
+            echo "Attempt $i — deployment status: $STATUS"
+            # status 4 = success, status 3 = failed
+            if [ "$STATUS" = "4" ]; then
+              echo "Staging deployment succeeded."
+              exit 0
+            fi
+            if [ "$STATUS" = "3" ]; then
+              echo "Staging deployment failed."
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "Timed out waiting for staging deployment."
+          exit 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. SMOKE TESTS
+  # Hit critical endpoints on the staging slot. If any check fails the
+  # pipeline stops and production is never touched.
+  # ──────────────────────────────────────────────────────────────────────────
+  smoke-tests:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for staging slot to warm up
+        run: sleep 15
+
+      - name: Health check — homepage (HTTP 200)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://houstonservicehub-staging.azurewebsites.net/")
+          echo "Homepage status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Homepage smoke test FAILED (got $STATUS)"
+            exit 1
+          fi
+
+      - name: Health check — API health endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://houstonservicehub-staging.azurewebsites.net/api/health")
+          echo "API health status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "API health smoke test FAILED (got $STATUS)"
+            exit 1
+          fi
+
+      - name: Health check — auth login page (HTTP 200)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://houstonservicehub-staging.azurewebsites.net/login")
+          echo "Login page status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Login page smoke test FAILED (got $STATUS)"
+            exit 1
+          fi
+
+      - name: All smoke tests passed
+        run: echo "All staging smoke tests passed — proceeding to production swap."
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. SWAP TO PRODUCTION
+  # Use the Azure CLI to swap staging → production. Because we relied on
+  # auto-swap being configured in the portal this job acts as the explicit
+  # trigger so the pipeline waits and can report success/failure.
+  # DB migrations are applied to production only after smoke tests pass.
+  # ──────────────────────────────────────────────────────────────────────────
+  swap-production:
+    needs: smoke-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code (needed for Prisma CLI)
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (for Prisma CLI)
+        run: npm ci
+
+      - name: Apply database migrations to production
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+
+      - name: Log in to Azure CLI
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Swap staging → production slot
+        run: |
+          az webapp deployment slot swap \
+            --resource-group App-Services-And-Related \
+            --name houstonservicehub \
+            --slot staging \
+            --target-slot production
+          echo "Slot swap complete. Production is now live."
+
+      - name: Verify production is healthy after swap
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://houstonservicehub.azurewebsites.net/api/health")
+          echo "Production health after swap: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Production health check FAILED post-swap. Consider swapping back."
+            exit 1
+          fi
+          echo "Production is healthy."

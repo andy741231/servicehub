@@ -155,15 +155,17 @@ export $(grep DATABASE_URL_PROD .env | xargs) && DATABASE_URL="$DATABASE_URL_PRO
 
 ## Deployment
 
-Deployment is fully automated. Push to `main` and GitHub Actions handles the rest:
+Deployment is fully automated with **zero-downtime** using Azure App Service deployment slots. Push to `main` and GitHub Actions handles the rest:
 
-1. Installs all dependencies
-2. Builds the React frontend (`client/dist/`)
-3. Generates Prisma client with Windows + Linux binaries
-4. Assembles a self-contained deployment package
-5. Deploys to Azure App Service via Kudu ZIP API
+| Stage | Job | What happens |
+|-------|-----|-------------|
+| 1 | `build` | Install deps, compile React frontend, generate Prisma client, assemble & zip deployment package |
+| 2 | `deploy-staging` | Apply staging DB migrations, push zip to the `staging` slot via Kudu, poll until complete |
+| 3 | `smoke-tests` | Hit `/`, `/api/health`, and `/login` on the staging URL — pipeline halts if any return non-200 |
+| 4 | `swap-production` | Apply production DB migrations, swap staging → production via Azure CLI, verify production health |
 
-**Production URL:** `https://houstonservicehub.azurewebsites.net`
+**Production URL:** `https://houstonservicehub.azurewebsites.net`  
+**Staging URL:** `https://houstonservicehub-staging.azurewebsites.net`
 
 ### Deploy code changes
 
@@ -182,15 +184,31 @@ To trigger a manual deploy without a code change:
 # Go to GitHub → Actions → "Build and Deploy to Azure" → Run workflow
 ```
 
+### How zero-downtime works
+
+1. The new build is deployed to the **staging slot** — production is untouched.
+2. Smoke tests run against staging. If they fail, production is never touched.
+3. Once tests pass, Azure performs an instant **slot swap** (staging ↔ production). The old production becomes the new staging slot, enabling instant rollback.
+
+### Emergency rollback
+
+If production behaves unexpectedly after a swap, swap back immediately:
+
+```bash
+az webapp deployment slot swap \
+  --resource-group App-Services-And-Related \
+  --name houstonservicehub \
+  --slot staging \
+  --target-slot production
+```
+
 ### Promoting database changes to production
 
-Code deploys automatically via GitHub Actions, and **database migrations now run automatically as part of the deploy pipeline** via `npx prisma migrate deploy`. You do not need to apply them manually.
+Code deploys automatically via GitHub Actions, and **database migrations now run automatically** via `npx prisma migrate deploy`:
+- Staging migrations run before deploying to the staging slot.
+- Production migrations run after smoke tests pass, right before the slot swap.
 
-The pipeline order is:
-1. Build frontend
-2. Generate Prisma client
-3. **Apply pending migrations to production DB** (`prisma migrate deploy`)
-4. Deploy code to Azure
+You do not need to apply migrations manually.
 
 > **Important:** `prisma migrate deploy` only applies new migrations — it never drops or recreates tables. It is safe to run against a live production database.
 
@@ -202,14 +220,67 @@ The pipeline order is:
    npx prisma migrate dev --name describe_your_change
    ```
 3. Commit both `schema.prisma` and the new file in `prisma/migrations/`.
-4. Push to `main` — the CI pipeline will apply the migration to production automatically.
+4. Push to `main` — the CI pipeline will apply the migration to staging first, then to production after smoke tests pass.
 
 > **Always test migrations on `free-test-servicehub` first.** Never use `db push` on production — it can silently drop data.
 
-#### Required GitHub secret
+#### Required GitHub secrets
 
-The pipeline reads `DATABASE_URL_PROD` from GitHub Actions secrets. Ensure it is set:
-**GitHub → Repository → Settings → Secrets and variables → Actions → `DATABASE_URL_PROD`**
+| Secret | Description |
+|--------|-------------|
+| `DATABASE_URL_PROD` | Production Azure SQL connection string |
+| `DATABASE_URL_STAGING` | Staging Azure SQL connection string |
+| `AZURE_DEPLOY_USER` | Kudu publishing username (production) |
+| `AZURE_DEPLOY_PWD` | Kudu publishing password (production) |
+| `AZURE_DEPLOY_USER_STAGING` | Kudu publishing username (staging slot) |
+| `AZURE_DEPLOY_PWD_STAGING` | Kudu publishing password (staging slot) |
+| `AZURE_CREDENTIALS` | Service principal JSON for `az login` (slot swap) |
+
+To add or update secrets: **GitHub → Repository → Settings → Secrets and variables → Actions**
+
+To generate the `AZURE_CREDENTIALS` service principal:
+```bash
+az ad sp create-for-rbac \
+  --name "github-actions-servicehub" \
+  --role contributor \
+  --scopes /subscriptions/<subscription-id>/resourceGroups/App-Services-And-Related \
+  --sdk-auth
+```
+Copy the full JSON output as the value of `AZURE_CREDENTIALS`.
+
+### One-time Azure CLI setup (staging slot)
+
+> **Already completed on 2026-06-25.** The staging slot is live and fully configured. These steps are documented here for reference only — do not run them again.
+
+| Step | What was done | Verified |
+|------|--------------|---------|
+| 1 | Created `staging` slot cloned from production | `az webapp deployment slot list` shows `staging` in `Running` state |
+| 2 | Auto-swap enabled (`staging` → `production`) | `autoSwapSlotName: production` confirmed on the slot config |
+| 3 | `DATABASE_URL` on staging set to `free-test-servicehub` (dev DB) | `database=free-test-servicehub` confirmed in staging app settings |
+| 4 | `DATABASE_URL` and `NODE_ENV` marked slot-sticky on both slots | Both show `slotSetting: true` on production and staging |
+
+To verify current state at any time:
+```bash
+# Confirm slot exists and auto-swap target
+az webapp deployment slot list \
+  --resource-group App-Services-And-Related \
+  --name houstonservicehub \
+  --query "[].{name:name, state:state, autoSwap:siteConfig.autoSwapSlotName}" \
+  -o table
+
+# Confirm slot-sticky settings on production
+az webapp config appsettings list \
+  --resource-group App-Services-And-Related \
+  --name houstonservicehub \
+  --query "[?slotSetting==\`true\`].name" -o tsv
+
+# Confirm staging DATABASE_URL points at the test DB
+az webapp config appsettings list \
+  --resource-group App-Services-And-Related \
+  --name houstonservicehub \
+  --slot staging \
+  --query "[?name=='DATABASE_URL'].value" -o tsv
+```
 
 ### Production environment variables
 
