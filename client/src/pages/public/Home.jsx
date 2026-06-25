@@ -155,7 +155,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                           {item.label}
                           <ChevronDown className="w-3.5 h-3.5 opacity-60 group-hover:rotate-180 transition-transform duration-200" />
                         </button>
-                        <div className="absolute left-0 top-[calc(100%+4px)] hidden group-hover:block">
+                        <div className="absolute left-0 top-full hidden group-hover:block pt-1">
                           <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 min-w-[180px] overflow-hidden">
                             {item.children.map((child, ci) => (
                               <a

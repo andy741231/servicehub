@@ -60,7 +60,7 @@ function useFocusTrap(isActive) {
 }
 import {
   Plus, ExternalLink, Trash2, Pencil, Globe, Link as LinkIcon,
-  X, Check, AlertCircle, ChevronRight, ChevronDown, GripVertical, FolderPlus, Settings
+  X, Check, AlertCircle, GripVertical, FolderPlus, Settings
 } from 'lucide-react';
 import api from '../../utils/api';
 import { useConfirm } from '../../components/Dialog';
@@ -292,130 +292,123 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
 // ─────────────────────────────────────────────
 // Single nav item row (top-level or child)
 // ─────────────────────────────────────────────
-function NavRow({ page, depth = 0, children, onEdit, onDelete, onAddChild, isLink }) {
-  const [open, setOpen] = useState(true);
-  const hasChildren = children?.length > 0;
-
+function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild, onTogglePublished, onToggleReserved, isLink }) {
   return (
-    <div>
+    <div
+      className={`flex items-center gap-2 group rounded-xl px-3 py-2.5 hover:bg-gray-50/80 transition-colors border border-transparent hover:border-gray-100 ${depth > 0 ? 'ml-7' : ''}`}
+    >
+      {/* Drag handle — only this element triggers drag */}
       <div
-        className={`flex items-center gap-2 group rounded-xl px-3 py-2.5 hover:bg-gray-50/80 transition-colors border border-transparent hover:border-gray-100 ${depth > 0 ? 'ml-7' : ''}`}
+        {...dragHandleProps}
+        className="cursor-grab flex-shrink-0"
+        onClick={e => e.stopPropagation()}
       >
-        {/* Drag handle */}
-        <GripVertical className="w-4 h-4 text-gray-200 group-hover:text-gray-400 cursor-grab flex-shrink-0 transition-colors" />
-
-        {/* Expand chevron */}
-        <button
-          onClick={() => setOpen(o => !o)}
-          className={`w-5 h-5 flex items-center justify-center flex-shrink-0 rounded transition-colors ${hasChildren ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100' : 'invisible'}`}
-          aria-label={open ? 'Collapse' : 'Expand'}
-        >
-          {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-        </button>
-
-        {/* Icon */}
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${isLink ? 'bg-purple-50 ring-1 ring-purple-100' : 'bg-blue-50 ring-1 ring-blue-100'}`}>
-          {isLink
-            ? <LinkIcon className="w-3.5 h-3.5 text-purple-500" />
-            : <Globe    className="w-3.5 h-3.5 text-blue-500" />}
-        </div>
-
-        {/* Label + path */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800">{page.navLabel || page.title}</span>
-            {!isLink && (
-              <>
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${page.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {page.isPublished ? 'Published' : 'Draft'}
-                </span>
-                {page.isReserved && (
-                  <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">Reserved</span>
-                )}
-                {page.hideFromNav && (
-                  <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">Hidden</span>
-                )}
-              </>
-            )}
-          </div>
-          <span className="text-xs text-gray-400 font-mono leading-tight">
-            {isLink ? (page.href || 'external link') : `/${page.slug}`}
-          </span>
-        </div>
-
-        {/* Primary CTA buttons — always visible */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {!isLink && (
-            <>
-              <Link
-                to={`/hub-admin/web/editor/${page.slug}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
-                title="Open in page editor"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Edit
-              </Link>
-              <a
-                href={page.slug === 'home' ? '/' : `/${page.slug}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 active:scale-95 transition-all shadow-sm"
-                title="View live page"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                View
-              </a>
-            </>
-          )}
-
-          {/* Secondary icon actions — on hover */}
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
-            {depth === 0 && (
-              <button
-                onClick={() => onAddChild(page.id)}
-                className="p-1.5 hover:bg-blue-50 text-blue-400 hover:text-blue-600 rounded-lg transition-colors"
-                aria-label="Add sub-menu item"
-                title="Add sub-menu item"
-              >
-                <FolderPlus className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={() => onEdit(page)}
-              className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-700 rounded-lg transition-colors"
-              aria-label="Page settings"
-              title="Page settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onDelete(page.id)}
-              className="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
-              aria-label="Delete"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <GripVertical className="w-4 h-4 text-gray-200 group-hover:text-gray-400 transition-colors" />
       </div>
 
-      {/* Children */}
-      {open && hasChildren && (
-        <div className="mt-0.5 space-y-0.5 border-l-2 border-gray-100 ml-[30px]">
-          {children.map(child => (
-            <NavRow
-              key={child.id}
-              page={child}
-              depth={depth + 1}
-              isLink={child.slug?.startsWith('__link_')}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onAddChild={onAddChild}
-            />
-          ))}
+      {/* Icon */}
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${isLink ? 'bg-purple-50 ring-1 ring-purple-100' : 'bg-blue-50 ring-1 ring-blue-100'}`}>
+        {isLink
+          ? <LinkIcon className="w-3.5 h-3.5 text-purple-500" />
+          : <Globe    className="w-3.5 h-3.5 text-blue-500" />}
+      </div>
+
+      {/* Label + path */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-gray-800">{page.navLabel || page.title}</span>
+          {!isLink && (
+            <>
+              {/* Published toggle badge */}
+              <button
+                onClick={() => onTogglePublished(page)}
+                title={page.isPublished ? 'Click to unpublish (set to Draft)' : 'Click to publish'}
+                className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
+                  page.isPublished
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200 hover:ring-green-400'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:ring-gray-400'
+                }`}
+              >
+                {page.isPublished ? 'Published' : 'Draft'}
+              </button>
+              {/* Reserved toggle badge */}
+              <button
+                onClick={() => onToggleReserved(page)}
+                title={page.isReserved ? 'Click to remove Reserved flag (moves to Pages group)' : 'Click to mark as Reserved (moves to Reserved group)'}
+                className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
+                  page.isReserved
+                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 hover:ring-amber-400'
+                    : 'bg-gray-50 text-gray-400 border border-dashed border-gray-300 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300 hover:ring-amber-300'
+                }`}
+              >
+                {page.isReserved ? 'Reserved' : 'Set reserved'}
+              </button>
+              {page.hideFromNav && (
+                <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">Hidden</span>
+              )}
+            </>
+          )}
         </div>
-      )}
+        <span className="text-xs text-gray-400 font-mono leading-tight">
+          {isLink ? (page.href || 'external link') : `/${page.slug}`}
+        </span>
+      </div>
+
+      {/* Primary CTA buttons — always visible */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {!isLink && (
+          <>
+            <Link
+              to={`/hub-admin/web/editor/${page.slug}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+              title="Open in page editor"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </Link>
+            <a
+              href={page.slug === 'home' ? '/' : `/${page.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 active:scale-95 transition-all shadow-sm"
+              title="View live page"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              View
+            </a>
+          </>
+        )}
+
+        {/* Secondary icon actions — on hover */}
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+          {depth === 0 && (
+            <button
+              onClick={() => onAddChild(page.id)}
+              className="p-1.5 hover:bg-blue-50 text-blue-400 hover:text-blue-600 rounded-lg transition-colors"
+              aria-label="Add sub-menu item"
+              title="Add sub-menu item"
+            >
+              <FolderPlus className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => onEdit(page)}
+            className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-700 rounded-lg transition-colors"
+            aria-label="Page settings"
+            title="Page settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onDelete(page.id)}
+            className="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+            aria-label="Delete"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -470,6 +463,25 @@ export default function Pages() {
     await load();
   };
 
+  // Optimistic inline toggles — patch single field, re-fetch to re-group
+  const handleQuickToggle = async (page, field) => {
+    const newVal = !page[field];
+    // Optimistic update
+    setPages(prev => prev.map(p => p.id === page.id ? { ...p, [field]: newVal } : p));
+    try {
+      await api.patch(`/web/pages/${page.id}`, { [field]: newVal });
+      const label = field === 'isPublished'
+        ? (newVal ? 'Page published.' : 'Page set to draft — no longer public.')
+        : (newVal ? 'Moved to Reserved group.' : 'Moved to Pages group.');
+      toast(label);
+      await load(); // re-fetch so grouping re-computes from server truth
+    } catch (e) {
+      console.error(e);
+      toast('Failed to update.', 'error');
+      await load(); // revert on error
+    }
+  };
+
   const handleDelete = async (id) => {
     const ok = await confirmDialog({
       title: 'Delete this item?',
@@ -485,14 +497,44 @@ export default function Pages() {
 
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
-    const { source, destination, draggableId } = result;
-    
+    const { source, destination } = result;
+
     // Only allow reordering within the same list (same parent)
     if (source.droppableId !== destination.droppableId) return;
+    if (source.index === destination.index) return;
 
     const listId = source.droppableId;
+
+    // ── Child sub-menu reorder ───────────────────────────────────────────────
+    if (listId.startsWith('children-')) {
+      const parentId = listId.replace('children-', '');
+      const siblings = pages.filter(p => p.parentId === parentId);
+      const newOrder = Array.from(siblings);
+      const [moved] = newOrder.splice(source.index, 1);
+      newOrder.splice(destination.index, 0, moved);
+
+      const reordered = newOrder.map((p, i) => ({ ...p, order: i }));
+      setPages(prev => [
+        ...prev.filter(p => p.parentId !== parentId),
+        ...reordered,
+      ]);
+
+      try {
+        await api.put('/web/pages/reorder', {
+          items: reordered.map((p, i) => ({ id: p.id, order: i })),
+        });
+        toast('Order updated.');
+      } catch (e) {
+        console.error(e);
+        toast('Failed to update order.', 'error');
+        await load();
+      }
+      return;
+    }
+
+    // ── Top-level reorder ────────────────────────────────────────────────────
     const isRegular = listId === 'regular';
-    const filteredList = isRegular 
+    const filteredList = isRegular
       ? topLevel.filter(p => !p.isReserved)
       : topLevel.filter(p => p.isReserved);
 
@@ -500,20 +542,15 @@ export default function Pages() {
     const [moved] = newOrder.splice(source.index, 1);
     newOrder.splice(destination.index, 0, moved);
 
-    // Update local state optimistically
-    const reorderedPages = newOrder.map((page, index) => ({
-      ...page,
-      order: index,
-    }));
-
-    // Merge back with the other list
+    const reorderedPages = newOrder.map((page, index) => ({ ...page, order: index }));
     const otherList = isRegular
       ? topLevel.filter(p => p.isReserved)
       : topLevel.filter(p => !p.isReserved);
-    
-    setPages([...reorderedPages, ...otherList]);
 
-    // Send to API
+    // Keep children intact — only replace top-level entries
+    const childPages = pages.filter(p => p.parentId);
+    setPages([...reorderedPages, ...otherList, ...childPages]);
+
     try {
       await api.put('/web/pages/reorder', {
         items: reorderedPages.map((p, i) => ({ id: p.id, order: i })),
@@ -522,7 +559,7 @@ export default function Pages() {
     } catch (e) {
       console.error(e);
       toast('Failed to update order.', 'error');
-      await load(); // Revert on error
+      await load();
     }
   };
 
@@ -549,32 +586,7 @@ export default function Pages() {
         </button>
       </div>
 
-      {/* Nav preview bar */}
-      {!loading && topLevel.filter(p => !p.hideFromNav).length > 0 && (
-        <div className="mb-6 bg-gray-900 rounded-xl px-5 py-3 flex items-center gap-1 overflow-x-auto shadow-inner">
-          <span className="text-white text-sm font-bold mr-4 flex-shrink-0 opacity-70">Preview</span>
-          {topLevel.filter(p => !p.hideFromNav).map(page => {
-            const kids = childrenOf(page.id);
-            return (
-              <div key={page.id} className="relative group/nav flex-shrink-0">
-                <span className="text-gray-300 hover:text-white text-sm px-3 py-1.5 rounded-md hover:bg-white/10 cursor-default flex items-center gap-1 transition-colors">
-                  {page.navLabel || page.title}
-                  {kids.length > 0 && <ChevronDown className="w-3 h-3 opacity-60" />}
-                </span>
-                {kids.length > 0 && (
-                  <div className="absolute top-full left-0 hidden group-hover/nav:block bg-white rounded-lg shadow-xl border border-gray-100 py-1.5 min-w-[160px] z-10 mt-1">
-                    {kids.map(k => (
-                      <span key={k.id} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-default">
-                        {k.navLabel || k.title}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+
 
       {/* List */}
       {loading ? (
@@ -610,28 +622,72 @@ export default function Pages() {
                       {...provided.droppableProps}
                       className={`space-y-1 bg-white border border-gray-200 rounded-2xl p-2 shadow-sm transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50 border-blue-200' : ''}`}
                     >
-                      {topLevel.filter(p => !p.isReserved).map((page, index) => (
-                        <Draggable key={page.id} draggableId={page.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
-                            >
-                              <NavRow
-                                page={page}
-                                depth={0}
-                                isLink={page.slug?.startsWith('__link_')}
-                                children={childrenOf(page.id)}
-                                onEdit={p => setModal({ mode: 'edit', page: p })}
-                                onDelete={handleDelete}
-                                onAddChild={parentId => setModal({ mode: 'add', parentId })}
-                              />
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
+                      {topLevel.filter(p => !p.isReserved).map((page, index) => {
+                        const kids = childrenOf(page.id);
+                        return (
+                          <Draggable key={page.id} draggableId={page.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
+                              >
+                                {/* Parent row — drag handle passed in so only the grip triggers drag */}
+                                <NavRow
+                                  page={page}
+                                  depth={0}
+                                  isLink={page.slug?.startsWith('__link_')}
+                                  dragHandleProps={provided.dragHandleProps}
+                                  onEdit={p => setModal({ mode: 'edit', page: p })}
+                                  onDelete={handleDelete}
+                                  onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                                  onTogglePublished={p => handleQuickToggle(p, 'isPublished')}
+                                  onToggleReserved={p => handleQuickToggle(p, 'isReserved')}
+                                />
+
+                                {/* Children — rendered inside the Draggable so they stay with the parent row,
+                                    but each child has its own Draggable for independent reordering */}
+                                {kids.length > 0 && (
+                                  <Droppable droppableId={`children-${page.id}`}>
+                                    {(cp, cs) => (
+                                      <div
+                                        ref={cp.innerRef}
+                                        {...cp.droppableProps}
+                                        className={`mt-0.5 border-l-2 border-gray-100 ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-blue-200 bg-blue-50/30' : ''}`}
+                                      >
+                                        {kids.map((child, ci) => (
+                                          <Draggable key={child.id} draggableId={child.id} index={ci}>
+                                            {(cdp, cds) => (
+                                              <div
+                                                ref={cdp.innerRef}
+                                                {...cdp.draggableProps}
+                                                className={`${cds.isDragging ? 'opacity-50' : ''}`}
+                                              >
+                                                <NavRow
+                                                  page={child}
+                                                  depth={1}
+                                                  isLink={child.slug?.startsWith('__link_')}
+                                                  dragHandleProps={cdp.dragHandleProps}
+                                                  onEdit={p => setModal({ mode: 'edit', page: p })}
+                                                  onDelete={handleDelete}
+                                                  onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                                                  onTogglePublished={p => handleQuickToggle(p, 'isPublished')}
+                                                  onToggleReserved={p => handleQuickToggle(p, 'isReserved')}
+                                                />
+                                              </div>
+                                            )}
+                                          </Draggable>
+                                        ))}
+                                        {cp.placeholder}
+                                      </div>
+                                    )}
+                                  </Droppable>
+                                )}
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
                       {provided.placeholder}
                     </div>
                   )}
@@ -654,28 +710,68 @@ export default function Pages() {
                       {...provided.droppableProps}
                       className={`space-y-1 bg-amber-50/60 border border-amber-200 rounded-2xl p-2 transition-colors ${snapshot.isDraggingOver ? 'bg-amber-100 border-amber-300' : ''}`}
                     >
-                      {topLevel.filter(p => p.isReserved).map((page, index) => (
-                        <Draggable key={page.id} draggableId={page.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
-                            >
-                              <NavRow
-                                page={page}
-                                depth={0}
-                                isLink={page.slug?.startsWith('__link_')}
-                                children={childrenOf(page.id)}
-                                onEdit={p => setModal({ mode: 'edit', page: p })}
-                                onDelete={handleDelete}
-                                onAddChild={parentId => setModal({ mode: 'add', parentId })}
-                              />
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
+                      {topLevel.filter(p => p.isReserved).map((page, index) => {
+                        const kids = childrenOf(page.id);
+                        return (
+                          <Draggable key={page.id} draggableId={page.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`${snapshot.isDragging ? 'opacity-50' : ''}`}
+                              >
+                                <NavRow
+                                  page={page}
+                                  depth={0}
+                                  isLink={page.slug?.startsWith('__link_')}
+                                  dragHandleProps={provided.dragHandleProps}
+                                  onEdit={p => setModal({ mode: 'edit', page: p })}
+                                  onDelete={handleDelete}
+                                  onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                                  onTogglePublished={p => handleQuickToggle(p, 'isPublished')}
+                                  onToggleReserved={p => handleQuickToggle(p, 'isReserved')}
+                                />
+                                {kids.length > 0 && (
+                                  <Droppable droppableId={`children-${page.id}`}>
+                                    {(cp, cs) => (
+                                      <div
+                                        ref={cp.innerRef}
+                                        {...cp.droppableProps}
+                                        className={`mt-0.5 border-l-2 border-amber-100 ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-amber-300 bg-amber-50/60' : ''}`}
+                                      >
+                                        {kids.map((child, ci) => (
+                                          <Draggable key={child.id} draggableId={child.id} index={ci}>
+                                            {(cdp, cds) => (
+                                              <div
+                                                ref={cdp.innerRef}
+                                                {...cdp.draggableProps}
+                                                className={`${cds.isDragging ? 'opacity-50' : ''}`}
+                                              >
+                                                <NavRow
+                                                  page={child}
+                                                  depth={1}
+                                                  isLink={child.slug?.startsWith('__link_')}
+                                                  dragHandleProps={cdp.dragHandleProps}
+                                                  onEdit={p => setModal({ mode: 'edit', page: p })}
+                                                  onDelete={handleDelete}
+                                                  onAddChild={parentId => setModal({ mode: 'add', parentId })}
+                                                  onTogglePublished={p => handleQuickToggle(p, 'isPublished')}
+                                                  onToggleReserved={p => handleQuickToggle(p, 'isReserved')}
+                                                />
+                                              </div>
+                                            )}
+                                          </Draggable>
+                                        ))}
+                                        {cp.placeholder}
+                                      </div>
+                                    )}
+                                  </Droppable>
+                                )}
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
                       {provided.placeholder}
                     </div>
                   )}

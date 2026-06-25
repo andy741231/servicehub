@@ -33,6 +33,12 @@ export const getPageBySlug = async (req, res) => {
       include: { blocks: { orderBy: { order: 'asc' } } }
     });
 
+    // Block public access to unpublished pages (draft pages)
+    // isPublished defaults to true on creation; home page is always accessible
+    if (page && !page.isPublished && slug !== 'home') {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+
     // Create a default page if it doesn't exist yet
     if (!page) {
       page = await prisma.webPage.create({
