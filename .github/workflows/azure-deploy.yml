@@ -92,15 +92,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download deployment artifact
-        uses: actions/download-artifact@v4
+      - name: Checkout code (needed for prisma/schema.prisma)
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          name: deploy-zip
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (for Prisma CLI)
+        run: npm ci
 
       - name: Apply database migrations to staging
         run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+
+      - name: Download deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-zip
 
       - name: Deploy to staging slot via Kudu
         env:
