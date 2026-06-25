@@ -209,11 +209,12 @@ jobs:
         run: echo "All staging smoke tests passed — proceeding to production swap."
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 4. SWAP TO PRODUCTION
-  # Use the Azure CLI to swap staging → production. Because we relied on
-  # auto-swap being configured in the portal this job acts as the explicit
-  # trigger so the pipeline waits and can report success/failure.
-  # DB migrations are applied to production only after smoke tests pass.
+  # 4. PROMOTE TO PRODUCTION
+  # Auto-swap fires automatically when staging deployment completes (configured
+  # on the slot). This job runs after smoke tests pass to:
+  #   a) Apply DB migrations to production
+  #   b) Wait for the auto-swap to propagate
+  #   c) Verify production is healthy
   # ──────────────────────────────────────────────────────────────────────────
   swap-production:
     needs: smoke-tests
@@ -237,29 +238,23 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 
-      - name: Log in to Azure CLI
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Swap staging → production slot
+      - name: Wait for auto-swap to complete
         run: |
-          az webapp deployment slot swap \
-            --resource-group App-Services-And-Related \
-            --name houstonservicehub \
-            --slot staging \
-            --target-slot production
-          echo "Slot swap complete. Production is now live."
+          echo "Auto-swap is configured on the staging slot — waiting for it to propagate..."
+          sleep 30
 
       - name: Verify production is healthy after swap
         run: |
-          sleep 10
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 30 \
-            "https://houstonservicehub.azurewebsites.net/api/health")
-          echo "Production health after swap: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "Production health check FAILED post-swap. Consider swapping back."
-            exit 1
-          fi
-          echo "Production is healthy."
+          for i in $(seq 1 6); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              "https://houstonservicehub.azurewebsites.net/api/health")
+            echo "Attempt $i — production health: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Production is healthy."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Production health check FAILED. Check Azure portal."
+          exit 1
