@@ -214,15 +214,42 @@ You do not need to apply migrations manually.
 
 #### Creating a new schema change
 
-1. Edit `prisma/schema.prisma` locally.
-2. Generate the migration file:
-   ```bash
-   npx prisma migrate dev --name describe_your_change
-   ```
-3. Commit both `schema.prisma` and the new file in `prisma/migrations/`.
-4. Push to `main` — the CI pipeline will apply the migration to staging first, then to production after smoke tests pass.
+> **Important:** Azure SQL does not support shadow databases, so `prisma migrate dev` will fail locally. Use the two-step workaround below instead. **Never use `prisma db push`** — it skips the migrations system and will break production.
 
-> **Always test migrations on `free-test-servicehub` first.** Never use `db push` on production — it can silently drop data.
+**Every schema change requires two steps before pushing:**
+
+**Step 1 — Create the migration file.**
+Replace `describe_your_change` with a short description (e.g. `add_directory_table`):
+
+```bash
+# Create the migration folder
+mkdir -p "prisma/migrations/$(date +%Y%m%d)_describe_your_change"
+
+# Generate the SQL diff and write it to the migration file
+npx prisma migrate diff \
+  --from-schema-datasource prisma/schema.prisma \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > "prisma/migrations/$(date +%Y%m%d)_describe_your_change/migration.sql"
+```
+
+**Step 2 — Mark the migration as already applied on your local dev DB**
+(because the test DB was already updated when you edited the schema):
+
+```bash
+npx prisma migrate resolve --applied "$(date +%Y%m%d)_describe_your_change"
+```
+
+**Step 3 — Commit and push:**
+
+```bash
+git add prisma/
+git commit -m "feat: describe your change"
+git push
+```
+
+CI will automatically apply the migration to staging, run smoke tests, then apply to production before the slot swap.
+
+> **Never skip Step 1.** If you push without a migration file, CI reports "No pending migrations" and production breaks — exactly what happened with the `WebSection` incident on 2026-06-25.
 
 #### Required GitHub secrets
 
