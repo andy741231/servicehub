@@ -114,7 +114,7 @@ npx prisma db seed
 npm run dev
 ```
 
-Turborepo starts both apps in parallel:
+Turborepo starts both apps in parallel :
 - **Frontend (React/Vite):** `http://localhost:3000`
 - **Backend (Express API):** `http://localhost:4000`
 
