@@ -3,4 +3,5 @@ export const APP_IDS = {
   FORMS: 'forms',
   EMAIL: 'email',
   DIRECTORY: 'directory',
+  PORTAL: 'portal',
 };

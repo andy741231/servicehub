@@ -50,6 +50,9 @@ export default function FormsBuilder() {
       placeholder: '',
       required: false,
       options: type === 'select' || type === 'checkbox' ? [''] : [],
+      content: type === 'content' ? '' : undefined,
+      columns: type === 'grid' ? [[], []] : undefined,
+      columnCount: type === 'grid' ? 2 : undefined,
     };
     addField(newField);
   };

@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-commit hook to auto-generate Prisma migrations when schema.prisma changes
+
+echo "🔍 Checking for Prisma schema changes..."
+
+# Check if prisma/schema.prisma is staged for commit
+if git diff --cached --name-only | grep -q "prisma/schema.prisma"; then
+  echo "✅ prisma/schema.prisma modified - generating migration..."
+  
+  # Generate migration name from commit message (first 50 chars, spaces to underscores)
+  COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "schema_change")
+  MIGRATION_NAME=$(date +%Y%m%d)_$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_' | head -c 50)
+  
+  # Create migration folder
+  MIGRATION_DIR="prisma/migrations/$MIGRATION_NAME"
+  mkdir -p "$MIGRATION_DIR"
+  
+  # Generate SQL diff
+  echo "📝 Generating migration: $MIGRATION_NAME"
+  npx prisma migrate diff \
+    --from-schema-datasource prisma/schema.prisma \
+    --to-schema-datamodel prisma/schema.prisma \
+    --script > "$MIGRATION_DIR/migration.sql"
+  
+  # Check if migration.sql has content (actual schema changes)
+  if [ -s "$MIGRATION_DIR/migration.sql" ]; then
+    echo "✨ Migration file created: $MIGRATION_DIR/migration.sql"
+    
+    # Mark migration as applied locally (since we already have the schema)
+    npx prisma migrate resolve --applied "$MIGRATION_NAME"
+    
+    # Add the migration file to this commit
+    git add "$MIGRATION_DIR/"
+    
+    echo "✅ Migration added to commit"
+  else
+    echo "⚠️  No schema changes detected - removing empty migration folder"
+    rm -rf "$MIGRATION_DIR"
+  fi
+else
+  echo "ℹ️  No Prisma schema changes detected"
+fi

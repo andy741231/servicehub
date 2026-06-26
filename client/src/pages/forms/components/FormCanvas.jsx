@@ -1,5 +1,7 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Trash2, Copy } from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import useFormStore from '../store/formStore';
 
 const FIELD_COMPONENTS = {
@@ -103,14 +105,178 @@ const FIELD_COMPONENTS = {
       ))}
     </fieldset>
   ),
+  content: ({ field, isPreview, onContentChange }) => {
+    const modules = {
+      toolbar: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link'],
+        ['clean']
+      ],
+    };
+
+    const formats = [
+      'header',
+      'bold', 'italic', 'underline', 'strike',
+      'list', 'bullet',
+      'link'
+    ];
+
+    return (
+      <div className="bg-background border border-border rounded-base">
+        <ReactQuill
+          theme="snow"
+          value={field.content || ''}
+          onChange={(content) => onContentChange && onContentChange(field.id, content)}
+          modules={modules}
+          formats={formats}
+          readOnly={isPreview}
+          placeholder="Add your content here..."
+          className="min-h-[150px]"
+        />
+      </div>
+    );
+  },
+  grid: ({ field, isPreview, onAddFieldToGrid, onRemoveFieldFromGrid, onUpdateGridField, onSelectField, onDeleteField, onDuplicateField, selectedField, onAddField }) => {
+    const columnCount = field.columnCount || 2;
+    const columns = field.columns || Array(columnCount).fill([]);
+
+    const gridCols = {
+      1: 'grid-cols-1',
+      2: 'grid-cols-2',
+      3: 'grid-cols-3',
+    }[columnCount] || 'grid-cols-2';
+
+    const handleAddFieldToColumn = (colIndex, fieldType) => {
+      const newField = {
+        id: `field-${Date.now()}`,
+        type: fieldType,
+        label: '',
+        placeholder: '',
+        required: false,
+        options: fieldType === 'select' || fieldType === 'checkbox' ? [''] : [],
+        content: fieldType === 'content' ? '' : undefined,
+      };
+      onAddFieldToGrid && onAddFieldToGrid(field.id, colIndex, newField);
+    };
+
+    if (isPreview) {
+      return (
+        <div className={`grid ${gridCols} gap-4`}>
+          {columns.map((column, colIndex) => (
+            <div key={colIndex} className="space-y-4">
+              {column.map((gridField) => {
+                const FieldComponent = FIELD_COMPONENTS[gridField.type];
+                return (
+                  <div key={gridField.id} className="space-y-2">
+                    {gridField.type !== 'content' && (
+                      <label
+                        htmlFor={gridField.id}
+                        className="block text-body font-medium text-base"
+                      >
+                        {gridField.label || 'Untitled field'}
+                        {gridField.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                    )}
+                    {FieldComponent ? (
+                      <FieldComponent field={gridField} isPreview={isPreview} />
+                    ) : (
+                      <p className="text-small text-muted">Unknown field type: {gridField.type}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`grid ${gridCols} gap-4`}>
+        {columns.map((column, colIndex) => (
+          <div key={colIndex} className="min-h-[100px] border-2 border-dashed border-border rounded-lg p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-small text-muted">Column {colIndex + 1}</div>
+              <select
+                onChange={(e) => handleAddFieldToColumn(colIndex, e.target.value)}
+                className="text-small px-2 py-1 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                value=""
+              >
+                <option value="">+ Add Field</option>
+                <option value="text">Text</option>
+                <option value="textarea">Long Text</option>
+                <option value="number">Number</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="date">Date</option>
+                <option value="select">Dropdown</option>
+                <option value="checkbox">Checkbox</option>
+                <option value="content">Content Block</option>
+              </select>
+            </div>
+            {column.map((gridField) => (
+              <div
+                key={gridField.id}
+                onClick={() => onSelectField(gridField.id)}
+                className={`p-3 border rounded-base cursor-pointer ${
+                  selectedField === gridField.id
+                    ? 'border-primary bg-primary-light'
+                    : 'border-border bg-surface hover:border-border-dark'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-body font-medium">{gridField.label || gridField.type}</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDuplicateField(gridField.id);
+                      }}
+                      className="p-1 text-subtle hover:text-muted"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveFieldFromGrid(field.id, gridField.id);
+                      }}
+                      className="p-1 text-subtle hover:text-red-500"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+                <div className="text-small text-muted">{gridField.type}</div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  },
 };
 
 export default function FormCanvas({ fields, onSelectField, onDeleteField, onDuplicateField, selectedField, isPreview = false }) {
-  const { reorderFields, updateField } = useFormStore();
+  const { reorderFields, updateField, addFieldToGrid, removeFieldFromGrid, updateGridField } = useFormStore();
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
     reorderFields(result.source.index, result.destination.index);
+  };
+
+  const handleContentChange = (fieldId, content) => {
+    updateField(fieldId, { content });
+  };
+
+  const handleRemoveFieldFromGrid = (gridId, fieldId) => {
+    removeFieldFromGrid(gridId, fieldId);
+  };
+
+  const handleAddFieldToGrid = (gridId, columnIndex, field) => {
+    addFieldToGrid(gridId, columnIndex, field);
   };
 
   if (fields.length === 0) {
@@ -129,15 +295,28 @@ export default function FormCanvas({ fields, onSelectField, onDeleteField, onDup
           const FieldComponent = FIELD_COMPONENTS[field.type];
           return (
             <div key={field.id} className="space-y-2">
-              <label 
-                htmlFor={field.id}
-                className="block text-body font-medium text-base"
-              >
-                {field.label || 'Untitled field'}
-                {field.required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
-              </label>
+              {field.type !== 'content' && (
+                <label
+                  htmlFor={field.id}
+                  className="block text-body font-medium text-base"
+                >
+                  {field.label || 'Untitled field'}
+                  {field.required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
+                </label>
+              )}
               {FieldComponent ? (
-                <FieldComponent field={field} isPreview={isPreview} />
+                <FieldComponent
+                  field={field}
+                  isPreview={isPreview}
+                  onContentChange={handleContentChange}
+                  onAddFieldToGrid={handleAddFieldToGrid}
+                  onRemoveFieldFromGrid={handleRemoveFieldFromGrid}
+                  onUpdateGridField={updateGridField}
+                  onSelectField={onSelectField}
+                  onDeleteField={onDeleteField}
+                  onDuplicateField={onDuplicateField}
+                  selectedField={selectedField}
+                />
               ) : (
                 <p className="text-small text-muted">Unknown field type: {field.type}</p>
               )}
@@ -182,26 +361,39 @@ export default function FormCanvas({ fields, onSelectField, onDeleteField, onDup
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <label htmlFor={`field-label-${field.id}`} className="sr-only">Field label</label>
-                            <input
-                              id={`field-label-${field.id}`}
-                              type="text"
-                              value={field.label}
-                              onChange={(e) => {
-                                updateField(field.id, { label: e.target.value });
-                              }}
-                              placeholder="Field label"
-                              className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-body font-medium placeholder:text-muted"
-                              aria-label="Field label"
-                            />
-                            {field.required && (
-                              <span className="text-red-500 text-small" aria-label="Required field">*</span>
-                            )}
-                          </div>
-                          
+                          {field.type !== 'content' && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <label htmlFor={`field-label-${field.id}`} className="sr-only">Field label</label>
+                              <input
+                                id={`field-label-${field.id}`}
+                                type="text"
+                                value={field.label}
+                                onChange={(e) => {
+                                  updateField(field.id, { label: e.target.value });
+                                }}
+                                placeholder="Field label"
+                                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-body font-medium placeholder:text-muted"
+                                aria-label="Field label"
+                              />
+                              {field.required && (
+                                <span className="text-red-500 text-small" aria-label="Required field">*</span>
+                              )}
+                            </div>
+                          )}
+
                           {FieldComponent ? (
-                            <FieldComponent field={field} isPreview={false} />
+                            <FieldComponent
+                              field={field}
+                              isPreview={false}
+                              onContentChange={handleContentChange}
+                              onAddFieldToGrid={handleAddFieldToGrid}
+                              onRemoveFieldFromGrid={handleRemoveFieldFromGrid}
+                              onUpdateGridField={updateGridField}
+                              onSelectField={onSelectField}
+                              onDeleteField={onDeleteField}
+                              onDuplicateField={onDuplicateField}
+                              selectedField={selectedField}
+                            />
                           ) : (
                             <p className="text-small text-muted">Unknown field type: {field.type}</p>
                           )}

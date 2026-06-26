@@ -35,9 +35,32 @@ const useFormStore = create((set) => ({
   ],
 
   addField: (field) => set((state) => ({ fields: [...state.fields, field] })),
-  
+
+  addFieldToGrid: (gridId, columnIndex, field) => set((state) => ({
+    fields: state.fields.map((f) => {
+      if (f.id === gridId && f.type === 'grid') {
+        const newColumns = [...f.columns];
+        newColumns[columnIndex] = [...(newColumns[columnIndex] || []), field];
+        return { ...f, columns: newColumns };
+      }
+      return f;
+    }),
+  })),
+
   removeField: (fieldId) => set((state) => ({
     fields: state.fields.filter((f) => f.id !== fieldId),
+  })),
+
+  removeFieldFromGrid: (gridId, fieldId) => set((state) => ({
+    fields: state.fields.map((f) => {
+      if (f.id === gridId && f.type === 'grid') {
+        const newColumns = f.columns.map((column) =>
+          column.filter((field) => field.id !== fieldId)
+        );
+        return { ...f, columns: newColumns };
+      }
+      return f;
+    }),
   })),
   
   duplicateField: (fieldId) => set((state) => {
@@ -61,6 +84,20 @@ const useFormStore = create((set) => ({
     fields: state.fields.map((f) =>
       f.id === fieldId ? { ...f, ...updates } : f
     ),
+  })),
+
+  updateGridField: (gridId, fieldId, updates) => set((state) => ({
+    fields: state.fields.map((f) => {
+      if (f.id === gridId && f.type === 'grid') {
+        const newColumns = f.columns.map((column) =>
+          column.map((field) =>
+            field.id === fieldId ? { ...field, ...updates } : field
+          )
+        );
+        return { ...f, columns: newColumns };
+      }
+      return f;
+    }),
   })),
   
   reorderFields: (fromIndex, toIndex) => set((state) => {

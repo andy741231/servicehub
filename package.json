@@ -13,9 +13,11 @@
     "lint": "turbo run lint",
     "start": "node server/src/index.js",
     "postinstall": "npx prisma generate",
-    "seed:users": "node prisma/seed-users.js"
+    "seed:users": "node prisma/seed-users.js",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "prisma": "^5.22.0",
     "turbo": "latest"
   },

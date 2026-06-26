@@ -4,6 +4,7 @@ import useAuthStore from '../../store/authStore';
 import { APPS } from '../../layouts/AppShell';
 
 function getFirstAccessiblePath(user) {
+  const hasSuperAdminRole = user?.roles?.includes('super_admin');
   const hasAdminRole = user?.roles?.includes('admin');
   const accessibleApp = APPS.find((app) => user?.permissions?.includes(app.id) || hasAdminRole);
   return accessibleApp?.path || '/hub-admin';

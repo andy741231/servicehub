@@ -214,42 +214,54 @@ You do not need to apply migrations manually.
 
 #### Creating a new schema change
 
-> **Important:** Azure SQL does not support shadow databases, so `prisma migrate dev` will fail locally. Use the two-step workaround below instead. **Never use `prisma db push`** — it skips the migrations system and will break production.
+> **✨ NEW: Automatic migration generation with pre-commit hooks**
+> 
+> A pre-commit hook now automatically generates migration files when you commit schema changes. No manual steps required!
 
-**Every schema change requires two steps before pushing:**
+**Simply edit `prisma/schema.prisma` and commit:**
 
-**Step 1 — Create the migration file.**
-Replace `describe_your_change` with a short description (e.g. `add_directory_table`):
+```bash
+git add prisma/schema.prisma
+git commit -m "feat: add new field to User model"
+git push
+```
+
+The pre-commit hook will:
+1. Detect that `prisma/schema.prisma` was modified
+2. Auto-generate the migration file using `prisma migrate diff`
+3. Name it with the current date and your commit message
+4. Mark it as applied locally (since your dev DB already has the schema)
+5. Add the migration file to your commit automatically
+
+**Your commit will include:**
+- `prisma/schema.prisma` (your schema change)
+- `prisma/migrations/20240626_add_new_field_to_user_model/migration.sql` (auto-generated)
+
+CI will automatically apply the migration to staging, run smoke tests, then apply to production before the slot swap.
+
+> **Never use `prisma db push`** — it skips the migrations system and will break production. The pre-commit hook ensures migrations are always created.
+
+> **Manual migration creation (fallback):** If the pre-commit hook fails or you need to create a migration manually, see the legacy steps below.
+
+**Legacy manual steps (only if pre-commit hook fails):**
 
 ```bash
 # Create the migration folder
 mkdir -p "prisma/migrations/$(date +%Y%m%d)_describe_your_change"
 
-# Generate the SQL diff and write it to the migration file
+# Generate the SQL diff
 npx prisma migrate diff \
   --from-schema-datasource prisma/schema.prisma \
   --to-schema-datamodel prisma/schema.prisma \
   --script > "prisma/migrations/$(date +%Y%m%d)_describe_your_change/migration.sql"
-```
 
-**Step 2 — Mark the migration as already applied on your local dev DB**
-(because the test DB was already updated when you edited the schema):
-
-```bash
+# Mark as applied locally
 npx prisma migrate resolve --applied "$(date +%Y%m%d)_describe_your_change"
-```
 
-**Step 3 — Commit and push:**
-
-```bash
+# Add and commit
 git add prisma/
 git commit -m "feat: describe your change"
-git push
 ```
-
-CI will automatically apply the migration to staging, run smoke tests, then apply to production before the slot swap.
-
-> **Never skip Step 1.** If you push without a migration file, CI reports "No pending migrations" and production breaks — exactly what happened with the `WebSection` incident on 2026-06-25.
 
 #### Required GitHub secrets
 
@@ -358,6 +370,35 @@ See the `Adding a New Sub-App` checklist in `SKILL.md`.
 ### Inspecting the database
 
 Use Azure Data Studio or the Azure portal query editor to connect to either database.
+
+### Adding your IP to Azure SQL Firewall
+
+If you see database connection errors like "Client with IP address is not allowed to access the server", you need to add your IP to the Azure SQL firewall:
+
+```bash
+# Get your current public IPv4 address
+MY_IP=$(curl -s -4 ifconfig.me)
+
+# Add your IP to the SQL Server firewall
+az sql server firewall-rule create \
+  --resource-group App-Services-And-Related \
+  --server houstonservice-test \
+  --name local-dev \
+  --start-ip-address $MY_IP \
+  --end-ip-address $MY_IP
+```
+
+**Alternative: Allow all Azure services (less secure but easier)**
+```bash
+az sql server firewall-rule create \
+  --resource-group App-Services-And-Related \
+  --server houstonservice-test \
+  --name allow-azure-services \
+  --start-ip-address 0.0.0.0 \
+  --end-ip-address 0.0.0.0
+```
+
+> **Note:** Firewall rule changes can take up to 5 minutes to take effect.
 
 ### Resetting your local dev database schema
 

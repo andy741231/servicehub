@@ -12,11 +12,15 @@ const generateTokens = (userId, rememberMe = false) => {
 export const login = async (req, res) => {
   try {
     const { username, password, rememberMe = false } = req.body;
+    console.log('Login attempt for username:', username);
+    
     const user = await prisma.user.findUnique({ where: { username } });
+    console.log('User found:', !!user);
     
     // For seeded admin users, bypass bcrypt if password starts with 'hashed_' to make local dev easier, 
     // but typically we should seed actual hashed passwords. We'll do a simple check.
     const validPassword = user && (user.password === password || await bcrypt.compare(password, user.password));
+    console.log('Password valid:', validPassword);
     
     if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
     if (!user.isActive) return res.status(403).json({ error: 'Account is deactivated' });
@@ -34,6 +38,7 @@ export const login = async (req, res) => {
     const roles = await prisma.userRole.findMany({ where: { userId: user.id }, include: { role: true }});
     const permissions = await prisma.appPermission.findMany({ where: { userId: user.id, canAccess: true } });
 
+    console.log('Login successful for:', username);
     res.json({ 
       user: { 
         id: user.id, username: user.username, email: user.email, name: user.name, 
@@ -42,7 +47,8 @@ export const login = async (req, res) => {
       } 
     });
   } catch (error) {
-    res.status(500).json({ error: 'Server error during login' });
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Server error during login', details: error.message });
   }
 };
 

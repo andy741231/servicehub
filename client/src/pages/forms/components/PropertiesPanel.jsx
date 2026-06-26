@@ -133,6 +133,35 @@ export default function PropertiesPanel({ selectedField, onUpdateField }) {
         </section>
       )}
 
+      {/* Grid Layout Settings */}
+      {field.type === 'grid' && (
+        <section>
+          <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
+            <Settings className="h-4 w-4" aria-hidden="true" />
+            Grid Layout
+          </h3>
+          <div>
+            <label htmlFor="prop-columns" className="block text-small font-medium text-base mb-1.5">
+              Number of Columns
+            </label>
+            <select
+              id="prop-columns"
+              value={field.columnCount || 2}
+              onChange={(e) => {
+                const newColumnCount = parseInt(e.target.value);
+                const newColumns = Array(newColumnCount).fill([]);
+                handleUpdate({ columnCount: newColumnCount, columns: newColumns });
+              }}
+              className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px]"
+            >
+              <option value={1}>1 Column</option>
+              <option value={2}>2 Columns</option>
+              <option value={3}>3 Columns</option>
+            </select>
+          </div>
+        </section>
+      )}
+
       {/* Validation */}
       <section>
         <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">

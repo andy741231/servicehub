@@ -36,7 +36,7 @@ export default function Users() {
     permissions: []
   });
 
-  const availableRoles = ['admin', 'editor', 'viewer'];
+  const availableRoles = ['super_admin', 'admin', 'editor', 'viewer'];
 
   const fetchUsers = async () => {
     try {
@@ -263,13 +263,14 @@ export default function Users() {
                     <div className="flex flex-col gap-1.5 max-w-[200px]">
                       {APPS.map(app => {
                         const hasPerm = user.permissions.includes(app.id);
+                        const isSuperAdmin = user.roles.includes('super_admin');
                         const isAdmin = user.roles.includes('admin');
                         return (
-                          <label key={app.id} className={`flex items-center space-x-2 text-sm ${isAdmin ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}>
+                          <label key={app.id} className={`flex items-center space-x-2 text-sm ${isSuperAdmin || isAdmin ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}>
                             <input
                               type="checkbox"
-                              checked={hasPerm || isAdmin}
-                              disabled={isAdmin}
+                              checked={hasPerm || isSuperAdmin || isAdmin}
+                              disabled={isSuperAdmin || isAdmin}
                               onChange={() => togglePermissionInTable(user.id, app.id, user.permissions)}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
                             />
@@ -440,15 +441,16 @@ export default function Users() {
                   <div className="space-y-2">
                     {APPS.map(app => {
                       const isChecked = formData.permissions.includes(app.id);
+                      const isSuperAdminSelected = formData.roles.includes('super_admin');
                       const isAdminSelected = formData.roles.includes('admin');
                       return (
                         <button
                           key={app.id}
                           type="button"
-                          disabled={isAdminSelected}
+                          disabled={isSuperAdminSelected || isAdminSelected}
                           onClick={() => handlePermissionToggle(app.id)}
                           className={`w-full flex items-center justify-between p-3 border rounded-lg text-left transition-all ${
-                            isAdminSelected 
+                            isSuperAdminSelected || isAdminSelected
                               ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
                               : isChecked
                                 ? 'bg-blue-50/50 border-blue-300 text-blue-900 font-semibold'
@@ -458,8 +460,8 @@ export default function Users() {
                           <span className="text-sm">{app.label}</span>
                           <input
                             type="checkbox"
-                            checked={isChecked || isAdminSelected}
-                            disabled={isAdminSelected}
+                            checked={isChecked || isSuperAdminSelected || isAdminSelected}
+                            disabled={isSuperAdminSelected || isAdminSelected}
                             readOnly
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
                           />

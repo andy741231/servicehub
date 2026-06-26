@@ -16,6 +16,9 @@ import FormsIndex from './pages/forms/index';
 import FormsBuilder from './pages/forms/FormsBuilder';
 import Submissions from './pages/forms/Submissions';
 import EmailIndex from './pages/email/index';
+import EmailShell from './pages/email/EmailShell';
+import NewsletterBuilder from './pages/email/NewsletterBuilder';
+import Directory from './pages/directory/index';
 import PublicHome from './pages/public/Home';
 import FormView from './pages/public/FormView';
 import SessionExpiredModal from './components/SessionExpiredModal';
@@ -67,8 +70,14 @@ export default function App() {
             <Route path="forms" element={<FormsIndex />} />
             <Route path="forms/builder/:formId?" element={<FormsBuilder />} />
             <Route path="forms/submissions" element={<Submissions />} />
-            <Route path="email/*" element={<EmailIndex />} />
-            <Route path="directory" element={<div className="p-8"><h1 className="text-2xl font-bold">Directory</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+            <Route path="email" element={<EmailShell />}>
+              <Route index element={<EmailIndex />} />
+              <Route path="campaigns/new" element={<NewsletterBuilder />} />
+              <Route path="lists" element={<div className="p-8"><h1 className="text-2xl font-bold">Mailing Lists</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+              <Route path="templates" element={<div className="p-8"><h1 className="text-2xl font-bold">Email Templates</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+            </Route>
+            <Route path="directory" element={<Directory />} />
+            <Route path="portal" element={<div className="p-8"><h1 className="text-2xl font-bold">Portal</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
 
             {/* Admin */}
             <Route path="admin/users" element={<Users />} />

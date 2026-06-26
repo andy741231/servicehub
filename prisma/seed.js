@@ -7,6 +7,12 @@ async function main() {
   console.log('Seeding database...');
 
   // Create roles
+  const superAdminRole = await prisma.role.upsert({
+    where: { name: 'super_admin' },
+    update: {},
+    create: { name: 'super_admin' },
+  });
+
   const adminRole = await prisma.role.upsert({
     where: { name: 'admin' },
     update: {},
@@ -41,11 +47,11 @@ async function main() {
     },
   });
 
-  // Assign admin role
+  // Assign super_admin role (upgraded from admin)
   await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
+    where: { userId_roleId: { userId: adminUser.id, roleId: superAdminRole.id } },
     update: {},
-    create: { userId: adminUser.id, roleId: adminRole.id },
+    create: { userId: adminUser.id, roleId: superAdminRole.id },
   });
 
   // Grant access to all apps
