@@ -104,6 +104,12 @@ jobs:
       - name: Install dependencies (for Prisma CLI)
         run: npm ci
 
+      - name: Resolve any failed migrations in staging
+        run: npx prisma migrate resolve --applied "20260625_add_web_section_and_draft_templates"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+        continue-on-error: true
+
       - name: Apply database migrations to staging
         run: npx prisma migrate deploy
         env:
