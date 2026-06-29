@@ -79,6 +79,9 @@ const normalizeForm = (backendForm) => ({
   ...(backendForm.schema || {}),
   id: backendForm.id,
   title: backendForm.title || backendForm.schema?.title || 'Untitled Form',
+  fields: backendForm.schema?.fields || [],
+  description: backendForm.schema?.description || '',
+  theme: backendForm.schema?.theme || { ...DEFAULT_THEME },
   createdAt: backendForm.createdAt,
   updatedAt: backendForm.updatedAt,
 });

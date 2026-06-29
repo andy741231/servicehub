@@ -371,7 +371,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
 
   useEffect(() => {
     const initialData = {};
-    form.fields.forEach(field => {
+    (form.fields || []).forEach(field => {
       initialData[field.id] = field.type === 'checkbox' ? [] : '';
     });
     setFormData(initialData);
@@ -500,8 +500,9 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   };
 
   const theme = { ...DEFAULT_THEME, ...form.theme };
+  const formFields = form.fields || [];
 
-  const pages = form.fields.reduce((acc, field) => {
+  const pages = formFields.reduce((acc, field) => {
     if (field.type === 'pageBreak') {
       acc.push([]);
     } else {
