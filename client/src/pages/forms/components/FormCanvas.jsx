@@ -150,6 +150,16 @@ const FIELD_COMPONENTS = {
       </button>
     </div>
   ),
+  pageBreak: ({ field, isPreview }) => (
+    <div className="flex items-center gap-4 py-2" aria-label="Page break">
+      <div className="h-px bg-border flex-1" />
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-light text-primary rounded-full text-small font-medium">
+        <SeparatorHorizontal className="h-4 w-4" aria-hidden="true" />
+        Page Break
+      </div>
+      <div className="h-px bg-border flex-1" />
+    </div>
+  ),
   content: ({ field, isPreview, onContentChange }) => {
     const modules = {
       toolbar: [

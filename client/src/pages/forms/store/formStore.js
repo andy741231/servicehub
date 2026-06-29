@@ -1,4 +1,13 @@
 import { create } from 'zustand';
+import {
+  fetchForms,
+  fetchForm as fetchFormFromApi,
+  createForm,
+  updateForm as updateFormApi,
+  deleteForm as deleteFormApi,
+  submitForm,
+  fetchSubmissions,
+} from '../api/formsApi';
 
 const STORAGE_KEY = 'form-store';
 
@@ -21,8 +30,6 @@ const saveToStorage = (forms, submissions) => {
     console.error('Failed to save form store:', e);
   }
 };
-
-const stored = loadFromStorage();
 
 export const DEFAULT_THEME = {
   primaryColor: '#2563eb',
@@ -68,17 +75,74 @@ const DEFAULT_FORMS = [
   },
 ];
 
+const normalizeForm = (backendForm) => ({
+  ...(backendForm.schema || {}),
+  id: backendForm.id,
+  title: backendForm.title || backendForm.schema?.title || 'Untitled Form',
+  createdAt: backendForm.createdAt,
+  updatedAt: backendForm.updatedAt,
+});
+
+const denormalizeForm = (clientForm) => ({
+  title: clientForm.title,
+  schema: clientForm,
+});
+
+const normalizeSubmission = (backendSubmission) => ({
+  id: backendSubmission.id,
+  formId: backendSubmission.formId,
+  submittedAt: backendSubmission.createdAt,
+  data: backendSubmission.data || {},
+});
+
 const useFormStore = create((set, get) => ({
   // Current form being edited
   fields: [],
   selectedField: null,
   currentFormId: null,
-  
-  // All saved forms
-  forms: stored?.forms || DEFAULT_FORMS,
-  
-  // All submissions across forms
-  submissions: stored?.submissions || [],
+
+  // All saved forms and submissions
+  forms: [],
+  submissions: [],
+
+  // Loading and error states
+  isLoading: false,
+  error: null,
+
+  // Load forms from backend (fallback to localStorage)
+  loadForms: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const backendForms = await fetchForms();
+      const forms = backendForms.map(normalizeForm);
+      set({ forms, isLoading: false });
+    } catch (e) {
+      console.warn('Failed to load forms from API, falling back to localStorage:', e);
+      const stored = loadFromStorage();
+      set({
+        forms: stored?.forms || DEFAULT_FORMS,
+        submissions: stored?.submissions || [],
+        isLoading: false,
+      });
+    }
+  },
+
+  // Fetch a single form from backend (used by public renderer)
+  fetchForm: async (formId) => {
+    try {
+      const backendForm = await fetchFormFromApi(formId);
+      const form = normalizeForm(backendForm);
+      set((state) => ({
+        forms: state.forms.some((f) => f.id === form.id)
+          ? state.forms.map((f) => (f.id === form.id ? form : f))
+          : [...state.forms, form],
+      }));
+      return form;
+    } catch (e) {
+      console.warn('Failed to fetch form from API:', e);
+      return get().forms.find((f) => f.id === formId) || null;
+    }
+  },
 
   addField: (field) => set((state) => ({ fields: [...state.fields, field] })),
 
@@ -108,24 +172,24 @@ const useFormStore = create((set, get) => ({
       return f;
     }),
   })),
-  
+
   duplicateField: (fieldId) => set((state) => {
     const fieldToDuplicate = state.fields.find((f) => f.id === fieldId);
     if (!fieldToDuplicate) return state;
-    
+
     const duplicatedField = {
       ...fieldToDuplicate,
       id: `field-${Date.now()}`,
       label: `${fieldToDuplicate.label} (copy)`,
     };
-    
+
     const index = state.fields.findIndex((f) => f.id === fieldId);
     const newFields = [...state.fields];
     newFields.splice(index + 1, 0, duplicatedField);
-    
+
     return { fields: newFields };
   }),
-  
+
   updateField: (fieldId, updates) => set((state) => ({
     fields: state.fields.map((f) =>
       f.id === fieldId ? { ...f, ...updates } : f
@@ -145,16 +209,16 @@ const useFormStore = create((set, get) => ({
       return f;
     }),
   })),
-  
+
   reorderFields: (fromIndex, toIndex) => set((state) => {
     const newFields = [...state.fields];
     const [movedField] = newFields.splice(fromIndex, 1);
     newFields.splice(toIndex, 0, movedField);
     return { fields: newFields };
   }),
-  
+
   setSelectedField: (fieldId) => set({ selectedField: fieldId }),
-  
+
   setCurrentForm: (formId) => set((state) => {
     const form = state.forms.find((f) => f.id === formId);
     if (form) {
@@ -166,8 +230,8 @@ const useFormStore = create((set, get) => ({
     }
     return state;
   }),
-  
-  createNewForm: () => {
+
+  createNewForm: async () => {
     const newForm = {
       id: `form-${Date.now()}`,
       title: 'Untitled Form',
@@ -177,18 +241,32 @@ const useFormStore = create((set, get) => ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    set((state) => ({
-      forms: [...state.forms, newForm],
-      currentFormId: newForm.id,
-      fields: [],
-      selectedField: null,
-    }));
-    return newForm.id;
+
+    try {
+      const backendForm = await createForm(newForm);
+      const form = normalizeForm(backendForm);
+      set((state) => ({
+        forms: [...state.forms, form],
+        currentFormId: form.id,
+        fields: form.fields,
+        selectedField: null,
+      }));
+      return form.id;
+    } catch (e) {
+      console.warn('Failed to create form on API, using localStorage:', e);
+      set((state) => ({
+        forms: [...state.forms, newForm],
+        currentFormId: newForm.id,
+        fields: newForm.fields,
+        selectedField: null,
+      }));
+      return newForm.id;
+    }
   },
-  
+
   saveCurrentForm: (title, description) => set((state) => {
     if (!state.currentFormId) return state;
-    
+
     const updatedForms = state.forms.map((form) =>
       form.id === state.currentFormId
         ? {
@@ -200,13 +278,70 @@ const useFormStore = create((set, get) => ({
           }
         : form
     );
-    
+
+    const updatedForm = updatedForms.find((f) => f.id === state.currentFormId);
+    if (updatedForm) {
+      updateFormApi(updatedForm.id, denormalizeForm(updatedForm)).catch((e) => {
+        console.warn('Failed to save form on API:', e);
+      });
+    }
+
     return { forms: updatedForms };
   }),
 
+  deleteForm: (formId) => set((state) => {
+    deleteFormApi(formId).catch((e) => {
+      console.warn('Failed to delete form on API:', e);
+    });
+
+    return {
+      forms: state.forms.filter((f) => f.id !== formId),
+      currentFormId: state.currentFormId === formId ? null : state.currentFormId,
+      fields: state.currentFormId === formId ? [] : state.fields,
+    };
+  }),
+
+  resetForm: () => set({ fields: [], selectedField: null, currentFormId: null }),
+
+  addSubmission: async (formId, data) => set((state) => {
+    const newSubmission = {
+      id: `sub-${Date.now()}`,
+      formId,
+      submittedAt: new Date().toISOString(),
+      data,
+    };
+
+    submitForm(formId, data).catch((e) => {
+      console.warn('Failed to submit to API:', e);
+    });
+
+    return { submissions: [...state.submissions, newSubmission] };
+  }),
+
+  deleteSubmission: (submissionId) => set((state) => ({
+    submissions: state.submissions.filter((s) => s.id !== submissionId),
+  })),
+
+  getSubmissionsForForm: (formId) => get().submissions.filter((s) => s.formId === formId),
+
+  loadSubmissions: async (formId) => {
+    try {
+      const backendSubmissions = await fetchSubmissions(formId);
+      const submissions = backendSubmissions.map(normalizeSubmission);
+      set((state) => ({
+        submissions: [
+          ...state.submissions.filter((s) => s.formId !== formId),
+          ...submissions,
+        ],
+      }));
+    } catch (e) {
+      console.warn('Failed to load submissions from API:', e);
+    }
+  },
+
   updateFormTheme: (themeUpdates) => set((state) => {
     if (!state.currentFormId) return state;
-    
+
     const updatedForms = state.forms.map((form) =>
       form.id === state.currentFormId
         ? {
@@ -216,33 +351,16 @@ const useFormStore = create((set, get) => ({
           }
         : form
     );
-    
+
+    const updatedForm = updatedForms.find((f) => f.id === state.currentFormId);
+    if (updatedForm) {
+      updateFormApi(updatedForm.id, denormalizeForm(updatedForm)).catch((e) => {
+        console.warn('Failed to save form theme on API:', e);
+      });
+    }
+
     return { forms: updatedForms };
   }),
-  
-  deleteForm: (formId) => set((state) => ({
-    forms: state.forms.filter((f) => f.id !== formId),
-    currentFormId: state.currentFormId === formId ? null : state.currentFormId,
-    fields: state.currentFormId === formId ? [] : state.fields,
-  })),
-  
-  resetForm: () => set({ fields: [], selectedField: null, currentFormId: null }),
-
-  addSubmission: (formId, data) => set((state) => {
-    const newSubmission = {
-      id: `sub-${Date.now()}`,
-      formId,
-      submittedAt: new Date().toISOString(),
-      data,
-    };
-    return { submissions: [...state.submissions, newSubmission] };
-  }),
-
-  deleteSubmission: (submissionId) => set((state) => ({
-    submissions: state.submissions.filter((s) => s.id !== submissionId),
-  })),
-
-  getSubmissionsForForm: (formId) => get().submissions.filter((s) => s.formId === formId),
 }));
 
 useFormStore.subscribe((state) => {

@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Trash2, Edit, BarChart3, Clock, Search, Share2, Check } from 'lucide-react';
+import { Plus, FileText, Trash2, Edit, BarChart3, Clock, Search, Share2, Check, TrendingUp } from 'lucide-react';
 import useFormStore from './store/formStore';
 
 export default function FormsDashboard() {
   const navigate = useNavigate();
-  const { forms, createNewForm, deleteForm, setCurrentForm } = useFormStore();
+  const { forms, createNewForm, deleteForm, setCurrentForm, loadForms, isLoading } = useFormStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedFormId, setCopiedFormId] = useState(null);
+
+  useEffect(() => {
+    loadForms();
+  }, [loadForms]);
 
   const handleCreateForm = () => {
     const newFormId = createNewForm();
@@ -22,6 +26,11 @@ export default function FormsDashboard() {
   const handleViewSubmissions = (formId) => {
     setCurrentForm(formId);
     navigate('/hub-admin/forms/submissions');
+  };
+
+  const handleViewAnalytics = (formId) => {
+    setCurrentForm(formId);
+    navigate(`/hub-admin/forms/analytics/${formId}`);
   };
 
   const handleDeleteForm = (formId) => {
@@ -169,10 +178,31 @@ export default function FormsDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleEditForm(form.id)}
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-surface border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span className="text-body">Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleViewSubmissions(form.id)}
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-surface border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span className="text-body">Submissions</span>
+                  </button>
+                  <button
+                    onClick={() => handleViewAnalytics(form.id)}
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-surface border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-body">Analytics</span>
+                  </button>
                   <button
                     onClick={() => handleShareForm(form.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-surface border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-surface border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
                   >
                     {copiedFormId === form.id ? (
                       <>
@@ -185,20 +215,6 @@ export default function FormsDashboard() {
                         <span className="text-body">Share</span>
                       </>
                     )}
-                  </button>
-                  <button
-                    onClick={() => handleEditForm(form.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-surface border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="text-body">Edit</span>
-                  </button>
-                  <button
-                    onClick={() => handleViewSubmissions(form.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-surface border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    <span className="text-body">Submissions</span>
                   </button>
                 </div>
               </div>

@@ -15,6 +15,7 @@ import WebShell from './pages/web/WebShell';
 import FormsIndex from './pages/forms/index';
 import FormsBuilder from './pages/forms/FormsBuilder';
 import Submissions from './pages/forms/Submissions';
+import FormAnalytics from './pages/forms/FormAnalytics';
 import EmailIndex from './pages/email/index';
 import EmailShell from './pages/email/EmailShell';
 import NewsletterBuilder from './pages/email/NewsletterBuilder';
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="forms" element={<FormsIndex />} />
             <Route path="forms/builder/:formId?" element={<FormsBuilder />} />
             <Route path="forms/submissions" element={<Submissions />} />
+            <Route path="forms/analytics/:formId?" element={<FormAnalytics />} />
             <Route path="email" element={<EmailShell />}>
               <Route index element={<EmailIndex />} />
               <Route path="campaigns/new" element={<NewsletterBuilder />} />

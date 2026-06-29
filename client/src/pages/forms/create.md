@@ -684,13 +684,13 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 
 #### 1. Form Builder Interface
 - ✅ Canvas-based drag-and-drop editor using @hello-pangea/dnd
-- ✅ Left sidebar with field palette (11 field types)
+- ✅ Left sidebar with field palette (12 field types including page break)
 - ✅ Right properties panel for field configuration and form theme
 - ✅ Top toolbar with Save, Export, Preview, Share actions
-- ✅ Real-time preview mode
+- ✅ Interactive preview mode (real form renderer)
 - ✅ Back navigation to dashboard
 
-#### 2. Core Field Types (11/11 implemented)
+#### 2. Core Field Types (12/12 implemented)
 - ✅ Short Text (single-line input)
 - ✅ Long Text (textarea)
 - ✅ Number (numeric input with validation)
@@ -700,8 +700,9 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Dropdown (select with options)
 - ✅ Checkbox (multiple selections)
 - ✅ Star Rating (1-5 stars, configurable)
-- ✅ File Upload (accepted types and size limits)
+- ✅ File Upload (accepted types and size limits, backend storage)
 - ✅ Signature Capture (draw or type)
+- ✅ Page Break (multi-page forms)
 
 #### 3. Field Management
 - ✅ Drag-and-drop reordering of fields
@@ -719,6 +720,7 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Value constraints (min/max) for number fields
 - ✅ Options management for select/checkbox fields
 - ✅ Conditional logic (show/hide based on other answers)
+- ✅ Page break configuration
 
 #### 5. Form Dashboard
 - ✅ Grid view of all forms
@@ -764,10 +766,11 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Zustand store for form state
 - ✅ Multiple forms support
 - ✅ Current form tracking
-- ✅ CRUD operations for forms
+- ✅ CRUD operations for forms (synced to backend)
 - ✅ Field-level state management
-- ✅ Submission management
-- ✅ localStorage persistence for forms and submissions
+- ✅ Submission management (synced to backend)
+- ✅ Backend database persistence via Prisma
+- ✅ localStorage fallback for offline/unauthenticated use
 
 #### 10. Form Design & Theming
 - ✅ Custom primary, button, background, and text colors
@@ -777,7 +780,13 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Optional redirect URL after submission
 - ✅ Optional progress bar and question numbers
 
-#### 11. UI/UX Best Practices
+#### 11. Analytics
+- ✅ Total submissions, today, this week, and average per day
+- ✅ Submissions over time chart (SVG)
+- ✅ Field-level completion rates
+- ✅ Form and date range filters
+
+#### 12. UI/UX Best Practices
 - ✅ Accessibility compliance (WCAG AA standards)
 - ✅ Touch targets (minimum 44px)
 - ✅ Focus states and keyboard navigation
@@ -829,23 +838,43 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 
 #### Advanced Field Types
 - ✅ Star Rating (configurable 2-10 stars)
-- ✅ File Upload (accepted types and max size limits)
+- ✅ File Upload (accepted types and max size limits, backend upload storage)
 - ✅ Signature Capture (draw or type)
+
+#### Multi-page Forms
+- ✅ Page Break field type
+- ✅ Multi-page rendering in public form and preview
+- ✅ Per-page validation and Next/Previous navigation
+- ✅ Page-based progress bar
+
+#### Interactive Builder Preview
+- ✅ Builder preview uses real form renderer
+- ✅ Conditional logic and theming are testable in the builder
+- ✅ Preview submission validates without saving
+
+#### Form Analytics Dashboard
+- ✅ Submission totals and trends
+- ✅ Simple SVG line chart for submissions over time
+- ✅ Field completion rates
+- ✅ Form selector and date range filters
+
+#### Backend Integration
+- ✅ REST API for form CRUD operations
+- ✅ REST API for form submissions
+- ✅ Database persistence via Prisma Form and FormSubmission models
+- ✅ Public form retrieval endpoint
+- ✅ Authenticated admin endpoints
+- ✅ Local disk file upload endpoint (with static file serving)
+- ✅ Client sync with backend (API first, localStorage fallback)
 
 ### ❌ Not Yet Implemented
 
 #### Advanced Features
-- ❌ Multi-page forms
-- ❌ Form analytics and statistics
 - ❌ Collaboration features
 - ❌ Integration webhooks
-- ❌ API endpoints for form management
-
-#### Backend Integration
-- ❌ Database schema for forms and submissions
-- ❌ API routes for CRUD operations
-- ❌ Authentication for public forms
-- ❌ Rate limiting and security measures
+- ❌ API key management
+- ❌ Rate limiting and security hardening
+- ❌ Azure Blob Storage migration for file uploads
 
 ### 📝 Technical Notes
 
@@ -855,14 +884,25 @@ client/src/pages/forms/
 ├── FormsBuilder.jsx          # Main form builder interface
 ├── FormsDashboard.jsx        # Form list and management
 ├── Submissions.jsx           # Submission viewing and export
+├── FormAnalytics.jsx         # Form analytics dashboard
 ├── components/
 │   ├── FormCanvas.jsx        # Drag-and-drop canvas
+│   ├── FormRenderer.jsx      # Shared public/preview form renderer
 │   ├── FieldPalette.jsx      # Field type selector
 │   └── PropertiesPanel.jsx   # Field configuration and form theme settings
 ├── store/
-│   └── formStore.js          # Zustand state management with localStorage persistence
+│   └── formStore.js          # Zustand state management with backend sync
 ├── utils/
 │   └── conditionalLogic.js   # Conditional show/hide evaluation engine
+├── api/
+│   └── formsApi.js           # Backend API client
+```
+
+```
+server/src/
+├── controllers/forms.js      # Form and submission CRUD + file upload
+├── routes/forms.js           # Form API routes
+└── ...
 ```
 
 #### Key Dependencies
@@ -871,21 +911,24 @@ client/src/pages/forms/
 - `lucide-react` - Icons
 - `papaparse` - CSV export
 - `react-router-dom` - Routing
+- `axios` - HTTP client
+- `multer` - File upload handling (server)
 
 #### Known Issues
-- Form submission is frontend-only (no backend integration)
-- File uploads store only the file name, not the file content
+- Backend API requires a running SQL Server database to persist data
+- File uploads are stored on local disk and should be migrated to Azure Blob Storage for production
 - Signature canvas is cleared on form re-render
 - Reserved path detection works but needs backend validation
 - Some console.log statements remain for debugging
+- Form analytics does not track form views or device breakdown yet
 
 #### Next Steps
-1. Implement backend API for form CRUD operations
-2. Add database persistence for forms and submissions
-3. Connect public form submission to backend
-4. Add multi-page form support
-5. Implement form analytics and statistics
-6. Add file upload backend storage
+1. Harden backend endpoints with rate limiting and input validation
+2. Migrate file uploads to Azure Blob Storage
+3. Add form view tracking and conversion analytics
+4. Add email/webhook notifications on new submissions
+5. Implement form templates and cloning
+6. Add user roles and permissions for form access
 
 ---
 

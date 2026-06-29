@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, Eye, Download, Settings, ArrowLeft, Share2, Copy, Check } from 'lucide-react';
 import FormCanvas from './components/FormCanvas';
+import FormRenderer from './components/FormRenderer';
 import FieldPalette from './components/FieldPalette';
 import PropertiesPanel from './components/PropertiesPanel';
 import useFormStore from './store/formStore';
@@ -115,26 +116,29 @@ export default function FormsBuilder() {
   };
 
   if (showPreview) {
+    const currentForm = forms.find((f) => f.id === currentFormId);
+    if (!currentForm) return null;
+
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-2xl mx-auto p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-base">Form Preview</h2>
-            <button
-              onClick={() => setShowPreview(false)}
-              className="px-4 py-2 bg-surface-raised border border-border rounded-base text-body hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
-            >
-              Back to Editor
-            </button>
-          </div>
-          <FormCanvas
-            fields={fields}
-            onSelectField={() => {}}
-            onDeleteField={() => {}}
-            onDuplicateField={() => {}}
-            isPreview
-          />
+        <div className="fixed top-4 left-4 z-50">
+          <button
+            onClick={() => setShowPreview(false)}
+            className="flex items-center gap-2 px-4 py-2 bg-surface-raised border border-border rounded-base text-body hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150 shadow-lg"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Editor
+          </button>
         </div>
+        <FormRenderer
+          form={{
+            ...currentForm,
+            title: formTitle,
+            description: formDescription,
+            fields,
+          }}
+          preview
+        />
       </div>
     );
   }

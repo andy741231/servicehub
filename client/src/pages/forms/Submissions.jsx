@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Download, Search, Filter, Calendar, ChevronDown, Eye, Trash2, X } from 'lucide-react';
 import Papa from 'papaparse';
 import { useConfirm } from '../../components/Dialog';
@@ -6,8 +6,14 @@ import useFormStore from './store/formStore';
 
 export default function Submissions() {
   const { confirmDialog, ConfirmDialogMount } = useConfirm();
-  const { submissions, forms, currentFormId, deleteSubmission } = useFormStore();
+  const { submissions, forms, currentFormId, deleteSubmission, loadSubmissions } = useFormStore();
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+
+  useEffect(() => {
+    if (currentFormId) {
+      loadSubmissions(currentFormId);
+    }
+  }, [currentFormId, loadSubmissions]);
   const [searchQuery, setSearchQuery] = useState('');
   const [formFilter, setFormFilter] = useState(currentFormId || 'all');
   const [sortBy, setSortBy] = useState('submittedAt');
