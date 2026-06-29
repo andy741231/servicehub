@@ -91,20 +91,24 @@ export default function FormsBuilder() {
 
   const handleSave = async () => {
     setSaveError(null);
-    if (currentFormId && isDuplicateName(formTitle, forms, currentFormId)) {
+    const latestForms = useFormStore.getState().forms;
+    const latestCurrentFormId = useFormStore.getState().currentFormId;
+    if (latestCurrentFormId && isDuplicateName(formTitle, latestForms, latestCurrentFormId)) {
       setSaveError('A form with this name already exists. Please use a unique name.');
       return;
     }
 
     setIsSaving(true);
     try {
-      saveCurrentForm(formTitle, formDescription);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await saveCurrentForm(formTitle, formDescription);
 
-      const updatedForm = useFormStore.getState().forms.find((f) => f.id === currentFormId);
+      const updatedForm = useFormStore.getState().forms.find((f) => f.id === useFormStore.getState().currentFormId);
       if (updatedForm && formSlug && updatedForm.slug !== formSlug) {
         navigate(`/hub-admin/forms/builder/${updatedForm.slug}`, { replace: true });
       }
+    } catch (e) {
+      console.error('Error saving form:', e);
+      setSaveError('Failed to save form. Please try again.');
     } finally {
       setIsSaving(false);
     }

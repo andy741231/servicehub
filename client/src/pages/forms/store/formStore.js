@@ -282,11 +282,12 @@ const useFormStore = create((set, get) => ({
     }
   },
 
-  saveCurrentForm: (title, description) => set((state) => {
-    if (!state.currentFormId) return state;
+  saveCurrentForm: async (title, description) => {
+    const state = get();
+    if (!state.currentFormId) return null;
 
     const currentForm = state.forms.find((f) => f.id === state.currentFormId);
-    if (!currentForm) return state;
+    if (!currentForm) return null;
 
     const newTitle = title || currentForm.title;
     const existingSlugs = state.forms.filter((f) => f.id !== currentForm.id).map((f) => f.slug);
@@ -294,28 +295,46 @@ const useFormStore = create((set, get) => ({
       ? generateSlug(newTitle, existingSlugs)
       : currentForm.slug;
 
-    const updatedForms = state.forms.map((form) =>
-      form.id === state.currentFormId
-        ? {
-            ...form,
-            title: newTitle,
-            slug: newSlug,
-            description: description || form.description,
-            fields: state.fields,
-            updatedAt: new Date().toISOString(),
-          }
-        : form
-    );
+    const updatedForm = {
+      ...currentForm,
+      title: newTitle,
+      slug: newSlug,
+      description: description || currentForm.description,
+      fields: state.fields,
+      updatedAt: new Date().toISOString(),
+    };
 
-    const updatedForm = updatedForms.find((f) => f.id === state.currentFormId);
-    if (updatedForm) {
-      updateFormApi(updatedForm.id, denormalizeForm(updatedForm)).catch((e) => {
-        console.warn('Failed to save form on API:', e);
-      });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatedForm.id);
+
+    set({
+      forms: state.forms.map((form) =>
+        form.id === state.currentFormId ? updatedForm : form
+      ),
+    });
+
+    if (!isUuid) {
+      try {
+        const backendForm = await createForm(updatedForm);
+        const form = normalizeForm(backendForm);
+        set((s) => ({
+          forms: s.forms.filter((f) => f.id !== updatedForm.id).concat(form),
+          currentFormId: form.id,
+        }));
+        return form.id;
+      } catch (e) {
+        console.warn('Failed to create form on API:', e);
+        return updatedForm.id;
+      }
     }
 
-    return { forms: updatedForms, currentFormId: updatedForm?.id || state.currentFormId };
-  }),
+    try {
+      await updateFormApi(updatedForm.id, denormalizeForm(updatedForm));
+      return updatedForm.id;
+    } catch (e) {
+      console.warn('Failed to save form on API:', e);
+      return updatedForm.id;
+    }
+  },
 
   deleteForm: (formId) => set((state) => {
     deleteFormApi(formId).catch((e) => {

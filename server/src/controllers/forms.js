@@ -143,6 +143,11 @@ export const updateForm = async (req, res) => {
     const { id } = req.params;
     const { title, schema } = req.body;
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
     const existing = await prisma.form.findUnique({ where: { id, deletedAt: null } });
     if (!existing) {
       return res.status(404).json({ error: 'Form not found' });
@@ -182,6 +187,11 @@ export const deleteForm = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
     const existing = await prisma.form.findUnique({ where: { id, deletedAt: null } });
     if (!existing) {
       return res.status(404).json({ error: 'Form not found' });
@@ -202,6 +212,11 @@ export const deleteForm = async (req, res) => {
 export const listSubmissions = async (req, res) => {
   try {
     const { id } = req.params;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
     const submissions = await prisma.formSubmission.findMany({
       where: { formId: id },
       orderBy: { createdAt: 'desc' },

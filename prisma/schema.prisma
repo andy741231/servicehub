@@ -107,8 +107,8 @@ model WebBlock {
 
 model Form {
   id          String           @id @default(uuid())
-  title       String
-  schema      String           // JSON serialized — parsed/serialized in controller
+  title       String           @db.NVarChar(255)
+  schema      String           @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
   createdAt   DateTime         @default(now())
   deletedAt   DateTime?        // Soft delete support
   submissions FormSubmission[]
@@ -117,7 +117,7 @@ model Form {
 model FormSubmission {
   id        String   @id @default(uuid())
   formId    String
-  data      String  // JSON serialized — parsed/serialized in controller
+  data      String   @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
   createdAt DateTime @default(now())
   form      Form @relation(fields: [formId], references: [id])
 }
