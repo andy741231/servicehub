@@ -29,10 +29,15 @@ export default function FormsBuilder() {
     setCurrentForm,
     saveCurrentForm,
     createNewForm,
+    loadForms,
     isLoading
   } = useFormStore();
 
   const findFormBySlug = (slug) => forms.find((f) => f.slug === slug || f.id === slug);
+
+  useEffect(() => {
+    loadForms();
+  }, [loadForms]);
 
   useEffect(() => {
     if (formSlug) {
@@ -42,7 +47,7 @@ export default function FormsBuilder() {
         setFormTitle(form.title);
         setFormDescription(form.description);
       }
-    } else if (!currentFormId) {
+    } else if (!currentFormId && !isLoading) {
       const create = async () => {
         const newFormId = await createNewForm();
         const latestForms = useFormStore.getState().forms;
@@ -53,7 +58,7 @@ export default function FormsBuilder() {
       };
       create();
     }
-  }, [formSlug, currentFormId, forms, setCurrentForm, createNewForm, navigate]);
+  }, [formSlug, currentFormId, forms, setCurrentForm, createNewForm, navigate, isLoading]);
 
   const handleAddField = (type) => {
     const newField = {
@@ -108,7 +113,8 @@ export default function FormsBuilder() {
       }
     } catch (e) {
       console.error('Error saving form:', e);
-      setSaveError('Failed to save form. Please try again.');
+      const message = e?.response?.data?.error || e?.message || 'Failed to save form. Please try again.';
+      setSaveError(message);
     } finally {
       setIsSaving(false);
     }
@@ -166,6 +172,17 @@ export default function FormsBuilder() {
           }}
           preview
         />
+      </div>
+    );
+  }
+
+  if (isLoading && !currentFormId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-body text-muted">Loading form...</p>
+        </div>
       </div>
     );
   }

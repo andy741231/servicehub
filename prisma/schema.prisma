@@ -110,6 +110,7 @@ model Form {
   title       String           @db.NVarChar(255)
   schema      String           @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
   createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   deletedAt   DateTime?        // Soft delete support
   submissions FormSubmission[]
 }

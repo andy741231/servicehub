@@ -256,14 +256,21 @@ export const createSubmission = async (req, res) => {
       return res.status(400).json({ error: 'Submission data is required' });
     }
 
-    const form = await prisma.form.findUnique({ where: { id, deletedAt: null } });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let form = null;
+    if (isUuid) {
+      form = await prisma.form.findUnique({ where: { id, deletedAt: null } });
+    } else {
+      form = await findFormBySlug(id);
+    }
+
     if (!form) {
       return res.status(404).json({ error: 'Form not found' });
     }
 
     const submission = await prisma.formSubmission.create({
       data: {
-        formId: id,
+        formId: form.id,
         data: stringifyJsonField(data),
       },
     });

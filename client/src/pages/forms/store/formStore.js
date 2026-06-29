@@ -79,22 +79,30 @@ const DEFAULT_FORMS = [
 const normalizeForm = (backendForm) => {
   const schema = backendForm.schema || {};
   return {
-    ...schema,
     id: backendForm.id,
     title: backendForm.title || schema.title || 'Untitled Form',
     slug: schema.slug || generateSlug(backendForm.title || schema.title || 'Untitled Form'),
-    fields: schema.fields || [],
     description: schema.description || '',
+    fields: schema.fields || [],
     theme: schema.theme || { ...DEFAULT_THEME },
     createdAt: backendForm.createdAt,
     updatedAt: backendForm.updatedAt,
   };
 };
 
-const denormalizeForm = (clientForm) => ({
-  title: clientForm.title,
-  schema: clientForm,
-});
+const denormalizeForm = (clientForm) => {
+  const { id, title: clientTitle, schema: nestedSchema, createdAt, updatedAt, ...rest } = clientForm;
+  return {
+    title: clientTitle,
+    schema: {
+      ...rest,
+      slug: clientForm.slug,
+      description: clientForm.description,
+      fields: clientForm.fields,
+      theme: clientForm.theme,
+    },
+  };
+};
 
 const normalizeSubmission = (backendSubmission) => ({
   id: backendSubmission.id,
@@ -247,7 +255,15 @@ const useFormStore = create((set, get) => ({
   }),
 
   createNewForm: async () => {
-    const title = 'Untitled Form';
+    const baseTitle = 'Untitled Form';
+    const existingTitles = get().forms.map((f) => f.title.trim());
+    let title = baseTitle;
+    let counter = 2;
+    while (existingTitles.includes(title)) {
+      title = `${baseTitle} ${counter}`;
+      counter += 1;
+    }
+
     const existingSlugs = get().forms.map((f) => f.slug);
     const newForm = {
       id: `form-${Date.now()}`,
@@ -312,6 +328,8 @@ const useFormStore = create((set, get) => ({
       ),
     });
 
+    const isConflictError = (e) => e?.response?.status === 409;
+
     if (!isUuid) {
       try {
         const backendForm = await createForm(updatedForm);
@@ -322,6 +340,7 @@ const useFormStore = create((set, get) => ({
         }));
         return form.id;
       } catch (e) {
+        if (isConflictError(e)) throw e;
         console.warn('Failed to create form on API:', e);
         return updatedForm.id;
       }
@@ -331,6 +350,7 @@ const useFormStore = create((set, get) => ({
       await updateFormApi(updatedForm.id, denormalizeForm(updatedForm));
       return updatedForm.id;
     } catch (e) {
+      if (isConflictError(e)) throw e;
       console.warn('Failed to save form on API:', e);
       return updatedForm.id;
     }
@@ -350,20 +370,17 @@ const useFormStore = create((set, get) => ({
 
   resetForm: () => set({ fields: [], selectedField: null, currentFormId: null }),
 
-  addSubmission: async (formId, data) => set((state) => {
-    const newSubmission = {
-      id: `sub-${Date.now()}`,
-      formId,
-      submittedAt: new Date().toISOString(),
-      data,
-    };
-
-    submitForm(formId, data).catch((e) => {
+  addSubmission: async (formId, data) => {
+    try {
+      const backendSubmission = await submitForm(formId, data);
+      const submission = normalizeSubmission(backendSubmission);
+      set((state) => ({ submissions: [...state.submissions, submission] }));
+      return submission;
+    } catch (e) {
       console.warn('Failed to submit to API:', e);
-    });
-
-    return { submissions: [...state.submissions, newSubmission] };
-  }),
+      throw e;
+    }
+  },
 
   deleteSubmission: (submissionId) => set((state) => ({
     submissions: state.submissions.filter((s) => s.id !== submissionId),
