@@ -5,7 +5,8 @@ BEGIN TRAN;
 -- AlterTable
 ALTER TABLE [dbo].[Form] ALTER COLUMN [title] NVARCHAR(255) NOT NULL;
 ALTER TABLE [dbo].[Form] ALTER COLUMN [schema] NVARCHAR(max) NOT NULL;
-ALTER TABLE [dbo].[Form] ADD [updatedAt] DATETIME2 NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.Form') AND name = 'updatedAt')
+    ALTER TABLE [dbo].[Form] ADD [updatedAt] DATETIME2 NOT NULL;
 
 -- AlterTable
 ALTER TABLE [dbo].[FormSubmission] ALTER COLUMN [data] NVARCHAR(max) NOT NULL;

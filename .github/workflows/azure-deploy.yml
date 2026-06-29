@@ -119,6 +119,7 @@ jobs:
         run: |
           npx prisma migrate resolve --applied "0_init" || true
           npx prisma migrate resolve --applied "20260625_add_web_section_and_draft_templates" || true
+          npx prisma migrate resolve --applied "20260629_cleanupmigrations_remove_redundant_manual_migratio" || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
