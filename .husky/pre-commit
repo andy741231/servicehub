@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Pre-commit hook to auto-generate Prisma migrations when schema.prisma changes
 
 echo "🔍 Checking for Prisma schema changes..."
