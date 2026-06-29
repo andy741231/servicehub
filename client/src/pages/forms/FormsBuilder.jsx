@@ -53,6 +53,10 @@ export default function FormsBuilder() {
       content: type === 'content' ? '' : undefined,
       columns: type === 'grid' ? [[], []] : undefined,
       columnCount: type === 'grid' ? 2 : undefined,
+      maxStars: type === 'rating' ? 5 : undefined,
+      accept: type === 'file' ? '' : undefined,
+      maxSize: type === 'file' ? 5 : undefined,
+      signatureType: type === 'signature' ? 'draw' : undefined,
     };
     addField(newField);
   };

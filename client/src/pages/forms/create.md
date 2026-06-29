@@ -684,13 +684,13 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 
 #### 1. Form Builder Interface
 - ✅ Canvas-based drag-and-drop editor using @hello-pangea/dnd
-- ✅ Left sidebar with field palette (8 field types)
-- ✅ Right properties panel for field configuration
+- ✅ Left sidebar with field palette (11 field types)
+- ✅ Right properties panel for field configuration and form theme
 - ✅ Top toolbar with Save, Export, Preview, Share actions
 - ✅ Real-time preview mode
 - ✅ Back navigation to dashboard
 
-#### 2. Core Field Types (8/8 implemented)
+#### 2. Core Field Types (11/11 implemented)
 - ✅ Short Text (single-line input)
 - ✅ Long Text (textarea)
 - ✅ Number (numeric input with validation)
@@ -699,6 +699,9 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Date (date picker)
 - ✅ Dropdown (select with options)
 - ✅ Checkbox (multiple selections)
+- ✅ Star Rating (1-5 stars, configurable)
+- ✅ File Upload (accepted types and size limits)
+- ✅ Signature Capture (draw or type)
 
 #### 3. Field Management
 - ✅ Drag-and-drop reordering of fields
@@ -715,6 +718,7 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Character limits (min/max) for text fields
 - ✅ Value constraints (min/max) for number fields
 - ✅ Options management for select/checkbox fields
+- ✅ Conditional logic (show/hide based on other answers)
 
 #### 5. Form Dashboard
 - ✅ Grid view of all forms
@@ -744,7 +748,7 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Mobile responsive design
 - ✅ Accessibility (ARIA labels, keyboard navigation, screen reader support)
 
-#### 8. Submission Management (UI Only)
+#### 8. Submission Management
 - ✅ Table view of submissions
 - ✅ Search and filter functionality
 - ✅ Sort by any column
@@ -752,7 +756,9 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Delete submissions with confirmation
 - ✅ Statistics dashboard (total, today, this week)
 - ✅ CSV export functionality using PapaParse
-- ⚠️ Note: Currently using mock data, not connected to backend
+- ✅ Filter submissions by form
+- ✅ Connected to real submission data
+- ⚠️ Note: Not connected to backend; stored locally
 
 #### 9. State Management
 - ✅ Zustand store for form state
@@ -760,9 +766,18 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Current form tracking
 - ✅ CRUD operations for forms
 - ✅ Field-level state management
-- ⚠️ Note: Forms are stored in memory only (cleared on refresh)
+- ✅ Submission management
+- ✅ localStorage persistence for forms and submissions
 
-#### 10. UI/UX Best Practices
+#### 10. Form Design & Theming
+- ✅ Custom primary, button, background, and text colors
+- ✅ Font family selection
+- ✅ Custom submit button text
+- ✅ Custom thank you title and message
+- ✅ Optional redirect URL after submission
+- ✅ Optional progress bar and question numbers
+
+#### 11. UI/UX Best Practices
 - ✅ Accessibility compliance (WCAG AA standards)
 - ✅ Touch targets (minimum 44px)
 - ✅ Focus states and keyboard navigation
@@ -784,22 +799,43 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 #### Form Submission
 - ✅ Frontend validation and UI flow
 - ✅ Loading states and success messages
+- ✅ Local storage of submissions (with form persistence)
 - ❌ Backend API integration
 - ❌ Database persistence
-- ❌ Real-time submission storage
 
 #### Form Persistence
 - ✅ In-memory state management
-- ❌ localStorage persistence (reverted due to build issues)
+- ✅ localStorage persistence
 - ❌ Backend database storage
+
+### ✅ Newly Implemented
+
+#### Conditional Logic
+- ✅ Show/hide fields based on other field answers
+- ✅ Rule builder with field selector, operator, and value
+- ✅ AND/OR logic between multiple conditions
+- ✅ Supported operators: equals, not equals, contains, greater than, less than, is empty, is not empty
+- ✅ Real-time evaluation in the public form renderer
+- ✅ Hidden fields are excluded from validation and submission data
+
+#### Form Theming
+- ✅ Customizable primary, button, background, and text colors
+- ✅ Font family selection
+- ✅ Custom submit button text
+- ✅ Custom thank you title and message
+- ✅ Optional redirect URL after submission
+- ✅ Optional progress bar and question numbers
+- ✅ Theme applied to public form renderer
+
+#### Advanced Field Types
+- ✅ Star Rating (configurable 2-10 stars)
+- ✅ File Upload (accepted types and max size limits)
+- ✅ Signature Capture (draw or type)
 
 ### ❌ Not Yet Implemented
 
 #### Advanced Features
-- ❌ Conditional logic (show/hide fields)
-- ❌ Form theming and customization
 - ❌ Multi-page forms
-- ❌ Advanced field types (rating, signature, file upload, etc.)
 - ❌ Form analytics and statistics
 - ❌ Collaboration features
 - ❌ Integration webhooks
@@ -822,10 +858,11 @@ client/src/pages/forms/
 ├── components/
 │   ├── FormCanvas.jsx        # Drag-and-drop canvas
 │   ├── FieldPalette.jsx      # Field type selector
-│   └── PropertiesPanel.jsx   # Field configuration
+│   └── PropertiesPanel.jsx   # Field configuration and form theme settings
 ├── store/
-│   └── formStore.js          # Zustand state management
-└── utils/                    # (empty, for future utilities)
+│   └── formStore.js          # Zustand state management with localStorage persistence
+├── utils/
+│   └── conditionalLogic.js   # Conditional show/hide evaluation engine
 ```
 
 #### Key Dependencies
@@ -836,8 +873,9 @@ client/src/pages/forms/
 - `react-router-dom` - Routing
 
 #### Known Issues
-- Forms disappear on browser refresh (memory-only storage)
 - Form submission is frontend-only (no backend integration)
+- File uploads store only the file name, not the file content
+- Signature canvas is cleared on form re-render
 - Reserved path detection works but needs backend validation
 - Some console.log statements remain for debugging
 
@@ -845,9 +883,9 @@ client/src/pages/forms/
 1. Implement backend API for form CRUD operations
 2. Add database persistence for forms and submissions
 3. Connect public form submission to backend
-4. Implement localStorage or database persistence
-5. Add conditional logic support
-6. Implement form theming system
+4. Add multi-page form support
+5. Implement form analytics and statistics
+6. Add file upload backend storage
 
 ---
 

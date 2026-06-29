@@ -1,4 +1,4 @@
-import { Type, Hash, Mail, Phone, Calendar, CheckSquare, List, MessageSquare, FileText, LayoutGrid } from 'lucide-react';
+import { Type, Hash, Mail, Phone, Calendar, CheckSquare, List, MessageSquare, FileText, LayoutGrid, Star, Upload, PenTool } from 'lucide-react';
 
 const FIELD_TYPES = [
   { type: 'text', label: 'Short Text', icon: Type, description: 'Single-line text input' },
@@ -9,6 +9,9 @@ const FIELD_TYPES = [
   { type: 'date', label: 'Date', icon: Calendar, description: 'Date picker' },
   { type: 'select', label: 'Dropdown', icon: List, description: 'Single selection dropdown' },
   { type: 'checkbox', label: 'Checkbox', icon: CheckSquare, description: 'Multiple checkboxes' },
+  { type: 'rating', label: 'Star Rating', icon: Star, description: '1-5 star rating' },
+  { type: 'file', label: 'File Upload', icon: Upload, description: 'File attachment' },
+  { type: 'signature', label: 'Signature', icon: PenTool, description: 'Draw or type signature' },
   { type: 'content', label: 'Content Block', icon: FileText, description: 'Rich text content with WYSIWYG editor' },
   { type: 'grid', label: 'Grid Layout', icon: LayoutGrid, description: 'Multi-column layout container' },
 ];

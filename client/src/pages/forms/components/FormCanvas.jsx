@@ -1,8 +1,9 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Trash2, Copy } from 'lucide-react';
+import { GripVertical, Trash2, Copy, GitBranch, Star, Upload, PenTool } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import useFormStore from '../store/formStore';
+import { evaluateConditionalLogic, hasConditionalLogic } from '../utils/conditionalLogic';
 
 const FIELD_COMPONENTS = {
   text: ({ field, isPreview }) => (
@@ -104,6 +105,50 @@ const FIELD_COMPONENTS = {
         </label>
       ))}
     </fieldset>
+  ),
+  rating: ({ field, isPreview }) => {
+    const maxStars = field.maxStars || 5;
+    return (
+      <div className="flex items-center gap-1" aria-label={field.label || 'Star rating'}>
+        {Array.from({ length: maxStars }).map((_, index) => (
+          <Star
+            key={index}
+            className={`h-6 w-6 ${isPreview ? 'text-gray-300' : 'text-subtle'}`}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+    );
+  },
+  file: ({ field, isPreview }) => (
+    <div className="space-y-2">
+      <input
+        type="file"
+        id={field.id}
+        disabled={isPreview}
+        accept={field.accept || undefined}
+        className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px] file:mr-4 file:py-2 file:px-4 file:rounded-base file:border-0 file:bg-primary file:text-white file:text-body"
+        aria-label={field.label || 'File upload'}
+      />
+      {field.maxSize && (
+        <p className="text-small text-muted">Max file size: {field.maxSize}MB</p>
+      )}
+    </div>
+  ),
+  signature: ({ field, isPreview }) => (
+    <div className="space-y-2">
+      <div className="w-full h-32 bg-background border border-border rounded-base flex items-center justify-center">
+        <PenTool className="h-8 w-8 text-subtle" aria-hidden="true" />
+        <span className="sr-only">Signature pad</span>
+      </div>
+      <button
+        type="button"
+        disabled={isPreview}
+        className="px-3 py-2 text-small text-muted border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+      >
+        Clear signature
+      </button>
+    </div>
   ),
   content: ({ field, isPreview, onContentChange }) => {
     const modules = {
@@ -259,7 +304,7 @@ const FIELD_COMPONENTS = {
   },
 };
 
-export default function FormCanvas({ fields, onSelectField, onDeleteField, onDuplicateField, selectedField, isPreview = false }) {
+export default function FormCanvas({ fields, onSelectField, onDeleteField, onDuplicateField, selectedField, isPreview = false, formData = {} }) {
   const { reorderFields, updateField, addFieldToGrid, removeFieldFromGrid, updateGridField } = useFormStore();
 
   const handleDragEnd = (result) => {
@@ -289,9 +334,13 @@ export default function FormCanvas({ fields, onSelectField, onDeleteField, onDup
   }
 
   if (isPreview) {
+    const visibleFields = fields.filter((field) =>
+      evaluateConditionalLogic(field.conditionalLogic, formData)
+    );
+
     return (
       <div className="space-y-6" role="form" aria-label="Form preview">
-        {fields.map((field) => {
+        {visibleFields.map((field) => {
           const FieldComponent = FIELD_COMPONENTS[field.type];
           return (
             <div key={field.id} className="space-y-2">
@@ -377,6 +426,15 @@ export default function FormCanvas({ fields, onSelectField, onDeleteField, onDup
                               />
                               {field.required && (
                                 <span className="text-red-500 text-small" aria-label="Required field">*</span>
+                              )}
+                              {hasConditionalLogic(field) && (
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-primary-light text-primary border border-primary/20"
+                                  title="This field has conditional logic"
+                                >
+                                  <GitBranch className="h-3 w-3" />
+                                  Logic
+                                </span>
                               )}
                             </div>
                           )}

@@ -1,41 +1,27 @@
-import { useState } from 'react';
-import { Download, Search, Filter, Calendar, ChevronDown, Eye, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Download, Search, Filter, Calendar, ChevronDown, Eye, Trash2, X } from 'lucide-react';
 import Papa from 'papaparse';
 import { useConfirm } from '../../components/Dialog';
+import useFormStore from './store/formStore';
 
 export default function Submissions() {
   const { confirmDialog, ConfirmDialogMount } = useConfirm();
-  const [submissions, setSubmissions] = useState([
-    {
-      id: 1,
-      submittedAt: '2024-06-24T10:30:00Z',
-      data: {
-        name: 'John Doe',
-        email: 'john@example.com',
-        phone: '+1234567890',
-        message: 'This is a test submission',
-      },
-    },
-    {
-      id: 2,
-      submittedAt: '2024-06-24T11:45:00Z',
-      data: {
-        name: 'Jane Smith',
-        email: 'jane@example.com',
-        phone: '+9876543210',
-        message: 'Another test submission',
-      },
-    },
-  ]);
+  const { submissions, forms, currentFormId, deleteSubmission } = useFormStore();
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [formFilter, setFormFilter] = useState(currentFormId || 'all');
   const [sortBy, setSortBy] = useState('submittedAt');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  const handleExportCSV = () => {
-    if (submissions.length === 0) return;
+  const filteredByForm = useMemo(() => {
+    if (formFilter === 'all') return submissions;
+    return submissions.filter((sub) => sub.formId === formFilter);
+  }, [submissions, formFilter]);
 
-    const csvData = submissions.map((sub) => ({
+  const handleExportCSV = () => {
+    if (filteredByForm.length === 0) return;
+
+    const csvData = filteredByForm.map((sub) => ({
       ID: sub.id,
       'Submitted At': new Date(sub.submittedAt).toLocaleString(),
       ...sub.data,
@@ -59,14 +45,14 @@ export default function Submissions() {
       variant: 'danger',
     });
     if (ok) {
-      setSubmissions(submissions.filter((sub) => sub.id !== id));
+      deleteSubmission(id);
       if (selectedSubmission?.id === id) {
         setSelectedSubmission(null);
       }
     }
   };
 
-  const filteredSubmissions = submissions.filter((sub) => {
+  const filteredSubmissions = filteredByForm.filter((sub) => {
     const searchLower = searchQuery.toLowerCase();
     return Object.values(sub.data).some(
       (value) => value && value.toString().toLowerCase().includes(searchLower)
@@ -83,7 +69,20 @@ export default function Submissions() {
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
-  const allFields = submissions.length > 0 ? Object.keys(submissions[0].data) : [];
+  const allFields = filteredByForm.length > 0
+    ? Array.from(new Set(filteredByForm.flatMap((sub) => Object.keys(sub.data))))
+    : [];
+
+  const todayCount = filteredByForm.filter(
+    (sub) => new Date(sub.submittedAt).toDateString() === new Date().toDateString()
+  ).length;
+
+  const weekCount = filteredByForm.filter((sub) => {
+    const subDate = new Date(sub.submittedAt);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return subDate >= weekAgo;
+  }).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -97,22 +96,42 @@ export default function Submissions() {
         </div>
 
         {/* Toolbar */}
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
-            <input
-              type="text"
-              placeholder="Search submissions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-            />
+        <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="flex-1 flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+              <input
+                type="text"
+                placeholder="Search submissions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+              />
+            </div>
+
+            <div className="relative min-w-[180px]">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+              <select
+                value={formFilter}
+                onChange={(e) => setFormFilter(e.target.value)}
+                className="w-full pl-10 pr-8 py-2 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px] appearance-none cursor-pointer"
+                aria-label="Filter by form"
+              >
+                <option value="all">All Forms</option>
+                {forms.map((form) => (
+                  <option key={form.id} value={form.id}>
+                    {form.title}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle pointer-events-none" />
+            </div>
           </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
-              disabled={submissions.length === 0}
+              disabled={filteredByForm.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Export to CSV"
             >
@@ -123,30 +142,18 @@ export default function Submissions() {
         </div>
 
         {/* Stats */}
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-surface-raised border border-border rounded-base p-4">
             <div className="text-small text-muted">Total Submissions</div>
-            <div className="text-2xl font-bold text-base mt-1">{submissions.length}</div>
+            <div className="text-2xl font-bold text-base mt-1">{filteredByForm.length}</div>
           </div>
           <div className="bg-surface-raised border border-border rounded-base p-4">
             <div className="text-small text-muted">Today</div>
-            <div className="text-2xl font-bold text-base mt-1">
-              {submissions.filter(
-                (sub) =>
-                  new Date(sub.submittedAt).toDateString() === new Date().toDateString()
-              ).length}
-            </div>
+            <div className="text-2xl font-bold text-base mt-1">{todayCount}</div>
           </div>
           <div className="bg-surface-raised border border-border rounded-base p-4">
             <div className="text-small text-muted">This Week</div>
-            <div className="text-2xl font-bold text-base mt-1">
-              {submissions.filter((sub) => {
-                const subDate = new Date(sub.submittedAt);
-                const weekAgo = new Date();
-                weekAgo.setDate(weekAgo.getDate() - 7);
-                return subDate >= weekAgo;
-              }).length}
-            </div>
+            <div className="text-2xl font-bold text-base mt-1">{weekCount}</div>
           </div>
         </div>
 
@@ -212,7 +219,10 @@ export default function Submissions() {
                       className="hover:bg-surface transition-colors duration-150"
                     >
                       <td className="px-4 py-3 text-small text-base">
-                        {new Date(submission.submittedAt).toLocaleString()}
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-subtle" />
+                          {new Date(submission.submittedAt).toLocaleString()}
+                        </div>
                       </td>
                       {allFields.map((field) => (
                         <td key={field} className="px-4 py-3 text-small text-base">
@@ -225,6 +235,7 @@ export default function Submissions() {
                             onClick={() => setSelectedSubmission(submission)}
                             className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
                             title="View details"
+                            aria-label="View submission details"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
@@ -232,6 +243,7 @@ export default function Submissions() {
                             onClick={() => handleDeleteSubmission(submission.id)}
                             className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
                             title="Delete submission"
+                            aria-label="Delete submission"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -249,11 +261,11 @@ export default function Submissions() {
         {selectedSubmission && (
           <div 
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
-            onMouseDown={e => { if (e.target === e.currentTarget) setSelectedSubmission(null); }}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedSubmission(null); }}
           >
             <div 
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
-              onMouseDown={e => e.stopPropagation()}
+              className="bg-surface rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-border"
+              onMouseDown={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="submission-details-title"
@@ -263,8 +275,9 @@ export default function Submissions() {
                 <button
                   onClick={() => setSelectedSubmission(null)}
                   className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+                  aria-label="Close submission details"
                 >
-                  ×
+                  <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="p-6 overflow-y-auto max-h-[60vh]">
