@@ -30,6 +30,8 @@ jobs:
 
       - name: Install all workspace dependencies
         run: npm ci
+        env:
+          HUSKY: 0
 
       - name: Build client (React/Vite)
         run: npm run build
@@ -106,6 +108,8 @@ jobs:
 
       - name: Install dependencies (for Prisma CLI)
         run: npm ci
+        env:
+          HUSKY: 0
 
       - name: Resolve any failed migrations in staging
         run: npx prisma migrate resolve --applied "20260625_add_web_section_and_draft_templates"
