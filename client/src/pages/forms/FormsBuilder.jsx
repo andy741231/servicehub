@@ -6,42 +6,54 @@ import FormRenderer from './components/FormRenderer';
 import FieldPalette from './components/FieldPalette';
 import PropertiesPanel from './components/PropertiesPanel';
 import useFormStore from './store/formStore';
+import { isDuplicateName } from './utils/slug';
 
 export default function FormsBuilder() {
   const navigate = useNavigate();
-  const { formId } = useParams();
+  const { formSlug } = useParams();
   const [selectedField, setSelectedField] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [formTitle, setFormTitle] = useState('Untitled Form');
   const [formDescription, setFormDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
-  
-  const { 
-    fields, 
-    addField, 
-    removeField, 
-    duplicateField, 
+  const [saveError, setSaveError] = useState(null);
+
+  const {
+    fields,
+    addField,
+    removeField,
+    duplicateField,
     currentFormId,
     forms,
     setCurrentForm,
     saveCurrentForm,
-    createNewForm
+    createNewForm,
+    isLoading
   } = useFormStore();
 
+  const findFormBySlug = (slug) => forms.find((f) => f.slug === slug || f.id === slug);
+
   useEffect(() => {
-    if (formId) {
-      setCurrentForm(formId);
-      const form = forms.find(f => f.id === formId);
+    if (formSlug) {
+      const form = findFormBySlug(formSlug);
       if (form) {
+        setCurrentForm(form.id);
         setFormTitle(form.title);
         setFormDescription(form.description);
       }
     } else if (!currentFormId) {
-      // Creating a new form
-      createNewForm();
+      const create = async () => {
+        const newFormId = await createNewForm();
+        const latestForms = useFormStore.getState().forms;
+        const newForm = latestForms.find((f) => f.id === newFormId) || latestForms.find((f) => f.slug === newFormId);
+        if (newForm?.slug) {
+          navigate(`/hub-admin/forms/builder/${newForm.slug}`, { replace: true });
+        }
+      };
+      create();
     }
-  }, [formId, currentFormId, forms, setCurrentForm, createNewForm]);
+  }, [formSlug, currentFormId, forms, setCurrentForm, createNewForm, navigate]);
 
   const handleAddField = (type) => {
     const newField = {
@@ -78,11 +90,21 @@ export default function FormsBuilder() {
   };
 
   const handleSave = async () => {
+    setSaveError(null);
+    if (currentFormId && isDuplicateName(formTitle, forms, currentFormId)) {
+      setSaveError('A form with this name already exists. Please use a unique name.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       saveCurrentForm(formTitle, formDescription);
-      // Simulate save delay
       await new Promise(resolve => setTimeout(resolve, 500));
+
+      const updatedForm = useFormStore.getState().forms.find((f) => f.id === currentFormId);
+      if (updatedForm && formSlug && updatedForm.slug !== formSlug) {
+        navigate(`/hub-admin/forms/builder/${updatedForm.slug}`, { replace: true });
+      }
     } finally {
       setIsSaving(false);
     }
@@ -108,7 +130,8 @@ export default function FormsBuilder() {
   };
 
   const handleShareForm = () => {
-    const formUrl = `${window.location.origin}/form/${currentFormId}`;
+    const currentForm = forms.find((f) => f.id === currentFormId);
+    const formUrl = `${window.location.origin}/form/${currentForm?.slug || currentFormId}`;
     navigator.clipboard.writeText(formUrl).then(() => {
       setCopiedToClipboard(true);
       setTimeout(() => setCopiedToClipboard(false), 2000);
@@ -241,6 +264,11 @@ export default function FormsBuilder() {
                   rows={2}
                   aria-label="Form description"
                 />
+                {saveError && (
+                  <p className="mt-2 text-small text-red-600 bg-red-50 px-3 py-2 rounded-base">
+                    {saveError}
+                  </p>
+                )}
               </div>
               <FormCanvas
                 fields={fields}

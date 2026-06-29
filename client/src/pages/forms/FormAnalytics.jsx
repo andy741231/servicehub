@@ -71,11 +71,18 @@ function SimpleLineChart({ data, color }) {
 }
 
 export default function FormAnalytics() {
-  const { formId } = useParams();
+  const { formSlug } = useParams();
   const navigate = useNavigate();
   const { forms, submissions } = useFormStore();
   const [range, setRange] = useState(7);
-  const [selectedFormId, setSelectedFormId] = useState(formId || 'all');
+  const [selectedFormId, setSelectedFormId] = useState('all');
+
+  useEffect(() => {
+    if (formSlug) {
+      const form = forms.find((f) => f.slug === formSlug || f.id === formSlug);
+      setSelectedFormId(form?.id || 'all');
+    }
+  }, [formSlug, forms]);
 
   const form = forms.find((f) => f.id === selectedFormId);
   const formSubmissions = useMemo(() => {

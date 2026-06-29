@@ -731,13 +731,14 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Create new form functionality
 
 #### 6. Form Publishing & Sharing
-- ✅ Unique form URL generation (`/form/:formId`)
+- ✅ Unique form URL generation (`/form/:formSlug`) based on form name
+- ✅ Duplicate form name prevention (client and server)
 - ✅ Share button with clipboard copy
 - ✅ Visual feedback when link copied
 - ✅ Reserved path system to prevent conflicts
 
 #### 7. Public Form Renderer
-- ✅ Clean, modern form display at `/form/:formId`
+- ✅ Clean, modern form display at `/form/:formSlug`
 - ✅ All field types supported in public view
 - ✅ Client-side form validation
 - ✅ Required field validation

@@ -44,7 +44,7 @@ export default function App() {
       <Routes>
         {/* ── Public site routes ── */}
         <Route path="/" element={<PublicHome />} />
-        <Route path="/form/:formId" element={<FormView />} />
+        <Route path="/form/:formSlug" element={<FormView />} />
         <Route path="/:slug" element={<PublicHome />} />
 
         {/* ── Admin backend (/hub-admin/*) ── */}
@@ -69,9 +69,9 @@ export default function App() {
 
             {/* Other sub-apps */}
             <Route path="forms" element={<FormsIndex />} />
-            <Route path="forms/builder/:formId?" element={<FormsBuilder />} />
+            <Route path="forms/builder/:formSlug?" element={<FormsBuilder />} />
             <Route path="forms/submissions" element={<Submissions />} />
-            <Route path="forms/analytics/:formId?" element={<FormAnalytics />} />
+            <Route path="forms/analytics/:formSlug?" element={<FormAnalytics />} />
             <Route path="email" element={<EmailShell />}>
               <Route index element={<EmailIndex />} />
               <Route path="campaigns/new" element={<NewsletterBuilder />} />

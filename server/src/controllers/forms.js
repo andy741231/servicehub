@@ -43,6 +43,34 @@ const serializeSubmission = (submission) => ({
   data: parseJsonField(submission.data),
 });
 
+const generateSlug = (title, existingSlugs = []) => {
+  const base = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'untitled-form';
+
+  let slug = base;
+  let counter = 1;
+  while (existingSlugs.includes(slug)) {
+    slug = `${base}-${counter}`;
+    counter += 1;
+  }
+  return slug;
+};
+
+const getFormSlug = (form) => {
+  const schema = parseJsonField(form.schema) || {};
+  return schema.slug || generateSlug(form.title || 'Untitled Form');
+};
+
+const findFormBySlug = async (slug) => {
+  const forms = await prisma.form.findMany({ where: { deletedAt: null } });
+  return forms.find((f) => getFormSlug(f) === slug) || null;
+};
+
 export const listForms = async (req, res) => {
   try {
     const forms = await prisma.form.findMany({
@@ -59,9 +87,14 @@ export const listForms = async (req, res) => {
 export const getForm = async (req, res) => {
   try {
     const { id } = req.params;
-    const form = await prisma.form.findUnique({
-      where: { id, deletedAt: null },
-    });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    let form = null;
+    if (isUuid) {
+      form = await prisma.form.findUnique({ where: { id, deletedAt: null } });
+    } else {
+      form = await findFormBySlug(id);
+    }
 
     if (!form) {
       return res.status(404).json({ error: 'Form not found' });
@@ -82,10 +115,19 @@ export const createForm = async (req, res) => {
       return res.status(400).json({ error: 'Title and schema are required' });
     }
 
+    const existingForms = await prisma.form.findMany({ where: { deletedAt: null } });
+    const normalizedTitle = title.trim().toLowerCase();
+    if (existingForms.some((f) => f.title.trim().toLowerCase() === normalizedTitle)) {
+      return res.status(409).json({ error: 'A form with this name already exists' });
+    }
+
+    const existingSlugs = existingForms.map((f) => getFormSlug(f));
+    const slug = generateSlug(schema?.slug || title, existingSlugs);
+
     const form = await prisma.form.create({
       data: {
         title,
-        schema: stringifyJsonField(schema),
+        schema: stringifyJsonField({ ...schema, slug }),
       },
     });
 
@@ -106,9 +148,23 @@ export const updateForm = async (req, res) => {
       return res.status(404).json({ error: 'Form not found' });
     }
 
+    const existingForms = await prisma.form.findMany({ where: { deletedAt: null } });
+    const normalizedTitle = title?.trim().toLowerCase();
+    if (normalizedTitle && existingForms.some((f) => f.id !== id && f.title.trim().toLowerCase() === normalizedTitle)) {
+      return res.status(409).json({ error: 'A form with this name already exists' });
+    }
+
     const updateData = {};
     if (title !== undefined) updateData.title = title;
-    if (schema !== undefined) updateData.schema = stringifyJsonField(schema);
+    if (schema !== undefined) {
+      const existingSlug = getFormSlug(existing);
+      const requestedSlug = schema?.slug || existingSlug;
+      const otherSlugs = existingForms
+        .filter((f) => f.id !== id)
+        .map((f) => getFormSlug(f));
+      const newSlug = generateSlug(requestedSlug, otherSlugs);
+      updateData.schema = stringifyJsonField({ ...schema, slug: newSlug });
+    }
 
     const form = await prisma.form.update({
       where: { id },

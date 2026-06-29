@@ -13,14 +13,16 @@ export default function FormsDashboard() {
     loadForms();
   }, [loadForms]);
 
-  const handleCreateForm = () => {
-    const newFormId = createNewForm();
-    navigate(`/hub-admin/forms/builder/${newFormId}`);
+  const handleCreateForm = async () => {
+    const newFormId = await createNewForm();
+    const newForm = useFormStore.getState().forms.find((f) => f.id === newFormId);
+    navigate(`/hub-admin/forms/builder/${newForm?.slug || newFormId}`);
   };
 
   const handleEditForm = (formId) => {
     setCurrentForm(formId);
-    navigate(`/hub-admin/forms/builder/${formId}`);
+    const form = forms.find((f) => f.id === formId);
+    navigate(`/hub-admin/forms/builder/${form?.slug || formId}`);
   };
 
   const handleViewSubmissions = (formId) => {
@@ -30,7 +32,8 @@ export default function FormsDashboard() {
 
   const handleViewAnalytics = (formId) => {
     setCurrentForm(formId);
-    navigate(`/hub-admin/forms/analytics/${formId}`);
+    const form = forms.find((f) => f.id === formId);
+    navigate(`/hub-admin/forms/analytics/${form?.slug || formId}`);
   };
 
   const handleDeleteForm = (formId) => {
@@ -40,7 +43,8 @@ export default function FormsDashboard() {
   };
 
   const handleShareForm = (formId) => {
-    const formUrl = `${window.location.origin}/form/${formId}`;
+    const form = forms.find((f) => f.id === formId);
+    const formUrl = `${window.location.origin}/form/${form?.slug || formId}`;
     navigator.clipboard.writeText(formUrl).then(() => {
       setCopiedFormId(formId);
       setTimeout(() => setCopiedFormId(null), 2000);

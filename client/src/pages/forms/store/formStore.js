@@ -8,6 +8,7 @@ import {
   submitForm,
   fetchSubmissions,
 } from '../api/formsApi';
+import { generateSlug, isDuplicateName } from '../utils/slug';
 
 const STORAGE_KEY = 'form-store';
 
@@ -75,16 +76,20 @@ const DEFAULT_FORMS = [
   },
 ];
 
-const normalizeForm = (backendForm) => ({
-  ...(backendForm.schema || {}),
-  id: backendForm.id,
-  title: backendForm.title || backendForm.schema?.title || 'Untitled Form',
-  fields: backendForm.schema?.fields || [],
-  description: backendForm.schema?.description || '',
-  theme: backendForm.schema?.theme || { ...DEFAULT_THEME },
-  createdAt: backendForm.createdAt,
-  updatedAt: backendForm.updatedAt,
-});
+const normalizeForm = (backendForm) => {
+  const schema = backendForm.schema || {};
+  return {
+    ...schema,
+    id: backendForm.id,
+    title: backendForm.title || schema.title || 'Untitled Form',
+    slug: schema.slug || generateSlug(backendForm.title || schema.title || 'Untitled Form'),
+    fields: schema.fields || [],
+    description: schema.description || '',
+    theme: schema.theme || { ...DEFAULT_THEME },
+    createdAt: backendForm.createdAt,
+    updatedAt: backendForm.updatedAt,
+  };
+};
 
 const denormalizeForm = (clientForm) => ({
   title: clientForm.title,
@@ -122,8 +127,15 @@ const useFormStore = create((set, get) => ({
     } catch (e) {
       console.warn('Failed to load forms from API, falling back to localStorage:', e);
       const stored = loadFromStorage();
+      const storedForms = stored?.forms || DEFAULT_FORMS;
+      const assignedSlugs = storedForms.map((f) => f.slug).filter(Boolean);
+      const forms = storedForms.map((form, index) => {
+        const slug = form.slug || generateSlug(form.title || `Untitled Form ${index + 1}`, assignedSlugs);
+        if (!form.slug) assignedSlugs.push(slug);
+        return { ...form, slug };
+      });
       set({
-        forms: stored?.forms || DEFAULT_FORMS,
+        forms,
         submissions: stored?.submissions || [],
         isLoading: false,
       });
@@ -222,11 +234,11 @@ const useFormStore = create((set, get) => ({
 
   setSelectedField: (fieldId) => set({ selectedField: fieldId }),
 
-  setCurrentForm: (formId) => set((state) => {
-    const form = state.forms.find((f) => f.id === formId);
+  setCurrentForm: (formIdOrSlug) => set((state) => {
+    const form = state.forms.find((f) => f.id === formIdOrSlug || f.slug === formIdOrSlug);
     if (form) {
       return {
-        currentFormId: formId,
+        currentFormId: form.id,
         fields: form.fields,
         selectedField: null,
       };
@@ -235,9 +247,12 @@ const useFormStore = create((set, get) => ({
   }),
 
   createNewForm: async () => {
+    const title = 'Untitled Form';
+    const existingSlugs = get().forms.map((f) => f.slug);
     const newForm = {
       id: `form-${Date.now()}`,
-      title: 'Untitled Form',
+      title,
+      slug: generateSlug(title, existingSlugs),
       description: '',
       fields: [],
       theme: { ...DEFAULT_THEME },
@@ -270,11 +285,21 @@ const useFormStore = create((set, get) => ({
   saveCurrentForm: (title, description) => set((state) => {
     if (!state.currentFormId) return state;
 
+    const currentForm = state.forms.find((f) => f.id === state.currentFormId);
+    if (!currentForm) return state;
+
+    const newTitle = title || currentForm.title;
+    const existingSlugs = state.forms.filter((f) => f.id !== currentForm.id).map((f) => f.slug);
+    const newSlug = newTitle !== currentForm.title
+      ? generateSlug(newTitle, existingSlugs)
+      : currentForm.slug;
+
     const updatedForms = state.forms.map((form) =>
       form.id === state.currentFormId
         ? {
             ...form,
-            title: title || form.title,
+            title: newTitle,
+            slug: newSlug,
             description: description || form.description,
             fields: state.fields,
             updatedAt: new Date().toISOString(),
@@ -289,7 +314,7 @@ const useFormStore = create((set, get) => ({
       });
     }
 
-    return { forms: updatedForms };
+    return { forms: updatedForms, currentFormId: updatedForm?.id || state.currentFormId };
   }),
 
   deleteForm: (formId) => set((state) => {

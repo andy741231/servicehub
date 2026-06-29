@@ -5,7 +5,7 @@ import useFormStore from '../forms/store/formStore';
 import FormRenderer from '../forms/components/FormRenderer';
 
 export default function FormView() {
-  const { formId } = useParams();
+  const { formSlug } = useParams();
   const navigate = useNavigate();
   const { forms, addSubmission, fetchForm } = useFormStore();
   const [form, setForm] = useState(null);
@@ -17,7 +17,7 @@ export default function FormView() {
 
     const loadForm = async () => {
       setIsLoading(true);
-      const foundForm = forms.find(f => f.id === formId);
+      const foundForm = forms.find((f) => f.slug === formSlug || f.id === formSlug);
       if (foundForm) {
         setForm(foundForm);
         setIsLoading(false);
@@ -25,7 +25,7 @@ export default function FormView() {
       }
 
       try {
-        const apiForm = await fetchForm(formId);
+        const apiForm = await fetchForm(formSlug);
         if (!cancelled) {
           if (apiForm) {
             setForm(apiForm);
@@ -43,7 +43,7 @@ export default function FormView() {
 
     loadForm();
     return () => { cancelled = true; };
-  }, [formId, forms, fetchForm]);
+  }, [formSlug, forms, fetchForm]);
 
   useEffect(() => {
     if (!form) return;
