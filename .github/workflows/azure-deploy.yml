@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -99,6 +101,8 @@ jobs:
     steps:
       - name: Checkout code (needed for prisma/schema.prisma)
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -112,10 +116,11 @@ jobs:
           HUSKY: 0
 
       - name: Resolve any failed migrations in staging
-        run: npx prisma migrate resolve --applied "20260625_add_web_section_and_draft_templates"
+        run: |
+          npx prisma migrate resolve --applied "0_init" || true
+          npx prisma migrate resolve --applied "20260625_add_web_section_and_draft_templates" || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
-        continue-on-error: true
 
       - name: Apply database migrations to staging
         run: npx prisma migrate deploy
