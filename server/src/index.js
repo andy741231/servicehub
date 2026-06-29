@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import routes from './routes/index.js';
+import prisma from './db/client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,6 +68,10 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
+
+// Warm up the Prisma connection before accepting requests so the first
+// public page load doesn't hit a cold database connection and return 500.
+await prisma.$connect();
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port} [${isProd ? 'production' : 'development'}]`);

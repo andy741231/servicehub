@@ -10,15 +10,25 @@ export const fetchForms = () => api.get('/forms').then((res) => res.data.forms);
 
 export const fetchForm = (id) => PUBLIC_API.get(`/forms/public/${id}`).then((res) => res.data.form);
 
-export const createForm = (form) => api.post('/forms', {
-  title: form.title,
-  schema: form,
-}).then((res) => res.data.form);
+export const createForm = (form) => {
+  console.log('[createForm] Input form:', form);
+  const payload = {
+    title: form.title,
+    schema: form.schema || form,
+  };
+  console.log('[createForm] Payload:', payload);
+  return api.post('/forms', payload).then((res) => res.data.form);
+};
 
-export const updateForm = (id, form) => api.put(`/forms/${id}`, {
-  title: form.title,
-  schema: form,
-}).then((res) => res.data.form);
+export const updateForm = (id, form) => {
+  console.log('[updateForm] Input form:', form);
+  const payload = {
+    title: form.title,
+    schema: form.schema || form,
+  };
+  console.log('[updateForm] Payload:', payload);
+  return api.put(`/forms/${id}`, payload).then((res) => res.data.form);
+};
 
 export const deleteForm = (id) => api.delete(`/forms/${id}`).then((res) => res.data);
 

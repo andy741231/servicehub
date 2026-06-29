@@ -92,7 +92,7 @@ const normalizeForm = (backendForm) => {
 
 const denormalizeForm = (clientForm) => {
   const { id, title: clientTitle, schema: nestedSchema, createdAt, updatedAt, ...rest } = clientForm;
-  return {
+  const result = {
     title: clientTitle,
     schema: {
       ...rest,
@@ -102,6 +102,9 @@ const denormalizeForm = (clientForm) => {
       theme: clientForm.theme,
     },
   };
+  console.log('[denormalizeForm] Input:', clientForm);
+  console.log('[denormalizeForm] Output:', result);
+  return result;
 };
 
 const normalizeSubmission = (backendSubmission) => ({
@@ -300,9 +303,11 @@ const useFormStore = create((set, get) => ({
 
   saveCurrentForm: async (title, description) => {
     const state = get();
+    console.log('[saveCurrentForm] Starting save, currentFormId:', state.currentFormId);
     if (!state.currentFormId) return null;
 
     const currentForm = state.forms.find((f) => f.id === state.currentFormId);
+    console.log('[saveCurrentForm] currentForm:', currentForm);
     if (!currentForm) return null;
 
     const newTitle = title || currentForm.title;
@@ -310,6 +315,8 @@ const useFormStore = create((set, get) => ({
     const newSlug = newTitle !== currentForm.title
       ? generateSlug(newTitle, existingSlugs)
       : currentForm.slug;
+
+    console.log('[saveCurrentForm] newTitle:', newTitle, 'newSlug:', newSlug, 'fields count:', state.fields.length);
 
     const updatedForm = {
       ...currentForm,
@@ -321,6 +328,7 @@ const useFormStore = create((set, get) => ({
     };
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatedForm.id);
+    console.log('[saveCurrentForm] isUuid:', isUuid, 'formId:', updatedForm.id);
 
     set({
       forms: state.forms.map((form) =>
@@ -331,8 +339,12 @@ const useFormStore = create((set, get) => ({
     const isConflictError = (e) => e?.response?.status === 409;
 
     if (!isUuid) {
+      console.log('[saveCurrentForm] Creating new form on API');
       try {
-        const backendForm = await createForm(updatedForm);
+        const denormalized = denormalizeForm(updatedForm);
+        console.log('[saveCurrentForm] denormalized form:', denormalized);
+        const backendForm = await createForm(denormalized);
+        console.log('[saveCurrentForm] Created form on API:', backendForm);
         const form = normalizeForm(backendForm);
         set((s) => ({
           forms: s.forms.filter((f) => f.id !== updatedForm.id).concat(form),
@@ -346,8 +358,12 @@ const useFormStore = create((set, get) => ({
       }
     }
 
+    console.log('[saveCurrentForm] Updating existing form on API');
     try {
-      await updateFormApi(updatedForm.id, denormalizeForm(updatedForm));
+      const denormalized = denormalizeForm(updatedForm);
+      console.log('[saveCurrentForm] denormalized form:', denormalized);
+      await updateFormApi(updatedForm.id, denormalized);
+      console.log('[saveCurrentForm] Updated form on API successfully');
       return updatedForm.id;
     } catch (e) {
       if (isConflictError(e)) throw e;
