@@ -120,6 +120,8 @@ jobs:
           npx prisma migrate resolve --applied "0_init" || true
           npx prisma migrate resolve --applied "20260625_add_web_section_and_draft_templates" || true
           npx prisma migrate resolve --applied "20260629_cleanupmigrations_remove_redundant_manual_migratio" || true
+          npx prisma migrate resolve --applied "20260630_feat_form_version_history" || true
+          npx prisma migrate resolve --applied "20260630_fixdb_guard_updatedat_column_add_and_resolve_faile" || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
@@ -251,6 +253,16 @@ jobs:
 
       - name: Install dependencies (for Prisma CLI)
         run: npm ci
+
+      - name: Resolve any failed migrations in production
+        run: |
+          npx prisma migrate resolve --applied "0_init" || true
+          npx prisma migrate resolve --applied "20260625_add_web_section_and_draft_templates" || true
+          npx prisma migrate resolve --applied "20260629_cleanupmigrations_remove_redundant_manual_migratio" || true
+          npx prisma migrate resolve --applied "20260630_feat_form_version_history" || true
+          npx prisma migrate resolve --applied "20260630_fixdb_guard_updatedat_column_add_and_resolve_faile" || true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 
       - name: Apply database migrations to production
         run: npx prisma migrate deploy
