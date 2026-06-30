@@ -1,8 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import api from '../../utils/api';
 import { Globe, Star, Image as ImageIcon, Check, Settings, MessageCircle, RefreshCw, Wrench, ChevronDown, Menu, X, FileX } from 'lucide-react';
+
+// Configure marked: GFM + line-break support, links open in new tab safely
+marked.use({
+  gfm: true,
+  breaks: true,
+  renderer: (() => {
+    const r = new marked.Renderer();
+    r.link = ({ href, title, tokens }) => {
+      const text = tokens.map(t => t.raw ?? '').join('');
+      const titleAttr = title ? ` title="${title}"` : '';
+      return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+    };
+    return r;
+  })(),
+});
+
+const renderMarkdown = (md) =>
+  DOMPurify.sanitize(marked.parse(md || ''), {
+    ALLOWED_TAGS: ['p','br','strong','em','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img'],
+    ALLOWED_ATTR: ['href','title','target','rel','src','alt','class'],
+  });
 
 const resolveUrl = (url) => {
   if (!url) return '';
@@ -428,7 +450,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
         <section key={block.id} className={`py-12 px-6 max-w-3xl mx-auto ${cc}`} style={sStyle}>
           <div
             className="prose prose-lg max-w-none prose-headings:font-bold prose-p:mb-4 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline"
-            dangerouslySetInnerHTML={{ __html: marked(block.content.content || '') }}
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(block.content.content) }}
           />
         </section>
       );

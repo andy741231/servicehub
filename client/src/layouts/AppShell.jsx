@@ -61,7 +61,7 @@ export default function AppShell() {
         <div className="flex-1 overflow-y-auto py-4">
           <nav className="px-3 space-y-1">
             {APPS.map((app) => {
-              const hasAccess = user?.permissions?.includes(app.id) || hasAdminRole;
+              const hasAccess = user?.permissions?.includes(app.id) || hasAdminRole || hasSuperAdminRole;
               if (!hasAccess) return null;
               return <NavItem key={app.id} app={app} location={location} />;
             })}

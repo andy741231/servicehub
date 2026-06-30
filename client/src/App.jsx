@@ -22,7 +22,7 @@ import NewsletterBuilder from './pages/email/NewsletterBuilder';
 import Directory from './pages/directory/index';
 import PublicHome from './pages/public/Home';
 import FormView from './pages/public/FormView';
-import SessionExpiredModal from './components/SessionExpiredModal';
+
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -40,7 +40,6 @@ export default function App() {
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <SessionExpiredModal />
       <Routes>
         {/* ── Public site routes ── */}
         <Route path="/" element={<PublicHome />} />

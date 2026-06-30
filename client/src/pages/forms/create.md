@@ -15,15 +15,15 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 ### 1. Form Builder Interface
 **Canvas-Based Editor**
 - Central drag-and-drop canvas for form construction
-- Left sidebar with categorized field palette (Basic, Advanced, Payments)
+- "Insert new field" button opens a field-type picker modal (no left sidebar palette)
 - Right properties panel for field configuration
 - Top toolbar for global actions (undo/redo, preview, publish)
 - Auto-save functionality with basic revision history
 - Real-time preview mode
 
 **Field Management**
-- Drag-and-drop reordering of fields
-- Click-to-add alternative to drag-and-drop
+- Drag-and-drop reordering of fields within a row
+- Click "Insert new field" to open a field-type picker modal
 - Duplicate/copy fields
 - Delete fields with confirmation
 - Field search functionality
@@ -53,8 +53,9 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 
 **Structural Elements**
 - Header (form title with subheader)
-- Section Break (group fields into sections)
+- Rows (group fields into layout sections, each with independent column settings)
 - Page Break (split form into multiple pages)
+- Content Block (rich text with WYSIWYG editor)
 - Hidden Fields (store metadata not visible to users)
 
 ### 3. Field Configuration
@@ -75,8 +76,8 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - File size limits
 
 **Display Options**
-- Field width (full, half, quarter)
-- Field positioning (move to new line, merge)
+- Row column layout (1, 2, or 3 columns per row)
+- Field positioning within a row via drag-and-drop
 - Hide label option
 - Read-only option
 
@@ -122,8 +123,9 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 **Layout Options**
 - Single-page form (all questions on one page)
 - Multi-page form (questions split across pages)
-- Section-based organization
-- Column layouts (1-4 columns)
+- Row-based organization: each row can independently be set to 1, 2, or 3 columns
+- Add/remove rows to group fields
+- Responsive column layouts (1-column on mobile)
 
 ### 6. Form Publishing & Sharing
 **Publishing Options**
@@ -684,13 +686,14 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 
 #### 1. Form Builder Interface
 - ✅ Canvas-based drag-and-drop editor using @hello-pangea/dnd
-- ✅ Left sidebar with field palette (12 field types including page break)
+- ✅ "Insert new field" button opens a field-type picker modal (no left sidebar palette)
+- ✅ Row-based layout: each row can independently be set to 1, 2, or 3 columns
 - ✅ Right properties panel for field configuration and form theme
 - ✅ Top toolbar with Save, Export, Preview, Share actions
 - ✅ Interactive preview mode (real form renderer)
 - ✅ Back navigation to dashboard
 
-#### 2. Core Field Types (12/12 implemented)
+#### 2. Core Field Types (11/11 implemented)
 - ✅ Short Text (single-line input)
 - ✅ Long Text (textarea)
 - ✅ Number (numeric input with validation)
@@ -699,17 +702,17 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Date (date picker)
 - ✅ Dropdown (select with options)
 - ✅ Checkbox (multiple selections)
-- ✅ Star Rating (1-5 stars, configurable)
 - ✅ File Upload (accepted types and size limits, backend storage)
-- ✅ Signature Capture (draw or type)
 - ✅ Page Break (multi-page forms)
+- ✅ Content Block (rich text with WYSIWYG editor)
 
 #### 3. Field Management
-- ✅ Drag-and-drop reordering of fields
+- ✅ Drag-and-drop reordering of fields within a row
 - ✅ Click-to-select fields for editing
 - ✅ Duplicate/copy fields
 - ✅ Delete fields with confirmation
 - ✅ Real-time label editing in canvas
+- ✅ Row-based organization with add/remove rows
 
 #### 4. Field Configuration
 - ✅ Field label/title
@@ -838,9 +841,7 @@ The Forms sub app is a drag-and-drop form builder that allows users to create cu
 - ✅ Theme applied to public form renderer
 
 #### Advanced Field Types
-- ✅ Star Rating (configurable 2-10 stars)
 - ✅ File Upload (accepted types and max size limits, backend upload storage)
-- ✅ Signature Capture (draw or type)
 
 #### Multi-page Forms
 - ✅ Page Break field type
@@ -889,7 +890,7 @@ client/src/pages/forms/
 ├── components/
 │   ├── FormCanvas.jsx        # Drag-and-drop canvas
 │   ├── FormRenderer.jsx      # Shared public/preview form renderer
-│   ├── FieldPalette.jsx      # Field type selector
+│   ├── FieldPalette.jsx      # Field type registry (used by the Insert new field modal)
 │   └── PropertiesPanel.jsx   # Field configuration and form theme settings
 ├── store/
 │   └── formStore.js          # Zustand state management with backend sync

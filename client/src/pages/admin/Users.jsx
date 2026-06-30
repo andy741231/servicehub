@@ -252,8 +252,12 @@ export default function Users() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex gap-1.5 flex-wrap">
                       {user.roles.map(role => (
-                        <span key={role} className="px-2.5 py-0.5 inline-flex items-center text-xs font-semibold rounded bg-blue-50 text-blue-700 border border-blue-200">
-                          <Shield className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                        <span key={role} className={`px-2.5 py-0.5 inline-flex items-center text-xs font-semibold rounded border ${
+                          role === 'super_admin'
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}>
+                          <Shield className={`h-3.5 w-3.5 mr-1 ${role === 'super_admin' ? 'text-purple-500' : 'text-blue-500'}`} />
                           {role}
                         </span>
                       ))}
@@ -416,18 +420,21 @@ export default function Users() {
                   <div className="grid grid-cols-3 gap-2">
                     {availableRoles.map(role => {
                       const isChecked = formData.roles.includes(role);
+                      const isSuperAdmin = role === 'super_admin';
                       return (
                         <button
                           key={role}
                           type="button"
                           onClick={() => handleRoleToggle(role)}
                           className={`flex items-center justify-center py-2 px-3 border rounded-lg text-sm font-semibold transition-all ${
-                            isChecked 
-                              ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' 
+                            isChecked
+                              ? isSuperAdmin
+                                ? 'bg-purple-50 border-purple-500 text-purple-700 shadow-sm'
+                                : 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
                               : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                           }`}
                         >
-                          {isChecked && <Check className="h-4 w-4 mr-1.5 text-blue-600" />}
+                          {isChecked && <Check className={`h-4 w-4 mr-1.5 ${isSuperAdmin ? 'text-purple-600' : 'text-blue-600'}`} />}
                           {role.charAt(0).toUpperCase() + role.slice(1)}
                         </button>
                       );

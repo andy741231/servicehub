@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Loader2, Star, PenTool, X, Lock } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { DEFAULT_THEME } from '../store/formStore';
 import { evaluateConditionalLogic } from '../utils/conditionalLogic';
 import { uploadFile } from '../api/formsApi';
@@ -66,6 +67,16 @@ const FieldError = ({ fieldId, error }) =>
       {error}
     </p>
   ) : null;
+
+// Sanitize Quill HTML output for safe rendering in the public form.
+const sanitizeHtml = (html) =>
+  DOMPurify.sanitize(html || '', {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'span', 'div',
+    ],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+  });
 
 const FIELD_COMPONENTS = {
   text: ({ field, value, onChange, error, theme }) => (
@@ -441,6 +452,29 @@ const FIELD_COMPONENTS = {
             {error}
           </p>
         )}
+      </div>
+    );
+  },
+  content: ({ field, theme }) => {
+    const bs = field.blockStyle || {};
+    const inlineStyle = {
+      color:         bs.color   || theme.textColor,
+      fontSize:      bs.fontSize ? `${bs.fontSize}px` : undefined,
+      textAlign:     bs.textAlign || undefined,
+      paddingTop:    bs.paddingTop    != null ? `${bs.paddingTop}px`    : undefined,
+      paddingBottom: bs.paddingBottom != null ? `${bs.paddingBottom}px` : undefined,
+      paddingLeft:   bs.paddingLeft   != null ? `${bs.paddingLeft}px`   : undefined,
+      paddingRight:  bs.paddingRight  != null ? `${bs.paddingRight}px`  : undefined,
+    };
+    return (
+      <div
+        className="ql-snow"
+        style={inlineStyle}
+      >
+        <div
+          className="ql-editor !p-0 !min-h-0"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(field.content) }}
+        />
       </div>
     );
   },

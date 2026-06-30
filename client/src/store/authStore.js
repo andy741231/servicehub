@@ -30,7 +30,6 @@ const useAuthStore = create((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  sessionExpired: false,
   wasLoggedIn: persistedState.wasLoggedIn || false,
   showLoggedOutMessage: persistedState.showLoggedOutMessage || false,
   
@@ -67,8 +66,7 @@ const useAuthStore = create((set, get) => ({
     savePersistedState(get());
   },
 
-  setSessionExpired: (expired = true) => set({ sessionExpired: expired }),
-  clearSessionExpired: () => set({ sessionExpired: false }),
+  
   dismissLoggedOutMessage: () => {
     set({ showLoggedOutMessage: false, wasLoggedIn: false });
     savePersistedState(get());

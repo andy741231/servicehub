@@ -32,9 +32,10 @@ api.interceptors.response.use(
         const { isAuthenticated } = useAuthStore.getState();
         if (isAuthenticated) {
           useAuthStore.getState().setState({
-            sessionExpired: true,
             wasLoggedIn: true,
             showLoggedOutMessage: true,
+            isAuthenticated: false,
+            user: null,
           });
         }
         return Promise.reject(refreshError);

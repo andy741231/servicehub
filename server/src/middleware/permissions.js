@@ -1,18 +1,29 @@
 import prisma from '../db/client.js';
 
+// Role hierarchy: super_admin > admin > editor > viewer
+// super_admin satisfies any role requirement, including 'admin'.
+const ROLE_HIERARCHY = ['super_admin', 'admin', 'editor', 'viewer'];
+
+async function userHasRole(userId, roleName) {
+  const requiredLevel = ROLE_HIERARCHY.indexOf(roleName);
+  if (requiredLevel === -1) return false;
+
+  const userRoles = await prisma.userRole.findMany({
+    where: { userId },
+    include: { role: true },
+  });
+
+  return userRoles.some((ur) => {
+    const userLevel = ROLE_HIERARCHY.indexOf(ur.role.name);
+    return userLevel !== -1 && userLevel <= requiredLevel;
+  });
+}
+
 export const requireAppAccess = (appId) => async (req, res, next) => {
   try {
-    // Check if user is an admin
-    const isAdmin = await prisma.userRole.findFirst({
-      where: {
-        userId: req.user.id,
-        role: { name: 'admin' }
-      }
-    });
-
-    if (isAdmin) {
-      return next();
-    }
+    // super_admin and admin bypass per-app permission checks
+    const isPrivileged = await userHasRole(req.user.id, 'admin');
+    if (isPrivileged) return next();
 
     const permission = await prisma.appPermission.findUnique({
       where: { 
@@ -36,16 +47,9 @@ export const requireAppAccess = (appId) => async (req, res, next) => {
 
 export const requireRole = (roleName) => async (req, res, next) => {
   try {
-    const userRole = await prisma.userRole.findFirst({
-      where: {
-        userId: req.user.id,
-        role: {
-          name: roleName
-        }
-      }
-    });
+    const hasRole = await userHasRole(req.user.id, roleName);
 
-    if (!userRole) {
+    if (!hasRole) {
       return res.status(403).json({ error: `Access denied. Requires ${roleName} role.` });
     }
 

@@ -1,10 +1,23 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Trash2, Copy, GitBranch, SeparatorHorizontal, Plus, LayoutTemplate, Columns, Grid3x3, Rows3, LayoutGrid, X, CopyPlus, ChevronDown, ChevronRight, Settings2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import useFormStore from '../store/formStore';
 import { evaluateConditionalLogic, hasConditionalLogic } from '../utils/conditionalLogic';
+
+// Quill toolbar config for content blocks — kept simple for in-canvas editing
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ align: [] }],
+    ['link'],
+    ['clean'],
+  ],
+};
+const QUILL_FORMATS = ['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'align', 'link'];
 
 const FIELD_COMPONENTS = {
   text: ({ field, isPreview }) => (
@@ -132,39 +145,23 @@ const FIELD_COMPONENTS = {
       <div className="h-px bg-border flex-1" />
     </div>
   ),
-  content: ({ field, isPreview, onContentChange }) => {
-    const modules = {
-      toolbar: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        ['link'],
-        ['clean']
-      ],
-    };
-
-    const formats = [
-      'header',
-      'bold', 'italic', 'underline', 'strike',
-      'list', 'bullet',
-      'link'
-    ];
-
-    return (
-      <div className="bg-background border border-border rounded-base">
-        <ReactQuill
-          theme="snow"
-          value={field.content || ''}
-          onChange={(content) => onContentChange && onContentChange(field.id, content)}
-          modules={modules}
-          formats={formats}
-          readOnly={isPreview}
-          placeholder="Add your content here..."
-          className="min-h-[150px]"
-        />
-      </div>
-    );
-  },
+  content: ({ field, isPreview, onContentChange }) => (
+    <div
+      className="content-block-quill rounded-base overflow-hidden border border-border"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <ReactQuill
+        theme="snow"
+        value={field.content || ''}
+        onChange={(html) => onContentChange && onContentChange(field.id, html)}
+        modules={QUILL_MODULES}
+        formats={QUILL_FORMATS}
+        readOnly={isPreview}
+        placeholder="Add your content here…"
+      />
+    </div>
+  ),
 };
 
 const LAYOUT_CLASS = {
@@ -192,17 +189,62 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
 
   return (
     <div
-      className={`p-4 border rounded-base transition-all duration-200 cursor-pointer bg-surface hover:border-border-dark ${isSelected ? 'border-primary shadow-sm' : 'border-border'}`}
+      className={`group border rounded-base transition-all duration-200 cursor-pointer bg-surface ${isSelected ? 'border-primary shadow-sm ring-1 ring-primary/20' : 'border-border hover:border-border-strong'} ${field.type === 'content' ? 'overflow-hidden' : 'p-4'}`}
       onClick={() => onSelectField(field.id)}
       onMouseDown={() => onSelectField(field.id)}
     >
-      <div className="flex items-start gap-3">
-        <div {...dragHandleProps} className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted">
-          <GripVertical className="h-5 w-5" />
+      {field.type === 'content' ? (
+        /* ── Content block: full-width WYSIWYG, controls float above ── */
+        <div className="relative">
+          {/* Floating action bar */}
+          <div
+            className={`absolute top-2 right-2 z-10 flex items-center gap-1 transition-opacity duration-150 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {hasConditionalLogic(field) && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-primary-light text-primary border border-primary/20 shadow-sm">
+                <GitBranch className="h-3 w-3" />
+                Logic
+              </span>
+            )}
+            <button
+              onClick={() => { onSelectField(field.id); onDuplicateField(field.id); }}
+              className="p-1.5 bg-surface/90 backdrop-blur-sm text-subtle hover:text-muted hover:bg-surface-raised rounded border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[30px] min-h-[30px] transition-colors duration-150"
+              title="Duplicate block"
+            >
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+            <button
+              onClick={() => onDeleteField(field.id)}
+              className="p-1.5 bg-surface/90 backdrop-blur-sm text-subtle hover:text-red-500 hover:bg-red-50 rounded border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[30px] min-h-[30px] transition-colors duration-150"
+              title="Delete block"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+          {/* Drag handle */}
+          <div
+            {...dragHandleProps}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+          <FieldComponent
+            field={field}
+            isPreview={false}
+            onContentChange={handleContentChange}
+          />
         </div>
+      ) : (
+        /* ── Regular field: label + input + actions ── */
+        <div className="flex items-start gap-3">
+          <div {...dragHandleProps} className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted">
+            <GripVertical className="h-5 w-5" />
+          </div>
 
-        <div className="flex-1 min-w-0">
-          {field.type !== 'content' && (
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <label htmlFor={`field-label-${field.id}`} className="sr-only">Field label</label>
               <input
@@ -227,38 +269,38 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
                 </span>
               )}
             </div>
-          )}
 
-          {FieldComponent ? (
-            <FieldComponent
-              field={field}
-              isPreview={false}
-              onContentChange={handleContentChange}
-            />
-          ) : (
-            <p className="text-small text-muted">Unknown field type: {field.type}</p>
-          )}
-        </div>
+            {FieldComponent ? (
+              <FieldComponent
+                field={field}
+                isPreview={false}
+                onContentChange={handleContentChange}
+              />
+            ) : (
+              <p className="text-small text-muted">Unknown field type: {field.type}</p>
+            )}
+          </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => { onSelectField(field.id); onDuplicateField(field.id); }}
-            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
-            title="Duplicate field"
-            aria-label={`Duplicate ${field.label || 'field'}`}
-          >
-            <Copy className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <button
-            onClick={() => onDeleteField(field.id)}
-            className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
-            title="Delete field"
-            aria-label={`Delete ${field.label || 'field'}`}
-          >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => { onSelectField(field.id); onDuplicateField(field.id); }}
+              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+              title="Duplicate field"
+              aria-label={`Duplicate ${field.label || 'field'}`}
+            >
+              <Copy className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              onClick={() => onDeleteField(field.id)}
+              className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+              title="Delete field"
+              aria-label={`Delete ${field.label || 'field'}`}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

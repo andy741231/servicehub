@@ -6,9 +6,10 @@ import {
   Palette, Type, Settings, Save, X, Check, AlertCircle, ChevronDown, ChevronUp,
   Link as LinkIcon, Edit3, Move, Copy, Upload,
   Zap, AlignLeft, AlignCenter, AlignRight, AlignJustify, Hand, Star, Sparkles, LayoutGrid, MessageSquare, Mail, Video, Columns,
-  Bold, Italic, Rows3
+  Bold, Italic, Rows3, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, ExternalLink, HelpCircle
 } from 'lucide-react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import api from '../../utils/api';
 
 const resolveUrl = (url) => {
@@ -300,6 +301,169 @@ const TextToolbar = ({ format = {}, onChange, onDelete, position = 'top' }) => {
           </button>
         </>
       )}
+    </div>
+  );
+};
+
+// ─── Markdown Content Block Editor ───────────────────────────────────────────
+// Renders a rich markdown editor with formatting toolbar, live preview toggle,
+// auto-resizing textarea, and word/character count.
+
+const renderMarkdownPreview = (md) =>
+  DOMPurify.sanitize(marked.parse(md || ''), {
+    ALLOWED_TAGS: ['p','br','strong','em','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img'],
+    ALLOWED_ATTR: ['href','title','target','rel','src','alt','class'],
+  });
+
+const MD_HELP = [
+  { syntax: '**bold**',        desc: 'Bold' },
+  { syntax: '*italic*',        desc: 'Italic' },
+  { syntax: '# Heading 1',     desc: 'H1' },
+  { syntax: '## Heading 2',    desc: 'H2' },
+  { syntax: '### Heading 3',   desc: 'H3' },
+  { syntax: '- item',          desc: 'Bullet list' },
+  { syntax: '1. item',         desc: 'Numbered list' },
+  { syntax: '> quote',         desc: 'Blockquote' },
+  { syntax: '`code`',          desc: 'Inline code' },
+  { syntax: '[text](url)',      desc: 'Link' },
+  { syntax: '---',             desc: 'Divider' },
+];
+
+const MarkdownContentEditor = ({ value, onChange }) => {
+  const [showPreview, setShowPreview]   = useState(false);
+  const [showHelp,    setShowHelp]      = useState(false);
+  const textareaRef = useRef(null);
+
+  // Auto-resize textarea to content height
+  const autoResize = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(220, el.scrollHeight)}px`;
+  };
+
+  useEffect(() => { autoResize(); }, [value, showPreview]);
+
+  // Insert markdown syntax at cursor position
+  const insert = (before, after = '', placeholder = '') => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end   = el.selectionEnd;
+    const sel   = el.value.slice(start, end) || placeholder;
+    const next  = el.value.slice(0, start) + before + sel + after + el.value.slice(end);
+    onChange(next);
+    // Restore cursor after React re-render
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + before.length + sel.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  const wordCount = value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
+  const charCount = value ? value.length : 0;
+
+  const toolbarBtns = [
+    { title: 'Bold',        Icon: Bold,         action: () => insert('**', '**', 'bold text') },
+    { title: 'Italic',      Icon: Italic,        action: () => insert('*', '*', 'italic text') },
+    { title: 'H1',          Icon: Heading1,      action: () => insert('# ', '', 'Heading 1') },
+    { title: 'H2',          Icon: Heading2,      action: () => insert('## ', '', 'Heading 2') },
+    { title: 'H3',          Icon: Heading3,      action: () => insert('### ', '', 'Heading 3') },
+    null, // separator
+    { title: 'Bullet list', Icon: List,          action: () => insert('- ', '', 'List item') },
+    { title: 'Numbered list', Icon: ListOrdered, action: () => insert('1. ', '', 'List item') },
+    { title: 'Blockquote',  Icon: Quote,         action: () => insert('> ', '', 'Quote') },
+    { title: 'Inline code', Icon: Code,          action: () => insert('`', '`', 'code') },
+    { title: 'Link',        Icon: ExternalLink,  action: () => insert('[', '](https://)', 'link text') },
+    { title: 'Divider',     Icon: Minus,         action: () => insert('\n---\n') },
+  ];
+
+  return (
+    <div className="flex flex-col gap-0 border border-border rounded-lg overflow-hidden shadow-sm">
+      {/* Toolbar row */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-surface-raised border-b border-border flex-wrap">
+        {toolbarBtns.map((btn, i) =>
+          btn === null ? (
+            <div key={`sep-${i}`} className="w-px h-5 bg-border mx-1" />
+          ) : (
+            <button
+              key={btn.title}
+              type="button"
+              title={btn.title}
+              onClick={btn.action}
+              className="p-1.5 rounded hover:bg-surface text-muted hover:text-base transition-colors duration-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+            >
+              <btn.Icon className="w-4 h-4" />
+            </button>
+          )
+        )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Help toggle */}
+        <button
+          type="button"
+          title="Markdown help"
+          onClick={() => setShowHelp(h => !h)}
+          className={`p-1.5 rounded transition-colors duration-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${showHelp ? 'bg-primary text-primary-foreground' : 'text-muted hover:bg-surface hover:text-base'}`}
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
+
+        <div className="w-px h-5 bg-border mx-1" />
+
+        {/* Preview toggle */}
+        <button
+          type="button"
+          title={showPreview ? 'Back to editor' : 'Preview'}
+          onClick={() => setShowPreview(p => !p)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-small font-medium transition-colors duration-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${showPreview ? 'bg-primary text-primary-foreground' : 'text-muted hover:bg-surface hover:text-base'}`}
+        >
+          <Eye className="w-3.5 h-3.5" />
+          {showPreview ? 'Edit' : 'Preview'}
+        </button>
+      </div>
+
+      {/* Help panel */}
+      {showHelp && (
+        <div className="bg-surface-raised border-b border-border px-3 py-2">
+          <p className="text-small font-semibold text-muted mb-1.5">Markdown quick reference</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+            {MD_HELP.map(({ syntax, desc }) => (
+              <div key={syntax} className="flex items-center gap-2 text-small">
+                <code className="font-mono text-primary bg-primary-light/50 px-1 rounded text-xs">{syntax}</code>
+                <span className="text-subtle">{desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Editor / Preview area */}
+      {showPreview ? (
+        <div
+          className="prose prose-sm max-w-none px-4 py-3 min-h-[220px] bg-surface prose-headings:font-bold prose-p:mb-3 prose-a:text-blue-600"
+          dangerouslySetInnerHTML={{ __html: renderMarkdownPreview(value) }}
+        />
+      ) : (
+        <textarea
+          ref={textareaRef}
+          value={value || ''}
+          onChange={(e) => { onChange(e.target.value); autoResize(); }}
+          placeholder="Start typing your content here… Markdown is supported."
+          className="w-full px-4 py-3 bg-surface text-base text-sm leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset min-h-[220px] font-mono"
+          style={{ height: 'auto' }}
+          rows={10}
+        />
+      )}
+
+      {/* Footer: word/char count */}
+      <div className="flex items-center justify-end gap-3 px-3 py-1 bg-surface-raised border-t border-border">
+        <span className="text-xs text-subtle">{wordCount} words</span>
+        <span className="text-xs text-subtle">{charCount} chars</span>
+      </div>
     </div>
   );
 };
@@ -1997,14 +2161,10 @@ export default function InlineEditor() {
         />
       ),
       text: () => (
-        <div className="py-12 px-6 max-w-3xl mx-auto">
-          <EditableText
-            content={block.content.content}
+        <div className="py-8 px-6 max-w-3xl mx-auto">
+          <MarkdownContentEditor
+            value={block.content.content}
             onChange={(value) => updateBlockContent(sIdx, bIdx, { content: value })}
-            placeholder="Start typing your content here... (Markdown supported)"
-            className="text-body text-base leading-relaxed block min-h-[120px]"
-            tag="div"
-            multiline
           />
         </div>
       ),
