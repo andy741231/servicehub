@@ -694,9 +694,11 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
           <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textColor }}>
             {theme.thankYouTitle}
           </h1>
-          <p className="mb-6" style={{ color: theme.textColor, opacity: 0.8 }}>
-            {theme.thankYouMessage}
-          </p>
+          <div
+            className="mb-6 ql-editor !p-0 !min-h-0"
+            style={{ color: theme.textColor, opacity: 0.8 }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(theme.thankYouMessage) }}
+          />
         </div>
       </div>
     );
