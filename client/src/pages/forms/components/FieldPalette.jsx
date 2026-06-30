@@ -1,4 +1,4 @@
-import { Type, Hash, Mail, Phone, Calendar, CheckSquare, List, MessageSquare, FileText, Upload, SeparatorHorizontal } from 'lucide-react';
+import { Type, Hash, Mail, Phone, Calendar, CheckSquare, List, MessageSquare, FileText, Upload, SeparatorHorizontal, Image as ImageIcon } from 'lucide-react';
 
 export const FIELD_TYPES = [
   { type: 'text', label: 'Short Text', icon: Type, description: 'Single-line text input' },
@@ -12,6 +12,7 @@ export const FIELD_TYPES = [
   { type: 'file', label: 'File Upload', icon: Upload, description: 'File attachment' },
   { type: 'pageBreak', label: 'Page Break', icon: SeparatorHorizontal, description: 'Split form into multiple pages' },
   { type: 'content', label: 'Content Block', icon: FileText, description: 'Rich text content with markdown support' },
+  { type: 'image', label: 'Image', icon: ImageIcon, description: 'Display an image' },
 ];
 
 export default function FieldPalette({ onAddField }) {

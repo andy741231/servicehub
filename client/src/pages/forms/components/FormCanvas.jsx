@@ -162,6 +162,27 @@ const FIELD_COMPONENTS = {
       />
     </div>
   ),
+  image: ({ field }) => {
+    const bs = field.blockStyle || {};
+    const inlineStyle = {
+      textAlign: bs.textAlign || 'center',
+      paddingTop: bs.paddingTop != null ? `${bs.paddingTop}px` : undefined,
+      paddingBottom: bs.paddingBottom != null ? `${bs.paddingBottom}px` : undefined,
+      paddingLeft: bs.paddingLeft != null ? `${bs.paddingLeft}px` : undefined,
+      paddingRight: bs.paddingRight != null ? `${bs.paddingRight}px` : undefined,
+    };
+    return (
+      <div style={inlineStyle}>
+        {field.imageUrl ? (
+          <img src={field.imageUrl} alt={field.label || 'Image'} style={{ maxWidth: bs.width ? `${bs.width}px` : '100%', height: 'auto', display: 'inline-block', borderRadius: '8px' }} />
+        ) : (
+          <div className="w-full h-32 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400">
+            <span className="text-sm">Image placeholder (upload in properties)</span>
+          </div>
+        )}
+      </div>
+    );
+  },
 };
 
 const LAYOUT_CLASS = {

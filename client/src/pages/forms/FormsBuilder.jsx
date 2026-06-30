@@ -112,6 +112,7 @@ export default function FormsBuilder() {
       required: false,
       options: type === 'select' || type === 'checkbox' ? [''] : [],
       content: type === 'content' ? '' : undefined,
+      imageUrl: type === 'image' ? '' : undefined,
       accept: type === 'file' ? '' : undefined,
       maxSize: type === 'file' ? 5 : undefined,
     };

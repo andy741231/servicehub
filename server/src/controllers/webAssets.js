@@ -1,6 +1,7 @@
 import prisma from '../db/client.js';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 // GET /api/web/assets
 export const listAssets = async (req, res) => {
@@ -38,7 +39,7 @@ export const deleteAsset = async (req, res) => {
     const asset = await prisma.webAsset.findUnique({ where: { id } });
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     // Delete file from disk
-    const filePath = path.join(process.cwd(), 'uploads', asset.filename);
+    const filePath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../uploads', asset.filename);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     await prisma.webAsset.delete({ where: { id } });
     res.json({ ok: true });

@@ -12,7 +12,7 @@ import { verifyToken } from '../middleware/auth.js';
 import { requireAppAccess } from '../middleware/permissions.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.join(__dirname, '../../../../uploads');
+const uploadsDir = path.join(__dirname, '../../../uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({

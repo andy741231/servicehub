@@ -478,6 +478,23 @@ const FIELD_COMPONENTS = {
       </div>
     );
   },
+  image: ({ field }) => {
+    const bs = field.blockStyle || {};
+    const inlineStyle = {
+      textAlign: bs.textAlign || 'center',
+      paddingTop: bs.paddingTop != null ? `${bs.paddingTop}px` : undefined,
+      paddingBottom: bs.paddingBottom != null ? `${bs.paddingBottom}px` : undefined,
+      paddingLeft: bs.paddingLeft != null ? `${bs.paddingLeft}px` : undefined,
+      paddingRight: bs.paddingRight != null ? `${bs.paddingRight}px` : undefined,
+    };
+    return (
+      <div style={inlineStyle}>
+        {field.imageUrl && (
+          <img src={field.imageUrl} alt={field.label || 'Image'} style={{ maxWidth: bs.width ? `${bs.width}px` : '100%', height: 'auto', display: 'inline-block', borderRadius: '8px' }} />
+        )}
+      </div>
+    );
+  },
 };
 
 export default function FormRenderer({ form, onSubmit, preview = false }) {

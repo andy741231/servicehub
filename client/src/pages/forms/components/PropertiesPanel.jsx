@@ -6,6 +6,7 @@ import { DEFAULT_THEME } from '../store/formStore';
 import AccessSchedulePanel from './AccessSchedulePanel';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { uploadFile } from '../api/formsApi';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Tag },
@@ -205,6 +206,290 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                   className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary"
                 />
                 <label htmlFor="cb-logic-enabled" className="text-body text-base cursor-pointer">
+                  Show this block conditionally
+                </label>
+              </div>
+
+              {field.conditionalLogic?.conditions?.length > 0 && (
+                <div className="space-y-3 pl-7">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-small text-muted">Show when</span>
+                    <select
+                      value={field.conditionalLogic?.operator || 'and'}
+                      onChange={(e) => handleLogic({ operator: e.target.value })}
+                      className="px-2 py-1 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="and">ALL</option>
+                      <option value="or">ANY</option>
+                    </select>
+                    <span className="text-small text-muted">conditions match</span>
+                  </div>
+
+                  {(field.conditionalLogic?.conditions || []).map((condition, index) => (
+                    <div key={index} className="space-y-2 p-3 bg-surface rounded-lg border border-border">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted w-8">
+                          {index === 0 ? 'IF' : field.conditionalLogic.operator === 'or' ? 'OR' : 'AND'}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const newConds = field.conditionalLogic.conditions.filter((_, i) => i !== index);
+                            handleLogic({ conditions: newConds });
+                          }}
+                          className="ml-auto p-1 text-subtle hover:text-red-500 rounded"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <select
+                        value={condition.fieldId || ''}
+                        onChange={(e) => {
+                          const newConds = [...field.conditionalLogic.conditions];
+                          newConds[index] = { ...condition, fieldId: e.target.value };
+                          handleLogic({ conditions: newConds });
+                        }}
+                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                      >
+                        <option value="">Select a field…</option>
+                        {otherFields.map((f) => (
+                          <option key={f.id} value={f.id}>{f.label || f.type}</option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <select
+                          value={condition.operator || 'equals'}
+                          onChange={(e) => {
+                            const newConds = [...field.conditionalLogic.conditions];
+                            newConds[index] = { ...condition, operator: e.target.value };
+                            handleLogic({ conditions: newConds });
+                          }}
+                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                        >
+                          {CONDITION_OPERATORS.map((op) => (
+                            <option key={op.value} value={op.value}>{op.label}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          value={condition.value || ''}
+                          onChange={(e) => {
+                            const newConds = [...field.conditionalLogic.conditions];
+                            newConds[index] = { ...condition, value: e.target.value };
+                            handleLogic({ conditions: newConds });
+                          }}
+                          placeholder="Value"
+                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => handleLogic({
+                      conditions: [...(field.conditionalLogic?.conditions || []), { fieldId: '', operator: 'equals', value: '' }],
+                    })}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[40px] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" /> Add Condition
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ImageBlockPropertiesPanel({ field, updateField }) {
+  const { fields } = useFormStore();
+  const [activeTab, setActiveTab] = useState('style');
+  const [isUploading, setIsUploading] = useState(false);
+  const style = field.blockStyle || {};
+  const otherFields = fields.filter((f) => f.id !== field.id && f.type !== 'image');
+
+  const handleStyle = (updates) =>
+    updateField(field.id, { blockStyle: { ...style, ...updates } });
+
+  const handleLogic = (updates) =>
+    updateField(field.id, { conditionalLogic: { ...(field.conditionalLogic || {}), ...updates } });
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File is too large. Maximum size is 5MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const result = await uploadFile(file);
+      updateField(field.id, { imageUrl: result.url });
+    } catch (err) {
+      console.error('File upload failed:', err);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden" aria-label="Image block properties">
+      <div className="flex border-b border-border bg-surface" role="tablist">
+        {CONTENT_BLOCK_TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
+              activeTab === id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-base hover:border-border'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            {label}
+            {id === 'logic' && field.conditionalLogic?.conditions?.length > 0 && (
+              <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        {activeTab === 'style' && (
+          <>
+            <section>
+              <h3 className="text-small font-medium text-base mb-2">Image Source</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={field.imageUrl || ''}
+                    onChange={(e) => updateField(field.id, { imageUrl: e.target.value })}
+                    placeholder="https://example.com/image.jpg"
+                    className="flex-1 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[40px]"
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="h-px bg-border flex-1" />
+                  <span className="text-xs text-muted font-medium uppercase tracking-wider">or</span>
+                  <div className="h-px bg-border flex-1" />
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    id={`upload-${field.id}`}
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor={`upload-${field.id}`}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors hover:bg-surface-raised focus-within:ring-2 focus-within:ring-primary ${
+                      isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {isUploading ? 'Uploading...' : 'Upload Image'}
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-small font-medium text-base mb-2">Image Alignment</h3>
+              <div className="flex gap-2">
+                {ALIGN_OPTIONS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleStyle({ textAlign: value })}
+                    className={`flex-1 py-1.5 rounded-base text-xs font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+                      (style.textAlign || 'center') === value
+                        ? 'border-primary bg-primary-light text-primary'
+                        : 'border-border text-muted hover:border-primary hover:text-primary'
+                    }`}
+                    aria-pressed={(style.textAlign || 'center') === value}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </section>
+            
+            <section>
+              <label className="block text-small font-medium text-base mb-2">
+                Max Width
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={10}
+                  value={style.width || ''}
+                  onChange={(e) => handleStyle({ width: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                  placeholder="100%"
+                  className="w-24 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[40px]"
+                />
+                <span className="text-small text-muted">px</span>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-small font-medium text-base mb-2">Padding</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'paddingTop',    label: 'Top' },
+                  { key: 'paddingBottom', label: 'Bottom' },
+                  { key: 'paddingLeft',   label: 'Left' },
+                  { key: 'paddingRight',  label: 'Right' },
+                ].map(({ key, label }) => (
+                  <div key={key}>
+                    <label className="block text-xs text-muted mb-1">{label}</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={120}
+                        value={style[key] ?? ''}
+                        onChange={(e) => handleStyle({ [key]: e.target.value !== '' ? parseInt(e.target.value, 10) : undefined })}
+                        placeholder="0"
+                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                      />
+                      <span className="text-xs text-subtle">px</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === 'logic' && (
+          <section>
+            <h3 className="text-small font-medium text-base mb-3 flex items-center gap-2">
+              <GitBranch className="h-4 w-4" /> Conditional Visibility
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id={`cb-logic-enabled-${field.id}`}
+                  checked={!!field.conditionalLogic?.conditions?.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      handleLogic({ conditions: [{ fieldId: '', operator: 'equals', value: '' }], operator: 'and' });
+                    } else {
+                      updateField(field.id, { conditionalLogic: null });
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary"
+                />
+                <label htmlFor={`cb-logic-enabled-${field.id}`} className="text-body text-base cursor-pointer">
                   Show this block conditionally
                 </label>
               </div>
@@ -817,6 +1102,9 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
   // ── Short-circuit: content block gets its own dedicated panel ─────────────
   if (field.type === 'content') {
     return <ContentBlockPropertiesPanel field={field} updateField={updateField} />;
+  }
+  if (field.type === 'image') {
+    return <ImageBlockPropertiesPanel field={field} updateField={updateField} />;
   }
 
   const handleUpdate = (updates) => {
