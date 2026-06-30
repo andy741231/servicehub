@@ -7,47 +7,49 @@ import { uploadFile } from '../api/formsApi';
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 /**
- * Given an accessSchedule object, returns the matching active rule (if the form is currently
- * within an open window) or null (form is closed / schedule disabled).
- * When the schedule is disabled or has no enabled rules, the form is open (returns 'open').
- * When the schedule is enabled but no rule covers now, returns the first enabled rule's
- * closedMessage so the renderer can show it.
+ * Evaluates whether the form is currently accessible based on its accessSchedule.
+ *
+ * Data model (AND-based):
+ *   schedule.enabled        — master switch; false → always open
+ *   schedule.dateRange      — { enabled, startDate, endDate } — optional date window
+ *   schedule.weeklyHours    — { enabled, days[], startTime, endTime } — optional recurring hours
+ *   schedule.closedMessage  — shown when closed
+ *
+ * All enabled constraints must be satisfied simultaneously (AND logic).
+ * If no constraint is enabled the master switch has no effect → form is open.
  */
 function evaluateSchedule(accessSchedule) {
-  // No schedule or no enabled rules → always open
-  const rules = (accessSchedule?.rules || []).filter((r) => r.enabled);
-  if (rules.length === 0) return { open: true, closedMessage: null };
+  if (!accessSchedule?.enabled) return { open: true, closedMessage: null };
+
+  const { dateRange, weeklyHours, closedMessage } = accessSchedule;
+  const hasAnyConstraint = dateRange?.enabled || weeklyHours?.enabled;
+  if (!hasAnyConstraint) return { open: true, closedMessage: null };
 
   const now = new Date();
   const currentDay = DAY_NAMES[now.getDay()];
   const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const currentDate = now.toISOString().slice(0, 10);
 
-  for (const rule of rules) {
-    if (rule.type === 'weekly') {
-      const days = rule.days || [];
-      const start = rule.startTime || '00:00';
-      const end = rule.endTime || '23:59';
-      if (days.includes(currentDay) && currentTime >= start && currentTime < end) {
-        return { open: true, closedMessage: null };
-      }
-    } else if (rule.type === 'dateRange') {
-      const startDate = rule.startDate || '';
-      const endDate = rule.endDate || '';
-      const start = rule.startTime || '00:00';
-      const end = rule.endTime || '23:59';
-      if (currentDate >= startDate && currentDate <= endDate && currentTime >= start && currentTime < end) {
-        return { open: true, closedMessage: null };
-      }
+  // Check date window constraint
+  if (dateRange?.enabled) {
+    const start = dateRange.startDate || '';
+    const end = dateRange.endDate || '';
+    if (currentDate < start || currentDate > end) {
+      return { open: false, closedMessage: closedMessage || 'This form is currently closed. Please check back later.' };
     }
   }
 
-  // No rule matched — form is closed; return the message from the first enabled rule
-  const firstRule = rules[0];
-  return {
-    open: false,
-    closedMessage: firstRule?.closedMessage || 'This form is currently closed. Please check back later.',
-  };
+  // Check weekly hours constraint
+  if (weeklyHours?.enabled) {
+    const days = weeklyHours.days || [];
+    const start = weeklyHours.startTime || '00:00';
+    const end = weeklyHours.endTime || '23:59';
+    if (!days.includes(currentDay) || currentTime < start || currentTime >= end) {
+      return { open: false, closedMessage: closedMessage || 'This form is currently closed. Please check back later.' };
+    }
+  }
+
+  return { open: true, closedMessage: null };
 }
 
 // Shared inline error message rendered below a field input

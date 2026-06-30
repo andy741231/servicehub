@@ -108,10 +108,14 @@ const normalizeForm = (backendForm) => {
     rows,
     fields,
     theme,
-    // Normalise schedule: strip legacy top-level `enabled` flag; rules presence is the truth
-    accessSchedule: schema.accessSchedule
-      ? { rules: schema.accessSchedule.rules || [] }
-      : null,
+    // Normalise schedule to the AND-based model; discard legacy rules[] shape
+    accessSchedule: (() => {
+      const s = schema.accessSchedule;
+      if (!s) return null;
+      // Legacy shape had a top-level rules[] array — discard it cleanly
+      if (Array.isArray(s.rules)) return null;
+      return s;
+    })(),
     createdAt: backendForm.createdAt,
     updatedAt: backendForm.updatedAt,
   };

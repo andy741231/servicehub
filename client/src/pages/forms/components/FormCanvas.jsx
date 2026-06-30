@@ -522,7 +522,7 @@ export default function FormCanvas({
                                       <FieldCard
                                         field={field}
                                         selectedField={selectedField}
-                                        onSelectField={(id) => { onSelectField(id); onSelectSection(null); }}
+                                        onSelectField={onSelectField}
                                         onDuplicateField={onDuplicateField}
                                         onDeleteField={onDeleteField}
                                         dragHandleProps={provided.dragHandleProps}
