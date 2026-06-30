@@ -1,0 +1,32 @@
+BEGIN TRY
+
+BEGIN TRAN;
+
+-- CreateTable
+CREATE TABLE [dbo].[FormVersion] (
+    [id] NVARCHAR(1000) NOT NULL,
+    [formId] NVARCHAR(1000) NOT NULL,
+    [title] NVARCHAR(255) NOT NULL,
+    [schema] NVARCHAR(max) NOT NULL,
+    [savedById] NVARCHAR(1000) NOT NULL,
+    [savedByName] NVARCHAR(255) NOT NULL,
+    [versionNumber] INT NOT NULL,
+    [createdAt] DATETIME2 NOT NULL CONSTRAINT [FormVersion_createdAt_df] DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT [FormVersion_pkey] PRIMARY KEY CLUSTERED ([id])
+);
+
+-- AddForeignKey
+ALTER TABLE [dbo].[FormVersion] ADD CONSTRAINT [FormVersion_formId_fkey] FOREIGN KEY ([formId]) REFERENCES [dbo].[Form]([id]) ON DELETE NO ACTION ON UPDATE CASCADE;
+
+COMMIT TRAN;
+
+END TRY
+BEGIN CATCH
+
+IF @@TRANCOUNT > 0
+BEGIN
+    ROLLBACK TRAN;
+END;
+THROW
+
+END CATCH

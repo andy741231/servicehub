@@ -1,17 +1,329 @@
-import { Tag, Settings, Trash2, GitBranch, Plus, Palette, CheckSquare } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Tag, Settings, Trash2, GitBranch, Plus, Palette, CheckSquare, SlidersHorizontal, LayoutTemplate, Columns, Grid3x3, LayoutGrid, X, CalendarClock } from 'lucide-react';
 import useFormStore from '../store/formStore';
 import { CONDITION_OPERATORS, DEFAULT_CONDITIONAL_LOGIC, hasConditionalLogic } from '../utils/conditionalLogic';
 import { DEFAULT_THEME } from '../store/formStore';
+import AccessSchedulePanel from './AccessSchedulePanel';
 
-export default function PropertiesPanel({ selectedField, onUpdateField }) {
+const TABS = [
+  { id: 'general', label: 'General', icon: Tag },
+  { id: 'advanced', label: 'Advanced', icon: SlidersHorizontal },
+  { id: 'logic', label: 'Logic', icon: GitBranch },
+];
+
+const SECTION_TABS = [
+  { id: 'general', label: 'General', icon: Tag },
+  { id: 'logic', label: 'Logic', icon: GitBranch },
+];
+
+const LAYOUT_OPTIONS = [
+  { value: '1', icon: LayoutTemplate, label: '1 column' },
+  { value: '2', icon: Columns, label: '2 columns' },
+  { value: '3', icon: Grid3x3, label: '3 columns' },
+  { value: '4', icon: LayoutGrid, label: '4 columns' },
+];
+
+function SectionPropertiesPanel({ selectedSection }) {
+  const { rows, fields, updateRow } = useFormStore();
+  const row = rows.find((r) => r.id === selectedSection);
+  const [activeTab, setActiveTab] = useState('general');
+  useEffect(() => { setActiveTab('general'); }, [selectedSection]);
+
+  if (!row) return null;
+
+  const sectionBg = row.backgroundColor || '';
+  const otherFields = fields.filter((f) => f.rowId !== selectedSection);
+
+  const handleUpdate = (updates) => updateRow(row.id, updates);
+
+  const tabBar = (
+    <div className="flex border-b border-border bg-surface" role="tablist">
+      {SECTION_TABS.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          role="tab"
+          aria-selected={activeTab === id}
+          onClick={() => setActiveTab(id)}
+          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
+            activeTab === id
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted hover:text-base hover:border-border'
+          }`}
+        >
+          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+          {label}
+          {id === 'logic' && row.conditionalLogic?.conditions?.length > 0 && (
+            <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {tabBar}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+
+        {/* GENERAL TAB */}
+        {activeTab === 'general' && (
+          <>
+            <section className="space-y-4">
+              <div>
+                <label className="block text-small font-medium text-base mb-1.5">Section Label</label>
+                <input
+                  type="text"
+                  value={row.label || ''}
+                  onChange={(e) => handleUpdate({ label: e.target.value })}
+                  placeholder="Section label"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+                />
+              </div>
+              <div>
+                <label className="block text-small font-medium text-base mb-1.5">Description</label>
+                <textarea
+                  value={row.description || ''}
+                  onChange={(e) => handleUpdate({ description: e.target.value })}
+                  placeholder="Optional description shown above fields"
+                  rows={2}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted resize-none"
+                />
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-small font-medium text-base mb-3">Column Layout</h3>
+              <div className="flex gap-2">
+                {LAYOUT_OPTIONS.map(({ value, icon: Icon, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleUpdate({ columns: value })}
+                    className={`flex flex-col items-center gap-1 flex-1 py-2 rounded-lg border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+                      (row.columns || '1') === value
+                        ? 'border-primary bg-primary-light text-primary'
+                        : 'border-border bg-background text-muted hover:border-primary hover:text-primary'
+                    }`}
+                    title={label}
+                    aria-label={label}
+                    aria-pressed={(row.columns || '1') === value}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-small font-medium text-base mb-3">Background Color</h3>
+              <div className="flex items-center gap-3">
+                <label className="relative flex items-center gap-2 cursor-pointer">
+                  <div
+                    className="w-8 h-8 rounded-lg border-2 border-border shadow-sm"
+                    style={{ backgroundColor: sectionBg || '#ffffff' }}
+                  />
+                  <span className="text-small text-muted">{sectionBg || 'None'}</span>
+                  <input
+                    type="color"
+                    value={sectionBg || '#ffffff'}
+                    onChange={(e) => handleUpdate({ backgroundColor: e.target.value })}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                  />
+                </label>
+                {sectionBg && (
+                  <button
+                    onClick={() => handleUpdate({ backgroundColor: '' })}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-500 rounded border border-border hover:border-red-300 transition-colors"
+                  >
+                    <X className="h-3 w-3" /> Clear
+                  </button>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* LOGIC TAB */}
+        {activeTab === 'logic' && (
+          <section>
+            <h3 className="text-small font-medium text-base mb-3 flex items-center gap-2">
+              <GitBranch className="h-4 w-4" /> Conditional Logic
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="section-logic-enabled"
+                  checked={!!row.conditionalLogic?.conditions?.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      handleUpdate({ conditionalLogic: { ...DEFAULT_CONDITIONAL_LOGIC } });
+                    } else {
+                      handleUpdate({ conditionalLogic: null });
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary"
+                />
+                <label htmlFor="section-logic-enabled" className="text-body text-base cursor-pointer">
+                  Enable conditional logic
+                </label>
+              </div>
+
+              {row.conditionalLogic?.conditions != null && (
+                <div className="space-y-3 pl-7">
+                  {/* Action */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-small text-muted">Show this section when</span>
+                    <select
+                      value={row.conditionalLogic?.operator || 'and'}
+                      onChange={(e) => handleUpdate({ conditionalLogic: { ...row.conditionalLogic, operator: e.target.value } })}
+                      className="px-2 py-1 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="and">ALL</option>
+                      <option value="or">ANY</option>
+                    </select>
+                    <span className="text-small text-muted">conditions match</span>
+                  </div>
+
+                  {/* Conditions */}
+                  {(row.conditionalLogic?.conditions || []).map((condition, index) => {
+                    const operator = CONDITION_OPERATORS.find((op) => op.value === condition.operator);
+                    return (
+                      <div key={index} className="space-y-2 p-3 bg-surface rounded-lg border border-border">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted w-8">{index === 0 ? 'IF' : row.conditionalLogic.operator === 'or' ? 'OR' : 'AND'}</span>
+                          <button
+                            onClick={() => {
+                              const newConds = row.conditionalLogic.conditions.filter((_, i) => i !== index);
+                              handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
+                            }}
+                            className="ml-auto p-1 text-subtle hover:text-red-500 rounded"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <select
+                          value={condition.fieldId || ''}
+                          onChange={(e) => {
+                            const newConds = [...row.conditionalLogic.conditions];
+                            newConds[index] = { ...condition, fieldId: e.target.value };
+                            handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
+                          }}
+                          className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                        >
+                          <option value="">Select a field…</option>
+                          {otherFields.map((f) => (
+                            <option key={f.id} value={f.id}>{f.label || f.type}</option>
+                          ))}
+                        </select>
+                        <div className="flex gap-2">
+                          <select
+                            value={condition.operator || 'equals'}
+                            onChange={(e) => {
+                              const newConds = [...row.conditionalLogic.conditions];
+                              newConds[index] = { ...condition, operator: e.target.value };
+                              handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
+                            }}
+                            className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                          >
+                            {CONDITION_OPERATORS.map((op) => (
+                              <option key={op.value} value={op.value}>{op.label}</option>
+                            ))}
+                          </select>
+                          {operator?.supportsValue && (
+                            <input
+                              type="text"
+                              value={condition.value || ''}
+                              onChange={(e) => {
+                                const newConds = [...row.conditionalLogic.conditions];
+                                newConds[index] = { ...condition, value: e.target.value };
+                                handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
+                              }}
+                              placeholder="Value"
+                              className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => handleUpdate({
+                      conditionalLogic: {
+                        ...row.conditionalLogic,
+                        conditions: [...(row.conditionalLogic?.conditions || []), { fieldId: '', operator: 'equals', value: '' }],
+                      },
+                    })}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[40px] transition-colors"
+                  >
+                    <Plus className="h-4 w-4" /> Add Condition
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+const FORM_TABS = [
+  { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'settings', label: 'Settings', icon: CheckSquare },
+  { id: 'schedule', label: 'Schedule', icon: CalendarClock },
+];
+
+export default function PropertiesPanel({ selectedField, selectedSection, onUpdateField }) {
   const { fields, updateField, currentFormId, forms, updateFormTheme } = useFormStore();
   const field = fields.find((f) => f.id === selectedField);
   const currentForm = forms.find((f) => f.id === currentFormId);
   const theme = currentForm?.theme || { ...DEFAULT_THEME };
+  const [activeTab, setActiveTab] = useState('general');
+  const [formTab, setFormTab] = useState('appearance');
+  // Reset to General tab when the selected field changes
+  useEffect(() => { setActiveTab('general'); }, [selectedField]);
+
+  // Show section properties if a section is selected
+  if (selectedSection) {
+    return <SectionPropertiesPanel selectedSection={selectedSection} />;
+  }
 
   if (!field) {
+    const hasSchedule = currentForm?.accessSchedule?.enabled && (currentForm?.accessSchedule?.rules?.length > 0);
     return (
-      <div className="flex-1 overflow-y-auto p-4 space-y-6" role="tabpanel" aria-label="Form settings">
+      <div className="flex-1 flex flex-col overflow-hidden" role="tabpanel" aria-label="Form settings">
+        {/* Form-level tab bar */}
+        <div className="flex border-b border-border bg-surface" role="tablist" aria-label="Form property tabs">
+          {FORM_TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={formTab === id}
+              onClick={() => setFormTab(id)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
+                formTab === id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted hover:text-base hover:border-border'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              {label}
+              {id === 'schedule' && hasSchedule && (
+                <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" aria-label="Schedule active" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Schedule tab */}
+        {formTab === 'schedule' && <AccessSchedulePanel />}
+
+        {/* Appearance + Settings tabs */}
+        {formTab === 'appearance' && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <section>
           <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
             <Palette className="h-4 w-4" aria-hidden="true" />
@@ -101,7 +413,11 @@ export default function PropertiesPanel({ selectedField, onUpdateField }) {
             </div>
           </div>
         </section>
+        </div>
+        )}
 
+        {formTab === 'settings' && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <section>
           <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
             <CheckSquare className="h-4 w-4" aria-hidden="true" />
@@ -157,17 +473,35 @@ export default function PropertiesPanel({ selectedField, onUpdateField }) {
                 className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
               />
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="theme-progress-bar"
-                checked={theme.showProgressBar}
-                onChange={(e) => updateFormTheme({ showProgressBar: e.target.checked })}
-                className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-1"
-              />
-              <label htmlFor="theme-progress-bar" className="text-body text-base cursor-pointer">
-                Show progress bar
+            <div>
+              <label className="block text-small font-medium text-base mb-2">
+                Progress Indicator
               </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { value: 'none',  label: 'None',  desc: 'Hidden' },
+                  { value: 'bar',   label: 'Bar',   desc: '— 60%' },
+                  { value: 'steps', label: 'Steps', desc: '① ② ③' },
+                ].map(({ value, label, desc }) => {
+                  const active = (theme.progressBarStyle || 'none') === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => updateFormTheme({ progressBarStyle: value })}
+                      className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+                        active
+                          ? 'border-primary bg-primary-light text-primary'
+                          : 'border-border bg-background text-muted hover:border-primary hover:text-primary'
+                      }`}
+                      aria-pressed={active}
+                    >
+                      <span className="font-semibold">{label}</span>
+                      <span className="opacity-60 text-[10px]">{desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <input
@@ -183,6 +517,8 @@ export default function PropertiesPanel({ selectedField, onUpdateField }) {
             </div>
           </div>
         </section>
+        </div>
+        )}
       </div>
     );
   }
@@ -191,174 +527,163 @@ export default function PropertiesPanel({ selectedField, onUpdateField }) {
     updateField(field.id, updates);
   };
 
+  // Tab bar
+  const tabBar = (
+    <div className="flex border-b border-border bg-surface" role="tablist" aria-label="Field property tabs">
+      {TABS.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          role="tab"
+          aria-selected={activeTab === id}
+          onClick={() => setActiveTab(id)}
+          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
+            activeTab === id
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted hover:text-base hover:border-border'
+          }`}
+        >
+          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+          {label}
+          {id === 'logic' && hasConditionalLogic(field) && (
+            <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" aria-label="Logic active" />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-6" role="tabpanel" aria-label="Field properties">
-      {/* Basic Settings */}
-      <section>
-        <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
-          <Tag className="h-4 w-4" aria-hidden="true" />
-          Basic Settings
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="prop-label" className="block text-small font-medium text-base mb-1.5">
-              Field Label
-            </label>
-            <input
-              id="prop-label"
-              type="text"
-              value={field.label || ''}
-              onChange={(e) => handleUpdate({ label: e.target.value })}
-              placeholder="Enter field label"
-              className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-            />
-          </div>
+    <div className="flex-1 flex flex-col overflow-hidden" aria-label="Field properties">
+      {tabBar}
 
-          <div>
-            <label htmlFor="prop-placeholder" className="block text-small font-medium text-base mb-1.5">
-              Placeholder Text
-            </label>
-            <input
-              id="prop-placeholder"
-              type="text"
-              value={field.placeholder || ''}
-              onChange={(e) => handleUpdate({ placeholder: e.target.value })}
-              placeholder="Enter placeholder text"
-              className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-            />
-          </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-6" role="tabpanel">
 
-          <div>
-            <label htmlFor="prop-help" className="block text-small font-medium text-base mb-1.5">
-              Help Text
-            </label>
-            <textarea
-              id="prop-help"
-              value={field.helpText || ''}
-              onChange={(e) => handleUpdate({ helpText: e.target.value })}
-              placeholder="Add help text for users"
-              rows={2}
-              className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted resize-none"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="prop-required"
-              checked={field.required || false}
-              onChange={(e) => handleUpdate({ required: e.target.checked })}
-              className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-1"
-            />
-            <label htmlFor="prop-required" className="text-body text-base cursor-pointer">
-              Required field
-            </label>
-          </div>
-        </div>
-      </section>
-
-      {/* Options for select/checkbox */}
-      {(field.type === 'select' || field.type === 'checkbox') && (
-        <section>
-          <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
-            <Settings className="h-4 w-4" aria-hidden="true" />
-            Options
-          </h3>
-          <div className="space-y-2" role="list" aria-label="Field options">
-            {field.options?.map((option, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <label htmlFor={`option-${index}`} className="sr-only">Option {index + 1}</label>
-                <input
-                  id={`option-${index}`}
-                  type="text"
-                  value={option}
-                  onChange={(e) => {
-                    const newOptions = [...field.options];
-                    newOptions[index] = e.target.value;
-                    handleUpdate({ options: newOptions });
-                  }}
-                  placeholder={`Option ${index + 1}`}
-                  className="flex-1 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-                />
-                <button
-                  onClick={() => {
-                    const newOptions = field.options.filter((_, i) => i !== index);
-                    handleUpdate({ options: newOptions });
-                  }}
-                  className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
-                  title="Remove option"
-                  aria-label={`Remove option ${index + 1}`}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() => handleUpdate({ options: [...(field.options || []), ''] })}
-              className="w-full px-3 py-2 border border-dashed border-border rounded-base text-body text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
-              aria-label="Add new option"
-            >
-              + Add Option
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Grid Layout Settings */}
-      {field.type === 'grid' && (
-        <section>
-          <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
-            <Settings className="h-4 w-4" aria-hidden="true" />
-            Grid Layout
-          </h3>
-          <div>
-            <label htmlFor="prop-columns" className="block text-small font-medium text-base mb-1.5">
-              Number of Columns
-            </label>
-            <select
-              id="prop-columns"
-              value={field.columnCount || 2}
-              onChange={(e) => {
-                const newColumnCount = parseInt(e.target.value);
-                const newColumns = Array(newColumnCount).fill([]);
-                handleUpdate({ columnCount: newColumnCount, columns: newColumns });
-              }}
-              className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px]"
-            >
-              <option value={1}>1 Column</option>
-              <option value={2}>2 Columns</option>
-              <option value={3}>3 Columns</option>
-            </select>
-          </div>
-        </section>
-      )}
-
-      {/* Advanced Field Settings */}
-      {(field.type === 'rating' || field.type === 'file' || field.type === 'signature') && (
-        <section>
-          <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
-            <Settings className="h-4 w-4" aria-hidden="true" />
-            Field Settings
-          </h3>
-          <div className="space-y-4">
-            {field.type === 'rating' && (
+      {/* ── GENERAL TAB ── */}
+      {activeTab === 'general' && (
+        <>
+          <section>
+            <div className="space-y-4">
               <div>
-                <label htmlFor="prop-max-stars" className="block text-small font-medium text-base mb-1.5">
-                  Maximum Stars
+                <label htmlFor="prop-label" className="block text-small font-medium text-base mb-1.5">
+                  Field Label
                 </label>
                 <input
-                  id="prop-max-stars"
-                  type="number"
-                  min={2}
-                  max={10}
-                  value={field.maxStars || 5}
-                  onChange={(e) => handleUpdate({ maxStars: parseInt(e.target.value) || 5 })}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px]"
+                  id="prop-label"
+                  type="text"
+                  value={field.label || ''}
+                  onChange={(e) => handleUpdate({ label: e.target.value })}
+                  placeholder="Enter field label"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
                 />
               </div>
-            )}
-            {field.type === 'file' && (
-              <>
+
+              {field.type !== 'content' && field.type !== 'pageBreak' && field.type !== 'checkbox' && (
+                <div>
+                  <label htmlFor="prop-placeholder" className="block text-small font-medium text-base mb-1.5">
+                    Placeholder Text
+                  </label>
+                  <input
+                    id="prop-placeholder"
+                    type="text"
+                    value={field.placeholder || ''}
+                    onChange={(e) => handleUpdate({ placeholder: e.target.value })}
+                    placeholder="Enter placeholder text"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="prop-help" className="block text-small font-medium text-base mb-1.5">
+                  Help Text
+                </label>
+                <textarea
+                  id="prop-help"
+                  value={field.helpText || ''}
+                  onChange={(e) => handleUpdate({ helpText: e.target.value })}
+                  placeholder="Add help text for users"
+                  rows={2}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted resize-none"
+                />
+              </div>
+
+              {field.type !== 'content' && field.type !== 'pageBreak' && (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="prop-required"
+                    checked={field.required || false}
+                    onChange={(e) => handleUpdate({ required: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                  />
+                  <label htmlFor="prop-required" className="text-body text-base cursor-pointer">
+                    Required field
+                  </label>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Options for select/checkbox */}
+          {(field.type === 'select' || field.type === 'checkbox') && (
+            <section>
+              <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
+                <Settings className="h-4 w-4" aria-hidden="true" />
+                Options
+              </h3>
+              <div className="space-y-2" role="list" aria-label="Field options">
+                {field.options?.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <label htmlFor={`option-${index}`} className="sr-only">Option {index + 1}</label>
+                    <input
+                      id={`option-${index}`}
+                      type="text"
+                      value={option}
+                      onChange={(e) => {
+                        const newOptions = [...field.options];
+                        newOptions[index] = e.target.value;
+                        handleUpdate({ options: newOptions });
+                      }}
+                      placeholder={`Option ${index + 1}`}
+                      className="flex-1 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+                    />
+                    <button
+                      onClick={() => {
+                        const newOptions = field.options.filter((_, i) => i !== index);
+                        handleUpdate({ options: newOptions });
+                      }}
+                      className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+                      title="Remove option"
+                      aria-label={`Remove option ${index + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => handleUpdate({ options: [...(field.options || []), ''] })}
+                  className="w-full px-3 py-2 border border-dashed border-border rounded-base text-body text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+                  aria-label="Add new option"
+                >
+                  + Add Option
+                </button>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      {/* ── ADVANCED TAB ── */}
+      {activeTab === 'advanced' && (
+        <>
+          {/* File-specific settings */}
+          {field.type === 'file' && (
+            <section>
+              <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
+                <Settings className="h-4 w-4" aria-hidden="true" />
+                File Settings
+              </h3>
+              <div className="space-y-4">
                 <div>
                   <label htmlFor="prop-accept" className="block text-small font-medium text-base mb-1.5">
                     Accepted File Types
@@ -386,101 +711,92 @@ export default function PropertiesPanel({ selectedField, onUpdateField }) {
                     className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
                   />
                 </div>
-              </>
-            )}
-            {field.type === 'signature' && (
-              <div>
-                <label htmlFor="prop-signature-type" className="block text-small font-medium text-base mb-1.5">
-                  Signature Type
-                </label>
-                <select
-                  id="prop-signature-type"
-                  value={field.signatureType || 'draw'}
-                  onChange={(e) => handleUpdate({ signatureType: e.target.value })}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px]"
-                >
-                  <option value="draw">Draw</option>
-                  <option value="type">Type</option>
-                </select>
               </div>
-            )}
-          </div>
-        </section>
+            </section>
+          )}
+
+          {/* Validation */}
+          {(field.type === 'text' || field.type === 'textarea' || field.type === 'number') && (
+            <section>
+              <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
+                <Settings className="h-4 w-4" aria-hidden="true" />
+                Validation
+              </h3>
+              <div className="space-y-4">
+                {(field.type === 'text' || field.type === 'textarea') && (
+                  <>
+                    <div>
+                      <label htmlFor="prop-min-length" className="block text-small font-medium text-base mb-1.5">
+                        Min Characters
+                      </label>
+                      <input
+                        id="prop-min-length"
+                        type="number"
+                        value={field.minLength || ''}
+                        onChange={(e) => handleUpdate({ minLength: parseInt(e.target.value) || undefined })}
+                        placeholder="No minimum"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="prop-max-length" className="block text-small font-medium text-base mb-1.5">
+                        Max Characters
+                      </label>
+                      <input
+                        id="prop-max-length"
+                        type="number"
+                        value={field.maxLength || ''}
+                        onChange={(e) => handleUpdate({ maxLength: parseInt(e.target.value) || undefined })}
+                        placeholder="No maximum"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+                      />
+                    </div>
+                  </>
+                )}
+                {field.type === 'number' && (
+                  <>
+                    <div>
+                      <label htmlFor="prop-min-value" className="block text-small font-medium text-base mb-1.5">
+                        Minimum Value
+                      </label>
+                      <input
+                        id="prop-min-value"
+                        type="number"
+                        value={field.minValue || ''}
+                        onChange={(e) => handleUpdate({ minValue: parseFloat(e.target.value) || undefined })}
+                        placeholder="No minimum"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="prop-max-value" className="block text-small font-medium text-base mb-1.5">
+                        Maximum Value
+                      </label>
+                      <input
+                        id="prop-max-value"
+                        type="number"
+                        value={field.maxValue || ''}
+                        onChange={(e) => handleUpdate({ maxValue: parseFloat(e.target.value) || undefined })}
+                        placeholder="No maximum"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* No advanced settings available */}
+          {field.type !== 'text' && field.type !== 'textarea' && field.type !== 'number' && field.type !== 'file' && (
+            <p className="text-small text-muted text-center py-8">No advanced settings for this field type.</p>
+          )}
+        </>
       )}
 
-      {/* Validation */}
-      <section>
-        <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
-          <Settings className="h-4 w-4" aria-hidden="true" />
-          Validation
-        </h3>
-        <div className="space-y-4">
-          {field.type === 'text' || field.type === 'textarea' ? (
-            <>
-              <div>
-                <label htmlFor="prop-min-length" className="block text-small font-medium text-base mb-1.5">
-                  Min Characters
-                </label>
-                <input
-                  id="prop-min-length"
-                  type="number"
-                  value={field.minLength || ''}
-                  onChange={(e) => handleUpdate({ minLength: parseInt(e.target.value) || undefined })}
-                  placeholder="No minimum"
-                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-                />
-              </div>
-              <div>
-                <label htmlFor="prop-max-length" className="block text-small font-medium text-base mb-1.5">
-                  Max Characters
-                </label>
-                <input
-                  id="prop-max-length"
-                  type="number"
-                  value={field.maxLength || ''}
-                  onChange={(e) => handleUpdate({ maxLength: parseInt(e.target.value) || undefined })}
-                  placeholder="No maximum"
-                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-                />
-              </div>
-            </>
-          ) : null}
-
-          {field.type === 'number' ? (
-            <>
-              <div>
-                <label htmlFor="prop-min-value" className="block text-small font-medium text-base mb-1.5">
-                  Minimum Value
-                </label>
-                <input
-                  id="prop-min-value"
-                  type="number"
-                  value={field.minValue || ''}
-                  onChange={(e) => handleUpdate({ minValue: parseFloat(e.target.value) || undefined })}
-                  placeholder="No minimum"
-                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-                />
-              </div>
-              <div>
-                <label htmlFor="prop-max-value" className="block text-small font-medium text-base mb-1.5">
-                  Maximum Value
-                </label>
-                <input
-                  id="prop-max-value"
-                  type="number"
-                  value={field.maxValue || ''}
-                  onChange={(e) => handleUpdate({ maxValue: parseFloat(e.target.value) || undefined })}
-                  placeholder="No maximum"
-                  className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted min-h-[44px]"
-                />
-              </div>
-            </>
-          ) : null}
-        </div>
-      </section>
-
-      {/* Conditional Logic */}
-      <section>
+      {/* ── LOGIC TAB ── */}
+      {activeTab === 'logic' && (
+        <section>
         <h3 className="text-body font-medium text-base mb-3 flex items-center gap-2">
           <GitBranch className="h-4 w-4" aria-hidden="true" />
           Conditional Logic
@@ -658,6 +974,9 @@ export default function PropertiesPanel({ selectedField, onUpdateField }) {
           )}
         </div>
       </section>
+      )}
+
+      </div>
     </div>
   );
 }

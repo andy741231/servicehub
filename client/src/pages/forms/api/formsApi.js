@@ -45,3 +45,9 @@ export const uploadFile = (file) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then((res) => res.data);
 };
+
+export const fetchVersions = (formId) =>
+  api.get(`/forms/${formId}/versions`).then((res) => res.data.versions);
+
+export const restoreVersion = (formId, versionId) =>
+  api.post(`/forms/${formId}/versions/${versionId}/restore`).then((res) => res.data.form);

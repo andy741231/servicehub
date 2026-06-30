@@ -113,6 +113,7 @@ model Form {
   updatedAt   DateTime         @updatedAt
   deletedAt   DateTime?        // Soft delete support
   submissions FormSubmission[]
+  versions    FormVersion[]
 }
 
 model FormSubmission {
@@ -121,6 +122,18 @@ model FormSubmission {
   data      String   @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
   createdAt DateTime @default(now())
   form      Form @relation(fields: [formId], references: [id])
+}
+
+model FormVersion {
+  id        String   @id @default(uuid())
+  formId    String
+  title     String   @db.NVarChar(255)
+  schema    String   @db.NVarChar(Max) // JSON snapshot of the form schema at save time
+  savedById String   // User who saved this version
+  savedByName String @db.NVarChar(255) // Display name cached at save time
+  versionNumber Int  // Sequential version counter per form
+  createdAt DateTime @default(now())
+  form      Form     @relation(fields: [formId], references: [id])
 }
 
 // ----------------------------------------------------------------------------

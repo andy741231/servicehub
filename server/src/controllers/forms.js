@@ -176,10 +176,110 @@ export const updateForm = async (req, res) => {
       data: updateData,
     });
 
+    // Snapshot a new version record
+    try {
+      const versionCount = await prisma.formVersion.count({ where: { formId: id } });
+      let savedByName = 'Unknown';
+      if (req.user?.id) {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
+        if (user?.name) savedByName = user.name;
+      }
+      await prisma.formVersion.create({
+        data: {
+          formId: id,
+          title: form.title,
+          schema: form.schema,
+          savedById: req.user?.id || '',
+          savedByName,
+          versionNumber: versionCount + 1,
+        },
+      });
+    } catch (versionErr) {
+      console.warn('Failed to create form version snapshot:', versionErr);
+    }
+
     res.json({ form: serializeForm(form) });
   } catch (error) {
     console.error('Error updating form:', error);
     res.status(500).json({ error: 'Failed to update form' });
+  }
+};
+
+export const listVersions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
+    const versions = await prisma.formVersion.findMany({
+      where: { formId: id },
+      orderBy: { versionNumber: 'desc' },
+    });
+
+    res.json({
+      versions: versions.map((v) => ({
+        ...v,
+        schema: parseJsonField(v.schema),
+      })),
+    });
+  } catch (error) {
+    console.error('Error listing form versions:', error);
+    res.status(500).json({ error: 'Failed to list form versions' });
+  }
+};
+
+export const restoreVersion = async (req, res) => {
+  try {
+    const { id, versionId } = req.params;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
+    const version = await prisma.formVersion.findUnique({ where: { id: versionId } });
+    if (!version || version.formId !== id) {
+      return res.status(404).json({ error: 'Version not found' });
+    }
+
+    // Before restoring, snapshot the current state as a new version
+    const versionCount = await prisma.formVersion.count({ where: { formId: id } });
+    const current = await prisma.form.findUnique({ where: { id, deletedAt: null } });
+    if (!current) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
+    let savedByName = 'Unknown';
+    if (req.user?.id) {
+      const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
+      if (user?.name) savedByName = user.name;
+    }
+
+    await prisma.formVersion.create({
+      data: {
+        formId: id,
+        title: current.title,
+        schema: current.schema,
+        savedById: req.user?.id || '',
+        savedByName,
+        versionNumber: versionCount + 1,
+      },
+    });
+
+    // Restore the selected version
+    const restored = await prisma.form.update({
+      where: { id },
+      data: {
+        title: version.title,
+        schema: version.schema,
+      },
+    });
+
+    res.json({ form: serializeForm(restored) });
+  } catch (error) {
+    console.error('Error restoring form version:', error);
+    res.status(500).json({ error: 'Failed to restore form version' });
   }
 };
 

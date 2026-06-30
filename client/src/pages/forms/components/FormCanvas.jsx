@@ -1,5 +1,6 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Trash2, Copy, GitBranch, Star, Upload, PenTool } from 'lucide-react';
+import { GripVertical, Trash2, Copy, GitBranch, SeparatorHorizontal, Plus, LayoutTemplate, Columns, Grid3x3, Rows3, LayoutGrid, X, CopyPlus, ChevronDown, ChevronRight, Settings2 } from 'lucide-react';
+import { useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import useFormStore from '../store/formStore';
@@ -106,20 +107,6 @@ const FIELD_COMPONENTS = {
       ))}
     </fieldset>
   ),
-  rating: ({ field, isPreview }) => {
-    const maxStars = field.maxStars || 5;
-    return (
-      <div className="flex items-center gap-1" aria-label={field.label || 'Star rating'}>
-        {Array.from({ length: maxStars }).map((_, index) => (
-          <Star
-            key={index}
-            className={`h-6 w-6 ${isPreview ? 'text-gray-300' : 'text-subtle'}`}
-            aria-hidden="true"
-          />
-        ))}
-      </div>
-    );
-  },
   file: ({ field, isPreview }) => (
     <div className="space-y-2">
       <input
@@ -133,21 +120,6 @@ const FIELD_COMPONENTS = {
       {field.maxSize && (
         <p className="text-small text-muted">Max file size: {field.maxSize}MB</p>
       )}
-    </div>
-  ),
-  signature: ({ field, isPreview }) => (
-    <div className="space-y-2">
-      <div className="w-full h-32 bg-background border border-border rounded-base flex items-center justify-center">
-        <PenTool className="h-8 w-8 text-subtle" aria-hidden="true" />
-        <span className="sr-only">Signature pad</span>
-      </div>
-      <button
-        type="button"
-        disabled={isPreview}
-        className="px-3 py-2 text-small text-muted border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
-      >
-        Clear signature
-      </button>
     </div>
   ),
   pageBreak: ({ field, isPreview }) => (
@@ -193,155 +165,137 @@ const FIELD_COMPONENTS = {
       </div>
     );
   },
-  grid: ({ field, isPreview, onAddFieldToGrid, onRemoveFieldFromGrid, onUpdateGridField, onSelectField, onDeleteField, onDuplicateField, selectedField, onAddField }) => {
-    const columnCount = field.columnCount || 2;
-    const columns = field.columns || Array(columnCount).fill([]);
-
-    const gridCols = {
-      1: 'grid-cols-1',
-      2: 'grid-cols-2',
-      3: 'grid-cols-3',
-    }[columnCount] || 'grid-cols-2';
-
-    const handleAddFieldToColumn = (colIndex, fieldType) => {
-      const newField = {
-        id: `field-${Date.now()}`,
-        type: fieldType,
-        label: '',
-        placeholder: '',
-        required: false,
-        options: fieldType === 'select' || fieldType === 'checkbox' ? [''] : [],
-        content: fieldType === 'content' ? '' : undefined,
-      };
-      onAddFieldToGrid && onAddFieldToGrid(field.id, colIndex, newField);
-    };
-
-    if (isPreview) {
-      return (
-        <div className={`grid ${gridCols} gap-4`}>
-          {columns.map((column, colIndex) => (
-            <div key={colIndex} className="space-y-4">
-              {column.map((gridField) => {
-                const FieldComponent = FIELD_COMPONENTS[gridField.type];
-                return (
-                  <div key={gridField.id} className="space-y-2">
-                    {gridField.type !== 'content' && (
-                      <label
-                        htmlFor={gridField.id}
-                        className="block text-body font-medium text-base"
-                      >
-                        {gridField.label || 'Untitled field'}
-                        {gridField.required && <span className="text-red-500 ml-1">*</span>}
-                      </label>
-                    )}
-                    {FieldComponent ? (
-                      <FieldComponent field={gridField} isPreview={isPreview} />
-                    ) : (
-                      <p className="text-small text-muted">Unknown field type: {gridField.type}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    return (
-      <div className={`grid ${gridCols} gap-4`}>
-        {columns.map((column, colIndex) => (
-          <div key={colIndex} className="min-h-[100px] border-2 border-dashed border-border rounded-lg p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-small text-muted">Column {colIndex + 1}</div>
-              <select
-                onChange={(e) => handleAddFieldToColumn(colIndex, e.target.value)}
-                className="text-small px-2 py-1 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                value=""
-              >
-                <option value="">+ Add Field</option>
-                <option value="text">Text</option>
-                <option value="textarea">Long Text</option>
-                <option value="number">Number</option>
-                <option value="email">Email</option>
-                <option value="phone">Phone</option>
-                <option value="date">Date</option>
-                <option value="select">Dropdown</option>
-                <option value="checkbox">Checkbox</option>
-                <option value="content">Content Block</option>
-              </select>
-            </div>
-            {column.map((gridField) => (
-              <div
-                key={gridField.id}
-                onClick={() => onSelectField(gridField.id)}
-                className={`p-3 border rounded-base cursor-pointer ${
-                  selectedField === gridField.id
-                    ? 'border-primary bg-primary-light'
-                    : 'border-border bg-surface hover:border-border-dark'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-body font-medium">{gridField.label || gridField.type}</span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDuplicateField(gridField.id);
-                      }}
-                      className="p-1 text-subtle hover:text-muted"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveFieldFromGrid(field.id, gridField.id);
-                      }}
-                      className="p-1 text-subtle hover:text-red-500"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-                <div className="text-small text-muted">{gridField.type}</div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  },
 };
 
-export default function FormCanvas({ fields, onSelectField, onDeleteField, onDuplicateField, selectedField, isPreview = false, formData = {} }) {
-  const { reorderFields, updateField, addFieldToGrid, removeFieldFromGrid, updateGridField } = useFormStore();
+const LAYOUT_CLASS = {
+  '1': 'grid-cols-1',
+  '2': 'grid-cols-1 sm:grid-cols-2',
+  '3': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  '4': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+};
 
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    reorderFields(result.source.index, result.destination.index);
-  };
+const LAYOUT_OPTIONS = [
+  { value: '1', icon: LayoutTemplate, label: '1 column' },
+  { value: '2', icon: Columns, label: '2 columns' },
+  { value: '3', icon: Grid3x3, label: '3 columns' },
+  { value: '4', icon: LayoutGrid, label: '4 columns' },
+];
+
+const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDeleteField, dragHandleProps }) => {
+  const { updateField } = useFormStore();
+  const FieldComponent = FIELD_COMPONENTS[field.type];
+  const isSelected = selectedField === field.id;
 
   const handleContentChange = (fieldId, content) => {
     updateField(fieldId, { content });
   };
 
-  const handleRemoveFieldFromGrid = (gridId, fieldId) => {
-    removeFieldFromGrid(gridId, fieldId);
-  };
+  return (
+    <div
+      className={`p-4 border rounded-base transition-all duration-200 cursor-pointer bg-surface hover:border-border-dark ${isSelected ? 'border-primary shadow-sm' : 'border-border'}`}
+      onClick={() => onSelectField(field.id)}
+    >
+      <div className="flex items-start gap-3">
+        <div {...dragHandleProps} className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted">
+          <GripVertical className="h-5 w-5" />
+        </div>
 
-  const handleAddFieldToGrid = (gridId, columnIndex, field) => {
-    addFieldToGrid(gridId, columnIndex, field);
-  };
+        <div className="flex-1 min-w-0" onClick={() => onSelectField(field.id)}>
+          {field.type !== 'content' && (
+            <div className="flex items-center gap-2 mb-2">
+              <label htmlFor={`field-label-${field.id}`} className="sr-only">Field label</label>
+              <input
+                id={`field-label-${field.id}`}
+                type="text"
+                value={field.label}
+                onChange={(e) => updateField(field.id, { label: e.target.value })}
+                placeholder="Field label"
+                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-body font-medium placeholder:text-muted"
+                aria-label="Field label"
+              />
+              {field.required && (
+                <span className="text-red-500 text-small" aria-label="Required field">*</span>
+              )}
+              {hasConditionalLogic(field) && (
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-primary-light text-primary border border-primary/20"
+                  title="This field has conditional logic"
+                >
+                  <GitBranch className="h-3 w-3" />
+                  Logic
+                </span>
+              )}
+            </div>
+          )}
 
-  if (fields.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-body text-muted">No fields added yet</p>
-        <p className="text-small text-muted mt-1">Click on field types from the left panel to add them</p>
+          {FieldComponent ? (
+            <FieldComponent
+              field={field}
+              isPreview={false}
+              onContentChange={handleContentChange}
+            />
+          ) : (
+            <p className="text-small text-muted">Unknown field type: {field.type}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={() => onDuplicateField(field.id)}
+            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+            title="Duplicate field"
+            aria-label={`Duplicate ${field.label || 'field'}`}
+          >
+            <Copy className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => onDeleteField(field.id)}
+            className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+            title="Delete field"
+            aria-label={`Delete ${field.label || 'field'}`}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
+};
+
+export default function FormCanvas({
+  fields,
+  rows,
+  onSelectField,
+  onDeleteField,
+  onDuplicateField,
+  onInsertField,
+  onAddRow,
+  onRemoveRow,
+  onUpdateRow,
+  onDuplicateRow,
+  onReorderRows,
+  selectedField,
+  selectedSection,
+  onSelectSection,
+  isPreview = false,
+  formData = {},
+}) {
+  const { reorderFields, updateField } = useFormStore();
+  const [collapsedRows, setCollapsedRows] = useState({});
+
+  const toggleCollapse = (rowId, e) => {
+    e.stopPropagation();
+    setCollapsedRows((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
+  };
+
+  const handleRowDragEnd = (result) => {
+    if (!result.destination || result.destination.index === result.source.index) return;
+    onReorderRows(result.source.index, result.destination.index);
+  };
+
+  const handleContentChange = (fieldId, content) => {
+    updateField(fieldId, { content });
+  };
 
   if (isPreview) {
     const visibleFields = fields.filter((field) =>
@@ -349,41 +303,43 @@ export default function FormCanvas({ fields, onSelectField, onDeleteField, onDup
     );
 
     return (
-      <div className="space-y-6" role="form" aria-label="Form preview">
-        {visibleFields.map((field) => {
-          const FieldComponent = FIELD_COMPONENTS[field.type];
+      <div className="space-y-8" role="form" aria-label="Form preview">
+        {rows.map((row) => {
+          const rowFields = visibleFields.filter((f) => f.rowId === row.id);
+          if (!rowFields.length) return null;
+          const gridClass = LAYOUT_CLASS[row.columns] || 'grid-cols-1';
           return (
-            <div key={field.id} className="space-y-2">
-              {field.type !== 'content' && (
-                <label
-                  htmlFor={field.id}
-                  className="block text-body font-medium text-base"
-                >
-                  {field.label || 'Untitled field'}
-                  {field.required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
-                </label>
-              )}
-              {FieldComponent ? (
-                <FieldComponent
-                  field={field}
-                  isPreview={isPreview}
-                  onContentChange={handleContentChange}
-                  onAddFieldToGrid={handleAddFieldToGrid}
-                  onRemoveFieldFromGrid={handleRemoveFieldFromGrid}
-                  onUpdateGridField={updateGridField}
-                  onSelectField={onSelectField}
-                  onDeleteField={onDeleteField}
-                  onDuplicateField={onDuplicateField}
-                  selectedField={selectedField}
-                />
-              ) : (
-                <p className="text-small text-muted">Unknown field type: {field.type}</p>
-              )}
-              {field.helpText && (
-                <p className="text-small text-muted" id={`${field.id}-help`}>
-                  {field.helpText}
-                </p>
-              )}
+            <div key={row.id} className={`grid ${gridClass} gap-6`}>
+              {rowFields.map((field) => {
+                const FieldComponent = FIELD_COMPONENTS[field.type];
+                return (
+                  <div key={field.id} className="space-y-2">
+                    {field.type !== 'content' && field.type !== 'pageBreak' && (
+                      <label
+                        htmlFor={field.id}
+                        className="block text-body font-medium text-base"
+                      >
+                        {field.label || 'Untitled field'}
+                        {field.required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
+                      </label>
+                    )}
+                    {FieldComponent ? (
+                      <FieldComponent
+                        field={field}
+                        isPreview={isPreview}
+                        onContentChange={handleContentChange}
+                      />
+                    ) : (
+                      <p className="text-small text-muted">Unknown field type: {field.type}</p>
+                    )}
+                    {field.helpText && (
+                      <p className="text-small text-muted" id={`${field.id}-help`}>
+                        {field.helpText}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
@@ -391,108 +347,226 @@ export default function FormCanvas({ fields, onSelectField, onDeleteField, onDup
     );
   }
 
+  const handleDragEnd = (rowId) => (result) => {
+    if (!result.destination) return;
+    reorderFields(rowId, result.source.index, result.destination.index);
+  };
+
+  if (!rows.length) {
+    return (
+      <button
+        onClick={onAddRow}
+        className="w-full flex flex-col items-center justify-center gap-3 py-10 border-2 border-dashed border-border rounded-lg text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/50 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[120px]"
+        aria-label="Add row"
+      >
+        <div className="w-12 h-12 rounded-full bg-surface-raised flex items-center justify-center">
+          <Rows3 className="h-6 w-6" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-body font-medium">Add row</p>
+          <p className="text-small text-muted mt-1">Create your first row to start adding fields</p>
+        </div>
+      </button>
+    );
+  }
+
+  // Inline add-row button rendered between rows
+  const InlineAddRow = ({ afterRowId }) => (
+    <div className="relative h-6 group flex items-center justify-center">
+      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-border group-hover:bg-primary/40 transition-colors" />
+      <button
+        onClick={() => onAddRow(afterRowId)}
+        className="relative z-10 flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-surface border border-border rounded-full text-subtle hover:text-primary hover:border-primary hover:bg-primary-light opacity-0 group-hover:opacity-100 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:opacity-100"
+        aria-label="Add section below"
+      >
+        <Plus className="h-3 w-3" />
+        Add section
+      </button>
+    </div>
+  );
+
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="form-fields">
-        {(provided) => (
-          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-            {fields.map((field, index) => {
-              const FieldComponent = FIELD_COMPONENTS[field.type];
-              return (
-                <Draggable key={field.id} draggableId={field.id} index={index}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      onClick={() => onSelectField(field.id)}
-                      className={`p-4 border rounded-base transition-all duration-200 cursor-pointer ${
-                        selectedField === field.id
-                          ? 'border-primary bg-primary-light'
-                          : 'border-border bg-surface hover:border-border-dark'
-                      } ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+    <DragDropContext onDragEnd={handleRowDragEnd}>
+      <Droppable droppableId="sections" type="ROW">
+        {(droppableProvided) => (
+    <div className="space-y-0" ref={droppableProvided.innerRef} {...droppableProvided.droppableProps}>
+      {rows.map((row, rowIndex) => {
+        const rowFields = fields.filter((f) => f.rowId === row.id);
+        const gridClass = LAYOUT_CLASS[row.columns] || 'grid-cols-1';
+        const sectionBg = row.backgroundColor || '';
+
+        const isCollapsed = !!collapsedRows[row.id];
+        const isSelectedSection = selectedSection === row.id;
+
+        return (
+          <Draggable key={row.id} draggableId={row.id} index={rowIndex}>
+            {(draggableProvided, draggableSnapshot) => (
+          <div ref={draggableProvided.innerRef} {...draggableProvided.draggableProps}>
+            {/* Inline add-row between sections */}
+            {rowIndex > 0 && <InlineAddRow afterRowId={rows[rowIndex - 1].id} />}
+
+            {/* Section card */}
+            <div
+              className={`rounded-xl border overflow-hidden transition-all duration-200 ${
+                draggableSnapshot.isDragging
+                  ? 'border-primary shadow-xl'
+                  : isSelectedSection
+                  ? 'border-primary shadow-sm'
+                  : 'border-border'
+              }`}
+              style={sectionBg ? { backgroundColor: sectionBg } : {}}
+            >
+              {/* Section header — click to select section */}
+              <div
+                className={`flex items-center justify-between px-3 py-2.5 border-b border-border/60 cursor-pointer select-none transition-colors ${
+                  isSelectedSection ? 'bg-primary-light/60' : 'bg-surface/80 hover:bg-surface-raised'
+                }`}
+                onClick={() => onSelectSection(isSelectedSection ? null : row.id)}
+                role="button"
+                aria-expanded={!isCollapsed}
+                aria-label={`Section ${rowIndex + 1}: ${row.label || 'Untitled'}`}
+              >
+                {/* Drag handle */}
+                <div
+                  {...draggableProvided.dragHandleProps}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-shrink-0 p-1 mr-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted rounded"
+                  title="Drag to reorder"
+                  aria-label="Drag to reorder section"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </div>
+
+                {/* Collapse toggle */}
+                <button
+                  onClick={(e) => toggleCollapse(row.id, e)}
+                  className="flex-shrink-0 p-1 mr-2 text-subtle hover:text-muted rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                  title={isCollapsed ? 'Expand section' : 'Collapse section'}
+                  aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+                >
+                  {isCollapsed
+                    ? <ChevronRight className="h-4 w-4" />
+                    : <ChevronDown className="h-4 w-4" />
+                  }
+                </button>
+
+                {/* Section name + field count */}
+                <div className="flex-1 min-w-0">
+                  <span className="text-small font-semibold text-base truncate">
+                    {row.label || `Section ${rowIndex + 1}`}
+                  </span>
+                  {isCollapsed && (
+                    <span className="ml-2 text-xs text-muted">
+                      {rowFields.length} field{rowFields.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-0.5 flex-shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                  {/* Duplicate */}
+                  <button
+                    onClick={() => onDuplicateRow(row.id)}
+                    className="p-1.5 text-subtle hover:text-primary hover:bg-primary-light rounded transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                    title="Duplicate section"
+                    aria-label="Duplicate section"
+                  >
+                    <CopyPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+
+                  {/* Delete */}
+                  {rows.length > 1 && (
+                    <button
+                      onClick={() => onRemoveRow(row.id)}
+                      className="p-1.5 text-subtle hover:text-red-500 hover:bg-red-50 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                      title="Remove section"
+                      aria-label="Remove section"
                     >
-                      <div className="flex items-start gap-3">
-                        <div
-                          {...provided.dragHandleProps}
-                          className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted"
-                        >
-                          <GripVertical className="h-5 w-5" />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          {field.type !== 'content' && (
-                            <div className="flex items-center gap-2 mb-2">
-                              <label htmlFor={`field-label-${field.id}`} className="sr-only">Field label</label>
-                              <input
-                                id={`field-label-${field.id}`}
-                                type="text"
-                                value={field.label}
-                                onChange={(e) => {
-                                  updateField(field.id, { label: e.target.value });
-                                }}
-                                placeholder="Field label"
-                                className="flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-body font-medium placeholder:text-muted"
-                                aria-label="Field label"
-                              />
-                              {field.required && (
-                                <span className="text-red-500 text-small" aria-label="Required field">*</span>
-                              )}
-                              {hasConditionalLogic(field) && (
-                                <span
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-primary-light text-primary border border-primary/20"
-                                  title="This field has conditional logic"
-                                >
-                                  <GitBranch className="h-3 w-3" />
-                                  Logic
-                                </span>
-                              )}
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Section body (collapsible) */}
+              {!isCollapsed && (
+                <div className="p-4">
+                  {rowFields.length === 0 ? (
+                    <button
+                      onClick={() => onInsertField(row.id)}
+                      className="w-full flex items-center justify-center gap-2 py-8 border-2 border-dashed border-border rounded-lg text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                      aria-label="Insert new field into this section"
+                    >
+                      <Plus className="h-5 w-5" aria-hidden="true" />
+                      <span className="text-body font-medium">Insert new field</span>
+                    </button>
+                  ) : (
+                    <>
+                      <DragDropContext onDragEnd={handleDragEnd(row.id)}>
+                        <Droppable droppableId={row.id}>
+                          {(provided) => (
+                            <div
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              className={`grid ${gridClass} gap-3`}
+                            >
+                              {rowFields.map((field, index) => (
+                                <Draggable key={field.id} draggableId={field.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      className={`${snapshot.isDragging ? 'shadow-lg' : ''} rounded-base`}
+                                    >
+                                      <FieldCard
+                                        field={field}
+                                        selectedField={selectedField}
+                                        onSelectField={(id) => { onSelectField(id); onSelectSection(null); }}
+                                        onDuplicateField={onDuplicateField}
+                                        onDeleteField={onDeleteField}
+                                        dragHandleProps={provided.dragHandleProps}
+                                      />
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
                             </div>
                           )}
-
-                          {FieldComponent ? (
-                            <FieldComponent
-                              field={field}
-                              isPreview={false}
-                              onContentChange={handleContentChange}
-                              onAddFieldToGrid={handleAddFieldToGrid}
-                              onRemoveFieldFromGrid={handleRemoveFieldFromGrid}
-                              onUpdateGridField={updateGridField}
-                              onSelectField={onSelectField}
-                              onDeleteField={onDeleteField}
-                              onDuplicateField={onDuplicateField}
-                              selectedField={selectedField}
-                            />
-                          ) : (
-                            <p className="text-small text-muted">Unknown field type: {field.type}</p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => onDuplicateField(field.id)}
-                            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
-                            title="Duplicate field"
-                            aria-label={`Duplicate ${field.label || 'field'}`}
-                          >
-                            <Copy className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                          <button
-                            onClick={() => onDeleteField(field.id)}
-                            className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
-                            title="Delete field"
-                            aria-label={`Delete ${field.label || 'field'}`}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                        </Droppable>
+                      </DragDropContext>
+                      <button
+                        onClick={() => onInsertField(row.id)}
+                        className="mt-3 w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-border rounded-lg text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                        aria-label="Insert new field after existing fields in this section"
+                      >
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                        <span className="text-small font-medium">Insert new field</span>
+                      </button>
+                    </>
                   )}
-                </Draggable>
-              );
-            })}
-            {provided.placeholder}
+                </div>
+              )}
+            </div>
           </div>
+            )}
+          </Draggable>
+        );
+      })}
+      {droppableProvided.placeholder}
+
+      {/* Inline add after last row */}
+      {rows.length > 0 && <InlineAddRow afterRowId={rows[rows.length - 1].id} />}
+
+      <button
+        onClick={() => onAddRow()}
+        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-border rounded-lg text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[48px]"
+        aria-label="Add new section"
+      >
+        <Rows3 className="h-4 w-4" aria-hidden="true" />
+        <span className="text-body font-medium">Add section</span>
+      </button>
+    </div>
         )}
       </Droppable>
     </DragDropContext>

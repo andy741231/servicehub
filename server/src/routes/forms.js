@@ -9,6 +9,8 @@ import {
   createSubmission,
   uploadFile,
   upload,
+  listVersions,
+  restoreVersion,
 } from '../controllers/forms.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -26,5 +28,7 @@ router.get('/:id', verifyToken, getForm);
 router.put('/:id', verifyToken, updateForm);
 router.delete('/:id', verifyToken, deleteForm);
 router.get('/:id/submissions', verifyToken, listSubmissions);
+router.get('/:id/versions', verifyToken, listVersions);
+router.post('/:id/versions/:versionId/restore', verifyToken, restoreVersion);
 
 export default router;

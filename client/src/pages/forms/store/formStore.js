@@ -7,6 +7,8 @@ import {
   deleteForm as deleteFormApi,
   submitForm,
   fetchSubmissions,
+  fetchVersions as fetchVersionsApi,
+  restoreVersion as restoreVersionApi,
 } from '../api/formsApi';
 import { generateSlug, isDuplicateName } from '../utils/slug';
 
@@ -39,23 +41,31 @@ export const DEFAULT_THEME = {
   buttonColor: '#2563eb',
   buttonTextColor: '#ffffff',
   fontFamily: 'sans-serif',
-  showProgressBar: false,
+  showProgressBar: false,          // kept for backward-compat reads
+  progressBarStyle: 'none',        // 'none' | 'bar' | 'steps'
   showQuestionNumbers: false,
   buttonText: 'Submit Form',
   thankYouTitle: 'Thank You!',
   thankYouMessage: 'Your form has been submitted successfully.',
   redirectUrl: '',
+  layout: '1', // '1' | '2' | '3' columns
 };
+
+const makeDefaultRow = (columns = '1') => ({
+  id: `row-${Date.now()}`,
+  columns,
+});
 
 const DEFAULT_FORMS = [
   {
     id: 'form-1',
     title: 'Contact Form',
     description: 'Basic contact information collection',
+    rows: [{ id: 'row-1', columns: '1' }],
     fields: [
-      { id: 'field-1', type: 'text', label: 'Name', placeholder: 'Your name', required: true },
-      { id: 'field-2', type: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
-      { id: 'field-3', type: 'textarea', label: 'Message', placeholder: 'Your message', required: true },
+      { id: 'field-1', rowId: 'row-1', type: 'text', label: 'Name', placeholder: 'Your name', required: true },
+      { id: 'field-2', rowId: 'row-1', type: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+      { id: 'field-3', rowId: 'row-1', type: 'textarea', label: 'Message', placeholder: 'Your message', required: true },
     ],
     theme: { ...DEFAULT_THEME },
     createdAt: new Date().toISOString(),
@@ -65,10 +75,11 @@ const DEFAULT_FORMS = [
     id: 'form-2',
     title: 'Survey Form',
     description: 'Customer satisfaction survey',
+    rows: [{ id: 'row-2', columns: '1' }],
     fields: [
-      { id: 'field-4', type: 'text', label: 'Company Name', placeholder: 'Company name', required: true },
-      { id: 'field-5', type: 'select', label: 'Industry', placeholder: 'Select industry', required: true, options: ['Technology', 'Healthcare', 'Finance', 'Other'] },
-      { id: 'field-6', type: 'number', label: 'Employees', placeholder: 'Number of employees', required: false },
+      { id: 'field-4', rowId: 'row-2', type: 'text', label: 'Company Name', placeholder: 'Company name', required: true },
+      { id: 'field-5', rowId: 'row-2', type: 'select', label: 'Industry', placeholder: 'Select industry', required: true, options: ['Technology', 'Healthcare', 'Finance', 'Other'] },
+      { id: 'field-6', rowId: 'row-2', type: 'number', label: 'Employees', placeholder: 'Number of employees', required: false },
     ],
     theme: { ...DEFAULT_THEME },
     createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -78,13 +89,26 @@ const DEFAULT_FORMS = [
 
 const normalizeForm = (backendForm) => {
   const schema = backendForm.schema || {};
+  const theme = schema.theme || { ...DEFAULT_THEME };
+  let fields = schema.fields || [];
+  let rows = schema.rows || [];
+
+  // Backward compatibility: legacy forms without rows get a single row
+  if (!rows.length && fields.length) {
+    const rowId = `row-${Date.now()}`;
+    rows = [{ id: rowId, columns: theme.layout || '1' }];
+    fields = fields.map((f) => ({ ...f, rowId }));
+  }
+
   return {
     id: backendForm.id,
     title: backendForm.title || schema.title || 'Untitled Form',
     slug: schema.slug || generateSlug(backendForm.title || schema.title || 'Untitled Form'),
     description: schema.description || '',
-    fields: schema.fields || [],
-    theme: schema.theme || { ...DEFAULT_THEME },
+    rows,
+    fields,
+    theme,
+    accessSchedule: schema.accessSchedule || null,
     createdAt: backendForm.createdAt,
     updatedAt: backendForm.updatedAt,
   };
@@ -114,11 +138,19 @@ const normalizeSubmission = (backendSubmission) => ({
   data: backendSubmission.data || {},
 });
 
+// Max number of undo snapshots to keep
+const MAX_HISTORY = 50;
+
 const useFormStore = create((set, get) => ({
   // Current form being edited
   fields: [],
+  rows: [],
   selectedField: null,
   currentFormId: null,
+
+  // Undo/Redo history — each entry is { fields, rows }
+  _history: [],
+  _future: [],
 
   // All saved forms and submissions
   forms: [],
@@ -127,6 +159,46 @@ const useFormStore = create((set, get) => ({
   // Loading and error states
   isLoading: false,
   error: null,
+
+  // --- Undo/Redo helpers ---
+  _snapshot: () => {
+    const { fields, rows } = get();
+    return { fields: [...fields], rows: [...rows] };
+  },
+
+  _pushHistory: () => {
+    const snapshot = get()._snapshot();
+    set((state) => ({
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    }));
+  },
+
+  undo: () => {
+    const { _history, fields, rows } = get();
+    if (!_history.length) return;
+    const previous = _history[_history.length - 1];
+    const current = { fields: [...fields], rows: [...rows] };
+    set((state) => ({
+      _history: state._history.slice(0, -1),
+      _future: [current, ...state._future],
+      fields: previous.fields,
+      rows: previous.rows,
+    }));
+  },
+
+  redo: () => {
+    const { _future, fields, rows } = get();
+    if (!_future.length) return;
+    const next = _future[0];
+    const current = { fields: [...fields], rows: [...rows] };
+    set((state) => ({
+      _future: state._future.slice(1),
+      _history: [...state._history, current].slice(-MAX_HISTORY),
+      fields: next.fields,
+      rows: next.rows,
+    }));
+  },
 
   // Load forms from backend (fallback to localStorage)
   loadForms: async () => {
@@ -170,51 +242,127 @@ const useFormStore = create((set, get) => ({
     }
   },
 
-  addField: (field) => set((state) => ({ fields: [...state.fields, field] })),
-
-  addFieldToGrid: (gridId, columnIndex, field) => set((state) => ({
-    fields: state.fields.map((f) => {
-      if (f.id === gridId && f.type === 'grid') {
-        const newColumns = [...f.columns];
-        newColumns[columnIndex] = [...(newColumns[columnIndex] || []), field];
-        return { ...f, columns: newColumns };
+  addRow: (columns = '1', afterRowId) => {
+    get()._pushHistory();
+    set((state) => {
+      const newRow = { id: `row-${Date.now()}`, columns };
+      const rows = [...state.rows];
+      if (afterRowId) {
+        const index = rows.findIndex((r) => r.id === afterRowId);
+        rows.splice(index + 1, 0, newRow);
+      } else {
+        rows.push(newRow);
       }
-      return f;
-    }),
-  })),
+      return { rows };
+    });
+  },
 
-  removeField: (fieldId) => set((state) => ({
-    fields: state.fields.filter((f) => f.id !== fieldId),
-  })),
+  removeRow: (rowId) => {
+    get()._pushHistory();
+    set((state) => ({
+      rows: state.rows.filter((r) => r.id !== rowId),
+      fields: state.fields.filter((f) => f.rowId !== rowId),
+    }));
+  },
 
-  removeFieldFromGrid: (gridId, fieldId) => set((state) => ({
-    fields: state.fields.map((f) => {
-      if (f.id === gridId && f.type === 'grid') {
-        const newColumns = f.columns.map((column) =>
-          column.filter((field) => field.id !== fieldId)
-        );
-        return { ...f, columns: newColumns };
-      }
-      return f;
-    }),
-  })),
+  updateRow: (rowId, updates) => {
+    get()._pushHistory();
+    set((state) => ({
+      rows: state.rows.map((r) => (r.id === rowId ? { ...r, ...updates } : r)),
+    }));
+  },
 
-  duplicateField: (fieldId) => set((state) => {
-    const fieldToDuplicate = state.fields.find((f) => f.id === fieldId);
-    if (!fieldToDuplicate) return state;
+  duplicateRow: (rowId) => {
+    get()._pushHistory();
+    set((state) => {
+      const srcRow = state.rows.find((r) => r.id === rowId);
+      if (!srcRow) return state;
+      const newRowId = `row-${Date.now()}`;
+      const newRow = { ...srcRow, id: newRowId };
 
-    const duplicatedField = {
-      ...fieldToDuplicate,
-      id: `field-${Date.now()}`,
-      label: `${fieldToDuplicate.label} (copy)`,
-    };
+      // Deep-copy all fields in the source row with new IDs
+      const srcFields = state.fields.filter((f) => f.rowId === rowId);
+      const newFields = srcFields.map((f) => ({
+        ...f,
+        id: `field-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        rowId: newRowId,
+        label: f.label ? `${f.label} (copy)` : '',
+      }));
 
-    const index = state.fields.findIndex((f) => f.id === fieldId);
+      // Insert new row + fields directly after the source
+      const rowIndex = state.rows.findIndex((r) => r.id === rowId);
+      const newRows = [...state.rows];
+      newRows.splice(rowIndex + 1, 0, newRow);
+
+      // Insert new fields after the last field of the source row
+      const lastSrcFieldIndex = state.fields.map((f) => f.rowId).lastIndexOf(rowId);
+      const allFields = [...state.fields];
+      allFields.splice(lastSrcFieldIndex + 1, 0, ...newFields);
+
+      return { rows: newRows, fields: allFields };
+    });
+  },
+
+  reorderRows: (fromIndex, toIndex) => {
+    get()._pushHistory();
+    set((state) => {
+      const newRows = [...state.rows];
+      const [moved] = newRows.splice(fromIndex, 1);
+      newRows.splice(toIndex, 0, moved);
+      return { rows: newRows };
+    });
+  },
+
+  addField: (field, rowId) => {
+    get()._pushHistory();
+    set((state) => {
+    const targetRowId = rowId || state.rows[state.rows.length - 1]?.id;
+    const fieldWithRow = { ...field, rowId: targetRowId };
+    if (!targetRowId) return { fields: [...state.fields, fieldWithRow] };
+
+    const lastIndex = state.fields.map((f) => f.rowId).lastIndexOf(targetRowId);
     const newFields = [...state.fields];
-    newFields.splice(index + 1, 0, duplicatedField);
-
+    if (lastIndex === -1) {
+      // First field in this row: place it after the last field of the previous row, or at start
+      const rowIndex = state.rows.findIndex((r) => r.id === targetRowId);
+      const previousRowId = state.rows[rowIndex - 1]?.id;
+      const prevLastIndex = previousRowId
+        ? state.fields.map((f) => f.rowId).lastIndexOf(previousRowId)
+        : -1;
+      newFields.splice(prevLastIndex + 1, 0, fieldWithRow);
+    } else {
+      newFields.splice(lastIndex + 1, 0, fieldWithRow);
+    }
     return { fields: newFields };
-  }),
+    });
+  },
+
+  removeField: (fieldId) => {
+    get()._pushHistory();
+    set((state) => ({
+      fields: state.fields.filter((f) => f.id !== fieldId),
+    }));
+  },
+
+  duplicateField: (fieldId) => {
+    get()._pushHistory();
+    set((state) => {
+      const fieldToDuplicate = state.fields.find((f) => f.id === fieldId);
+      if (!fieldToDuplicate) return state;
+
+      const duplicatedField = {
+        ...fieldToDuplicate,
+        id: `field-${Date.now()}`,
+        label: `${fieldToDuplicate.label} (copy)`,
+      };
+
+      const index = state.fields.findIndex((f) => f.id === fieldId);
+      const newFields = [...state.fields];
+      newFields.splice(index + 1, 0, duplicatedField);
+
+      return { fields: newFields };
+    });
+  },
 
   updateField: (fieldId, updates) => set((state) => ({
     fields: state.fields.map((f) =>
@@ -222,35 +370,43 @@ const useFormStore = create((set, get) => ({
     ),
   })),
 
-  updateGridField: (gridId, fieldId, updates) => set((state) => ({
-    fields: state.fields.map((f) => {
-      if (f.id === gridId && f.type === 'grid') {
-        const newColumns = f.columns.map((column) =>
-          column.map((field) =>
-            field.id === fieldId ? { ...field, ...updates } : field
-          )
-        );
-        return { ...f, columns: newColumns };
-      }
-      return f;
-    }),
-  })),
+  reorderFields: (rowId, fromIndex, toIndex) => {
+    get()._pushHistory();
+    set((state) => {
+      const start = state.fields.findIndex((f) => f.rowId === rowId);
+      if (start === -1) return state;
+      const newFields = [...state.fields];
+      const flatFrom = start + fromIndex;
+      const flatTo = start + toIndex;
+      const [moved] = newFields.splice(flatFrom, 1);
+      newFields.splice(flatTo, 0, moved);
+      return { fields: newFields };
+    });
+  },
 
-  reorderFields: (fromIndex, toIndex) => set((state) => {
-    const newFields = [...state.fields];
-    const [movedField] = newFields.splice(fromIndex, 1);
-    newFields.splice(toIndex, 0, movedField);
-    return { fields: newFields };
-  }),
+  moveFieldToRow: (fieldId, targetRowId) => set((state) => ({
+    fields: state.fields.map((f) =>
+      f.id === fieldId ? { ...f, rowId: targetRowId } : f
+    ),
+  })),
 
   setSelectedField: (fieldId) => set({ selectedField: fieldId }),
 
   setCurrentForm: (formIdOrSlug) => set((state) => {
     const form = state.forms.find((f) => f.id === formIdOrSlug || f.slug === formIdOrSlug);
     if (form) {
+      const theme = form.theme || { ...DEFAULT_THEME };
+      let rows = form.rows || [];
+      let fields = form.fields || [];
+      if (!rows.length && fields.length) {
+        const rowId = `row-${Date.now()}`;
+        rows = [{ id: rowId, columns: theme.layout || '1' }];
+        fields = fields.map((f) => ({ ...f, rowId }));
+      }
       return {
         currentFormId: form.id,
-        fields: form.fields,
+        rows,
+        fields,
         selectedField: null,
       };
     }
@@ -268,11 +424,13 @@ const useFormStore = create((set, get) => ({
     }
 
     const existingSlugs = get().forms.map((f) => f.slug);
+    const initialRowId = `row-${Date.now()}`;
     const newForm = {
       id: `form-${Date.now()}`,
       title,
       slug: generateSlug(title, existingSlugs),
       description: '',
+      rows: [{ id: initialRowId, columns: DEFAULT_THEME.layout || '1' }],
       fields: [],
       theme: { ...DEFAULT_THEME },
       createdAt: new Date().toISOString(),
@@ -323,6 +481,7 @@ const useFormStore = create((set, get) => ({
       title: newTitle,
       slug: newSlug,
       description: description || currentForm.description,
+      rows: state.rows,
       fields: state.fields,
       updatedAt: new Date().toISOString(),
     };
@@ -419,6 +578,22 @@ const useFormStore = create((set, get) => ({
     }
   },
 
+  updateFormSchedule: (schedule) => set((state) => {
+    if (!state.currentFormId) return state;
+    const updatedForms = state.forms.map((form) =>
+      form.id === state.currentFormId
+        ? { ...form, accessSchedule: schedule, updatedAt: new Date().toISOString() }
+        : form
+    );
+    const updatedForm = updatedForms.find((f) => f.id === state.currentFormId);
+    if (updatedForm) {
+      updateFormApi(updatedForm.id, denormalizeForm(updatedForm)).catch((e) => {
+        console.warn('Failed to save form schedule on API:', e);
+      });
+    }
+    return { forms: updatedForms };
+  }),
+
   updateFormTheme: (themeUpdates) => set((state) => {
     if (!state.currentFormId) return state;
 
@@ -441,6 +616,40 @@ const useFormStore = create((set, get) => ({
 
     return { forms: updatedForms };
   }),
+
+  // --- Version History ---
+  formVersions: [],
+  versionsLoading: false,
+
+  loadVersions: async (formId) => {
+    set({ versionsLoading: true });
+    try {
+      const versions = await fetchVersionsApi(formId);
+      set({ formVersions: versions, versionsLoading: false });
+    } catch (e) {
+      console.warn('Failed to load form versions:', e);
+      set({ versionsLoading: false });
+    }
+  },
+
+  restoreVersion: async (formId, versionId) => {
+    try {
+      const backendForm = await restoreVersionApi(formId, versionId);
+      const form = normalizeForm(backendForm);
+      set((state) => ({
+        forms: state.forms.map((f) => (f.id === form.id ? form : f)),
+        currentFormId: form.id,
+        fields: form.fields,
+        rows: form.rows,
+      }));
+      // Reload versions list after restore
+      get().loadVersions(formId);
+      return form;
+    } catch (e) {
+      console.warn('Failed to restore form version:', e);
+      throw e;
+    }
+  },
 }));
 
 useFormStore.subscribe((state) => {

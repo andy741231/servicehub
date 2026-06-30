@@ -1,134 +1,212 @@
 import { useState, useEffect, useRef } from 'react';
-import { CheckCircle, Loader2, Star, PenTool, X } from 'lucide-react';
+import { CheckCircle, Loader2, Star, PenTool, X, Lock } from 'lucide-react';
 import { DEFAULT_THEME } from '../store/formStore';
 import { evaluateConditionalLogic } from '../utils/conditionalLogic';
 import { uploadFile } from '../api/formsApi';
 
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/**
+ * Given an accessSchedule object, returns the matching active rule (if the form is currently
+ * within an open window) or null (form is closed / schedule disabled).
+ * When the schedule is disabled or has no enabled rules, the form is open (returns 'open').
+ * When the schedule is enabled but no rule covers now, returns the first enabled rule's
+ * closedMessage so the renderer can show it.
+ */
+function evaluateSchedule(accessSchedule) {
+  if (!accessSchedule?.enabled) return { open: true, closedMessage: null };
+  const rules = (accessSchedule.rules || []).filter((r) => r.enabled);
+  if (rules.length === 0) return { open: true, closedMessage: null };
+
+  const now = new Date();
+  const currentDay = DAY_NAMES[now.getDay()];
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const currentDate = now.toISOString().slice(0, 10);
+
+  for (const rule of rules) {
+    if (rule.type === 'weekly') {
+      const days = rule.days || [];
+      const start = rule.startTime || '00:00';
+      const end = rule.endTime || '23:59';
+      if (days.includes(currentDay) && currentTime >= start && currentTime < end) {
+        return { open: true, closedMessage: null };
+      }
+    } else if (rule.type === 'dateRange') {
+      const startDate = rule.startDate || '';
+      const endDate = rule.endDate || '';
+      const start = rule.startTime || '00:00';
+      const end = rule.endTime || '23:59';
+      if (currentDate >= startDate && currentDate <= endDate && currentTime >= start && currentTime < end) {
+        return { open: true, closedMessage: null };
+      }
+    }
+  }
+
+  // No rule matched — form is closed; return the message from the first enabled rule
+  const firstRule = rules[0];
+  return {
+    open: false,
+    closedMessage: firstRule?.closedMessage || 'This form is currently closed. Please check back later.',
+  };
+}
+
+// Shared inline error message rendered below a field input
+const FieldError = ({ fieldId, error }) =>
+  error ? (
+    <p id={`${fieldId}-error`} role="alert" className="flex items-center gap-1 text-sm text-red-600 mt-1.5">
+      <svg className="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+      {error}
+    </p>
+  ) : null;
+
 const FIELD_COMPONENTS = {
   text: ({ field, value, onChange, error, theme }) => (
-    <input
-      type="text"
-      id={field.id}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={field.placeholder || field.label}
-      className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-        error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-      }`}
-      style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
-      aria-label={field.label}
-      aria-required={field.required}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${field.id}-error` : undefined}
-    />
+    <div className="space-y-0">
+      <input
+        type="text"
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder || field.label}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      <FieldError fieldId={field.id} error={error} />
+    </div>
   ),
   textarea: ({ field, value, onChange, error, theme }) => (
-    <textarea
-      id={field.id}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={field.placeholder || field.label}
-      rows={4}
-      className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
-        error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-      }`}
-      style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
-      aria-label={field.label}
-      aria-required={field.required}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${field.id}-error` : undefined}
-    />
+    <div className="space-y-0">
+      <textarea
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder || field.label}
+        rows={4}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      <FieldError fieldId={field.id} error={error} />
+    </div>
   ),
   number: ({ field, value, onChange, error, theme }) => (
-    <input
-      type="number"
-      id={field.id}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={field.placeholder || field.label}
-      className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-        error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-      }`}
-      style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
-      aria-label={field.label}
-      aria-required={field.required}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${field.id}-error` : undefined}
-      min={field.minValue}
-      max={field.maxValue}
-    />
+    <div className="space-y-0">
+      <input
+        type="number"
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder || field.label}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+        min={field.minValue}
+        max={field.maxValue}
+      />
+      <FieldError fieldId={field.id} error={error} />
+    </div>
   ),
   email: ({ field, value, onChange, error, theme }) => (
-    <input
-      type="email"
-      id={field.id}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={field.placeholder || field.label}
-      className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-        error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-      }`}
-      style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
-      aria-label={field.label}
-      aria-required={field.required}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${field.id}-error` : undefined}
-    />
+    <div className="space-y-0">
+      <input
+        type="email"
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder || field.label}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      <FieldError fieldId={field.id} error={error} />
+    </div>
   ),
   phone: ({ field, value, onChange, error, theme }) => (
-    <input
-      type="tel"
-      id={field.id}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={field.placeholder || field.label}
-      className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-        error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-      }`}
-      style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
-      aria-label={field.label}
-      aria-required={field.required}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${field.id}-error` : undefined}
-    />
+    <div className="space-y-0">
+      <input
+        type="tel"
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder || field.label}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      <FieldError fieldId={field.id} error={error} />
+    </div>
   ),
   date: ({ field, value, onChange, error, theme }) => (
-    <input
-      type="date"
-      id={field.id}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-        error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-      }`}
-      style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
-      aria-label={field.label}
-      aria-required={field.required}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${field.id}-error` : undefined}
-    />
+    <div className="space-y-0">
+      <input
+        type="date"
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      <FieldError fieldId={field.id} error={error} />
+    </div>
   ),
   select: ({ field, value, onChange, error, theme }) => (
-    <select
-      id={field.id}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-        error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
-      }`}
-      style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
-      aria-label={field.label}
-      aria-required={field.required}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${field.id}-error` : undefined}
-    >
-      <option value="">Select an option</option>
-      {field.options?.map((option, index) => (
-        <option key={index} value={option}>
-          {option}
-        </option>
-      ))}
-    </select>
+    <div className="space-y-0">
+      <select
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      >
+        <option value="">Select an option</option>
+        {field.options?.map((option, index) => (
+          <option key={index} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <FieldError fieldId={field.id} error={error} />
+    </div>
   ),
   checkbox: ({ field, value, onChange, error, theme }) => (
     <fieldset className={`space-y-3 ${error ? 'border border-red-500 rounded-lg p-4' : ''}`} aria-label={field.label}>
@@ -369,6 +447,9 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
 
+  // Schedule check (re-evaluates whenever form changes; skipped in preview mode)
+  const scheduleStatus = preview ? { open: true, closedMessage: null } : evaluateSchedule(form?.accessSchedule);
+
   useEffect(() => {
     const initialData = {};
     (form.fields || []).forEach(field => {
@@ -502,23 +583,26 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   const theme = { ...DEFAULT_THEME, ...form.theme };
   const formFields = form.fields || [];
 
-  const pages = formFields.reduce((acc, field) => {
-    if (field.type === 'pageBreak') {
-      acc.push([]);
-    } else {
-      acc[acc.length - 1] = [...acc[acc.length - 1], field];
-    }
-    return acc;
-  }, [[]]).filter((page) => page.length > 0);
+  // Each row is one "page". Rows whose conditional logic is false are skipped.
+  const allRows = (form.rows || []).filter((row) =>
+    evaluateConditionalLogic(row.conditionalLogic, formData)
+  );
+  // pages: array of { row, fields }
+  const pages = allRows.map((row) => ({
+    row,
+    fields: formFields.filter((f) => f.rowId === row.id && f.type !== 'pageBreak'),
+  })).filter((p) => p.fields.length > 0);
 
-  const allFields = pages.flat();
-  const currentPageFields = pages[currentPage] || [];
+  const allFields = formFields.filter((f) => f.type !== 'pageBreak');
+  const currentPage_obj = pages[currentPage];
+  const currentRow = currentPage_obj?.row;
+  const currentPageFields = currentPage_obj?.fields || [];
   const visiblePageFields = currentPageFields.filter((field) =>
     evaluateConditionalLogic(field.conditionalLogic, formData)
   );
 
   const validatePage = (pageIndex) => {
-    const pageFields = pages[pageIndex] || [];
+    const pageFields = pages[pageIndex]?.fields || [];
     const visibleFields = pageFields.filter((field) =>
       evaluateConditionalLogic(field.conditionalLogic, formData)
     );
@@ -539,6 +623,26 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
 
   const pageProgress = pages.length > 0 ? (currentPage + 1) / pages.length : 1;
 
+  // Show "form closed" screen when schedule is active and current time is outside all open windows
+  if (!scheduleStatus.open) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
+      >
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <Lock className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+          <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textColor }}>
+            {form.title}
+          </h1>
+          <p className="text-gray-600 leading-relaxed">
+            {scheduleStatus.closedMessage}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!preview && isSubmitted) {
     return (
       <div
@@ -558,12 +662,23 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     );
   }
 
+  const layoutGrid = {
+    '1': 'grid-cols-1',
+    '2': 'grid-cols-1 sm:grid-cols-2',
+    '3': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    '4': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+  };
+  const hasMultiColumnRow = (form.rows || []).some((r) => r.columns && r.columns !== '1');
+  const layoutMaxWidth = hasMultiColumnRow ? 'max-w-6xl' : 'max-w-2xl';
+  const isLastPage = currentPage === pages.length - 1;
+  const gridClass = layoutGrid[currentRow?.columns] || 'grid-cols-1';
+
   return (
     <div
       className="min-h-screen py-12 px-4"
       style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
     >
-      <div className="max-w-2xl mx-auto">
+      <div className={`${layoutMaxWidth} mx-auto`}>
         <div className="bg-white rounded-xl shadow-lg p-8">
           {/* Form Header */}
           <div className="mb-8">
@@ -575,86 +690,160 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
             )}
           </div>
 
-          {/* Progress Bar */}
-          {theme.showProgressBar && pages.length > 0 && (
-            <div className="mb-6">
-              <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full transition-all duration-300"
-                  style={{ width: `${pageProgress * 100}%`, backgroundColor: theme.primaryColor }}
-                />
+          {/* Progress indicator — style controlled by theme.progressBarStyle */}
+          {pages.length > 1 && (() => {
+            const style = theme.progressBarStyle || (theme.showProgressBar ? 'bar' : 'none');
+            if (style === 'none') return null;
+
+            return (
+              <div className="mb-8">
+                {/* Step circles (only for 'steps' style) */}
+                {style === 'steps' && (
+                  <div className="flex items-center mb-3">
+                    {pages.map(({ row }, index) => {
+                      const isCompleted = index < currentPage;
+                      const isCurrent = index === currentPage;
+                      return (
+                        <div key={row.id} className="flex items-center flex-1 last:flex-none">
+                          <div className="flex flex-col items-center gap-1">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300 ${
+                                isCompleted
+                                  ? 'border-transparent text-white'
+                                  : isCurrent
+                                  ? 'border-transparent text-white shadow-md'
+                                  : 'bg-white text-gray-400 border-gray-200'
+                              }`}
+                              style={
+                                isCompleted || isCurrent
+                                  ? { backgroundColor: theme.primaryColor, borderColor: theme.primaryColor }
+                                  : {}
+                              }
+                              aria-label={`Step ${index + 1}${isCompleted ? ' (completed)' : isCurrent ? ' (current)' : ''}`}
+                            >
+                              {isCompleted ? (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden="true">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                index + 1
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-500 text-center max-w-[64px] truncate" title={row.label || `Section ${index + 1}`}>
+                              {row.label || `Section ${index + 1}`}
+                            </span>
+                          </div>
+                          {index < pages.length - 1 && (
+                            <div className="flex-1 mx-1 h-0.5 rounded-full overflow-hidden bg-gray-200 self-start mt-4">
+                              <div
+                                className="h-full transition-all duration-500"
+                                style={{ width: index < currentPage ? '100%' : '0%', backgroundColor: theme.primaryColor }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Thin bar + percentage (only for 'bar' style) */}
+                {style === 'bar' && <div className="flex items-center gap-3">
+                  <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pageProgress * 100}%`, backgroundColor: theme.primaryColor }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium tabular-nums flex-shrink-0" style={{ color: theme.textColor, opacity: 0.6 }}>
+                    {Math.round(pageProgress * 100)}%
+                  </span>
+                </div>}
               </div>
-              <p className="text-sm mt-2 text-right" style={{ color: theme.textColor, opacity: 0.7 }}>
-                Page {currentPage + 1} of {pages.length}
-              </p>
+            );
+          })()}
+
+          {/* Section heading (shown on the page) */}
+          {currentRow && (
+            <div className="mb-6 pb-4 border-b border-gray-100">
+              <h2 className="text-xl font-semibold" style={{ color: theme.textColor }}>
+                {currentRow.label || `Section ${currentPage + 1}`}
+              </h2>
+              {currentRow.description && (
+                <p className="text-sm mt-1" style={{ color: theme.textColor, opacity: 0.7 }}>
+                  {currentRow.description}
+                </p>
+              )}
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {visiblePageFields.map((field, index) => {
-              const FieldComponent = FIELD_COMPONENTS[field.type];
-              if (!FieldComponent) return null;
+          <form onSubmit={handleSubmit}>
+            <div
+              className={`grid ${gridClass} gap-6 mb-6`}
+              style={currentRow?.backgroundColor ? { backgroundColor: currentRow.backgroundColor, borderRadius: '0.75rem', padding: '1.25rem' } : {}}
+            >
+              {visiblePageFields.map((field) => {
+                const FieldComponent = FIELD_COMPONENTS[field.type];
+                if (!FieldComponent) return null;
 
-              return (
-                <div key={field.id} className="space-y-2">
-                  {field.type !== 'checkbox' && (
-                    <label
-                      htmlFor={field.id}
-                      className="block text-sm font-medium"
-                      style={{ color: theme.textColor }}
-                    >
-                      {theme.showQuestionNumbers && (
-                        <span
-                          className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs mr-2"
-                          style={{ backgroundColor: theme.primaryColor, color: theme.buttonTextColor }}
-                        >
-                          {index + 1}
-                        </span>
-                      )}
-                      {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-                  )}
+                const isFullWidth = field.type === 'content';
+                const questionNumber = visiblePageFields.findIndex((f) => f.id === field.id) + 1;
 
-                  <FieldComponent
-                    field={field}
-                    value={formData[field.id]}
-                    onChange={(value) => handleFieldChange(field.id, value)}
-                    error={errors[field.id]}
-                    theme={theme}
-                  />
+                return (
+                  <div key={field.id} className={`space-y-2${isFullWidth ? ' col-span-full' : ''}`}>
+                    {field.type !== 'checkbox' && field.type !== 'content' && (
+                      <label
+                        htmlFor={field.id}
+                        className="block text-sm font-medium"
+                        style={{ color: theme.textColor }}
+                      >
+                        {theme.showQuestionNumbers && (
+                          <span
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs mr-2"
+                            style={{ backgroundColor: theme.primaryColor, color: theme.buttonTextColor }}
+                          >
+                            {questionNumber}
+                          </span>
+                        )}
+                        {field.label}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                    )}
 
-                  {field.helpText && (
-                    <p className="text-sm" style={{ color: theme.textColor, opacity: 0.7 }}>
-                      {field.helpText}
-                    </p>
-                  )}
+                    <FieldComponent
+                      field={field}
+                      value={formData[field.id]}
+                      onChange={(value) => handleFieldChange(field.id, value)}
+                      error={errors[field.id]}
+                      theme={theme}
+                    />
 
-                  {errors[field.id] && field.type !== 'checkbox' && (
-                    <p id={`${field.id}-error`} className="text-sm text-red-600">
-                      {errors[field.id]}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+                    {field.helpText && (
+                      <p className="text-sm" style={{ color: theme.textColor, opacity: 0.7 }}>
+                        {field.helpText}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
-            <div className="flex items-center gap-3 pt-4">
+            <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
               {currentPage > 0 && (
                 <button
                   type="button"
                   onClick={handlePrevious}
-                  className="px-6 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors min-h-[48px]"
+                  className="flex-1 px-6 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors min-h-[48px]"
                   style={{ '--tw-ring-color': theme.primaryColor }}
                 >
-                  Previous
+                  ← Back
                 </button>
               )}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[48px]"
+                className="flex-1 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[48px] font-medium"
                 style={{
                   backgroundColor: theme.buttonColor,
                   color: theme.buttonTextColor,
@@ -666,11 +855,10 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Submitting...
                   </span>
-                ) : (
-                  preview
-                    ? (currentPage === pages.length - 1 ? 'Preview Submit' : 'Preview Next')
-                    : (currentPage === pages.length - 1 ? theme.buttonText : 'Next')
-                )}
+                ) : preview
+                  ? (isLastPage ? 'Preview Submit' : 'Next →')
+                  : (isLastPage ? theme.buttonText : 'Next →')
+                }
               </button>
             </div>
           </form>
