@@ -643,15 +643,18 @@ const useFormStore = create((set, get) => ({
   // --- Version History ---
   formVersions: [],
   versionsLoading: false,
+  versionsError: null,
 
   loadVersions: async (formId) => {
-    set({ versionsLoading: true });
+    if (!formId) return;
+    // Clear stale data from a previous form immediately
+    set({ versionsLoading: true, formVersions: [], versionsError: null });
     try {
       const versions = await fetchVersionsApi(formId);
-      set({ formVersions: versions, versionsLoading: false });
+      set({ formVersions: versions ?? [], versionsLoading: false });
     } catch (e) {
       console.warn('Failed to load form versions:', e);
-      set({ versionsLoading: false });
+      set({ versionsLoading: false, versionsError: 'Could not load version history.' });
     }
   },
 

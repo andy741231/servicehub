@@ -23,6 +23,7 @@ export default function FormsBuilder() {
   const [showFieldModal, setShowFieldModal] = useState(false);
   const [targetRowId, setTargetRowId] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyOpenCount, setHistoryOpenCount] = useState(0);
 
   const {
     fields,
@@ -320,7 +321,7 @@ export default function FormsBuilder() {
               <span className="text-body">Export</span>
             </button>
             <button
-              onClick={() => setShowHistory((v) => !v)}
+              onClick={() => { setShowHistory((v) => { if (!v) setHistoryOpenCount((c) => c + 1); return !v; }); }}
               className={`flex items-center gap-2 px-3 py-2 border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150 ${showHistory ? 'bg-primary text-white border-primary' : 'bg-surface-raised border-border hover:bg-surface'}`}
               title="Version history"
               aria-label="Version history"
@@ -397,6 +398,7 @@ export default function FormsBuilder() {
       <aside className="w-80 bg-surface border-l border-border flex flex-col" aria-label={showHistory ? 'Version history' : 'Properties panel'}>
         {showHistory ? (
           <VersionHistoryPanel
+            key={`history-${historyOpenCount}`}
             formId={currentFormId}
             onClose={() => setShowHistory(false)}
             onRestored={(form) => {

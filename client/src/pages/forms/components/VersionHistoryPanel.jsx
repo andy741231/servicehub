@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { History, RotateCcw, User, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { History, RotateCcw, User, Clock, ChevronDown, ChevronUp, X, RefreshCw, AlertCircle } from 'lucide-react';
 import useFormStore from '../store/formStore';
 
 function formatDateTime(iso) {
@@ -11,14 +11,17 @@ function formatDateTime(iso) {
 }
 
 export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
-  const { formVersions, versionsLoading, loadVersions, restoreVersion } = useFormStore();
+  const { formVersions, versionsLoading, versionsError, loadVersions, restoreVersion } = useFormStore();
   const [expandedId, setExpandedId] = useState(null);
   const [restoringId, setRestoringId] = useState(null);
   const [restoreError, setRestoreError] = useState(null);
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     if (formId) loadVersions(formId);
   }, [formId, loadVersions]);
+
+  // Fetch whenever formId changes or panel first mounts
+  useEffect(() => { refresh(); }, [refresh]);
 
   const handleRestore = async (versionId) => {
     setRestoreError(null);
@@ -41,13 +44,24 @@ export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
           <History className="h-5 w-5 text-primary" />
           <h2 className="text-base font-semibold text-base-color">Version History</h2>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 text-muted hover:text-base-color hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary"
-          aria-label="Close version history"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={refresh}
+            disabled={versionsLoading}
+            className="p-1.5 text-muted hover:text-base-color hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-40"
+            aria-label="Refresh version history"
+            title="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${versionsLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-muted hover:text-base-color hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Close version history"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Body */}
@@ -58,7 +72,20 @@ export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
           </div>
         )}
 
-        {!versionsLoading && formVersions.length === 0 && (
+        {!versionsLoading && versionsError && (
+          <div className="flex flex-col items-center py-12 text-center gap-3">
+            <AlertCircle className="h-10 w-10 text-red-400" />
+            <p className="text-small text-red-600">{versionsError}</p>
+            <button
+              onClick={refresh}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Try again
+            </button>
+          </div>
+        )}
+
+        {!versionsLoading && !versionsError && formVersions.length === 0 && (
           <div className="text-center py-12">
             <History className="h-10 w-10 text-muted mx-auto mb-3" />
             <p className="text-body text-muted">No saved versions yet.</p>
@@ -66,7 +93,7 @@ export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
           </div>
         )}
 
-        {restoreError && (
+        {(restoreError) && (
           <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-base text-small text-red-600">
             {restoreError}
           </div>

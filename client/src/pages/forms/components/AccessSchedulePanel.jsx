@@ -248,8 +248,7 @@ export default function AccessSchedulePanel() {
         />
       </div>
 
-      {schedule.enabled && (
-        <div className="space-y-4">
+      <div className={`space-y-4 transition-opacity duration-200 ${schedule.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none select-none'}`}>
           <p className="text-xs text-muted leading-relaxed">
             All enabled constraints must be satisfied at the same time. Weekly slots within a constraint are OR'd — the form opens if any slot matches.
           </p>
@@ -351,8 +350,7 @@ export default function AccessSchedulePanel() {
             />
             <p className="text-xs text-muted mt-1">Shown to visitors when the form is outside the allowed window.</p>
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

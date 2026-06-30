@@ -684,18 +684,20 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
       className="min-h-screen py-12 px-4"
       style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
     >
+      {/* Form title & description — sits above the card, full-width within the outer padding */}
+      <div className={`${layoutMaxWidth} mx-auto mb-6`}>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: theme.textColor }}>
+          {form.title}
+        </h1>
+        {form.description && (
+          <p className="text-base" style={{ color: theme.textColor, opacity: 0.8 }}>{form.description}</p>
+        )}
+      </div>
+
       <div className={`${layoutMaxWidth} mx-auto`}>
         <div className="bg-white rounded-xl shadow-lg p-8">
-          {/* Form Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2" style={{ color: theme.textColor }}>
-              {form.title}
-            </h1>
-            {form.description && (
-              <p style={{ color: theme.textColor, opacity: 0.8 }}>{form.description}</p>
-            )}
-          </div>
 
+          {/* (Form title moved above card) */}
           {/* Progress indicator — style controlled by theme.progressBarStyle */}
           {pages.length > 1 && (() => {
             const style = theme.progressBarStyle || (theme.showProgressBar ? 'bar' : 'none');
