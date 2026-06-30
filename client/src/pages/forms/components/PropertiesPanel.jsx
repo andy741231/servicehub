@@ -4,6 +4,8 @@ import useFormStore from '../store/formStore';
 import { CONDITION_OPERATORS, DEFAULT_CONDITIONAL_LOGIC, hasConditionalLogic } from '../utils/conditionalLogic';
 import { DEFAULT_THEME } from '../store/formStore';
 import AccessSchedulePanel from './AccessSchedulePanel';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Tag },
@@ -729,13 +731,25 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
               <label htmlFor="theme-thank-you-message" className="block text-small font-medium text-base mb-1.5">
                 Thank You Message
               </label>
-              <textarea
-                id="theme-thank-you-message"
-                value={theme.thankYouMessage}
-                onChange={(e) => updateFormTheme({ thankYouMessage: e.target.value })}
-                rows={2}
-                className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-muted resize-none"
-              />
+              <div className="prose-editor">
+                <ReactQuill
+                  theme="snow"
+                  value={theme.thankYouMessage || ''}
+                  onChange={(value) => updateFormTheme({ thankYouMessage: value })}
+                  className="bg-background [&_.ql-container]:min-h-[100px] [&_.ql-container]:text-body [&_.ql-container]:font-sans [&_.ql-toolbar]:border-border [&_.ql-container]:border-border [&_.ql-container]:rounded-b-base [&_.ql-toolbar]:rounded-t-base"
+                  modules={{
+                    toolbar: [
+                      [{ header: [1, 2, 3, false] }],
+                      ['bold', 'italic', 'underline'],
+                      [{ list: 'ordered' }, { list: 'bullet' }],
+                      [{ align: [] }],
+                      ['link'],
+                      ['clean'],
+                    ],
+                  }}
+                  formats={['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'align', 'link']}
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="theme-redirect-url" className="block text-small font-medium text-base mb-1.5">
