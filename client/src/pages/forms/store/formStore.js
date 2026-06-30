@@ -108,12 +108,28 @@ const normalizeForm = (backendForm) => {
     rows,
     fields,
     theme,
-    // Normalise schedule to the AND-based model; discard legacy rules[] shape
+    // Normalise schedule to the AND-based + slots model
     accessSchedule: (() => {
       const s = schema.accessSchedule;
       if (!s) return null;
-      // Legacy shape had a top-level rules[] array — discard it cleanly
+      // Legacy v1: top-level rules[] array — discard
       if (Array.isArray(s.rules)) return null;
+      // Migrate legacy v2 weeklyHours that had days/startTime/endTime directly (no slots[])
+      const wh = s.weeklyHours;
+      if (wh && !Array.isArray(wh.slots) && (wh.days || wh.startTime)) {
+        return {
+          ...s,
+          weeklyHours: {
+            enabled: wh.enabled ?? false,
+            slots: [{
+              id: `slot-migrated`,
+              days: wh.days || [],
+              startTime: wh.startTime || '09:00',
+              endTime: wh.endTime || '17:00',
+            }],
+          },
+        };
+      }
       return s;
     })(),
     createdAt: backendForm.createdAt,

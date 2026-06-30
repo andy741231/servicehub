@@ -9,44 +9,48 @@ const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frid
 /**
  * Evaluates whether the form is currently accessible based on its accessSchedule.
  *
- * Data model (AND-based):
+ * Data model:
  *   schedule.enabled        — master switch; false → always open
- *   schedule.dateRange      — { enabled, startDate, endDate } — optional date window
- *   schedule.weeklyHours    — { enabled, days[], startTime, endTime } — optional recurring hours
+ *   schedule.dateRange      — { enabled, startDate, endDate }
+ *   schedule.weeklyHours    — { enabled, slots: [{ days[], startTime, endTime }] }
  *   schedule.closedMessage  — shown when closed
  *
- * All enabled constraints must be satisfied simultaneously (AND logic).
- * If no constraint is enabled the master switch has no effect → form is open.
+ * AND logic between constraints; OR logic across weekly slots.
+ * "Date window Jun 17–18 AND weekly slots [Mon–Wed 9–12, Thu–Fri 14–17]" means:
+ *   open only during Jun 17–18, and only when a slot matches the current day/time.
  */
 function evaluateSchedule(accessSchedule) {
   if (!accessSchedule?.enabled) return { open: true, closedMessage: null };
 
   const { dateRange, weeklyHours, closedMessage } = accessSchedule;
+  const closed = { open: false, closedMessage: closedMessage || 'This form is currently closed. Please check back later.' };
   const hasAnyConstraint = dateRange?.enabled || weeklyHours?.enabled;
   if (!hasAnyConstraint) return { open: true, closedMessage: null };
 
   const now = new Date();
   const currentDay = DAY_NAMES[now.getDay()];
-  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const currentTime = `${hh}:${mm}`;
   const currentDate = now.toISOString().slice(0, 10);
 
-  // Check date window constraint
+  // Date window — must be satisfied if enabled
   if (dateRange?.enabled) {
     const start = dateRange.startDate || '';
     const end = dateRange.endDate || '';
-    if (currentDate < start || currentDate > end) {
-      return { open: false, closedMessage: closedMessage || 'This form is currently closed. Please check back later.' };
-    }
+    if (currentDate < start || currentDate > end) return closed;
   }
 
-  // Check weekly hours constraint
+  // Weekly hours — at least one slot must match (OR across slots)
   if (weeklyHours?.enabled) {
-    const days = weeklyHours.days || [];
-    const start = weeklyHours.startTime || '00:00';
-    const end = weeklyHours.endTime || '23:59';
-    if (!days.includes(currentDay) || currentTime < start || currentTime >= end) {
-      return { open: false, closedMessage: closedMessage || 'This form is currently closed. Please check back later.' };
-    }
+    const slots = weeklyHours.slots || [];
+    const anySlotOpen = slots.some((slot) => {
+      const days = slot.days || [];
+      const start = slot.startTime || '00:00';
+      const end = slot.endTime || '23:59';
+      return days.includes(currentDay) && currentTime >= start && currentTime < end;
+    });
+    if (!anySlotOpen) return closed;
   }
 
   return { open: true, closedMessage: null };
