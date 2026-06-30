@@ -108,7 +108,10 @@ const normalizeForm = (backendForm) => {
     rows,
     fields,
     theme,
-    accessSchedule: schema.accessSchedule || null,
+    // Normalise schedule: strip legacy top-level `enabled` flag; rules presence is the truth
+    accessSchedule: schema.accessSchedule
+      ? { rules: schema.accessSchedule.rules || [] }
+      : null,
     createdAt: backendForm.createdAt,
     updatedAt: backendForm.updatedAt,
   };

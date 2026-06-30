@@ -292,7 +292,7 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
   }
 
   if (!field) {
-    const hasSchedule = currentForm?.accessSchedule?.enabled && (currentForm?.accessSchedule?.rules?.length > 0);
+    const hasSchedule = (currentForm?.accessSchedule?.rules || []).some((r) => r.enabled);
     return (
       <div className="flex-1 flex flex-col overflow-hidden" role="tabpanel" aria-label="Form settings">
         {/* Form-level tab bar */}

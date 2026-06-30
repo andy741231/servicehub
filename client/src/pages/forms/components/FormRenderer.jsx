@@ -14,8 +14,8 @@ const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frid
  * closedMessage so the renderer can show it.
  */
 function evaluateSchedule(accessSchedule) {
-  if (!accessSchedule?.enabled) return { open: true, closedMessage: null };
-  const rules = (accessSchedule.rules || []).filter((r) => r.enabled);
+  // No schedule or no enabled rules → always open
+  const rules = (accessSchedule?.rules || []).filter((r) => r.enabled);
   if (rules.length === 0) return { open: true, closedMessage: null };
 
   const now = new Date();

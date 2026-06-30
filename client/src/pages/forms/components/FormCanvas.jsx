@@ -194,13 +194,14 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
     <div
       className={`p-4 border rounded-base transition-all duration-200 cursor-pointer bg-surface hover:border-border-dark ${isSelected ? 'border-primary shadow-sm' : 'border-border'}`}
       onClick={() => onSelectField(field.id)}
+      onMouseDown={() => onSelectField(field.id)}
     >
       <div className="flex items-start gap-3">
         <div {...dragHandleProps} className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted">
           <GripVertical className="h-5 w-5" />
         </div>
 
-        <div className="flex-1 min-w-0" onClick={() => onSelectField(field.id)}>
+        <div className="flex-1 min-w-0">
           {field.type !== 'content' && (
             <div className="flex items-center gap-2 mb-2">
               <label htmlFor={`field-label-${field.id}`} className="sr-only">Field label</label>
@@ -239,9 +240,9 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
           )}
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => onDuplicateField(field.id)}
+            onClick={() => { onSelectField(field.id); onDuplicateField(field.id); }}
             className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
             title="Duplicate field"
             aria-label={`Duplicate ${field.label || 'field'}`}
