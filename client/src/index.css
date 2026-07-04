@@ -16,8 +16,10 @@
   --color-background:         hsl(var(--background));
   --color-surface:            hsl(var(--surface));
   --color-surface-raised:     hsl(var(--surface-raised));
+  --color-surface-tertiary:   hsl(var(--surface-tertiary));
 
   --color-border:             hsl(var(--border));
+  --color-border-soft:        hsl(var(--border-soft));
   --color-border-strong:      hsl(var(--border-strong));
 
   --color-text-base:          hsl(var(--text-base));
@@ -39,9 +41,11 @@
   --radius-base: var(--radius-base-value);
   --radius-card: var(--radius-card-value);
   --radius-lg:   var(--radius-lg-value);
+  --radius-2xl:  var(--radius-2xl-value);
 
   /* --- Shadows --- */
   --shadow-card:     var(--shadow-card-value);
+  --shadow-card-sm:  var(--shadow-card-sm-value);
   --shadow-dropdown: var(--shadow-dropdown-value);
   --shadow-modal:    var(--shadow-modal-value);
 
@@ -77,7 +81,9 @@
     --background:         210 20% 98%;   /* #F9FAFB */
     --surface:            0 0% 100%;     /* #FFFFFF */
     --surface-raised:     220 14% 96%;   /* #F3F4F6 */
+    --surface-tertiary:   240 10% 93%;   /* #E8E8ED */
     --border:             220 13% 91%;   /* #E5E7EB */
+    --border-soft:        240 15% 91%;   /* #E5E5EA */
     --border-strong:      216 12% 84%;   /* #D1D5DB */
 
     /* Text */
@@ -101,9 +107,11 @@
     --radius-base-value: 6px;
     --radius-card-value: 8px;
     --radius-lg-value:   12px;
+    --radius-2xl-value:  16px;
 
     /* Shadows */
     --shadow-card-value:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-card-sm-value:  0 1px 3px rgba(0,0,0,0.04);
     --shadow-dropdown-value: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
     --shadow-modal-value:    0 20px 25px -5px rgba(0,0,0,0.10), 0 10px 10px -5px rgba(0,0,0,0.04);
   }
@@ -187,6 +195,29 @@
   .badge-danger  { background-color: hsl(var(--danger-light));  color: hsl(var(--danger));  }
   .badge-info    { background-color: hsl(var(--info-light));    color: hsl(var(--info));    }
   .badge-neutral { background-color: hsl(var(--surface-raised)); color: hsl(var(--text-muted)); }
+
+  /* Small icon button for hover-reveal card actions */
+  .icon-btn-sm {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: hsl(var(--text-muted));
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+  }
+  .icon-btn-sm:hover { background: hsl(var(--surface-raised)); color: hsl(var(--text-base)); }
+
+  /* Form card hover/focus reveal for quick actions */
+  .form-card .quick-actions { opacity: 0; transition: opacity 0.15s; }
+  .form-card:hover .quick-actions,
+  .form-card:focus-within .quick-actions { opacity: 1; }
+  @media (hover: none) {
+    .form-card .quick-actions { opacity: 1; }
+  }
   .badge-primary { background-color: hsl(var(--primary-light)); color: hsl(var(--primary)); }
 
   /* Safe area utilities for modern phones with notches and gesture bars */
@@ -194,4 +225,27 @@
   .safe-bottom { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .safe-left { padding-left: max(16px, env(safe-area-inset-left)); }
   .safe-right { padding-right: max(16px, env(safe-area-inset-right)); }
+
+  /* ─── Elevation system (4 levels) ───────────────────────────────
+     0 — Base:      canvas/panel backgrounds (no shadow)
+     1 — Raised:    field/section cards at rest
+     2 — Elevated:  selected field/section, hover state
+     3 — Floating:  drag preview, modals, dropdowns
+  */
+  .elevation-0 { box-shadow: none; }
+  .elevation-1 { box-shadow: var(--shadow-card-value); }
+  .elevation-2 { box-shadow: var(--shadow-dropdown-value); }
+  .elevation-3 { box-shadow: var(--shadow-modal-value); }
+
+  /* Canvas dotted-grid background — subtle spatial cue (Notion/Figma pattern) */
+  .canvas-grid {
+    background-image: radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -12px -12px;
+  }
+
+  /* Smooth width/opacity transition for collapsible sidebars */
+  .sidebar-transition {
+    transition: width 200ms ease-out, opacity 150ms ease-out;
+  }
 }

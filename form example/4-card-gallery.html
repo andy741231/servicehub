@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FormHub — Card Gallery</title>
+<style>
+  :root {
+    --cream-canvas: #faf9fb;
+    --aubergine-ink: #2a222b;
+    --deep-plum: #3e3040;
+    --violet-mist: #9454ab;
+    --lavender-whisper: #ddb7f0;
+    --pure-white: #ffffff;
+    --border: #e5e1e6;
+    --border-strong: #d4d1d5;
+    --text-secondary: #655d67;
+    --text-muted: #9b929d;
+    --green: #2d8f5b;
+    --shadow: 0 1px 3px rgba(42, 34, 43, 0.06), 0 1px 2px rgba(42, 34, 43, 0.04);
+    --shadow-hover: 0 8px 24px rgba(42, 34, 43, 0.1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--cream-canvas);
+    color: var(--aubergine-ink);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: 'Georgia', 'Times New Roman', serif; }
+  .app { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh; }
+
+  /* SIDEBAR (shared style with example 1) */
+  .sidebar {
+    background: var(--aubergine-ink); color: #d8d2db;
+    padding: 24px 0; position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  .logo {
+    padding: 0 24px 28px; font-family: 'Georgia', serif;
+    font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+    color: #fff; display: flex; align-items: center; gap: 10px;
+  }
+  .logo-dot { width: 10px; height: 10px; background: var(--violet-mist); border-radius: 50%; }
+  .nav-section { padding: 0 16px; }
+  .nav-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-muted); padding: 16px 12px 8px; font-weight: 600;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: 8px; color: #c4bdc7; text-decoration: none;
+    font-size: 14px; font-weight: 500; transition: background 0.15s, color 0.15s; cursor: pointer;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+  .nav-item.active { background: rgba(148, 84, 171, 0.22); color: #fff; }
+  .nav-item .icon { width: 18px; height: 18px; opacity: 0.85; }
+  .nav-item .badge {
+    margin-left: auto; background: var(--violet-mist); color: #fff;
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  }
+  .sidebar-footer {
+    margin-top: auto; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--violet-mist), var(--lavender-whisper));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 14px;
+  }
+  .user-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .user-email { font-size: 12px; color: var(--text-muted); }
+
+  /* MAIN */
+  .main { padding: 40px 48px; max-width: 1536px; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;
+  }
+  .topbar h1 { font-family: 'Georgia', serif; font-size: 34px; font-weight: 700; letter-spacing: -0.03em; }
+  .topbar p { color: var(--text-secondary); font-size: 15px; margin-top: 4px; }
+  .topbar-right { display: flex; gap: 12px; align-items: center; }
+  .search {
+    width: 320px; padding: 10px 14px 10px 38px; border: 1px solid var(--border-strong);
+    border-radius: 10px; background: var(--pure-white) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23655d67' stroke-width='2' viewBox='0 0 24 24'><circle cx='11' cy='11' r='7'/><path d='m21 21-4.3-4.3'/></svg>") no-repeat 12px center;
+    font-size: 14px; color: var(--aubergine-ink); outline: none; transition: border 0.15s, box-shadow 0.15s;
+  }
+  .search:focus { border-color: var(--violet-mist); box-shadow: 0 0 0 3px rgba(148,84,171,0.12); }
+  .btn {
+    padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    border: none; cursor: pointer; transition: transform 0.1s, background 0.15s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--aubergine-ink); color: #fff; }
+  .btn-primary:hover { background: var(--deep-plum); }
+  .btn-ghost { background: transparent; color: var(--aubergine-ink); border: 1px solid var(--border-strong); }
+  .btn-ghost:hover { background: var(--pure-white); }
+
+  /* TOOLBAR */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .tabs { display: flex; gap: 2px; background: var(--pure-white); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
+  .tab {
+    padding: 7px 16px; border-radius: 7px; font-size: 13px; font-weight: 600;
+    border: none; background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tab.active { background: var(--aubergine-ink); color: #fff; }
+  .tab .count { font-size: 11px; opacity: 0.7; }
+
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+    background: var(--pure-white); border: 1px solid var(--border-strong);
+    border-radius: 18px; font-size: 13px; font-weight: 500; color: var(--aubergine-ink); cursor: pointer;
+  }
+  .filter-chip.active { background: rgba(148,84,171,0.1); border-color: var(--violet-mist); color: var(--violet-mist); }
+  .filter-chip .x { opacity: 0.5; cursor: pointer; }
+  .filter-chip .x:hover { opacity: 1; }
+
+  .view-toggle { display: flex; gap: 2px; background: var(--pure-white); border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-left: auto; }
+  .view-btn {
+    width: 34px; height: 32px; border-radius: 7px; border: none; background: transparent;
+    color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .view-btn.active { background: var(--aubergine-ink); color: #fff; }
+
+  .sort-dropdown {
+    padding: 8px 14px; border: 1px solid var(--border-strong); border-radius: 10px;
+    background: var(--pure-white); font-size: 13px; font-weight: 500; color: var(--aubergine-ink);
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+
+  /* CARD GRID */
+  .forms-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px;
+  }
+  .form-card {
+    background: var(--pure-white); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; box-shadow: var(--shadow); transition: box-shadow 0.2s, transform 0.2s;
+    cursor: pointer; display: flex; flex-direction: column;
+  }
+  .form-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-3px); }
+
+  .form-preview {
+    height: 140px; position: relative; padding: 20px; overflow: hidden;
+    background: linear-gradient(135deg, #f5f0f7, #e8ddf0);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .form-preview.p2 { background: linear-gradient(135deg, #e8f4fd, #c8e3f7); }
+  .form-preview.p3 { background: linear-gradient(135deg, #e8f8ee, #c8edda); }
+  .form-preview.p4 { background: linear-gradient(135deg, #fff4e8, #ffe2c8); }
+  .form-preview.p5 { background: linear-gradient(135deg, #fde8f4, #f7c8e3); }
+  .form-preview.p6 { background: linear-gradient(135deg, #f0f0f3, #d8d8e0); }
+  .preview-line { height: 8px; border-radius: 4px; background: rgba(42,34,43,0.15); }
+  .preview-line.short { width: 60%; }
+  .preview-line.medium { width: 80%; }
+  .preview-box { height: 22px; border-radius: 6px; background: rgba(42,34,43,0.1); width: 100%; }
+  .preview-btn { height: 26px; width: 80px; border-radius: 6px; background: rgba(42,34,43,0.25); margin-top: auto; }
+
+  .form-status-pill {
+    position: absolute; top: 14px; right: 14px;
+    padding: 4px 10px; border-radius: 14px; font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+    backdrop-filter: blur(8px); background: rgba(255,255,255,0.85);
+  }
+  .form-status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status-live { color: var(--green); }
+  .status-draft { color: var(--violet-mist); }
+  .status-closed { color: var(--text-secondary); }
+
+  .form-card-body { padding: 18px 20px; flex: 1; display: flex; flex-direction: column; }
+  .form-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .form-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 14px; }
+  .form-meta-row {
+    display: flex; gap: 16px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  }
+  .meta-item { display: flex; flex-direction: column; }
+  .meta-value { font-size: 16px; font-weight: 700; font-family: 'Georgia', serif; }
+  .meta-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+
+  .form-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
+  .form-updated { font-size: 12px; color: var(--text-muted); }
+  .form-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+  .form-card:hover .form-actions { opacity: 1; }
+  .icon-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent;
+    color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s, color 0.12s;
+  }
+  .icon-btn:hover { background: var(--border); color: var(--aubergine-ink); }
+
+  /* NEW FORM CARD */
+  .new-card {
+    border: 2px dashed var(--border-strong); background: transparent; box-shadow: none;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    color: var(--text-secondary); cursor: pointer; transition: all 0.2s; min-height: 320px;
+  }
+  .new-card:hover { border-color: var(--violet-mist); color: var(--violet-mist); background: rgba(148,84,171,0.04); transform: none; box-shadow: none; }
+  .new-card-icon {
+    width: 48px; height: 48px; border-radius: 14px; background: rgba(148,84,171,0.1);
+    color: var(--violet-mist); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+  }
+  .new-card h3 { font-family: 'Georgia', serif; font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .new-card p { font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-dot"></span> FormHub</div>
+    <div class="nav-section">
+      <div class="nav-label">Workspace</div>
+      <a class="nav-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg> Dashboard</a>
+      <a class="nav-item active"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Forms <span class="badge">24</span></a>
+      <a class="nav-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Submissions <span class="badge">1.2k</span></a>
+      <a class="nav-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 12l4-4 4 4 5-5"/></svg> Analytics</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Library</div>
+      <a class="nav-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg> Templates</a>
+      <a class="nav-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar">AM</div>
+      <div><div class="user-name">Andy Marsh</div><div class="user-email">andy@formhub.io</div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="serif">Forms</h1>
+        <p>24 forms · 18 live · 4 drafts · 2 closed</p>
+      </div>
+      <div class="topbar-right">
+        <input class="search" placeholder="Search forms…">
+        <button class="btn btn-ghost">Import</button>
+        <button class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New Form</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="tabs">
+        <button class="tab active">All <span class="count">24</span></button>
+        <button class="tab">Live <span class="count">18</span></button>
+        <button class="tab">Drafts <span class="count">4</span></button>
+        <button class="tab">Closed <span class="count">2</span></button>
+        <button class="tab">Archived <span class="count">0</span></button>
+      </div>
+      <span class="filter-chip active">Last 30 days <span class="x">×</span></span>
+      <button class="sort-dropdown">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        Recently updated
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="view-toggle">
+        <button class="view-btn active" title="Grid view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+        <button class="view-btn" title="List view"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+      </div>
+    </div>
+
+    <div class="forms-grid">
+      <!-- Card 1 -->
+      <div class="form-card">
+        <div class="form-preview">
+          <span class="form-status-pill status-live">Live</span>
+          <div class="preview-line short"></div>
+          <div class="preview-box"></div>
+          <div class="preview-line medium"></div>
+          <div class="preview-box"></div>
+          <div class="preview-btn"></div>
+        </div>
+        <div class="form-card-body">
+          <div class="form-title">Customer Survey Q3</div>
+          <div class="form-desc">Collect quarterly feedback with a 12-question multi-step survey.</div>
+          <div class="form-meta-row">
+            <div class="meta-item"><div class="meta-value serif">842</div><div class="meta-label">Submissions</div></div>
+            <div class="meta-item"><div class="meta-value serif">78%</div><div class="meta-label">Completion</div></div>
+            <div class="meta-item"><div class="meta-value serif">12</div><div class="meta-label">Questions</div></div>
+          </div>
+          <div class="form-card-footer">
+            <span class="form-updated">Updated 2h ago</span>
+            <div class="form-actions">
+              <button class="icon-btn" title="View"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn" title="Edit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="form-card">
+        <div class="form-preview p2">
+          <span class="form-status-pill status-live">Live</span>
+          <div class="preview-line short"></div>
+          <div class="preview-box"></div>
+          <div class="preview-line medium"></div>
+          <div class="preview-btn"></div>
+        </div>
+        <div class="form-card-body">
+          <div class="form-title">Contact Form</div>
+          <div class="form-desc">Simple single-page contact form for website inquiries.</div>
+          <div class="form-meta-row">
+            <div class="meta-item"><div class="meta-value serif">3,210</div><div class="meta-label">Submissions</div></div>
+            <div class="meta-item"><div class="meta-value serif">92%</div><div class="meta-label">Completion</div></div>
+            <div class="meta-item"><div class="meta-value serif">5</div><div class="meta-label">Questions</div></div>
+          </div>
+          <div class="form-card-footer">
+            <span class="form-updated">Updated 1d ago</span>
+            <div class="form-actions">
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="form-card">
+        <div class="form-preview p3">
+          <span class="form-status-pill status-live">Live</span>
+          <div class="preview-line short"></div>
+          <div class="preview-box"></div>
+          <div class="preview-line medium"></div>
+          <div class="preview-box"></div>
+          <div class="preview-line short"></div>
+          <div class="preview-btn"></div>
+        </div>
+        <div class="form-card-body">
+          <div class="form-title">Job Application</div>
+          <div class="form-desc">Multi-step application form with file upload and screening questions.</div>
+          <div class="form-meta-row">
+            <div class="meta-item"><div class="meta-value serif">1,540</div><div class="meta-label">Submissions</div></div>
+            <div class="meta-item"><div class="meta-value serif">64%</div><div class="meta-label">Completion</div></div>
+            <div class="meta-item"><div class="meta-value serif">8</div><div class="meta-label">Questions</div></div>
+          </div>
+          <div class="form-card-footer">
+            <span class="form-updated">Updated 3d ago</span>
+            <div class="form-actions">
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="form-card">
+        <div class="form-preview p4">
+          <span class="form-status-pill status-draft">Draft</span>
+          <div class="preview-line short"></div>
+          <div class="preview-box"></div>
+          <div class="preview-btn"></div>
+        </div>
+        <div class="form-card-body">
+          <div class="form-title">Event RSVP</div>
+          <div class="form-desc">Quick RSVP form for the summer company event.</div>
+          <div class="form-meta-row">
+            <div class="meta-item"><div class="meta-value serif">0</div><div class="meta-label">Submissions</div></div>
+            <div class="meta-item"><div class="meta-value serif">—</div><div class="meta-label">Completion</div></div>
+            <div class="meta-item"><div class="meta-value serif">3</div><div class="meta-label">Questions</div></div>
+          </div>
+          <div class="form-card-footer">
+            <span class="form-updated">Updated 5d ago</span>
+            <div class="form-actions">
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="form-card">
+        <div class="form-preview p5">
+          <span class="form-status-pill status-closed">Closed</span>
+          <div class="preview-line short"></div>
+          <div class="preview-box"></div>
+          <div class="preview-btn"></div>
+        </div>
+        <div class="form-card-body">
+          <div class="form-title">Newsletter Signup</div>
+          <div class="form-desc">Embedded signup widget for the marketing site footer.</div>
+          <div class="form-meta-row">
+            <div class="meta-item"><div class="meta-value serif">6,890</div><div class="meta-label">Submissions</div></div>
+            <div class="meta-item"><div class="meta-value serif">88%</div><div class="meta-label">Completion</div></div>
+            <div class="meta-item"><div class="meta-value serif">2</div><div class="meta-label">Questions</div></div>
+          </div>
+          <div class="form-card-footer">
+            <span class="form-updated">Updated 1w ago</span>
+            <div class="form-actions">
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="form-card">
+        <div class="form-preview p6">
+          <span class="form-status-pill status-draft">Draft</span>
+          <div class="preview-line short"></div>
+          <div class="preview-box"></div>
+          <div class="preview-line medium"></div>
+          <div class="preview-box"></div>
+          <div class="preview-btn"></div>
+        </div>
+        <div class="form-card-body">
+          <div class="form-title">Product Feedback</div>
+          <div class="form-desc">Detailed feedback form with rating scales and open text fields.</div>
+          <div class="form-meta-row">
+            <div class="meta-item"><div class="meta-value serif">0</div><div class="meta-label">Submissions</div></div>
+            <div class="meta-item"><div class="meta-value serif">—</div><div class="meta-label">Completion</div></div>
+            <div class="meta-item"><div class="meta-value serif">10</div><div class="meta-label">Questions</div></div>
+          </div>
+          <div class="form-card-footer">
+            <span class="form-updated">Updated 2w ago</span>
+            <div class="form-actions">
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Form Card -->
+      <div class="form-card new-card">
+        <div>
+          <div class="new-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+          <h3 class="serif">Create new form</h3>
+          <p>Start from scratch or a template</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

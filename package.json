@@ -8,7 +8,9 @@
     "shared"
   ],
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "concurrently \"npm:dev:client\" \"npm:dev:server\"",
+    "dev:client": "npm -w client run dev",
+    "dev:server": "npm -w server run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "start": "node server/src/index.js",
@@ -17,6 +19,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "concurrently": "^9.2.3",
     "husky": "^9.1.7",
     "prisma": "^5.22.0",
     "turbo": "latest"

@@ -49,6 +49,7 @@ export const DEFAULT_THEME = {
   thankYouMessage: 'Your form has been submitted successfully.',
   redirectUrl: '',
   layout: '1', // '1' | '2' | '3' columns
+  layoutMode: 'page', // 'page' (all fields per section) | 'conversational' (one field per screen)
 };
 
 const makeDefaultRow = (columns = '1') => ({
@@ -149,8 +150,6 @@ const denormalizeForm = (clientForm) => {
       theme: clientForm.theme,
     },
   };
-  console.log('[denormalizeForm] Input:', clientForm);
-  console.log('[denormalizeForm] Output:', result);
   return result;
 };
 
@@ -267,8 +266,9 @@ const useFormStore = create((set, get) => ({
 
   addRow: (columns = '1', afterRowId) => {
     get()._pushHistory();
+    const newRowId = `row-${Date.now()}`;
     set((state) => {
-      const newRow = { id: `row-${Date.now()}`, columns };
+      const newRow = { id: newRowId, columns };
       const rows = [...state.rows];
       if (afterRowId) {
         const index = rows.findIndex((r) => r.id === afterRowId);
@@ -278,6 +278,7 @@ const useFormStore = create((set, get) => ({
       }
       return { rows };
     });
+    return newRowId;
   },
 
   removeRow: (rowId) => {
@@ -484,11 +485,9 @@ const useFormStore = create((set, get) => ({
 
   saveCurrentForm: async (title, description) => {
     const state = get();
-    console.log('[saveCurrentForm] Starting save, currentFormId:', state.currentFormId);
     if (!state.currentFormId) return null;
 
     const currentForm = state.forms.find((f) => f.id === state.currentFormId);
-    console.log('[saveCurrentForm] currentForm:', currentForm);
     if (!currentForm) return null;
 
     const newTitle = title || currentForm.title;
@@ -496,8 +495,6 @@ const useFormStore = create((set, get) => ({
     const newSlug = newTitle !== currentForm.title
       ? generateSlug(newTitle, existingSlugs)
       : currentForm.slug;
-
-    console.log('[saveCurrentForm] newTitle:', newTitle, 'newSlug:', newSlug, 'fields count:', state.fields.length);
 
     const updatedForm = {
       ...currentForm,
@@ -510,7 +507,6 @@ const useFormStore = create((set, get) => ({
     };
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatedForm.id);
-    console.log('[saveCurrentForm] isUuid:', isUuid, 'formId:', updatedForm.id);
 
     set({
       forms: state.forms.map((form) =>
@@ -521,12 +517,9 @@ const useFormStore = create((set, get) => ({
     const isConflictError = (e) => e?.response?.status === 409;
 
     if (!isUuid) {
-      console.log('[saveCurrentForm] Creating new form on API');
       try {
         const denormalized = denormalizeForm(updatedForm);
-        console.log('[saveCurrentForm] denormalized form:', denormalized);
         const backendForm = await createForm(denormalized);
-        console.log('[saveCurrentForm] Created form on API:', backendForm);
         const form = normalizeForm(backendForm);
         set((s) => ({
           forms: s.forms.filter((f) => f.id !== updatedForm.id).concat(form),
@@ -540,12 +533,9 @@ const useFormStore = create((set, get) => ({
       }
     }
 
-    console.log('[saveCurrentForm] Updating existing form on API');
     try {
       const denormalized = denormalizeForm(updatedForm);
-      console.log('[saveCurrentForm] denormalized form:', denormalized);
       await updateFormApi(updatedForm.id, denormalized);
-      console.log('[saveCurrentForm] Updated form on API successfully');
       return updatedForm.id;
     } catch (e) {
       if (isConflictError(e)) throw e;
@@ -565,6 +555,78 @@ const useFormStore = create((set, get) => ({
       fields: state.currentFormId === formId ? [] : state.fields,
     };
   }),
+
+  // Rename any form (not just the current one) — updates title + slug and
+  // persists via the API. Resolves with the new slug, or rejects on conflict.
+  renameForm: async (formId, newTitle) => {
+    const state = get();
+    const form = state.forms.find((f) => f.id === formId);
+    if (!form) throw new Error('Form not found');
+    const trimmed = (newTitle || '').trim();
+    if (!trimmed) throw new Error('Title cannot be empty');
+    if (trimmed === form.title) return form.slug;
+
+    if (isDuplicateName(trimmed, state.forms, formId)) {
+      const err = new Error('A form with this name already exists.');
+      err.code = 'CONFLICT';
+      throw err;
+    }
+
+    const existingSlugs = state.forms.filter((f) => f.id !== formId).map((f) => f.slug);
+    const newSlug = generateSlug(trimmed, existingSlugs);
+
+    const updatedForm = {
+      ...form,
+      title: trimmed,
+      slug: newSlug,
+      updatedAt: new Date().toISOString(),
+    };
+
+    set({
+      forms: state.forms.map((f) => (f.id === formId ? updatedForm : f)),
+      // If renaming the currently-loaded form, keep the builder in sync.
+      ...(state.currentFormId === formId ? { currentFormSlug: newSlug } : {}),
+    });
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formId);
+    try {
+      if (isUuid) {
+        // Local-only form (not yet persisted). Save it as a new record.
+        const denormalized = denormalizeForm(updatedForm);
+        const backendForm = await createForm(denormalized);
+        const normalized = normalizeForm(backendForm);
+        set((s) => ({
+          forms: s.forms.filter((f) => f.id !== formId).concat(normalized),
+          currentFormId: s.currentFormId === formId ? normalized.id : s.currentFormId,
+        }));
+        return normalized.slug;
+      }
+      await updateFormApi(formId, denormalizeForm(updatedForm));
+      return newSlug;
+    } catch (e) {
+      if (e?.response?.status === 409) throw e;
+      console.warn('Failed to rename form on API:', e);
+      // Revert on hard failure so the UI reflects the server state.
+      set({ forms: state.forms });
+      throw e;
+    }
+  },
+
+  setFormStatus: (formId, status) => {
+    const state = get();
+    const form = state.forms.find((f) => f.id === formId);
+    if (!form) return;
+    const updatedForm = { ...form, status, updatedAt: new Date().toISOString() };
+    set({
+      forms: state.forms.map((f) => (f.id === formId ? updatedForm : f)),
+    });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formId);
+    if (!isUuid) {
+      updateFormApi(formId, denormalizeForm(updatedForm)).catch((e) => {
+        console.warn('Failed to update form status on API:', e);
+      });
+    }
+  },
 
   resetForm: () => set({ fields: [], selectedField: null, currentFormId: null }),
 
