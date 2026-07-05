@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, FileText, Trash2, Edit, BarChart3, Search, Share2, Check,
+  Plus, FileText, Trash2, BarChart3, Search, Check,
   TrendingUp, Inbox, Sparkles, ArrowUpDown, MoreHorizontal, Copy, Pencil,
-  AlertTriangle, X, LayoutGrid, List, Eye, LayoutTemplate, Upload, Plug, Bell,
+  AlertTriangle, X, LayoutGrid, List, ExternalLink, LayoutTemplate, Upload, Plug,
+  Folder, FolderPlus,
 } from 'lucide-react';
 import useFormStore from './store/formStore';
 import { useToast } from '../../components/Toast';
@@ -14,38 +15,28 @@ import { useToast } from '../../components/Toast';
 const deriveStatus = (form) => form.status || ((form.fields?.length || 0) === 0 ? 'draft' : 'published');
 
 const STATUS_META = {
-  published: { label: 'Live', badge: 'badge-success', pillClass: 'text-success' },
-  draft:     { label: 'Draft', badge: 'badge-neutral', pillClass: 'text-warning' },
-  closed:    { label: 'Closed', badge: 'badge-neutral', pillClass: 'text-text-muted' },
+  published: { label: 'Live', badge: 'badge-success', pillClass: 'text-success', headerBg: 'bg-emerald-500', dotClass: 'bg-emerald-500' },
+  draft:     { label: 'Draft', badge: 'badge-neutral', pillClass: 'text-warning', headerBg: 'bg-amber-500', dotClass: 'bg-amber-500' },
+  closed:    { label: 'Closed', badge: 'badge-neutral', pillClass: 'text-text-muted', headerBg: 'bg-gray-500', dotClass: 'bg-gray-500' },
 };
 
-// Soft tint backgrounds for card previews (replaces heavy gradient stripes)
-const COVER_TINTS = [
-  'bg-blue-50',
-  'bg-emerald-50',
-  'bg-rose-50',
-  'bg-amber-50',
-  'bg-violet-50',
-  'bg-cyan-50',
-];
-
-// Solid color backgrounds for list-mode avatar tiles
-const COVER_SOLIDS = [
-  'bg-blue-500',
-  'bg-emerald-500',
-  'bg-rose-500',
-  'bg-amber-500',
-  'bg-violet-500',
-  'bg-cyan-500',
-];
-
-const _hashId = (id = '') => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return h;
-};
-const coverTintFor = (id = '') => COVER_TINTS[_hashId(id) % COVER_TINTS.length];
-const coverSolidFor = (id = '') => COVER_SOLIDS[_hashId(id) % COVER_SOLIDS.length];
+function StatusPill({ status, variant = 'solid' }) {
+  const meta = STATUS_META[status] || STATUS_META.draft;
+  if (variant === 'tint') {
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/85 backdrop-blur ${meta.pillClass}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+        {meta.label}
+      </span>
+    );
+  }
+  return (
+    <span className={`badge ${meta.badge} inline-flex items-center gap-1.5`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${meta.pillClass.replace('text-', 'bg-')}`} />
+      {meta.label}
+    </span>
+  );
+}
 
 const initials = (title = '') =>
   title.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
@@ -75,9 +66,18 @@ export default function FormsDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'published' | 'draft' | 'closed'
   const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'submissions' | 'alpha'
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
-  const [copiedFormId, setCopiedFormId] = useState(null);
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('forms-view-mode') || 'list');
   const [menuOpenId, setMenuOpenId] = useState(null);
+  // Folder state (localStorage-backed)
+  const [folders, setFolders] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('forms-folders') || '[]'); } catch { return []; }
+  });
+  const [formFolders, setFormFolders] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('forms-folder-map') || '{}'); } catch { return {}; }
+  });
+  const [selectedFolder, setSelectedFolder] = useState('all');
+  const [selectedFormIds, setSelectedFormIds] = useState(new Set());
+  const [showBatchBar, setShowBatchBar] = useState(false);
   // Rename modal state
   const [renaming, setRenaming] = useState(null); // { id, title, original }
   const [renameError, setRenameError] = useState('');
@@ -90,8 +90,16 @@ export default function FormsDashboard() {
     loadForms();
   }, [loadForms]);
 
+  useEffect(() => { localStorage.setItem('forms-view-mode', viewMode); }, [viewMode]);
+  useEffect(() => { localStorage.setItem('forms-folders', JSON.stringify(folders)); }, [folders]);
+  useEffect(() => { localStorage.setItem('forms-folder-map', JSON.stringify(formFolders)); }, [formFolders]);
+  useEffect(() => { setSelectedFormIds(new Set()); }, [selectedFolder]);
+
   const handleCreateForm = async () => {
     const newFormId = await createNewForm();
+    if (selectedFolder !== 'all') {
+      setFormFolders(prev => ({ ...prev, [newFormId]: selectedFolder }));
+    }
     const newForm = useFormStore.getState().forms.find((f) => f.id === newFormId);
     navigate(`/hub-admin/forms/builder/${newForm?.slug || newFormId}`);
   };
@@ -127,19 +135,10 @@ export default function FormsDashboard() {
     setDeleting(null);
   };
 
-  const handleShareForm = async (formId) => {
+  const handlePreviewForm = (formId) => {
     const form = forms.find((f) => f.id === formId);
     const formUrl = `${window.location.origin}/form/${form?.slug || formId}`;
-    try {
-      await navigator.clipboard.writeText(formUrl);
-      setCopiedFormId(formId);
-      setTimeout(() => setCopiedFormId(null), 2000);
-      toast('Share link copied to clipboard.', 'success');
-    } catch (e) {
-      // Clipboard API can fail in non-secure contexts / denied permissions.
-      // Fall back to a toast containing the link so the user can still copy it.
-      toast(`Copy failed — link: ${formUrl}`, 'info');
-    }
+    window.open(formUrl, '_blank', 'noopener,noreferrer');
     setMenuOpenId(null);
   };
 
@@ -204,6 +203,103 @@ export default function FormsDashboard() {
     setMenuOpenId(null);
   };
 
+  const handleCreateFolder = () => {
+    const name = window.prompt('Folder name:');
+    if (!name?.trim()) return;
+    const id = `folder-${Date.now()}`;
+    setFolders(prev => [...prev, { id, name: name.trim() }]);
+    toast(`Folder "${name.trim()}" created.`, 'success');
+  };
+
+  const handleRenameFolder = (folderId, newName) => {
+    if (!newName?.trim()) return;
+    setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name: newName.trim() } : f));
+    toast(`Folder renamed to "${newName.trim()}".`, 'success');
+  };
+
+  const handleMoveToFolder = (formId, folderId) => {
+    setFormFolders(prev => {
+      const next = { ...prev };
+      next[formId] = folderId;
+      return next;
+    });
+    setMenuOpenId(null);
+  };
+
+  const handleDeleteFolder = (folderId) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+    if (!window.confirm(`Delete folder "${folder.name}"? Forms inside will be unassigned.`)) return;
+    setFolders(prev => prev.filter(f => f.id !== folderId));
+    setFormFolders(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(fid => { if (next[fid] === folderId) delete next[fid]; });
+      return next;
+    });
+    if (selectedFolder === folderId) setSelectedFolder('all');
+    toast('Folder deleted. Forms moved to All Forms.', 'info');
+  };
+
+  const handleBatchMove = (folderId) => {
+    setFormFolders(prev => {
+      const next = { ...prev };
+      selectedFormIds.forEach(id => { next[id] = folderId; });
+      return next;
+    });
+    toast(`${selectedFormIds.size} form${selectedFormIds.size !== 1 ? 's' : ''} moved.`, 'success');
+    setSelectedFormIds(new Set());
+    setShowBatchBar(false);
+  };
+
+  const toggleSelect = (formId) => {
+    setSelectedFormIds(prev => {
+      const next = new Set(prev);
+      if (next.has(formId)) next.delete(formId);
+      else next.add(formId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFormIds.size === filteredForms.length) {
+      setSelectedFormIds(new Set());
+    } else {
+      setSelectedFormIds(new Set(filteredForms.map(f => f.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedFormIds(new Set());
+    setShowBatchBar(false);
+  };
+
+  const [draggedFormId, setDraggedFormId] = useState(null);
+  const [dragOverFolder, setDragOverFolder] = useState(null);
+
+  const handleDragStart = (e, formId) => {
+    setDraggedFormId(formId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, folderId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverFolder(folderId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverFolder(null);
+  };
+
+  const handleDrop = (e, folderId) => {
+    e.preventDefault();
+    if (draggedFormId) {
+      handleMoveToFolder(draggedFormId, folderId);
+    }
+    setDraggedFormId(null);
+    setDragOverFolder(null);
+  };
+
   const submissionCountFor = (formId) => submissions.filter((s) => s.formId === formId).length;
 
   const stats = useMemo(() => {
@@ -236,6 +332,16 @@ export default function FormsDashboard() {
     };
   }, [forms, submissions]);
 
+  const folderCounts = useMemo(() => {
+    const counts = { all: forms.length };
+    folders.forEach(f => { counts[f.id] = 0; });
+    forms.forEach(f => {
+      const fid = formFolders[f.id];
+      if (fid && counts[fid] !== undefined) counts[fid]++;
+    });
+    return counts;
+  }, [forms, folders, formFolders]);
+
   const filteredForms = useMemo(() => {
     const searchLower = searchQuery.toLowerCase().trim();
     let list = forms.filter((form) => {
@@ -243,7 +349,9 @@ export default function FormsDashboard() {
         form.title.toLowerCase().includes(searchLower) ||
         (form.description || '').toLowerCase().includes(searchLower);
       const matchesStatus = statusFilter === 'all' || deriveStatus(form) === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesFolder = selectedFolder === 'all' ||
+        formFolders[form.id] === selectedFolder;
+      return matchesSearch && matchesStatus && matchesFolder;
     });
     list = [...list].sort((a, b) => {
       if (sortBy === 'alpha') return (a.title || '').localeCompare(b.title || '');
@@ -253,42 +361,20 @@ export default function FormsDashboard() {
     });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [forms, searchQuery, statusFilter, sortBy, submissions]);
+  }, [forms, searchQuery, statusFilter, sortBy, submissions, formFolders, selectedFolder]);
 
   return (
     <div className="bg-background">
       {/* Frosted sub-header bar */}
       <div className="sticky top-0 z-30 h-14 flex items-center gap-3 px-6 bg-surface/70 backdrop-blur-xl border-b border-border-soft">
-        <span className="text-sm text-text-muted">Workspace</span>
-        <span className="text-text-subtle">/</span>
-        <span className="font-medium text-text-base text-sm">Forms</span>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative hidden sm:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle" />
-            <input
-              type="text"
-              placeholder="Search…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-52 lg:w-64 pl-9 pr-3 py-1.5 bg-surface-raised/60 border border-border-soft rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface transition-colors"
-              aria-label="Search forms"
-            />
-          </div>
-          <button className="relative w-9 h-9 rounded-lg flex items-center justify-center text-text-muted hover:bg-surface-raised transition-colors" aria-label="Notifications">
-            <Bell className="h-[18px] w-[18px]" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full border-2 border-surface" />
-          </button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-400 text-white flex items-center justify-center text-xs font-semibold cursor-pointer">
-            AM
-          </div>
-        </div>
+        <h1 className="text-base font-semibold text-text-base">Forms</h1>
       </div>
 
       <div className="max-w-7xl mx-auto p-6 lg:p-8">
         {/* Bento stats grid */}
-        <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4" style={{ gridAutoRows: '132px' }}>
+        <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
           {/* Hero: Total Submissions */}
-          <div className="col-span-2 row-span-1 rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-indigo-600 relative overflow-hidden shadow-card flex flex-col">
+          <div className="col-span-2 row-span-1 min-h-[132px] rounded-2xl p-5 text-white bg-gradient-to-br from-primary to-indigo-600 relative overflow-hidden shadow-card flex flex-col">
             <div className="absolute top-4 right-4 w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
               <Inbox className="h-5 w-5" />
             </div>
@@ -301,7 +387,7 @@ export default function FormsDashboard() {
           </div>
 
           {/* Active Forms */}
-          <div className="rounded-2xl p-5 bg-surface border border-border-soft shadow-card-sm flex flex-col">
+          <div className="min-h-[132px] rounded-2xl p-5 bg-surface border border-border-soft shadow-card-sm flex flex-col">
             <div className="flex items-start justify-between mb-1">
               <div className="text-sm text-text-muted">Active Forms</div>
               <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center">
@@ -316,7 +402,7 @@ export default function FormsDashboard() {
           </div>
 
           {/* Completion ring — avg fields per form */}
-          <div className="rounded-2xl p-4 bg-surface border border-border-soft shadow-card-sm flex items-center gap-3">
+          <div className="min-h-[132px] rounded-2xl p-4 bg-surface border border-border-soft shadow-card-sm flex items-center gap-3">
             <svg width="88" height="88" className="-rotate-90 flex-shrink-0" role="img" aria-label={`${stats.avgFields} avg fields per form`}>
               <circle cx="44" cy="44" r="36" fill="none" stroke="hsl(var(--surface-raised))" strokeWidth="6" />
               <circle cx="44" cy="44" r="36" fill="none" stroke="hsl(var(--success))" strokeWidth="6"
@@ -331,7 +417,7 @@ export default function FormsDashboard() {
           </div>
 
           {/* Total Forms — dark tile */}
-          <div className="rounded-2xl p-5 bg-gradient-to-br from-gray-800 to-gray-900 text-white relative overflow-hidden shadow-card flex flex-col">
+          <div className="min-h-[132px] rounded-2xl p-5 bg-gradient-to-br from-gray-800 to-gray-900 text-white relative overflow-hidden shadow-card flex flex-col">
             <div className="absolute top-4 right-4 w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
               <BarChart3 className="h-5 w-5" />
             </div>
@@ -343,7 +429,7 @@ export default function FormsDashboard() {
           </div>
 
           {/* Drafts tile */}
-          <div className="rounded-2xl p-5 bg-surface border border-border-soft shadow-card-sm flex flex-col">
+          <div className="min-h-[132px] rounded-2xl p-5 bg-surface border border-border-soft shadow-card-sm flex flex-col">
             <div className="text-sm text-text-muted mb-1">Drafts</div>
             <div className="text-3xl font-bold tracking-tight text-text-base">{stats.draft}</div>
             <div className="mt-auto text-sm text-text-muted">
@@ -352,7 +438,7 @@ export default function FormsDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="col-span-2 rounded-2xl p-4 bg-surface border border-border-soft shadow-card-sm">
+          <div className="col-span-2 min-h-[132px] rounded-2xl p-4 bg-surface border border-border-soft shadow-card-sm">
             <div className="text-sm font-semibold mb-2.5">Quick Actions</div>
             <div className="grid grid-cols-2 gap-2.5">
               <QuickAction icon={Plus} label="Blank Form" desc="Start from scratch" color="primary" onClick={handleCreateForm} />
@@ -387,8 +473,8 @@ export default function FormsDashboard() {
             ))}
           </div>
 
-          {/* Search (mobile — hidden on sm+ since sub-header has it) */}
-          <div className="relative flex-1 sm:hidden">
+          {/* Search */}
+          <div className="relative flex-1 sm:flex-none sm:w-56 lg:w-64 sm:ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle" />
             <input
               type="text"
@@ -401,7 +487,7 @@ export default function FormsDashboard() {
           </div>
 
           {/* Sort */}
-          <div className="relative sm:ml-auto">
+          <div className="relative">
             <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle pointer-events-none" />
             <select
               value={sortBy}
@@ -436,48 +522,216 @@ export default function FormsDashboard() {
           </div>
         </div>
 
+        {/* Mobile folder selector (list view only) */}
+        {viewMode === 'list' && folders.length > 0 && (
+          <div className="md:hidden mb-4">
+            <select
+              value={selectedFolder}
+              onChange={(e) => setSelectedFolder(e.target.value)}
+              className="w-full px-3 py-2 bg-surface border border-border rounded-base text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+              aria-label="Select folder"
+            >
+              <option value="all">All Forms ({folderCounts.all})</option>
+              {folders.map(f => (
+                <option key={f.id} value={f.id}>{f.name} ({folderCounts[f.id] || 0})</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Forms Grid / List */}
         {isLoading ? (
           <div className="text-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
             <p className="text-body text-text-muted">Loading forms...</p>
           </div>
-        ) : filteredForms.length === 0 && !searchQuery && statusFilter === 'all' ? (
-          <EmptyState onCreate={handleCreateForm} />
-        ) : filteredForms.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="h-12 w-12 text-text-subtle mx-auto mb-3" />
-            <p className="text-body text-text-muted">No forms match your filters</p>
-          </div>
         ) : viewMode === 'list' ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex gap-6">
+            {/* Folder sidebar */}
+            <div className="w-52 flex-shrink-0 hidden md:block">
+              <div className="sticky top-20">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-text-subtle">Folders</span>
+                  <button
+                    onClick={handleCreateFolder}
+                    className="p-1 text-text-subtle hover:text-primary hover:bg-primary-light rounded transition-colors"
+                    aria-label="New folder"
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => setSelectedFolder('all')}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedFolder === 'all' ? 'bg-primary-light text-primary' : 'text-text-muted hover:bg-surface-raised'}`}
+                  >
+                    <Folder className="h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1 text-left truncate">All Forms</span>
+                    <span className="text-xs text-text-subtle tabular-nums">{folderCounts.all}</span>
+                  </button>
+                  {folders.length > 0 && <div className="my-1.5 border-t border-border-soft" />}
+                  {folders.map(folder => (
+                    <div
+                      key={folder.id}
+                      className="group relative"
+                      onDragOver={(e) => handleDragOver(e, folder.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, folder.id)}
+                    >
+                      <button
+                        onClick={() => setSelectedFolder(folder.id)}
+                        onDoubleClick={() => {
+                          const newName = window.prompt('Rename folder:', folder.name);
+                          if (newName?.trim() && newName.trim() !== folder.name) handleRenameFolder(folder.id, newName);
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full ${selectedFolder === folder.id ? 'bg-primary-light text-primary' : 'text-text-muted hover:bg-surface-raised'} ${dragOverFolder === folder.id ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                      >
+                        <Folder className="h-4 w-4 flex-shrink-0" />
+                        <span className="flex-1 text-left truncate">{folder.name}</span>
+                        <span className="text-xs text-text-subtle tabular-nums">{folderCounts[folder.id] || 0}</span>
+                      </button>
+                      <div className="absolute right-7 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newName = window.prompt('Rename folder:', folder.name);
+                            if (newName?.trim() && newName.trim() !== folder.name) handleRenameFolder(folder.id, newName);
+                          }}
+                          className="p-1 text-text-subtle hover:text-primary rounded"
+                          aria-label={`Rename folder ${folder.name}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
+                          className="p-1 text-text-subtle hover:text-danger rounded"
+                          aria-label={`Delete folder ${folder.name}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {folders.length === 0 && (
+                  <p className="text-xs text-text-subtle px-3 py-2">No folders yet. Click + to create one.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Form list */}
+            <div className="flex-1 flex flex-col gap-2">
+            {/* Batch action bar */}
+            {selectedFormIds.size > 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-primary-light border border-primary/20">
+                <span className="text-sm font-semibold text-primary">{selectedFormIds.size} selected</span>
+                <div className="flex items-center gap-1.5">
+                  {folders.length > 0 ? (
+                    <select
+                      value=""
+                      onChange={(e) => { if (e.target.value) handleBatchMove(e.target.value); }}
+                      className="px-3 py-1.5 bg-surface border border-border rounded-base text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px] cursor-pointer"
+                    >
+                      <option value="" disabled>Move to folder…</option>
+                      {folders.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-text-muted">Create a folder first</span>
+                  )}
+                </div>
+                <button
+                  onClick={clearSelection}
+                  className="ml-auto text-sm text-text-muted hover:text-text-base transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+            {/* Select-all header */}
+            {filteredForms.length > 0 && (
+              <div className="flex items-center gap-3 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={selectedFormIds.size === filteredForms.length && filteredForms.length > 0}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                  aria-label="Select all forms"
+                />
+                <span className="text-xs text-text-subtle font-medium">
+                  {selectedFormIds.size > 0 ? `${selectedFormIds.size} of ${filteredForms.length} selected` : 'Select all'}
+                </span>
+              </div>
+            )}
+            {filteredForms.length > 0 && folders.length > 0 && (
+              <div className="text-xs text-text-subtle px-1 pb-1 hidden md:block">
+                Tip: Drag a form onto a folder to move it.
+              </div>
+            )}
+            {filteredForms.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-text-subtle mx-auto mb-3" />
+                <p className="text-body text-text-muted mb-4">
+                  {forms.length === 0 ? 'No forms yet.' : 'No forms in this folder.'}
+                </p>
+                <button
+                  onClick={handleCreateForm}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] text-sm font-medium transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  {forms.length === 0 ? 'Create your first form' : 'Create form in this folder'}
+                </button>
+              </div>
+            ) : (
+            <>
             {filteredForms.map((form) => {
               const status = deriveStatus(form);
-              const meta = STATUS_META[status];
               const subCount = submissionCountFor(form.id);
               const fieldCount = form.fields?.length || 0;
               return (
                 <div
                   key={form.id}
-                  className="form-card group flex items-center gap-4 p-3 rounded-xl bg-surface border border-border hover:border-border-strong hover:shadow-card-sm transition-all"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, form.id)}
+                  className={`form-card group flex items-center gap-4 p-3 rounded-xl bg-surface border hover:border-border-strong hover:shadow-card-sm transition-all ${selectedFormIds.has(form.id) ? 'border-primary bg-primary-light/30' : 'border-border'} ${draggedFormId === form.id ? 'opacity-40' : ''}`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${coverSolidFor(form.id)}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedFormIds.has(form.id)}
+                    onChange={() => toggleSelect(form.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer flex-shrink-0"
+                    aria-label={`Select ${form.title}`}
+                  />
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${STATUS_META[status].headerBg}`}>
                     {initials(form.title)}
                   </div>
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleEditForm(form.id)} role="button" aria-label={`Open ${form.title}`}>
-                    <div className="font-semibold truncate text-text-base">{form.title}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold truncate text-text-base">{form.title}</span>
+                      {formFolders[form.id] && folders.find(f => f.id === formFolders[form.id]) && (
+                        <span className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-raised text-text-muted flex-shrink-0">
+                          <Folder className="h-3 w-3" />
+                          {folders.find(f => f.id === formFolders[form.id]).name}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-text-muted truncate">{form.description || 'No description'}</div>
                   </div>
-                  <span className={`badge ${meta.badge} hidden sm:inline-flex`}>{meta.label}</span>
+                  <span className="hidden sm:inline-flex"><StatusPill status={status} /></span>
                   <span className="text-sm tabular-nums w-16 text-right text-text-base hidden sm:inline">{subCount}</span>
                   <span className="text-xs text-text-subtle w-20 text-right hidden md:inline">{timeAgo(form.updatedAt)}</span>
                   <div className="relative flex-shrink-0">
                     <div className="flex gap-1 quick-actions">
                       <button className="icon-btn-sm" onClick={() => handleViewSubmissions(form.id)} aria-label="View submissions">
-                        <Eye className="h-4 w-4" />
+                        <BarChart3 className="h-4 w-4" />
                       </button>
                       <button className="icon-btn-sm" onClick={() => handleEditForm(form.id)} aria-label="Edit form">
                         <Pencil className="h-4 w-4" />
+                      </button>
+                      <button className="icon-btn-sm" onClick={() => handlePreviewForm(form.id)} aria-label="Preview form">
+                        <ExternalLink className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setMenuOpenId(menuOpenId === form.id ? null : form.id)}
@@ -491,17 +745,23 @@ export default function FormsDashboard() {
                     </div>
                     {menuOpenId === form.id && (
                       <>
-                        <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
+                        <div className="fixed inset-0 z-10 bg-black/5" onClick={() => setMenuOpenId(null)} />
                         <div className="absolute right-0 top-9 z-20 w-44 bg-surface border border-border rounded-base shadow-dropdown py-1" role="menu">
-                          <MenuItem icon={Edit} label="Edit" onClick={() => handleEditForm(form.id)} />
                           <MenuItem icon={Pencil} label="Rename" onClick={() => handleRenameClick(form.id)} />
                           <MenuItem icon={Copy} label="Duplicate" onClick={() => handleDuplicate(form.id)} />
-                          <MenuItem icon={Share2} label="Share link" onClick={() => handleShareForm(form.id)} />
-                          <MenuItem icon={BarChart3} label="Submissions" onClick={() => handleViewSubmissions(form.id)} />
                           <MenuItem icon={TrendingUp} label="Analytics" onClick={() => handleViewAnalytics(form.id)} />
                           {status === 'closed'
                             ? <MenuItem icon={Check} label="Reopen" onClick={() => handleReopenForm(form.id)} />
                             : <MenuItem icon={X} label="Close form" onClick={() => handleCloseForm(form.id)} />}
+                          {folders.length > 0 && (
+                            <>
+                              <div className="my-1 border-t border-border" />
+                              <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-text-subtle font-semibold">Move to</div>
+                              {folders.map(folder => (
+                                <MenuItem key={folder.id} icon={Folder} label={folder.name} onClick={() => handleMoveToFolder(form.id, folder.id)} />
+                              ))}
+                            </>
+                          )}
                           <div className="my-1 border-t border-border" />
                           <MenuItem icon={Trash2} label="Delete" onClick={() => handleDeleteForm(form.id)} danger />
                         </div>
@@ -518,79 +778,39 @@ export default function FormsDashboard() {
               <Plus className="h-5 w-5" />
               <span className="text-sm font-medium">Create new form</span>
             </button>
+            </>
+            )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredForms.map((form) => {
               const status = deriveStatus(form);
-              const meta = STATUS_META[status];
               const subCount = submissionCountFor(form.id);
               const fieldCount = form.fields?.length || 0;
               return (
                 <div
                   key={form.id}
-                  className="form-card group bg-surface border border-border-soft rounded-2xl overflow-hidden hover:border-border-strong hover:shadow-card transition-all duration-200 flex flex-col"
+                  className="form-card group bg-surface border border-border-soft rounded-2xl hover:border-border-strong hover:shadow-card transition-all duration-200 flex flex-col"
                 >
-                  {/* Mini form preview */}
+                  {/* Colored header with title + description */}
                   <div
-                    className={`h-32 relative p-4 overflow-hidden cursor-pointer ${coverTintFor(form.id)}`}
+                    className={`relative p-5 cursor-pointer rounded-t-2xl ${STATUS_META[status].headerBg}`}
                     onClick={() => handleEditForm(form.id)}
                     role="button"
                     aria-label={`Open ${form.title}`}
                   >
-                    <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-white/85 backdrop-blur ${meta.pillClass}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                      {meta.label}
+                    <span className="absolute top-3 right-3">
+                      <StatusPill status={status} variant="tint" />
                     </span>
-                    <div className="flex flex-col gap-2">
-                      <div className="h-2 w-3/5 rounded bg-text-base/15" />
-                      <div className="h-5 w-full rounded bg-text-base/10" />
-                      <div className="h-2 w-4/5 rounded bg-text-base/15" />
-                      <div className="h-5 w-full rounded bg-text-base/10" />
-                      {fieldCount > 4 && <div className="h-5 w-full rounded bg-text-base/10" />}
-                      <div className="h-6 w-20 rounded bg-text-base/25 mt-auto" />
-                    </div>
+                    <h3 className="text-lg font-bold text-white truncate pr-20">{form.title}</h3>
+                    <p className="text-sm text-white/75 line-clamp-2 mt-1">{form.description || 'No description'}</p>
                   </div>
 
                   {/* Body */}
                   <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="text-base font-bold text-text-base truncate flex-1 cursor-pointer" onClick={() => handleEditForm(form.id)}>{form.title}</h3>
-                      <div className="relative flex-shrink-0">
-                        <button
-                          onClick={() => setMenuOpenId(menuOpenId === form.id ? null : form.id)}
-                          className="p-1.5 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary min-w-[32px] min-h-[32px]"
-                          aria-label="More actions"
-                          aria-haspopup="menu"
-                          aria-expanded={menuOpenId === form.id}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                        {menuOpenId === form.id && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-                            <div className="absolute right-0 top-9 z-20 w-44 bg-surface border border-border rounded-base shadow-dropdown py-1" role="menu">
-                              <MenuItem icon={Edit} label="Edit" onClick={() => handleEditForm(form.id)} />
-                              <MenuItem icon={Pencil} label="Rename" onClick={() => handleRenameClick(form.id)} />
-                              <MenuItem icon={Copy} label="Duplicate" onClick={() => handleDuplicate(form.id)} />
-                              <MenuItem icon={Share2} label="Share link" onClick={() => handleShareForm(form.id)} />
-                              <MenuItem icon={BarChart3} label="Submissions" onClick={() => handleViewSubmissions(form.id)} />
-                              <MenuItem icon={TrendingUp} label="Analytics" onClick={() => handleViewAnalytics(form.id)} />
-                              {status === 'closed'
-                                ? <MenuItem icon={Check} label="Reopen" onClick={() => handleReopenForm(form.id)} />
-                                : <MenuItem icon={X} label="Close form" onClick={() => handleCloseForm(form.id)} />}
-                              <div className="my-1 border-t border-border" />
-                              <MenuItem icon={Trash2} label="Delete" onClick={() => handleDeleteForm(form.id)} danger />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-text-muted mb-3 line-clamp-2 flex-1">{form.description || 'No description'}</p>
-
                     {/* Meta stats row */}
-                    <div className="flex gap-4 py-3 border-t border-border-soft">
+                    <div className="flex gap-4 py-3 border-t border-border-soft overflow-hidden">
                       <div className="flex flex-col">
                         <div className="text-base font-bold tabular-nums text-text-base">{subCount}</div>
                         <div className="text-[10px] uppercase tracking-wider text-text-subtle font-semibold">Submits</div>
@@ -605,20 +825,54 @@ export default function FormsDashboard() {
                       </div>
                     </div>
 
-                    {/* Hover-reveal actions */}
+                    {/* Quick actions + more menu */}
                     <div className="flex items-center justify-between pt-3 border-t border-border-soft">
                       <div className="flex gap-1 quick-actions">
                         <button className="icon-btn-sm" onClick={() => handleViewSubmissions(form.id)} aria-label="View submissions">
-                          <Eye className="h-4 w-4" />
+                          <BarChart3 className="h-4 w-4" />
                         </button>
                         <button className="icon-btn-sm" onClick={() => handleEditForm(form.id)} aria-label="Edit form">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button className="icon-btn-sm" onClick={() => handleShareForm(form.id)} aria-label="Share form">
-                          {copiedFormId === form.id ? <Check className="h-4 w-4 text-success" /> : <Share2 className="h-4 w-4" />}
+                        <button className="icon-btn-sm" onClick={() => handlePreviewForm(form.id)} aria-label="Preview form">
+                          <ExternalLink className="h-4 w-4" />
                         </button>
                       </div>
-                      <span className="text-xs text-text-subtle">{meta.label}</span>
+                      <div className="relative flex-shrink-0">
+                        <button
+                          onClick={() => setMenuOpenId(menuOpenId === form.id ? null : form.id)}
+                          className="p-1.5 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[32px] min-h-[32px]"
+                          aria-label="More actions"
+                          aria-haspopup="menu"
+                          aria-expanded={menuOpenId === form.id}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                        {menuOpenId === form.id && (
+                          <>
+                            <div className="fixed inset-0 z-50 bg-black/5" onClick={() => setMenuOpenId(null)} />
+                            <div className="absolute right-0 top-9 z-[60] w-44 bg-surface border border-border rounded-base shadow-dropdown py-1" role="menu">
+                              <MenuItem icon={Pencil} label="Rename" onClick={() => handleRenameClick(form.id)} />
+                              <MenuItem icon={Copy} label="Duplicate" onClick={() => handleDuplicate(form.id)} />
+                              <MenuItem icon={TrendingUp} label="Analytics" onClick={() => handleViewAnalytics(form.id)} />
+                              {status === 'closed'
+                                ? <MenuItem icon={Check} label="Reopen" onClick={() => handleReopenForm(form.id)} />
+                                : <MenuItem icon={X} label="Close form" onClick={() => handleCloseForm(form.id)} />}
+                              {folders.length > 0 && (
+                                <>
+                                  <div className="my-1 border-t border-border" />
+                                  <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-text-subtle font-semibold">Move to</div>
+                                  {folders.map(folder => (
+                                    <MenuItem key={folder.id} icon={Folder} label={folder.name} onClick={() => handleMoveToFolder(form.id, folder.id)} />
+                                  ))}
+                                </>
+                              )}
+                              <div className="my-1 border-t border-border" />
+                              <MenuItem icon={Trash2} label="Delete" onClick={() => handleDeleteForm(form.id)} danger />
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

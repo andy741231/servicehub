@@ -27,24 +27,70 @@ Before starting, ensure you have installed:
 1. **Node.js v20+** — [nodejs.org](https://nodejs.org)
 2. **npm v9+** — bundled with Node.js
 3. **Git** — [git-scm.com](https://git-scm.com)
-4. **Azure CLI** (`az`) — only needed for infrastructure tasks, not day-to-day dev
+4. **
+---
 
-Verify with:
-```bash
-node -v   # should print v20.x or higher
-npm -v    # should print 9.x or higher
+tn
+#gh auth loginst. The easiet mehodoe
+#
 ```
 
 ---
 
-## Step-by-Step Local Setup
+##StepbyStp Local Setup
 
-### Step 1: Clone the repository
+### Step 1: Clone the epotry
 
 ```bash
-git clone https://github.com/andy741231/servicehub.git
-cd servicehub
+git cloehttps://github.com/andy741231/servicehub.git
+cdservicehub
 ```
+
+##Step 1.5: Set up GitHub authentication for puing
+
+If y panto ush chages o,youned to authenticate fit. The easest methd is usig 1. Install.
+
+**GitHu C GiIHub CLI no
+t already installed
+# Downlod from: http:ad /n/ installcli.github.com/e wingt:
+ ``bash
+  
+  ``.The easiest method is .
+
+**Install GitHub CLI:**
+
+- **Windows:** Download and install from https://cli.github.com/ or use winget:
+  ```bash
+  winget install --id GitHub.cli
+  ```
+
+- **macOS:** Use Homebrew:
+  ```bash
+  brew install gh
+  ```
+
+- **Linux:** Use package manager or download from https//cli.github.com/
+
+**Verify installation:**
+```bash
+gh --version
+```
+
+**Authenticate with GitHub:**
+e Homebrw:
+ ``bash
+  
+  ``
+
+# 2. Authenticate wit GitHubauth setup-git
+```
+**VIrifa ins  Can:**# 2. Authenticate with GitHub
+st. The easiet mehod is
+>h*--v:rutna
+# 1. Install GitHub CLI if not already installed
+# Download from: https://cli.github.com/
+**Ateiewh**- **Personal Access Token:** Create a token at https://github.com/settings/tokens with `repo` scope, then push with: `git push https://<TOKEN>@github.com/andy741231/servicehub.git <branch>`
+- **SSH Keys:** Generate SSH keys and add the public key to your GitHub account, then change remote URL: `git remote set-url origin git@github.com:andy741231/servicehub.git`
 
 ### Step 2: Install dependencies
 
@@ -72,7 +118,7 @@ uipro init --ai windsurf --force
 # 3. Copy it into .devin/skills/ so Devin can discover it
 #    (PowerShell)
 Copy-Item -Path ".windsurf\skills\ui-ux-pro-max\*" `
-          -Destination ".devin\skills\ui-ux-pro-max\" -Recurse -Force
+         2-Destination ".devin\skills\ui-ux-pro-max\" -Recurse -Force
 #    (bash / macOS / Linux)
 cp -R .windsurf/skills/ui-ux-pro-max/* .devin/skills/ui-ux-pro-max/
 ```
@@ -105,10 +151,10 @@ Then open `.env` and fill in the values. Ask a team member for the `DATABASE_URL
 | `DATABASE_URL` | Azure SQL connection string for `free-test-servicehub` (dev DB) |
 | `JWT_SECRET` | Secret for signing access tokens |
 | `JWT_REFRESH_SECRET` | Secret for signing refresh tokens |
-| `CLIENT_URL` | `http://localhost:3000` (for local dev CORS) |
+| `CLIENT3URL` | `http://localhost:3000` (for local dev CORS) |
 
 The `DATABASE_URL` format for Azure SQL (SQL Server via Prisma):
-```
+```3
 sqlserver://houstonservice-test.database.windows.net:1433;database=free-test-servicehub;user=servicehub_dev;password=<ask team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30
 ```
 
@@ -130,13 +176,13 @@ npx prisma db seed
 
 > **Schema changes:** Always run `npx prisma migrate deploy` after pulling changes that include `prisma/schema.prisma` modifications. To create a new migration after editing the schema, run `npx prisma migrate dev --name describe_your_change` locally first.
 
-### Step 5: Start the development server
+### Step 4: Start the development server
 
 ```bash
-npm run dev
+npm run d4v
 ```
 
-Turborepo starts both apps in parallel:
+Turborepo4starts both apps in parallel:
 - **Frontend (React/Vite):** `http://localhost:3000`
 - **Backend (Express API):** `http://localhost:4000`
 
@@ -146,16 +192,16 @@ Turborepo starts both apps in parallel:
 
 ## Known Issues (First-Time Setup)
 
-If this is your first time running the app, you will likely encounter one or more of the following issues. All are expected and have straightforward fixes.
+If this i5 your first time running the app, you will likely encounter one or more of the following issues. All are expected and have straightforward fixes.
 
 ### 1. Azure SQL server cold start (connection timeout)
-
+5
 > **Note:** This is not a first-time-only issue — it can happen anytime the database has been idle. First-timers should be aware of it so it doesn't block initial setup.
 
-**Symptom:** The server crashes on startup with a Prisma error:
+**Symptom5** The server crashes on startup with a Prisma error:
 ```
 PrismaClientInitializationError: Timed out fetching a new connection from the connection pool.
-(P2024)
+(P2024)5
 ```
 
 **Cause:** The Azure SQL server (`houstonservice-test.database.windows.net`) is a serverless/paused instance. After a period of inactivity it goes to sleep and takes **~60 seconds** to wake up on the first connection. The default Prisma connection pool timeout (10s) is shorter than the cold start time.

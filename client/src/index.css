@@ -212,7 +212,7 @@
   .icon-btn-sm:hover { background: hsl(var(--surface-raised)); color: hsl(var(--text-base)); }
 
   /* Form card hover/focus reveal for quick actions */
-  .form-card .quick-actions { opacity: 0; transition: opacity 0.15s; }
+  .form-card .quick-actions { opacity: 0.55; transition: opacity 0.15s; }
   .form-card:hover .quick-actions,
   .form-card:focus-within .quick-actions { opacity: 1; }
   @media (hover: none) {
