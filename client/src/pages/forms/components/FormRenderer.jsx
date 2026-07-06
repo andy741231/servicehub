@@ -4,6 +4,8 @@ import DOMPurify from 'dompurify';
 import { DEFAULT_THEME } from '../store/formStore';
 import { evaluateConditionalLogic } from '../utils/conditionalLogic';
 import { uploadFile } from '../api/formsApi';
+import { useToast } from '../../../components/Toast';
+import { useAlert } from '../../../components/Dialog';
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -294,7 +296,7 @@ const FIELD_COMPONENTS = {
       </div>
     );
   },
-  file: ({ field, value, onChange, error, theme }) => {
+  file: ({ field, value, onChange, error, theme, toast }) => {
     const [isUploading, setIsUploading] = useState(false);
     const fileName = value || null;
 
@@ -306,7 +308,7 @@ const FIELD_COMPONENTS = {
       }
       if (field.maxSize && file.size > field.maxSize * 1024 * 1024) {
         onChange(null);
-        alert(`File is too large. Maximum size is ${field.maxSize}MB.`);
+        toast(`File is too large. Maximum size is ${field.maxSize}MB.`, 'error');
         return;
       }
 
@@ -316,7 +318,7 @@ const FIELD_COMPONENTS = {
         onChange(result.url);
       } catch (err) {
         console.error('File upload failed:', err);
-        alert('Failed to upload file. Please try again.');
+        toast('Failed to upload file. Please try again.', 'error');
         onChange(null);
       } finally {
         setIsUploading(false);
@@ -503,6 +505,8 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const { toast, ToastMount } = useToast();
+  const { alertDialog, AlertDialogMount } = useAlert();
 
   // Schedule check (re-evaluates whenever form changes; skipped in preview mode)
   const scheduleStatus = preview ? { open: true, closedMessage: null } : evaluateSchedule(form?.accessSchedule);
@@ -600,7 +604,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     }
 
     if (preview) {
-      alert('Preview validation passed. This is a preview — no submission was saved.');
+      toast('Preview validation passed. This is a preview — no submission was saved.', 'info');
       return;
     }
 
@@ -624,7 +628,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Submission error:', error);
-      alert('Failed to submit form. Please try again.');
+      await alertDialog({ title: 'Error', message: 'Failed to submit form. Please try again.', variant: 'danger' });
     } finally {
       setIsSubmitting(false);
     }
@@ -878,6 +882,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                       onChange={(value) => handleFieldChange(field.id, value)}
                       error={errors[field.id]}
                       theme={theme}
+                      toast={toast}
                     />
 
                     {field.helpText && (
@@ -925,6 +930,8 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
           </form>
         </div>
       </div>
+      <ToastMount />
+      <AlertDialogMount />
     </div>
   );
 }

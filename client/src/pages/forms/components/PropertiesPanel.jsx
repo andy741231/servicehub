@@ -7,6 +7,7 @@ import AccessSchedulePanel from './AccessSchedulePanel';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { uploadFile } from '../api/formsApi';
+import { useToast } from '../../../components/Toast';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Tag },
@@ -308,6 +309,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
   const [isUploading, setIsUploading] = useState(false);
   const style = field.blockStyle || {};
   const otherFields = fields.filter((f) => f.id !== field.id && f.type !== 'image');
+  const { toast, ToastMount } = useToast();
 
   const handleStyle = (updates) =>
     updateField(field.id, { blockStyle: { ...style, ...updates } });
@@ -320,7 +322,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File is too large. Maximum size is 5MB.');
+      toast('File is too large. Maximum size is 5MB.', 'error');
       return;
     }
 
@@ -330,7 +332,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
       updateField(field.id, { imageUrl: result.url });
     } catch (err) {
       console.error('File upload failed:', err);
-      alert('Failed to upload file. Please try again.');
+      toast('Failed to upload file. Please try again.', 'error');
     } finally {
       setIsUploading(false);
     }
@@ -582,6 +584,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
           </section>
         )}
       </div>
+      <ToastMount />
     </div>
   );
 }

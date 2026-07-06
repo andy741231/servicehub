@@ -208,14 +208,10 @@ When implementing or refactoring modals:
 - ✅ Web/Assets.jsx - uses `useConfirm()` and `useToast()`
 - ✅ Web/HeaderFooter.jsx - uses `useToast()`
 - ✅ Web/OldWebBuilder.jsx - uses `useToast()`
-
-### Needs Migration
-- ❌ Email/CampaignComposer.jsx - 4 `alert()` calls
-- ❌ Email/MailingLists.jsx - 1 `confirm()` call
-- ❌ Email/EmailDashboard.jsx - 1 `confirm()` call
-- ❌ Forms/FormsDashboard.jsx - 1 `window.confirm()` call
-- ❌ Forms/Submissions.jsx - 1 `window.confirm()` call
-- ❌ Public/FormView.jsx - 1 `alert()` call
+- ✅ Forms/PropertiesPanel.jsx - uses `useToast()` (migrated)
+- ✅ Forms/FormRenderer.jsx - uses `useToast()` and `useAlert()` (migrated)
+- ✅ Forms/FormsDashboard.jsx - uses `useConfirm()` (migrated)
+- ✅ Email/EmailDashboard.jsx - uses `useConfirm()` (migrated)
 
 ### Custom Modals (Keep as-is if complex)
 - Admin/Users.jsx - 2 custom modals (complex forms)

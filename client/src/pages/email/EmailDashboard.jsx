@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Mail, Users, BarChart3, Clock, MoreVertical, Edit, Trash2, Send, Eye } from 'lucide-react';
 import useEmailStore from './store/emailStore';
+import { useConfirm } from '../../components/Dialog';
 
 export default function EmailDashboard() {
   const navigate = useNavigate();
   const { campaigns, mailingLists, loading, error, fetchCampaigns, fetchMailingLists, deleteCampaign } = useEmailStore();
+  const { confirmDialog, ConfirmDialogMount } = useConfirm();
 
   useEffect(() => {
     fetchCampaigns();
@@ -13,12 +15,16 @@ export default function EmailDashboard() {
   }, [fetchCampaigns, fetchMailingLists]);
 
   const handleDeleteCampaign = async (id) => {
-    if (confirm('Are you sure you want to delete this campaign? This action cannot be undone.')) {
-      try {
-        await deleteCampaign(id);
-      } catch (error) {
-        console.error('Failed to delete campaign:', error);
-      }
+    const ok = await confirmDialog({
+      title: 'Delete this campaign?',
+      message: 'This action cannot be undone.',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await deleteCampaign(id);
+    } catch (error) {
+      console.error('Failed to delete campaign:', error);
     }
   };
 
@@ -207,6 +213,7 @@ export default function EmailDashboard() {
           </tbody>
         </table>
       </div>
+      {ConfirmDialogMount}
     </div>
   );
 }

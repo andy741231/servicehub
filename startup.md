@@ -56,16 +56,9 @@ npm install
 
 This installs dependencies for all packages: `client/`, `server/`, and `shared/`.
 
-### Step 2.5: Download UI/UX Pro Max skill
+### Step 2.5: UI/UX Pro Max skill
 
-Download the UI/UX Pro Max skill for advanced design guidance:
-
-```bash
-# Download the skill to .devin/skills/
-curl -o .devin/skills/ui-ux-pro-max.md https://raw.githubusercontent.com/your-repo/ui-ux-pro-max/main/skill.md
-```
-
-This skill provides accessibility best practices, interaction patterns, animation guidelines, and UX validation for UI components.
+The UI/UX Pro Max skill is available in `.devin/skills/ui-ux-pro-max/` and provides advanced design guidance, accessibility best practices, interaction patterns, animation guidelines, and UX validation for UI components. It is automatically invoked when needed for UI/UX work.
 
 ### Step 3: Configure environment variables
 if you dont have a .env file, copy the example file:
@@ -125,9 +118,8 @@ Turborepo starts both apps in parallel:
 ### Default Admin Account
 | Field | Value |
 |-------|-------|
-| Email | `admin@servicehub.com` |
+| Username | `admin` |
 | Password | `Admin@2024!` |
-| Role | `admin` (access to all apps) |
 
 > This account exists in **both** the test and production databases.
 
@@ -151,6 +143,8 @@ npx prisma db seed
 export $(grep DATABASE_URL_PROD .env | xargs) && DATABASE_URL="$DATABASE_URL_PROD" npx prisma db seed
 ```
 
+> **Note:** If http://localhost:3000/ shows "page not found" on first startup, wait up to a minute — the app uses a remote Azure SQL database which may need time to cold-start. This could  happen if the database has been inactive for an hour.
+
 ---
 
 ## Deployment
@@ -161,7 +155,7 @@ Deployment is fully automated with **zero-downtime** using Azure App Service dep
 |-------|-----|-------------|
 | 1 | `build` | Install deps, compile React frontend, generate Prisma client, assemble & zip deployment package |
 | 2 | `deploy-staging` | Apply staging DB migrations, push zip to the `staging` slot via Kudu, poll until complete |
-| 3 | `smoke-tests` | Hit `/`, `/api/health`, and `/login` on the staging URL — pipeline halts if any return non-200 |
+| 3 | `smoke-tests` | Hit `/`, `/api/health`, and `/hub-admin` on the staging URL — pipeline halts if any return non-200 |
 | 4 | `swap-production` | Apply production DB migrations, swap staging → production via Azure CLI, verify production health |
 
 **Production URL:** `https://houstonservicehub.azurewebsites.net`  
@@ -480,5 +474,12 @@ Implementation plan when ready:
 4. Update `uploadAsset` controller to store the blob URL instead of `/uploads/<filename>`
 5. Remove the `app.use('/uploads', express.static(...))` line from `index.js` — files are served directly from Azure CDN URLs
 6. Run a one-time migration script to move existing `/uploads` files to the blob container
+
+
+# View Azure SQL Database / prisma studio IN PRODUCTION
+```bash
+DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database=free-production-servicehub;user=servicehub_prod;password=zM8@nL3wP6!qS9;encrypt=true;trustServerCertificate=false;connectionTimeout=30' npx prisma studio
+```
+
 
 **Cost:** ~$0.018/GB/month (Hot tier, LRS). Negligible for typical image usage.

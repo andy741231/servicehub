@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FileText, Trash2, Edit, BarChart3, Clock, Search, Share2, Check, TrendingUp } from 'lucide-react';
 import useFormStore from './store/formStore';
+import { useConfirm } from '../../components/Dialog';
 
 export default function FormsDashboard() {
   const navigate = useNavigate();
   const { forms, createNewForm, deleteForm, setCurrentForm, loadForms, isLoading } = useFormStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedFormId, setCopiedFormId] = useState(null);
+  const { confirmDialog, ConfirmDialogMount } = useConfirm();
 
   useEffect(() => {
     loadForms();
@@ -36,10 +38,14 @@ export default function FormsDashboard() {
     navigate(`/hub-admin/forms/analytics/${form?.slug || formId}`);
   };
 
-  const handleDeleteForm = (formId) => {
-    if (window.confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
-      deleteForm(formId);
-    }
+  const handleDeleteForm = async (formId) => {
+    const ok = await confirmDialog({
+      title: 'Delete this form?',
+      message: 'This action cannot be undone.',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    deleteForm(formId);
   };
 
   const handleShareForm = (formId) => {
@@ -226,6 +232,7 @@ export default function FormsDashboard() {
           </div>
         )}
       </div>
+      {ConfirmDialogMount}
     </div>
   );
 }
