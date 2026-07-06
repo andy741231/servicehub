@@ -1,0 +1,33 @@
+=== LOGIN ===
+=== FORMS DASHBOARD ===
+Form cards: 17
+=== VERIFY RENAME MENU ITEM ===
+Menu actions: ["Edit","Rename","Duplicate","Share link","Submissions","Analytics","Delete"]
+Rename present in menu: true
+[shot] a-menu-with-rename.png
+=== OPEN RENAME MODAL ===
+Rename dialog visible: 1
+Rename input prefilled with: "Contact Form (3)"
+[shot] b-rename-modal.png
+=== SUBMIT RENAME ===
+Dialog still open after save: 0
+First card title after rename: "UX Audit Test Form [renamed]"
+[shot] c-after-rename.png
+Rename toast shown: 1
+=== BUILDER INLINE RENAME ===
+Builder URL: http://localhost:3003/hub-admin/forms/builder/ux-audit-test-form-renamed
+Header rename button present: 1
+Header inline rename input visible: 1
+Inline rename committed via Enter
+[shot] d-builder-inline-rename.png
+=== DELETE CONFIRM MODAL ===
+Forms before delete: 19
+Native window.confirm fired: false (should be false)
+Styled delete dialog visible: 1
+[shot] e-delete-modal.png
+Forms after delete: 18
+[shot] f-after-delete.png
+=== SHARE FEEDBACK ===
+Share feedback toast shown: 1
+[shot] g-share-toast.png
+=== VERIFICATION COMPLETE ===

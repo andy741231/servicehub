@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Globe, Lock, Calendar, Clock, ToggleLeft, ToggleRight, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import useFormStore from '../store/formStore';
+import { isOpenNow, nextTransition, formatDuration, formatDayTime } from '../utils/schedule';
 
 const DAYS = [
   { value: 'monday',    short: 'Mon' },
@@ -14,12 +15,42 @@ const DAYS = [
 
 const DEFAULT_CLOSED_MESSAGE = 'This form is currently closed. Please check back later.';
 
-const makeSlot = () => ({
+const makeSlot = (overrides = {}) => ({
   id: `slot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
   startTime: '09:00',
   endTime: '17:00',
+  ...overrides,
 });
+
+// ── Presets ────────────────────────────────────────────────────────────────
+// Each preset replaces the current weekly slots with a prebuilt config.
+// `label` is shown on the chip; `slots` is the factory output.
+const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+const WEEKEND = ['saturday', 'sunday'];
+const ALL_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+const PRESETS = [
+  {
+    label: 'Business hours',
+    slots: [makeSlot({ days: WEEKDAYS, startTime: '09:00', endTime: '17:00' })],
+  },
+  {
+    label: 'Weekends',
+    slots: [makeSlot({ days: WEEKEND, startTime: '09:00', endTime: '17:00' })],
+  },
+  {
+    label: '24/7',
+    slots: [makeSlot({ days: ALL_DAYS, startTime: '00:00', endTime: '23:59' })],
+  },
+  {
+    label: 'Lunch + dinner',
+    slots: [
+      makeSlot({ days: WEEKDAYS, startTime: '11:00', endTime: '14:00' }),
+      makeSlot({ days: WEEKDAYS, startTime: '17:00', endTime: '22:00' }),
+    ],
+  },
+];
 
 const DEFAULT_SCHEDULE = {
   enabled: false,
@@ -59,6 +90,141 @@ function validate(schedule) {
 
   if (!schedule.closedMessage?.trim()) errors.push('A "closed" message is required.');
   return errors;
+}
+
+// ── Week timeline ──────────────────────────────────────────────────────────
+// Compact 7-column visual summary of the weekly open hours. Each slot
+// renders as a colored bar positioned by its time range within the day.
+// Overlapping slots are visible because bars are semi-transparent.
+const SLOT_COLORS = [
+  'bg-primary/70 border-primary',
+  'bg-blue-400/70 border-blue-500',
+  'bg-emerald-400/70 border-emerald-500',
+  'bg-violet-400/70 border-violet-500',
+  'bg-amber-400/70 border-amber-500',
+];
+
+function timeToMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function WeekTimeline({ slots }) {
+  if (!slots?.length) return null;
+
+  return (
+    <div className="border border-border rounded-lg bg-background p-3">
+      <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Week overview</p>
+      <div className="flex gap-1.5">
+        {DAYS.map(({ value, short }) => {
+          const daySlots = slots
+            .map((s, i) => ({ ...s, color: SLOT_COLORS[i % SLOT_COLORS.length] }))
+            .filter((s) => (s.days || []).includes(value));
+          return (
+            <div key={value} className="flex-1 flex flex-col">
+              <span className="text-[10px] font-semibold text-muted text-center mb-1">{short}</span>
+              <div className="relative h-32 bg-surface-raised rounded border border-border overflow-hidden">
+                {/* Hour gridlines at 6/12/18 */}
+                {[6, 12, 18].map((h) => (
+                  <div
+                    key={h}
+                    className="absolute left-0 right-0 border-t border-border/60"
+                    style={{ top: `${(h / 24) * 100}%` }}
+                  />
+                ))}
+                {daySlots.map((s, idx) => {
+                  const start = timeToMinutes(s.startTime);
+                  const end = timeToMinutes(s.endTime);
+                  const top = `${(start / 1440) * 100}%`;
+                  const height = `${Math.max(((end - start) / 1440) * 100, 1.5)}%`;
+                  return (
+                    <div
+                      key={idx}
+                      className={`absolute left-0.5 right-0.5 rounded-sm border ${s.color}`}
+                      style={{ top, height }}
+                      title={`${s.startTime} – ${s.endTime}`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-3 mt-2 text-[10px] text-muted">
+        <span>0:00</span>
+        <span className="flex-1 text-center">12:00</span>
+        <span>24:00</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Presets row ────────────────────────────────────────────────────────────
+// Quick-apply chips that replace the current weekly slots with a common
+// configuration. Shown only inside the Weekly hours section.
+function PresetsRow({ onApply }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {PRESETS.map((p) => (
+        <button
+          key={p.label}
+          type="button"
+          onClick={() => onApply(p.slots)}
+          className="px-2.5 py-1 text-xs font-medium rounded-full border border-border bg-background text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Live status strip ──────────────────────────────────────────────────────
+// Shows whether the form is open or closed right now, plus the next
+// transition (e.g. "closes at Mon 5:00 PM — in 2h 14m"). Refreshes every
+// 30s so the countdown stays reasonably fresh without thrashing renders.
+function LiveStatusStrip({ schedule }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Recompute only when the schedule shape changes or the tick advances.
+  // eslint-disable-next-line no-unused-vars
+  const _ = tick;
+
+  const open = isOpenNow(schedule);
+  const transition = useMemo(() => nextTransition(schedule), [schedule]);
+
+  if (!schedule?.enabled) return null;
+  const hasConstraint = schedule.dateRange?.enabled || schedule.weeklyHours?.enabled;
+  if (!hasConstraint) return null;
+
+  const dot = open ? 'bg-green-500' : 'bg-red-400';
+  const label = open ? 'Open now' : 'Closed now';
+
+  let detail = '';
+  if (transition) {
+    const verb = transition.opening ? 'Opens' : 'Closes';
+    const when = formatDayTime(transition.at);
+    const until = formatDuration(transition.at.getTime() - Date.now());
+    detail = `${verb} ${when} — ${until}`;
+  }
+
+  return (
+    <div className="flex items-center gap-2.5 px-4 py-2.5 bg-surface-raised border border-border rounded-lg">
+      <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${dot} ${open ? 'animate-pulse' : ''}`} />
+      <div className="flex-1 min-w-0">
+        <span className="text-small font-semibold text-base-color">{label}</span>
+        {detail && (
+          <span className="text-xs text-muted ml-2">{detail}</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ── Toggle button ──────────────────────────────────────────────────────────
@@ -181,7 +347,11 @@ export default function AccessSchedulePanel() {
   };
 
   const errors = validate(schedule);
-  const isActive = schedule.enabled && (schedule.dateRange.enabled || schedule.weeklyHours.enabled);
+  const hasConstraints = schedule.dateRange.enabled || schedule.weeklyHours.enabled;
+  const isActive = schedule.enabled && hasConstraints;
+  // Master toggle is on but no sub-constraint enabled — a confusing no-op
+  // state that deserves its own message rather than "Always open".
+  const enabledButEmpty = schedule.enabled && !hasConstraints;
 
   const save = (updates) => updateFormSchedule({ ...schedule, ...updates });
   const patchDateRange = (updates) => save({ dateRange: { ...schedule.dateRange, ...updates } });
@@ -206,22 +376,37 @@ export default function AccessSchedulePanel() {
 
       {/* Status banner */}
       <div className={`flex items-start gap-3 px-4 py-3 rounded-lg border ${
-        isActive ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-green-50 border-green-200 text-green-800'
+        isActive
+          ? 'bg-amber-50 border-amber-200 text-amber-800'
+          : enabledButEmpty
+            ? 'bg-yellow-50 border-yellow-300 text-yellow-800'
+            : 'bg-green-50 border-green-200 text-green-800'
       }`}>
         {isActive
           ? <Lock className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          : <Globe className="h-5 w-5 flex-shrink-0 mt-0.5" />}
+          : enabledButEmpty
+            ? <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            : <Globe className="h-5 w-5 flex-shrink-0 mt-0.5" />}
         <div>
           <p className="text-small font-semibold">
-            {isActive ? 'Access is restricted' : 'Always open to the public'}
+            {isActive
+              ? 'Access is restricted'
+              : enabledButEmpty
+                ? 'Schedule enabled but no restrictions set'
+                : 'Always open to the public'}
           </p>
           <p className="text-xs mt-0.5 opacity-80">
             {isActive
               ? 'The form is only accessible during the windows defined below.'
-              : 'Anyone with the link can fill out this form at any time.'}
+              : enabledButEmpty
+                ? 'Enable a date window or weekly hours below, otherwise the form stays open.'
+                : 'Anyone with the link can fill out this form at any time.'}
           </p>
         </div>
       </div>
+
+      {/* Live status — open/closed right now + next transition */}
+      <LiveStatusStrip schedule={schedule} />
 
       {/* Validation errors */}
       {errors.length > 0 && (
@@ -311,7 +496,16 @@ export default function AccessSchedulePanel() {
             </div>
 
             {schedule.weeklyHours.enabled && (
-              <div className="px-3 py-3 border-t border-border space-y-2">
+              <div className="px-3 py-3 border-t border-border space-y-3">
+                {/* Presets */}
+                <div>
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">Presets</p>
+                  <PresetsRow onApply={(slots) => patchWeekly({ slots })} />
+                </div>
+
+                {/* Visual week overview */}
+                <WeekTimeline slots={schedule.weeklyHours.slots} />
+
                 {/* Slot list */}
                 {schedule.weeklyHours.slots.map((slot, i) => (
                   <SlotCard

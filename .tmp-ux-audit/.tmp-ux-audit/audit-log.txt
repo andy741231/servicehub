@@ -1,0 +1,89 @@
+=== STEP 1: Login as admin ===
+[console.error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[console.error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[console.error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[shot] 01-login.png
+[shot] 02-after-login.png
+URL after login: http://localhost:3003/hub-admin/web/pages
+=== STEP 2: Go to Forms dashboard ===
+[shot] 03-forms-dashboard.png
+URL: http://localhost:3003/hub-admin/forms
+Form cards visible: 18
+=== STEP 3: Inspect overflow menu actions ===
+[shot] 04-overflow-menu.png
+Overflow menu actions: ["Edit","Duplicate","Share link","Submissions","Analytics","Delete"]
+=== STEP 4: Look for Rename capability on dashboard ===
+Rename menu item count: 0, Rename button count: 0, contenteditable title: 0
+[shot] 05-after-dblclick-title.png
+Focused input after dblclick: 0
+=== STEP 5: Open builder (Edit) ===
+[console.error] Warning: findDOMNode is deprecated and will be removed in the next major release. Instead, add a ref directly to the element you want to reference. Learn more about using refs safely here: https://reactjs.org/link/strict-mode-find-node%s 
+    at ReactQuill2 (http://localhost:3003/node_modules/.vite/deps/react-quill.js?v=a2bccfd1:12915:30)
+    at div
+    at content (http://localhost:3003/src/pages/forms/components/FormCanvas.jsx:295:15)
+    at div
+    at div
+    at FieldCard (http://localhost:3003/src/pages/forms/components/FormCanvas.jsx:710:22)
+    at div
+    at Draggable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7692:40)
+    at ConnectFunction (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1014:74)
+    at PrivateDraggable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7972:28)
+    at PublicDraggable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7980:34)
+    at div
+    at Droppable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:8590:50)
+    at ConnectFunction (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1014:74)
+    at Provider (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1188:11)
+    at App (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7392:5)
+    at ErrorBoundary (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1605:5)
+    at DragDropContext (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7504:21)
+    at div
+    at div
+    at div
+    at Draggable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7692:40)
+    at ConnectFunction (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1014:74)
+    at PrivateDraggable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7972:28)
+    at PublicDraggable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7980:34)
+    at div
+    at Droppable (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:8590:50)
+    at ConnectFunction (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1014:74)
+    at Provider (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1188:11)
+    at App (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7392:5)
+    at ErrorBoundary (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:1605:5)
+    at DragDropContext (http://localhost:3003/node_modules/.vite/deps/@hello-pangea_dnd.js?v=a2bccfd1:7504:21)
+    at FormCanvas (http://localhost:3003/src/pages/forms/components/FormCanvas.jsx:1054:3)
+    at div
+    at div
+    at main
+    at div
+    at FormsBuilder (http://localhost:3003/src/pages/forms/FormsBuilder.jsx:31:20)
+    at RenderedRoute (http://localhost:3003/node_modules/.vite/deps/react-router-dom.js?v=a2bccfd1:4122:5)
+    at Outlet (http://localhost:3003/node_modules/.vite/deps/react-router-dom.js?v=a2bccfd1:4528:26)
+    at main
+    at div
+    at div
+    at AppShell (http://localhost:3003/src/layouts/AppShell.jsx:59:28)
+    at ProtectedRoute (http://localhost:3003/src/App.jsx:43:27)
+    at RenderedRoute (http://localhost:3003/node_modules/.vite/deps/react-router-dom.js?v=a2bccfd1:4122:5)
+    at RenderedRoute (http://localhost:3003/node_modules/.vite/deps/react-router-dom.js?v=a2bccfd1:4122:5)
+    at Routes (http://localhost:3003/node_modules/.vite/deps/react-router-dom.js?v=a2bccfd1:4592:5)
+    at Router (http://localhost:3003/node_modules/.vite/deps/react-router-dom.js?v=a2bccfd1:4535:15)
+    at BrowserRouter (http://localhost:3003/node_modules/.vite/deps/react-router-dom.js?v=a2bccfd1:5273:5)
+    at App (http://localhost:3003/src/App.jsx:64:25)
+[shot] 06-builder.png
+Builder URL: http://localhost:3003/hub-admin/forms/builder/video-training-check-in-form
+Builder editable elements (first 5): ["","","","abcdefkdsafasfj das;jfjjl;adsfdafjdafasafdakj;dfa",""]
+Title field present: 1
+=== STEP 6: View submissions ===
+[shot] 07-submissions.png
+Submissions URL: http://localhost:3003/hub-admin/forms/submissions
+Submission rows: 1
+=== STEP 7: Delete a form ===
+Form count before delete: 18
+Dialog: "Are you sure you want to delete this form? This action cannot be undone."
+[shot] 08-after-delete.png
+Form count after delete: 17
+=== STEP 8: Share link ===
+[pageerror] Failed to execute 'writeText' on 'Clipboard': Write permission denied.
+[shot] 09-share.png
+Share clicked (copies to clipboard)
+=== AUDIT COMPLETE ===

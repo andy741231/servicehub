@@ -46,6 +46,39 @@ git clone https://github.com/andy741231/servicehub.git
 cd servicehub
 ```
 
+### Step 1.5: Set up GitHub authentication for pushing
+
+If you plan to push changes, you need to authenticate first. The easiest method is using the GitHub CLI.
+
+**Install GitHub CLI:**
+
+- **Windows:** Download and install from https://cli.github.com/ or use winget:
+  ```bash
+  winget install --id GitHub.cli
+  ```
+
+- **macOS:** Use Homebrew:
+  ```bash
+  brew install gh
+  ```
+
+- **Linux:** Use package manager or download from https://cli.github.com/
+
+**Verify installation:**
+```bash
+gh --version
+```
+
+**Authenticate with GitHub:**
+```bash
+gh auth login
+gh auth setup-git
+```
+
+**Alternative methods:**
+- **Personal Access Token:** Create a token at https://github.com/settings/tokens with `repo` scope, then push with: `git push https://<TOKEN>@github.com/andy741231/servicehub.git <branch>`
+- **SSH Keys:** Generate SSH keys and add the public key to your GitHub account, then change remote URL: `git remote set-url origin git@github.com:andy741231/servicehub.git`
+
 ### Step 2: Install dependencies
 
 This project uses npm Workspaces + Turborepo. Run once from the project root:
@@ -54,18 +87,40 @@ This project uses npm Workspaces + Turborepo. Run once from the project root:
 npm install
 ```
 
-This installs dependencies for all packages: `client/`, `server/`, and `shared/`.
+This installs dependencies for all packages: `client/`, `server/`, and `shared/`. The `dev` script uses `concurrently` (included as a dev dependency) to start both apps in one terminal — works on both Windows and macOS.
 
-### Step 2.5: Download UI/UX Pro Max skill
+### Step 2.5: Install the UI/UX Pro Max skill
 
-Download the UI/UX Pro Max skill for advanced design guidance:
+The [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill provides design intelligence — accessibility rules, interaction patterns, animation guidelines, color/typography/style recommendations, and UX validation — for UI work.
+
+Install it via the official CLI, then mirror the generated bundle into `.devin/skills/` so Devin can invoke it:
 
 ```bash
-# Download the skill to .devin/skills/
-curl -o .devin/skills/ui-ux-pro-max.md https://raw.githubusercontent.com/your-repo/ui-ux-pro-max/main/skill.md
+# 1. Install the CLI globally
+npm install -g ui-ux-pro-max-cli
+
+# 2. Generate the skill bundle for Windsurf (writes to .windsurf/skills/ui-ux-pro-max/)
+uipro init --ai windsurf --force
+
+# 3. Copy it into .devin/skills/ so Devin can discover it
+#    (PowerShell)
+Copy-Item -Path ".windsurf\skills\ui-ux-pro-max\*" `
+         -Destination ".devin\skills\ui-ux-pro-max\" -Recurse -Force
+#    (bash / macOS / Linux)
+cp -R .windsurf/skills/ui-ux-pro-max/* .devin/skills/ui-ux-pro-max/
 ```
 
-This skill provides accessibility best practices, interaction patterns, animation guidelines, and UX validation for UI components.
+> **Windows note:** If `uipro` fails with a PowerShell execution-policy error, invoke the `.cmd` shim directly:
+> `& "$env:APPDATA\npm\uipro.cmd" init --ai windsurf --force`
+
+> **Python (optional):** The skill ships Python scripts (`scripts/search.py`, `scripts/design_system.py`) for searchable database queries (`--domain`, `--design-system`). Install Python 3 to use them; the SKILL.md guidance itself works without Python.
+
+**Updating later:**
+```bash
+uipro update                       # update the global CLI
+uipro init --ai windsurf --force   # regenerate the bundle
+# then re-run the copy command above
+```
 
 ### Step 3: Configure environment variables
 if you dont have a .env file, copy the example file:
@@ -118,6 +173,46 @@ Turborepo starts both apps in parallel:
 - **Frontend (React/Vite):** `http://localhost:3000`
 - **Backend (Express API):** `http://localhost:4000`
 
+> **⚠️ First-time setup?** If `npm run dev` fails or the server crashes on startup, see the [Known Issues](#known-issues-first-time-setup) section below — it covers the Azure SQL cold start, firewall IP whitelist, and a Windows-specific `npm run dev` bug.
+
+---
+
+## Known Issues (First-Time Setup)
+
+If this is your first time running the app, you will likely encounter one or more of the following issues. All are expected and have straightforward fixes.
+
+### 1. Azure SQL server cold start (connection timeout)
+
+> **Note:** This is not a first-time-only issue — it can happen anytime the database has been idle. First-timers should be aware of it so it doesn't block initial setup.
+
+**Symptom:** The server crashes on startup with a Prisma error:
+```
+PrismaClientInitializationError: Timed out fetching a new connection from the connection pool.
+(P2024)
+```
+
+**Cause:** The Azure SQL server (`houstonservice-test.database.windows.net`) is a serverless/paused instance. After a period of inactivity it goes to sleep and takes **~60 seconds** to wake up on the first connection. The default Prisma connection pool timeout (10s) is shorter than the cold start time.
+
+**Fix:** Simply restart the server after waiting ~1 minute. The first connection attempt wakes the server; subsequent connections will be fast.
+
+```bash
+# If the server crashed, just re-run it:
+node --watch server/src/index.js
+```
+
+### 2. Your IP is not in the Azure SQL firewall whitelist
+
+**Symptom:** The server crashes with:
+```
+PrismaClientInitializationError: Client with IP address 'xxx.xxx.xxx.xxx' is not allowed to access the server.
+```
+
+**Cause:** Azure SQL has a firewall that blocks all incoming connections by default. Each developer must add their public IP address to the whitelist.
+
+**Fix:** See the [Adding your IP to Azure SQL Firewall](#adding-your-ip-to-azure-sql-firewall) section below. You will need the Azure CLI (`az`) installed and authenticated.
+
+> **Note:** If your ISP uses dynamic IPs or you switch networks (home/office/VPN), you may need to re-add your IP each time it changes. Firewall rule changes can take up to 5 minutes to take effect.
+
 ---
 
 ## Login Credentials
@@ -150,6 +245,8 @@ npx prisma db seed
 # Seed prod DB (for admins only — ensure DATABASE_URL_PROD is set in .env)
 export $(grep DATABASE_URL_PROD .env | xargs) && DATABASE_URL="$DATABASE_URL_PROD" npx prisma db seed
 ```
+
+> **Note:** If http://localhost:3000/ shows "page not found" on first startup, wait up to a minute — the app uses a remote Azure SQL database which may need time to cold-start. This could  happen if the database has been inactive for an hour.
 
 ---
 
@@ -480,5 +577,12 @@ Implementation plan when ready:
 4. Update `uploadAsset` controller to store the blob URL instead of `/uploads/<filename>`
 5. Remove the `app.use('/uploads', express.static(...))` line from `index.js` — files are served directly from Azure CDN URLs
 6. Run a one-time migration script to move existing `/uploads` files to the blob container
+
+
+# View Azure SQL Database / prisma studio IN PRODUCTION
+```bash
+DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database=free-production-servicehub;user=servicehub_prod;password=zM8@nL3wP6!qS9;encrypt=true;trustServerCertificate=false;connectionTimeout=30' npx prisma studio
+```
+
 
 **Cost:** ~$0.018/GB/month (Hot tier, LRS). Negligible for typical image usage.
