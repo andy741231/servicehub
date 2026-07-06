@@ -46,6 +46,39 @@ git clone https://github.com/andy741231/servicehub.git
 cd servicehub
 ```
 
+### Step 1.5: Set up GitHub authentication for pushing
+
+If you plan to push changes, you need to authenticate first. The easiest method is using the GitHub CLI.
+
+**Install GitHub CLI:**
+
+- **Windows:** Download and install from https://cli.github.com/ or use winget:
+  ```bash
+  winget install --id GitHub.cli
+  ```
+
+- **macOS:** Use Homebrew:
+  ```bash
+  brew install gh
+  ```
+
+- **Linux:** Use package manager or download from https://cli.github.com/
+
+**Verify installation:**
+```bash
+gh --version
+```
+
+**Authenticate with GitHub:**
+```bash
+gh auth login
+gh auth setup-git
+```
+
+**Alternative methods:**
+- **Personal Access Token:** Create a token at https://github.com/settings/tokens with `repo` scope, then push with: `git push https://<TOKEN>@github.com/andy741231/servicehub.git <branch>`
+- **SSH Keys:** Generate SSH keys and add the public key to your GitHub account, then change remote URL: `git remote set-url origin git@github.com:andy741231/servicehub.git`
+
 ### Step 2: Install dependencies
 
 This project uses npm Workspaces + Turborepo. Run once from the project root:
@@ -54,11 +87,40 @@ This project uses npm Workspaces + Turborepo. Run once from the project root:
 npm install
 ```
 
-This installs dependencies for all packages: `client/`, `server/`, and `shared/`.
+This installs dependencies for all packages: `client/`, `server/`, and `shared/`. The `dev` script uses `concurrently` (included as a dev dependency) to start both apps in one terminal — works on both Windows and macOS.
 
-### Step 2.5: UI/UX Pro Max skill
+### Step 2.5: Install the UI/UX Pro Max skill
 
-The UI/UX Pro Max skill is available in `.devin/skills/ui-ux-pro-max/` and provides advanced design guidance, accessibility best practices, interaction patterns, animation guidelines, and UX validation for UI components. It is automatically invoked when needed for UI/UX work.
+The [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill provides design intelligence — accessibility rules, interaction patterns, animation guidelines, color/typography/style recommendations, and UX validation — for UI work.
+
+Install it via the official CLI, then mirror the generated bundle into `.devin/skills/` so Devin can invoke it:
+
+```bash
+# 1. Install the CLI globally
+npm install -g ui-ux-pro-max-cli
+
+# 2. Generate the skill bundle for Windsurf (writes to .windsurf/skills/ui-ux-pro-max/)
+uipro init --ai windsurf --force
+
+# 3. Copy it into .devin/skills/ so Devin can discover it
+#    (PowerShell)
+Copy-Item -Path ".windsurf\skills\ui-ux-pro-max\*" `
+         -Destination ".devin\skills\ui-ux-pro-max\" -Recurse -Force
+#    (bash / macOS / Linux)
+cp -R .windsurf/skills/ui-ux-pro-max/* .devin/skills/ui-ux-pro-max/
+```
+
+> **Windows note:** If `uipro` fails with a PowerShell execution-policy error, invoke the `.cmd` shim directly:
+> `& "$env:APPDATA\npm\uipro.cmd" init --ai windsurf --force`
+
+> **Python (optional):** The skill ships Python scripts (`scripts/search.py`, `scripts/design_system.py`) for searchable database queries (`--domain`, `--design-system`). Install Python 3 to use them; the SKILL.md guidance itself works without Python.
+
+**Updating later:**
+```bash
+uipro update                       # update the global CLI
+uipro init --ai windsurf --force   # regenerate the bundle
+# then re-run the copy command above
+```
 
 ### Step 3: Configure environment variables
 if you dont have a .env file, copy the example file:
@@ -111,6 +173,46 @@ Turborepo starts both apps in parallel:
 - **Frontend (React/Vite):** `http://localhost:3000`
 - **Backend (Express API):** `http://localhost:4000`
 
+> **⚠️ First-time setup?** If `npm run dev` fails or the server crashes on startup, see the [Known Issues](#known-issues-first-time-setup) section below — it covers the Azure SQL cold start, firewall IP whitelist, and a Windows-specific `npm run dev` bug.
+
+---
+
+## Known Issues (First-Time Setup)
+
+If this is your first time running the app, you will likely encounter one or more of the following issues. All are expected and have straightforward fixes.
+
+### 1. Azure SQL server cold start (connection timeout)
+
+> **Note:** This is not a first-time-only issue — it can happen anytime the database has been idle. First-timers should be aware of it so it doesn't block initial setup.
+
+**Symptom:** The server crashes on startup with a Prisma error:
+```
+PrismaClientInitializationError: Timed out fetching a new connection from the connection pool.
+(P2024)
+```
+
+**Cause:** The Azure SQL server (`houstonservice-test.database.windows.net`) is a serverless/paused instance. After a period of inactivity it goes to sleep and takes **~60 seconds** to wake up on the first connection. The default Prisma connection pool timeout (10s) is shorter than the cold start time.
+
+**Fix:** Simply restart the server after waiting ~1 minute. The first connection attempt wakes the server; subsequent connections will be fast.
+
+```bash
+# If the server crashed, just re-run it:
+node --watch server/src/index.js
+```
+
+### 2. Your IP is not in the Azure SQL firewall whitelist
+
+**Symptom:** The server crashes with:
+```
+PrismaClientInitializationError: Client with IP address 'xxx.xxx.xxx.xxx' is not allowed to access the server.
+```
+
+**Cause:** Azure SQL has a firewall that blocks all incoming connections by default. Each developer must add their public IP address to the whitelist.
+
+**Fix:** See the [Adding your IP to Azure SQL Firewall](#adding-your-ip-to-azure-sql-firewall) section below. You will need the Azure CLI (`az`) installed and authenticated.
+
+> **Note:** If your ISP uses dynamic IPs or you switch networks (home/office/VPN), you may need to re-add your IP each time it changes. Firewall rule changes can take up to 5 minutes to take effect.
+
 ---
 
 ## Login Credentials
@@ -118,8 +220,9 @@ Turborepo starts both apps in parallel:
 ### Default Admin Account
 | Field | Value |
 |-------|-------|
-| Username | `admin` |
+| Email | `admin@servicehub.com` |
 | Password | `Admin@2024!` |
+| Role | `admin` (access to all apps) |
 
 > This account exists in **both** the test and production databases.
 
@@ -155,7 +258,7 @@ Deployment is fully automated with **zero-downtime** using Azure App Service dep
 |-------|-----|-------------|
 | 1 | `build` | Install deps, compile React frontend, generate Prisma client, assemble & zip deployment package |
 | 2 | `deploy-staging` | Apply staging DB migrations, push zip to the `staging` slot via Kudu, poll until complete |
-| 3 | `smoke-tests` | Hit `/`, `/api/health`, and `/hub-admin` on the staging URL — pipeline halts if any return non-200 |
+| 3 | `smoke-tests` | Hit `/`, `/api/health`, and `/login` on the staging URL — pipeline halts if any return non-200 |
 | 4 | `swap-production` | Apply production DB migrations, swap staging → production via Azure CLI, verify production health |
 
 **Production URL:** `https://houstonservicehub.azurewebsites.net`  

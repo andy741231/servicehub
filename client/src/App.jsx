@@ -16,6 +16,7 @@ import FormsIndex from './pages/forms/index';
 import FormsBuilder from './pages/forms/FormsBuilder';
 import Submissions from './pages/forms/Submissions';
 import FormAnalytics from './pages/forms/FormAnalytics';
+import FormTemplates from './pages/forms/FormTemplates';
 import EmailIndex from './pages/email/index';
 import EmailShell from './pages/email/EmailShell';
 import NewsletterBuilder from './pages/email/NewsletterBuilder';
@@ -35,7 +36,12 @@ export default function App() {
   const { checkAuth } = useAuthStore();
 
   useEffect(() => {
-    checkAuth();
+    // Only check auth on admin routes — public routes (/, /form/:slug, /:slug)
+    // don't need a session and would otherwise produce 401 console noise.
+    const path = window.location.pathname;
+    if (path.startsWith('/hub-admin')) {
+      checkAuth();
+    }
   }, [checkAuth]);
 
   return (
@@ -71,6 +77,7 @@ export default function App() {
             <Route path="forms/builder/:formSlug?" element={<FormsBuilder />} />
             <Route path="forms/submissions" element={<Submissions />} />
             <Route path="forms/analytics/:formSlug?" element={<FormAnalytics />} />
+            <Route path="forms/templates" element={<FormTemplates />} />
             <Route path="email" element={<EmailShell />}>
               <Route index element={<EmailIndex />} />
               <Route path="campaigns/new" element={<NewsletterBuilder />} />

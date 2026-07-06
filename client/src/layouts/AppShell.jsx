@@ -20,6 +20,12 @@ function NavItem({ app, location }) {
       ? location.pathname.startsWith('/hub-admin/web')
       : app.id === 'email'
       ? location.pathname.startsWith('/hub-admin/email')
+      : app.id === 'forms'
+      ? location.pathname.startsWith('/hub-admin/forms')
+      : app.id === 'directory'
+      ? location.pathname.startsWith('/hub-admin/directory')
+      : app.id === 'portal'
+      ? location.pathname.startsWith('/hub-admin/portal')
       : location.pathname === app.path;
 
   return (

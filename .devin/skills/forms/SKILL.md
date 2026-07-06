@@ -6,181 +6,97 @@ description: Guide for building the drag-and-drop Form Builder and submission ma
 # Form Builder (`client/src/pages/forms`)
 
 ## Overview
-The Forms sub-app is a comprehensive drag-and-drop form builder that allows users to create custom forms, share them via unique endpoints, and analyze incoming submissions. It features a conversational one-question-at-a-time interface, smart conditional logic, and beautiful UX design.
+Allows building custom forms using a drag-and-drop interface, sharing them via unique endpoints, and analyzing incoming user submissions.
 
-## Key Features
+## Features
+- **Form Editor:** 3-pane builder (left field palette, center canvas, right properties/preview) with drag-and-drop sections, 20 field types, conditional logic, version history, autosave, and a `/` command palette.
+- **Form Submissions Inbox:** View submissions in a clean table format with search, filter, and sort.
+- **CSV Exporter:** Download submission entries locally.
+- **Form Analytics:** Submission trends (SVG line chart), field completion rates, date-range filters.
+- **Templates Gallery:** 6 prebuilt forms (Contact, Feedback, Event RSVP, Job App, Support, Lead Capture) at `/hub-admin/forms/templates`.
+- **Theme System:** 6 one-click theme presets, custom colors, font picker, progress bar/steps, conversational (one-question-per-screen) layout mode.
 
-### Form Builder Interface
-- **Canvas-Based Editor:** Central drag-and-drop canvas for form construction
-- **Field Type Picker:** Modal-based field selection (no left sidebar palette)
-- **Properties Panel:** Right-side panel for field configuration
-- **Auto-Save:** Automatic saving with revision history
-- **Real-time Preview:** Live preview mode for testing
+## Architecture
+- `FormsDashboard.jsx` — form cards grid with status badges, stats, filters, sort, overflow menu
+- `FormsBuilder.jsx` — 3-pane editor: left `FieldPalette`, center `FormCanvas`, right `PropertiesPanel` / live `FormRenderer` preview
+- `FormCanvas.jsx` — sections (rows) with 1-4 column layouts, drag-and-drop via `@hello-pangea/dnd`, collapsible sections, `FieldCard` rendering
+- `FormRenderer.jsx` — public form with theming, validation, multi-page, conditional logic, access-schedule gating, computed-field auto-evaluation, repeating groups
+- `PropertiesPanel.jsx` — field/section/form properties with General/Advanced/Logic tabs; dedicated panels for content blocks, image blocks, computed fields, repeating groups
+- `FieldPalette.jsx` — categorized (Basic/Choice/Advanced/Personal/Layout) searchable field registry
+- `FormTemplates.jsx` — template gallery that clones rows+fields into a new form
+- `store/formStore.js` — Zustand store with undo/redo (50 snapshots), API + localStorage fallback, form/submission CRUD
+- `utils/formula.js` — safe formula evaluation for computed fields (`${Field Label}` references, sanitized math)
+- `utils/conditionalLogic.js` — conditional show/hide evaluation
+- `utils/schedule.js` — access-schedule evaluation (date ranges, weekly hours)
+- `utils/slug.js` — slug generation and duplicate-name detection
 
-### Field Types
-**Text & Input Fields:**
-- Short Text (single-line, 0-999 characters)
-- Long Text (multi-line textarea)
-- Number (numeric input with validation)
-- Email (email address with validation)
-- Phone Number (phone input with formatting)
-- Website (URL input)
-- Password (masked input)
+## Field Types (20)
+text, textarea, number, email, phone, date, url, select, checkbox, rating, slider, file, content, image, signature, computed, repeatingGroup, name, address, pageBreak
 
-**Choice-Based Fields:**
-- Multiple Choice (single selection)
-- Dropdown (long lists with alphabetical sort)
-- Checkbox (multiple selections)
-- Yes/No (binary choice)
+## Design Tokens
+Uses the project's token system (`bg-surface`, `border-border`, `rounded-base`, `text-body`, etc.) defined in `client/src/index.css`. Badge classes: `badge-success`, `badge-warning`, `badge-danger`, `badge-info`, `badge-neutral`, `badge-primary`.
 
-**Structured Data Fields:**
-- Date (date picker)
-- Time (time selection)
-- Address (structured address input)
-- File Upload (accept various file types)
+---
 
-**Structural Elements:**
-- Header (form title with subheader)
-- Rows (group fields into layout sections, each with independent column settings)
-- Page Break (split form into multiple pages)
-- Content Block (rich text with WYSIWYG editor)
-- Hidden Fields (store metadata not visible to users)
+## Known Issues & Remaining Work
 
-### Field Configuration
-- Basic settings (label, placeholder, help text, required, default value)
-- Validation rules (email format, number format, custom regex, min/max values)
-- Display options (row column layout, field positioning, hide label, read-only)
+The following items were identified after the Phase 1-4 overhaul. They are tracked here so a future session can pick them up. **Work through them top-to-bottom** — item 1 is a real bug, the rest are polish.
 
-### Conditional Logic
-- Show/Hide fields based on answers
-- Enable/Disable fields based on conditions
-- Require fields dynamically
-- Skip to different pages/sections
-- Visual IF/THEN rule builder with AND/OR logic
-- All field types as triggers (not just choice fields)
+### 1. BUG: Repeating Group data model is incomplete
+**Problem:** `FormRenderer.jsx` finds "child" fields of a repeating group by matching `field.rowId === repeatingGroup.rowId`. But in the builder, fields in the same row are *siblings*, not children of the repeating group. There is no way to designate which fields belong inside a repeating group, and no canvas UI to add fields *into* a group.
 
-### Form Design & Theming
-- Pre-built theme gallery
-- Custom theme creation
-- Color customization (primary, background, text, button)
-- Font selection (4-6 options)
-- Background images with brightness controls
-- Progress bar and question number toggles
-- Custom thank you message and redirect URL
+**Fix required:**
+- Add a `parentFieldId` property to fields (or a nested `childFields: []` array on the repeatingGroup field).
+- Update `formStore.js`:
+  - `addField` should accept a `parentFieldId` and set it on the new field.
+  - Add a `moveFieldToGroup(fieldId, groupId)` action.
+- Update `FormCanvas.jsx`:
+  - When a `repeatingGroup` field is rendered, render its child fields (those with `parentFieldId === field.id`) *inside* the group card, with their own add/drag controls.
+  - Add a "Add field to group" button inside the repeating group card that opens the field modal with `parentFieldId` preset.
+- Update `FormRenderer.jsx`:
+  - Change the `repeatingGroup` renderer to find children via `parentFieldId === field.id` instead of `rowId`.
+- Update `PropertiesPanel.jsx`:
+  - The `RepeatingGroupSettings` component is fine as-is (min/max/button label).
+- Update `FormsBuilder.jsx` `handleAddField` to pass `parentFieldId` when adding into a group.
 
-### Form Publishing & Sharing
-- Unique form URL
-- Form status (enable/disable)
-- Password protection
-- Domain restriction (optional)
-- Embed options (inline, popup/modal, full-screen)
-- Access controls (public, private, limited responses, time-limited)
+**Files to touch:** `store/formStore.js`, `components/FormCanvas.jsx`, `components/FormRenderer.jsx`, `FormsBuilder.jsx`
 
-### Submission Management
-- Real-time submission storage
-- Table view of all submissions
-- Individual submission detail view
-- Filter by date, field values
-- Search and sort functionality
-- CSV/Excel/JSON export options
+### 2. Computed field double-render on first load
+**Problem:** Computed fields initialize as `''`, the auto-compute `useEffect` produces `'0'` (or `'0.00'`), which differs → triggers a second render. Stabilizes after one cycle. Not a crash, just a wasted render.
 
-### Analytics
-- Total views and submissions
-- Conversion rate (submissions/views)
-- Completion rate and average time to complete
-- Drop-off analysis
-- Response trends over time
-- Device breakdown (mobile vs desktop)
+**Fix:** In the form-load `useEffect` (around line 704 of `FormRenderer.jsx`), initialize computed fields with their evaluated value (using zeros for all inputs) instead of `''`.
 
-## Technical Architecture
+### 3. Dashboard "Duplicate" bypasses store history
+**Problem:** `FormsDashboard.jsx` `handleDuplicate` calls `useFormStore.setState({...})` directly to inject fields/rows. This bypasses undo/redo history tracking and could race with the `createNewForm` API call.
 
-### Database Schema
-```prisma
-model Form {
-  id          String           @id @default(uuid())
-  title       String           @db.NVarChar(255)
-  schema      String           @db.NVarChar(Max) // JSON serialized
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  deletedAt   DateTime?        // Soft delete support
-  submissions FormSubmission[]
-  versions    FormVersion[]
-}
+**Fix:** Add a proper `duplicateForm(formId)` action to `formStore.js` that:
+- Calls `createNewForm()`
+- Copies the source form's fields (with new IDs) and rows into the new form
+- Calls `saveCurrentForm` with `${title} (copy)`
+- Returns the new form ID
+Then `handleDuplicate` just calls `duplicateForm(formId)` and navigates.
 
-model FormSubmission {
-  id        String   @id @default(uuid())
-  formId    String
-  data      String   @db.NVarChar(Max) // JSON serialized
-  createdAt DateTime @default(now())
-  form      Form @relation(fields: [formId], references: [id])
-}
+### 4. Command palette lacks keyboard arrow navigation
+**Problem:** The `/` command palette in `FormsBuilder.jsx` supports typing to filter but has no Up/Down/Enter to select without a mouse.
 
-model FormVersion {
-  id        String   @id @default(uuid())
-  formId    String
-  title     String   @db.NVarChar(255)
-  schema    String   @db.NVarChar(Max) // JSON snapshot
-  savedById String
-  savedByName String @db.NVarChar(255)
-  versionNumber Int
-  createdAt DateTime @default(now())
-  form      Form     @relation(fields: [formId], references: [id])
-}
+**Fix:** Add a `highlightedIndex` state. On `ArrowDown`/`ArrowUp`, move the highlight. On `Enter`, call `handleAddField` with the highlighted field type. Reset index to 0 when `paletteQuery` changes.
+
+### 5. Runtime testing not yet done
+The build compiles and the dev server starts, but no click-through testing has been performed. Before shipping, manually verify:
+- Dashboard: create, edit, share, delete, duplicate, filter, sort, templates gallery
+- Builder: add each of the 20 field types, drag-reorder, section collapse/duplicate/delete, undo/redo, autosave indicator, split preview (mobile/tablet/desktop), command palette, version history restore
+- Properties: each field type's General/Advanced/Logic tabs, theme presets, conversational mode toggle, access schedule
+- Public form (`/form/:slug`): submit each field type, validation messages, multi-page navigation, conditional logic show/hide, computed field auto-calc, repeating group add/remove instances, access-schedule closed screen
+- Analytics: chart renders, date-range toggle, field completion rates
+- Submissions: table, search, filter, CSV export, detail view, delete
+
+## Build & Verify
+```powershell
+cd client
+npx vite build          # production build (must pass with no errors)
+npx vite --port 3000    # dev server
 ```
+ESLint is not configured (no `.eslintrc`), so the build is the primary gate.
 
-### Component Structure
-- **FormBuilder.jsx:** Main drag-and-drop editor
-- **FormRenderer.jsx:** Public form renderer for submissions
-- **PropertiesPanel.jsx:** Field configuration panel
-- **FormsDashboard.jsx:** List of all forms
-- **Submissions.jsx:** Submission management view
-
-### State Management
-- React useState for builder history/undo
-- No global store for the form builder
-- Form schema stored as JSON string in database
-
-## Key Patterns
-
-### Adding a New Field Type
-1. Add field type to the field type picker modal
-2. Add default content schema in the builder
-3. Add the editor form in the properties panel
-4. Add the public renderer in FormRenderer.jsx
-5. Update validation rules if needed
-
-### Form Schema Structure
-```js
-{
-  title: "Form Title",
-  description: "Form description",
-  fields: [
-    {
-      id: "field-1",
-      type: "text",
-      label: "Field Label",
-      placeholder: "Placeholder text",
-      required: true,
-      validation: { minLength: 2, maxLength: 100 }
-    }
-  ],
-  theme: {
-    primaryColor: "#2563EB",
-    backgroundColor: "#F9FAFB",
-    font: "Inter"
-  }
-}
-```
-
-## Integration Points
-- **Auth System:** Uses existing JWT authentication
-- **Design System:** THEME.md tokens and components
-- **Database:** Prisma integration with existing schema
-- **API Structure:** Consistent with existing backend patterns
-
-## Security & Compliance
-- CSRF protection on form submissions
-- Input validation and sanitization
-- Rate limiting for form submissions
-- Data encryption at rest and in transit
-- GDPR compliance features (data export, deletion)
+## Git Commit Style
+Recent commits use `feat(forms):` / `fix(forms):` prefixes. See `git log --oneline -10` for current style.

@@ -16,43 +16,45 @@ export default {
       colors: {
         // Brand / Accent
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          hover:       "hsl(var(--primary-hover))",
-          light:       "hsl(var(--primary-light))",
-          foreground:  "hsl(var(--primary-foreground))",
+          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+          hover:       "hsl(var(--primary-hover) / <alpha-value>)",
+          light:       "hsl(var(--primary-light) / <alpha-value>)",
+          foreground:  "hsl(var(--primary-foreground) / <alpha-value>)",
         },
         // Surfaces
-        background:    "hsl(var(--background))",
+        background:    "hsl(var(--background) / <alpha-value>)",
         surface: {
-          DEFAULT: "hsl(var(--surface))",
-          raised:  "hsl(var(--surface-raised))",
+          DEFAULT:   "hsl(var(--surface) / <alpha-value>)",
+          raised:    "hsl(var(--surface-raised) / <alpha-value>)",
+          tertiary:  "hsl(var(--surface-tertiary) / <alpha-value>)",
         },
         // Borders
         border: {
-          DEFAULT: "hsl(var(--border))",
-          strong:  "hsl(var(--border-strong))",
+          DEFAULT: "hsl(var(--border) / <alpha-value>)",
+          soft:    "hsl(var(--border-soft) / <alpha-value>)",
+          strong:  "hsl(var(--border-strong) / <alpha-value>)",
         },
         // Text
-        "text-base":    "hsl(var(--text-base))",
-        "text-muted":   "hsl(var(--text-muted))",
-        "text-subtle":  "hsl(var(--text-subtle))",
-        "text-inverse": "hsl(var(--text-inverse))",
+        "text-base":    "hsl(var(--text-base) / <alpha-value>)",
+        "text-muted":   "hsl(var(--text-muted) / <alpha-value>)",
+        "text-subtle":  "hsl(var(--text-subtle) / <alpha-value>)",
+        "text-inverse": "hsl(var(--text-inverse) / <alpha-value>)",
         // Semantic states
         success: {
-          DEFAULT: "hsl(var(--success))",
-          light:   "hsl(var(--success-light))",
+          DEFAULT: "hsl(var(--success) / <alpha-value>)",
+          light:   "hsl(var(--success-light) / <alpha-value>)",
         },
         warning: {
-          DEFAULT: "hsl(var(--warning))",
-          light:   "hsl(var(--warning-light))",
+          DEFAULT: "hsl(var(--warning) / <alpha-value>)",
+          light:   "hsl(var(--warning-light) / <alpha-value>)",
         },
         danger: {
-          DEFAULT: "hsl(var(--danger))",
-          light:   "hsl(var(--danger-light))",
+          DEFAULT: "hsl(var(--danger) / <alpha-value>)",
+          light:   "hsl(var(--danger-light) / <alpha-value>)",
         },
         info: {
-          DEFAULT: "hsl(var(--info))",
-          light:   "hsl(var(--info-light))",
+          DEFAULT: "hsl(var(--info) / <alpha-value>)",
+          light:   "hsl(var(--info-light) / <alpha-value>)",
         },
       },
 
@@ -61,10 +63,12 @@ export default {
         base: "var(--radius-base-value)",
         card: "var(--radius-card-value)",
         lg:   "var(--radius-lg-value)",
+        '2xl': "var(--radius-2xl-value)",
       },
 
       boxShadow: {
         card:     "var(--shadow-card-value)",
+        'card-sm': "var(--shadow-card-sm-value)",
         dropdown: "var(--shadow-dropdown-value)",
         modal:    "var(--shadow-modal-value)",
       },

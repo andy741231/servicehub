@@ -4,60 +4,8 @@ import DOMPurify from 'dompurify';
 import { DEFAULT_THEME } from '../store/formStore';
 import { evaluateConditionalLogic } from '../utils/conditionalLogic';
 import { uploadFile } from '../api/formsApi';
-import { useToast } from '../../../components/Toast';
-import { useAlert } from '../../../components/Dialog';
-
-const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-/**
- * Evaluates whether the form is currently accessible based on its accessSchedule.
- *
- * Data model:
- *   schedule.enabled        — master switch; false → always open
- *   schedule.dateRange      — { enabled, startDate, endDate }
- *   schedule.weeklyHours    — { enabled, slots: [{ days[], startTime, endTime }] }
- *   schedule.closedMessage  — shown when closed
- *
- * AND logic between constraints; OR logic across weekly slots.
- * "Date window Jun 17–18 AND weekly slots [Mon–Wed 9–12, Thu–Fri 14–17]" means:
- *   open only during Jun 17–18, and only when a slot matches the current day/time.
- */
-function evaluateSchedule(accessSchedule) {
-  if (!accessSchedule?.enabled) return { open: true, closedMessage: null };
-
-  const { dateRange, weeklyHours, closedMessage } = accessSchedule;
-  const closed = { open: false, closedMessage: closedMessage || 'This form is currently closed. Please check back later.' };
-  const hasAnyConstraint = dateRange?.enabled || weeklyHours?.enabled;
-  if (!hasAnyConstraint) return { open: true, closedMessage: null };
-
-  const now = new Date();
-  const currentDay = DAY_NAMES[now.getDay()];
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  const currentTime = `${hh}:${mm}`;
-  const currentDate = now.toISOString().slice(0, 10);
-
-  // Date window — must be satisfied if enabled
-  if (dateRange?.enabled) {
-    const start = dateRange.startDate || '';
-    const end = dateRange.endDate || '';
-    if (currentDate < start || currentDate > end) return closed;
-  }
-
-  // Weekly hours — at least one slot must match (OR across slots)
-  if (weeklyHours?.enabled) {
-    const slots = weeklyHours.slots || [];
-    const anySlotOpen = slots.some((slot) => {
-      const days = slot.days || [];
-      const start = slot.startTime || '00:00';
-      const end = slot.endTime || '23:59';
-      return days.includes(currentDay) && currentTime >= start && currentTime < end;
-    });
-    if (!anySlotOpen) return closed;
-  }
-
-  return { open: true, closedMessage: null };
-}
+import { evaluateSchedule, nextTransition, formatDuration, formatDayTime } from '../utils/schedule';
+import { evaluateFormula, formatComputedValue } from '../utils/formula';
 
 // Shared inline error message rendered below a field input
 const FieldError = ({ fieldId, error }) =>
@@ -109,6 +57,7 @@ const FIELD_COMPONENTS = {
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder || field.label}
         rows={4}
+        maxLength={field.maxLength || undefined}
         className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
           error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
         }`}
@@ -118,6 +67,11 @@ const FIELD_COMPONENTS = {
         aria-invalid={!!error}
         aria-describedby={error ? `${field.id}-error` : undefined}
       />
+      {field.maxLength && (
+        <p className="text-xs text-gray-400 text-right mt-1">
+          {(value || '').length}/{field.maxLength}
+        </p>
+      )}
       <FieldError fieldId={field.id} error={error} />
     </div>
   ),
@@ -217,7 +171,7 @@ const FIELD_COMPONENTS = {
         aria-invalid={!!error}
         aria-describedby={error ? `${field.id}-error` : undefined}
       >
-        <option value="">Select an option</option>
+        <option value="" disabled hidden>Select an option</option>
         {field.options?.map((option, index) => (
           <option key={index} value={option}>
             {option}
@@ -296,9 +250,12 @@ const FIELD_COMPONENTS = {
       </div>
     );
   },
-  file: ({ field, value, onChange, error, theme, toast }) => {
+  file: ({ field, value, onChange, error, theme }) => {
     const [isUploading, setIsUploading] = useState(false);
-    const fileName = value || null;
+    // value can be a string (legacy: just the URL) or an object { url, name, size }
+    const fileObj = value && typeof value === 'object' ? value : null;
+    const fileUrl = typeof value === 'string' ? value : fileObj?.url;
+    const fileName = fileObj?.name || (fileUrl ? fileUrl.split('/').pop() : null);
 
     const handleFileChange = async (e) => {
       const file = e.target.files?.[0];
@@ -308,17 +265,17 @@ const FIELD_COMPONENTS = {
       }
       if (field.maxSize && file.size > field.maxSize * 1024 * 1024) {
         onChange(null);
-        toast(`File is too large. Maximum size is ${field.maxSize}MB.`, 'error');
+        alert(`File is too large. Maximum size is ${field.maxSize}MB.`);
         return;
       }
 
       setIsUploading(true);
       try {
         const result = await uploadFile(file);
-        onChange(result.url);
+        onChange({ url: result.url, name: file.name, size: file.size });
       } catch (err) {
         console.error('File upload failed:', err);
-        toast('Failed to upload file. Please try again.', 'error');
+        alert('Failed to upload file. Please try again.');
         onChange(null);
       } finally {
         setIsUploading(false);
@@ -339,18 +296,43 @@ const FIELD_COMPONENTS = {
             aria-invalid={!!error}
             aria-describedby={error ? `${field.id}-error` : undefined}
           />
-          <label
-            htmlFor={field.id}
-            className={`px-4 py-2 rounded-lg cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-              isUploading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            style={{ backgroundColor: theme?.primaryColor, color: theme?.buttonTextColor, '--tw-ring-color': theme?.primaryColor }}
-          >
-            {isUploading ? 'Uploading...' : 'Choose file'}
-          </label>
-          <span className="text-sm text-gray-600 truncate">
-            {fileName || 'No file selected'}
-          </span>
+          {fileName ? (
+            <>
+              <span className="flex-1 text-sm text-gray-700 truncate" title={fileName}>
+                {fileName}
+              </span>
+              <button
+                type="button"
+                onClick={() => onChange(null)}
+                className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                aria-label="Remove uploaded file"
+              >
+                Remove
+              </button>
+              <label
+                htmlFor={field.id}
+                className="px-3 py-1.5 text-sm rounded-lg cursor-pointer border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1"
+                style={{ '--tw-ring-color': theme?.primaryColor }}
+              >
+                Replace
+              </label>
+            </>
+          ) : (
+            <>
+              <label
+                htmlFor={field.id}
+                className={`px-4 py-2 rounded-lg cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 border border-gray-300 text-gray-600 hover:bg-gray-50 ${
+                  isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                style={{ '--tw-ring-color': theme?.primaryColor }}
+              >
+                {isUploading ? 'Uploading…' : 'Choose file'}
+              </label>
+              <span className="text-sm text-gray-400 truncate">
+                No file selected
+              </span>
+            </>
+          )}
         </div>
         {field.maxSize && (
           <p className="text-sm text-gray-500">Max file size: {field.maxSize}MB</p>
@@ -497,7 +479,257 @@ const FIELD_COMPONENTS = {
       </div>
     );
   },
+  url: ({ field, value, onChange, error, theme }) => (
+    <div className="space-y-0">
+      <input
+        type="url"
+        id={field.id}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={field.placeholder || field.label || 'https://example.com'}
+        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        }`}
+        style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+        aria-label={field.label}
+        aria-required={field.required}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      <FieldError fieldId={field.id} error={error} />
+    </div>
+  ),
+  slider: ({ field, value, onChange, error, theme }) => {
+    const min = field.min ?? 0;
+    const max = field.max ?? 100;
+    const step = field.step || 1;
+    const current = value !== undefined && value !== '' ? Number(value) : min;
+    return (
+      <div className="space-y-2">
+        <input
+          type="range"
+          id={field.id}
+          min={min}
+          max={max}
+          step={step}
+          value={current}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full"
+          style={{ accentColor: theme?.primaryColor }}
+          aria-label={field.label}
+          aria-required={field.required}
+          aria-invalid={!!error}
+        />
+        <div className="flex justify-between text-sm text-gray-500">
+          <span>{min}</span>
+          <span className="font-medium text-gray-700">{current}</span>
+          <span>{max}</span>
+        </div>
+        <FieldError fieldId={field.id} error={error} />
+      </div>
+    );
+  },
+  name: ({ field, value, onChange, error, theme }) => {
+    const v = value || {};
+    const setPart = (part, val) => onChange({ ...v, [part]: val });
+    return (
+      <div className="space-y-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            type="text"
+            value={v.first || ''}
+            onChange={(e) => setPart('first', e.target.value)}
+            placeholder="First name"
+            className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+            }`}
+            style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+            aria-label={`${field.label} first name`}
+            aria-required={field.required}
+          />
+          <input
+            type="text"
+            value={v.last || ''}
+            onChange={(e) => setPart('last', e.target.value)}
+            placeholder="Last name"
+            className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+            }`}
+            style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
+            aria-label={`${field.label} last name`}
+            aria-required={field.required}
+          />
+        </div>
+        <FieldError fieldId={field.id} error={error} />
+      </div>
+    );
+  },
+  address: ({ field, value, onChange, error, theme }) => {
+    const v = value || {};
+    const setPart = (part, val) => onChange({ ...v, [part]: val });
+    const inputCls = `w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+      error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+    }`;
+    const ringStyle = error ? undefined : { '--tw-ring-color': theme?.primaryColor };
+    return (
+      <div className="space-y-2">
+        <input type="text" value={v.street || ''} onChange={(e) => setPart('street', e.target.value)} placeholder="Street address" className={inputCls} style={ringStyle} aria-label={`${field.label} street`} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="text" value={v.city || ''} onChange={(e) => setPart('city', e.target.value)} placeholder="City" className={inputCls} style={ringStyle} aria-label={`${field.label} city`} />
+          <input type="text" value={v.state || ''} onChange={(e) => setPart('state', e.target.value)} placeholder="State / Province" className={inputCls} style={ringStyle} aria-label={`${field.label} state`} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="text" value={v.zip || ''} onChange={(e) => setPart('zip', e.target.value)} placeholder="ZIP / Postal code" className={inputCls} style={ringStyle} aria-label={`${field.label} zip`} />
+          <input type="text" value={v.country || ''} onChange={(e) => setPart('country', e.target.value)} placeholder="Country" className={inputCls} style={ringStyle} aria-label={`${field.label} country`} />
+        </div>
+        <FieldError fieldId={field.id} error={error} />
+      </div>
+    );
+  },
+  computed: ({ field, formData, allFields, theme }) => {
+    const { value, error } = evaluateFormula(field.formula, allFields, formData);
+    const display = formatComputedValue(value, field.displayFormat);
+    return (
+      <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="text-2xl font-bold" style={{ color: theme?.primaryColor }}>
+          {display || '—'}
+        </div>
+        {error && field.formula && (
+          <div className="text-xs text-gray-400 mt-1">{error}</div>
+        )}
+      </div>
+    );
+  },
+  repeatingGroup: ({ field, value, onChange, error, theme, allFields, renderFields }) => {
+    const instances = Array.isArray(value) ? value : [];
+    const min = field.minInstances || 1;
+    const max = field.maxInstances ? parseInt(field.maxInstances) : Infinity;
+    // Ensure at least min instances
+    const effectiveInstances = instances.length < min
+      ? [...instances, ...Array.from({ length: min - instances.length }, () => ({}))]
+      : instances;
+
+    const updateInstance = (index, data) => {
+      const next = [...effectiveInstances];
+      next[index] = data;
+      onChange(next);
+    };
+    const addInstance = () => {
+      if (effectiveInstances.length < max) onChange([...effectiveInstances, {}]);
+    };
+    const removeInstance = (index) => {
+      if (effectiveInstances.length <= min) return;
+      onChange(effectiveInstances.filter((_, i) => i !== index));
+    };
+
+    // Find child fields that belong to this repeating group.
+    // Prefer the explicit `groupId` linkage (set by the builder); fall back to
+    // rowId matching only for legacy forms that pre-date the groupId property.
+    const childFields = allFields.filter((f) =>
+      f.id !== field.id &&
+      f.type !== 'pageBreak' &&
+      (f.groupId ? f.groupId === field.id : f.rowId === field.rowId)
+    );
+
+    return (
+      <div className="space-y-4">
+        {effectiveInstances.map((instance, index) => (
+          <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-3 relative">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Entry {index + 1}</span>
+              {effectiveInstances.length > min && (
+                <button
+                  type="button"
+                  onClick={() => removeInstance(index)}
+                  className="text-xs text-red-500 hover:text-red-700"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            {childFields.map((childField) => {
+              const ChildComponent = FIELD_COMPONENTS[childField.type];
+              if (!ChildComponent) return null;
+              return (
+                <div key={childField.id}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    {childField.label}
+                    {childField.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  <ChildComponent
+                    field={childField}
+                    value={instance[childField.id]}
+                    onChange={(val) => updateInstance(index, { ...instance, [childField.id]: val })}
+                    error={null}
+                    theme={theme}
+                    allFields={allFields}
+                    formData={instance}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        {effectiveInstances.length < max && (
+          <button
+            type="button"
+            onClick={addInstance}
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            style={{ '--tw-ring-color': theme?.primaryColor }}
+          >
+            + {field.addButtonLabel || 'Add another'}
+          </button>
+        )}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+      </div>
+    );
+  },
 };
+
+// ── Closed screen ───────────────────────────────────────────────────────────
+// Shown when the form's access schedule says "closed right now".
+// Displays the admin's closed message plus, when computable, the next
+// open time and a live countdown that refreshes every second.
+function ClosedScreen({ form, schedule, theme }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const transition = schedule?.enabled ? nextTransition(schedule) : null;
+  const opening = transition?.opening ? transition : null;
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
+    >
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+        <Lock className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+        <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textColor }}>
+          {form.title}
+        </h1>
+        <p className="text-gray-600 leading-relaxed">
+          {schedule?.closedMessage || 'This form is currently closed. Please check back later.'}
+        </p>
+        {opening && (
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              Opens
+            </p>
+            <p className="text-lg font-semibold" style={{ color: theme.primaryColor }}>
+              {formatDayTime(opening.at)}
+            </p>
+            <p className="text-sm text-gray-500 mt-1 tabular-nums">
+              {formatDuration(opening.at.getTime() - Date.now())}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function FormRenderer({ form, onSubmit, preview = false }) {
   const [formData, setFormData] = useState({});
@@ -505,8 +737,6 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const { toast, ToastMount } = useToast();
-  const { alertDialog, AlertDialogMount } = useAlert();
 
   // Schedule check (re-evaluates whenever form changes; skipped in preview mode)
   const scheduleStatus = preview ? { open: true, closedMessage: null } : evaluateSchedule(form?.accessSchedule);
@@ -514,7 +744,15 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   useEffect(() => {
     const initialData = {};
     (form.fields || []).forEach(field => {
-      initialData[field.id] = field.type === 'checkbox' ? [] : '';
+      if (field.type === 'computed') {
+        initialData[field.id] = '';
+      } else if (field.type === 'repeatingGroup') {
+        initialData[field.id] = [];
+      } else if (field.type === 'checkbox') {
+        initialData[field.id] = [];
+      } else {
+        initialData[field.id] = '';
+      }
     });
     setFormData(initialData);
     setErrors({});
@@ -522,38 +760,101 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     setCurrentPage(0);
   }, [form]);
 
+  // Auto-compute computed fields whenever form data changes
+  useEffect(() => {
+    const computedFields = (form.fields || []).filter((f) => f.type === 'computed' && f.formula);
+    if (computedFields.length === 0) return;
+    setFormData((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      computedFields.forEach((field) => {
+        const { value } = evaluateFormula(field.formula, form.fields, prev);
+        const display = formatComputedValue(value, field.displayFormat);
+        if (next[field.id] !== display) {
+          next[field.id] = display;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [formData, form.fields]);
+
   const validateField = (field, value) => {
-    if (field.required && (!value || (Array.isArray(value) && value.length === 0))) {
-      return `${field.label || 'This field'} is required`;
+    // Computed fields are auto-calculated — never validate them
+    if (field.type === 'computed') return null;
+    const label = field.label || 'This field';
+    const requiredMsg = field.validationMessage || `${label} is required`;
+
+    // Determine "emptiness" including object-style fields (name, address)
+    const isEmptyObject = (v) => v && typeof v === 'object' && !Array.isArray(v) &&
+      Object.values(v).every((x) => x === undefined || x === null || x === '');
+    const isEmpty = !value || (Array.isArray(value) && value.length === 0) || isEmptyObject(value);
+
+    if (field.required && isEmpty) {
+      return requiredMsg;
     }
+    if (isEmpty) return null;
 
     if (field.type === 'email' && value) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(value)) {
-        return 'Please enter a valid email address';
+        return field.validationMessage || 'Please enter a valid email address';
+      }
+    }
+
+    if (field.type === 'url' && value) {
+      try {
+        const u = new URL(value);
+        if (!u.protocol.startsWith('http')) throw new Error();
+      } catch {
+        return field.validationMessage || 'Please enter a valid URL (https://...)';
       }
     }
 
     if (field.type === 'number' && value) {
       const numValue = parseFloat(value);
-      if (field.minValue && numValue < field.minValue) {
+      if (field.minValue != null && numValue < field.minValue) {
         return `Minimum value is ${field.minValue}`;
       }
-      if (field.maxValue && numValue > field.maxValue) {
+      if (field.maxValue != null && numValue > field.maxValue) {
         return `Maximum value is ${field.maxValue}`;
       }
     }
 
-    if ((field.type === 'text' || field.type === 'textarea') && value) {
+    if ((field.type === 'text' || field.type === 'textarea' || field.type === 'url') && value) {
       if (field.minLength && value.length < field.minLength) {
         return `Minimum ${field.minLength} characters required`;
       }
       if (field.maxLength && value.length > field.maxLength) {
         return `Maximum ${field.maxLength} characters allowed`;
       }
+      if (field.pattern) {
+        try {
+          const re = new RegExp(field.pattern);
+          if (!re.test(value)) {
+            return field.validationMessage || 'Please match the requested format';
+          }
+        } catch {
+          // Invalid regex in config — ignore rather than crash
+        }
+      }
     }
 
     return null;
+  };
+
+  // Move focus to the first invalid field so keyboard/screen-reader users can
+  // find the error without hunting. Called after a failed validatePage/validateForm.
+  const focusFirstError = (errorsObj) => {
+    const firstErrorFieldId = visiblePageFields.find((f) => errorsObj[f.id])?.id;
+    if (!firstErrorFieldId) return;
+    setTimeout(() => {
+      const el = document.getElementById(firstErrorFieldId);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 0);
   };
 
   const validateForm = () => {
@@ -573,6 +874,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     });
 
     setErrors(newErrors);
+    if (!isValid) focusFirstError(newErrors);
     return isValid;
   };
 
@@ -604,7 +906,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     }
 
     if (preview) {
-      toast('Preview validation passed. This is a preview — no submission was saved.', 'info');
+      alert('Preview validation passed. This is a preview — no submission was saved.');
       return;
     }
 
@@ -628,7 +930,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Submission error:', error);
-      await alertDialog({ title: 'Error', message: 'Failed to submit form. Please try again.', variant: 'danger' });
+      alert('Failed to submit form. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -648,18 +950,30 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   const allRows = (form.rows || []).filter((row) =>
     evaluateConditionalLogic(row.conditionalLogic, formData)
   );
+  // In conversational mode each field is its own page (one question per screen).
+  const conversational = theme.layoutMode === 'conversational';
   // pages: array of { row, fields }
-  const pages = allRows.map((row) => ({
-    row,
-    fields: formFields.filter((f) => f.rowId === row.id && f.type !== 'pageBreak'),
-  })).filter((p) => p.fields.length > 0);
+  const pages = (conversational
+    ? allRows.flatMap((row) =>
+        formFields
+          .filter((f) => f.rowId === row.id && f.type !== 'pageBreak')
+          .map((f) => ({ row, fields: [f] }))
+      )
+    : allRows.map((row) => ({
+        row,
+        fields: formFields.filter((f) => f.rowId === row.id && f.type !== 'pageBreak'),
+      }))
+  ).filter((p) => p.fields.length > 0);
 
   const allFields = formFields.filter((f) => f.type !== 'pageBreak');
   const currentPage_obj = pages[currentPage];
   const currentRow = currentPage_obj?.row;
   const currentPageFields = currentPage_obj?.fields || [];
   const visiblePageFields = currentPageFields.filter((field) =>
-    evaluateConditionalLogic(field.conditionalLogic, formData)
+    evaluateConditionalLogic(field.conditionalLogic, formData) &&
+    // Don't render repeating-group children at the top level — they render
+    // inside their parent group instance. (groupId set by the builder.)
+    !field.groupId
   );
 
   const validatePage = (pageIndex) => {
@@ -679,6 +993,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     });
 
     setErrors((prev) => ({ ...prev, ...newErrors }));
+    if (!isValid) focusFirstError(newErrors);
     return isValid;
   };
 
@@ -686,25 +1001,11 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
 
   // Show "form closed" screen when schedule is active and current time is outside all open windows
   if (!scheduleStatus.open) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
-      >
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-          <Lock className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-          <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textColor }}>
-            {form.title}
-          </h1>
-          <p className="text-gray-600 leading-relaxed">
-            {scheduleStatus.closedMessage}
-          </p>
-        </div>
-      </div>
-    );
+    return <ClosedScreen form={form} schedule={form?.accessSchedule} theme={theme} />;
   }
 
   if (!preview && isSubmitted) {
+    const confirmationId = `SH-${Date.now().toString(36).toUpperCase()}`;
     return (
       <div
         className="min-h-screen flex items-center justify-center p-4"
@@ -716,10 +1017,21 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
             {theme.thankYouTitle}
           </h1>
           <div
-            className="mb-6 ql-editor !p-0 !min-h-0"
-            style={{ color: theme.textColor, opacity: 0.8 }}
+            className="mb-4 ql-editor !p-0 !min-h-0"
+            style={{ color: theme.textColor }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(theme.thankYouMessage) }}
           />
+          <p className="text-sm text-gray-500 mb-6">
+            Confirmation ID: <span className="font-mono font-medium text-gray-700">{confirmationId}</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => { setFormData({}); setErrors({}); setCurrentPage(0); setIsSubmitted(false); }}
+            className="px-5 py-2.5 rounded-lg font-medium transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{ backgroundColor: theme.primaryColor, color: theme.buttonTextColor, '--tw-ring-color': theme.primaryColor }}
+          >
+            Submit another response
+          </button>
         </div>
       </div>
     );
@@ -738,7 +1050,8 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
 
   return (
     <div
-      className="min-h-screen py-12 px-4"
+      id="main-content"
+      className="min-h-screen py-12 px-4 sm:py-12"
       style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
     >
       {/* Form title & description — sits above the card, full-width within the outer padding */}
@@ -794,7 +1107,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                                 index + 1
                               )}
                             </div>
-                            <span className="text-xs text-gray-500 text-center max-w-[64px] truncate" title={row.label || `Section ${index + 1}`}>
+                            <span className="text-xs text-gray-500 text-center max-w-[80px] sm:max-w-[120px] truncate" title={row.label || `Section ${index + 1}`}>
                               {row.label || `Section ${index + 1}`}
                             </span>
                           </div>
@@ -882,7 +1195,8 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                       onChange={(value) => handleFieldChange(field.id, value)}
                       error={errors[field.id]}
                       theme={theme}
-                      toast={toast}
+                      allFields={allFields}
+                      formData={formData}
                     />
 
                     {field.helpText && (
@@ -930,8 +1244,6 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
           </form>
         </div>
       </div>
-      <ToastMount />
-      <AlertDialogMount />
     </div>
   );
 }
