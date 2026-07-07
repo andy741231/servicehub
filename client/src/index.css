@@ -92,61 +92,62 @@
    ============================================================ */
 @layer base {
   :root {
-    /* Brand / Accent — professional navy with emerald accent
-       Generated from ui-ux-pro-max design direction for a modern builder UI. */
-    --primary:            213 53% 25%;   /* #1E3A5F */
-    --primary-hover:      213 53% 18%;   /* #152A45 */
-    --primary-light:      213 52% 94%;   /* #E2EBF5 */
-    --primary-foreground: 0 0% 100%;      /* #FFFFFF */
+    /* Brand / Accent — Modern Teal (site-2-modern-teal)
+       Airy, friendly, modern SaaS with a teal heritage. Teal-600 primary,
+       amber-500 accent, teal-tinted surfaces, pill-shaped & rounder. */
+    --primary:            175 84% 32%;   /* #0D9488 teal-600 */
+    --primary-hover:      175 77% 26%;   /* #0F766E teal-700 */
+    --primary-light:      166 76% 97%;   /* #F0FDFA teal-50 — tinted bg, pill badges */
+    --primary-foreground: 0 0% 100%;     /* #FFFFFF */
 
-    /* Neutrals — cool slate for a clean canvas feel */
-    --background:         210 40% 98%;   /* #F8FAFC */
-    --surface:            0 0% 100%;      /* #FFFFFF */
-    --surface-raised:     214 32% 95%;    /* #E9EEF5 */
-    --surface-tertiary:   214 24% 90%;    /* #D9E0EA */
-    --border:             215 20% 82%;    /* #CBD5E1 */
-    --border-soft:        215 24% 90%;    /* #DDE4ED */
-    --border-strong:      215 16% 72%;    /* #A4B1C2 */
+    /* Neutrals — faint teal-tinted off-white canvas with teal-tinted surfaces */
+    --background:         160 43% 99%;   /* #FAFDFC faint teal-tinted off-white */
+    --surface:            0 0% 100%;     /* #FFFFFF */
+    --surface-raised:     166 76% 97%;   /* #F0FDFA teal-50 — muted panels, table headers, hovers */
+    --surface-tertiary:   167 85% 89%;   /* #CCFBF1 teal-100 — nested insets, quick-action hover */
+    --border:             214 32% 91%;   /* #E2E8F0 slate-200 */
+    --border-soft:        160 82% 98%;   /* #F5FEFB soft teal-tinted divider */
+    --border-strong:      213 27% 84%;   /* #CBD5E1 slate-300 — input borders */
 
-    /* Text */
-    --text-base:          222 47% 11%;    /* #0F172A */
-    --text-muted:         215 16% 45%;    /* #475569 */
-    --text-subtle:        215 12% 60%;    /* #64748B */
-    --text-inverse:       0 0% 100%;      /* #FFFFFF */
+    /* Text — dark teal-slate primary, slate secondaries */
+    --text-base:          176 21% 14%;   /* #1C2B2A dark teal-slate */
+    --text-muted:         215 16% 47%;   /* #64748B slate-500 */
+    --text-subtle:        215 20% 65%;   /* #94A3B8 slate-400 */
+    --text-inverse:       0 0% 100%;     /* #FFFFFF */
 
-    /* Semantic states */
-    --success:            142 72% 37%;   /* #16A34A */
-    --success-light:      138 76% 97%;   /* #F0FDF4 */
-    --warning:            32 95% 44%;     /* #D97706 */
-    --warning-light:      48 100% 96%;   /* #FFFBEB */
-    --danger:             0 72% 51%;     /* #DC2626 */
-    --danger-light:       0 86% 97%;     /* #FEF2F2 */
-    --info:               192 91% 37%;   /* #0891B2 */
-    --info-light:         183 100% 96%;  /* #ECFEFF */
+    /* Semantic states — emerald/amber/rose on soft tinted backgrounds */
+    --success:            161 94% 30%;   /* #059669 emerald-600 */
+    --success-light:      138 76% 97%;   /* #F0FDF4 emerald-50 */
+    --warning:            32 95% 44%;    /* #D97706 amber-600 */
+    --warning-light:      48 100% 96%;   /* #FFFBEB amber-50 */
+    --danger:             347 77% 50%;   /* #E11D48 rose-600 */
+    --danger-light:       356 100% 97%;  /* #FFF1F2 rose-50 */
+    --info:               192 91% 36%;   /* #0891B2 cyan-600 */
+    --info-light:         183 100% 96%;  /* #ECFEFF cyan-50 */
 
-    /* Chart / data-visualization palette (light mode) */
-    --chart-primary:      213 53% 25%;   /* #1E3A5F — navy */
-    --chart-success:      142 72% 37%;   /* #16A34A */
-    --chart-warning:      32 95% 44%;    /* #D97706 */
-    --chart-danger:       0 72% 51%;     /* #DC2626 */
-    --chart-info:         192 91% 37%;   /* #0891B2 */
-    --chart-muted:        215 20% 65%;   /* #94A3B8 — slate-400 */
-    --chart-grid:         214 32% 91%;   /* #E2E8F0 — grid lines */
-    --chart-axis:         215 20% 65%;   /* #94A3B8 — axis lines */
-    --chart-axis-tick:    215 16% 45%;   /* #475569 — tick labels */
+    /* Chart / data-visualization palette (light mode) — teal-led */
+    --chart-primary:      175 84% 32%;   /* #0D9488 teal-600 */
+    --chart-success:      161 94% 30%;   /* #059669 emerald-600 */
+    --chart-warning:      32 95% 44%;    /* #D97706 amber-600 */
+    --chart-danger:       347 77% 50%;   /* #E11D48 rose-600 */
+    --chart-info:         192 91% 36%;   /* #0891B2 cyan-600 */
+    --chart-muted:        215 20% 65%;   /* #94A3B8 slate-400 */
+    --chart-grid:         214 32% 91%;   /* #E2E8F0 slate-200 — grid lines */
+    --chart-axis:         215 20% 65%;   /* #94A3B8 slate-400 — axis lines */
+    --chart-axis-tick:    215 16% 47%;   /* #64748B slate-500 — tick labels */
 
-    /* Radius — slightly softer corners */
-    --radius-sm-value:   4px;
-    --radius-base-value: 8px;
-    --radius-card-value: 12px;
-    --radius-lg-value:   16px;
-    --radius-2xl-value:  20px;
+    /* Radius — rounder, friendlier (site-2 uses 16px card radius) */
+    --radius-sm-value:   6px;
+    --radius-base-value: 10px;
+    --radius-card-value: 16px;
+    --radius-lg-value:   20px;
+    --radius-2xl-value:  24px;
 
-    /* Shadows — softer, layered depth */
-    --shadow-card-value:     0 1px 2px rgba(30,58,95,0.05), 0 1px 3px rgba(30,58,95,0.04);
-    --shadow-card-sm-value:  0 1px 2px rgba(30,58,95,0.04);
-    --shadow-dropdown-value: 0 4px 6px -1px rgba(30,58,95,0.06), 0 2px 4px -1px rgba(30,58,95,0.03);
-    --shadow-modal-value:    0 20px 25px -5px rgba(30,58,95,0.08), 0 10px 10px -5px rgba(30,58,95,0.03);
+    /* Shadows — teal-tinged, layered depth */
+    --shadow-card-value:     0 1px 3px rgba(13,148,136,0.08), 0 4px 12px rgba(15,23,42,0.05);
+    --shadow-card-sm-value:  0 1px 2px rgba(13,148,136,0.06);
+    --shadow-dropdown-value: 0 4px 6px -1px rgba(13,148,136,0.08), 0 2px 4px -1px rgba(15,23,42,0.04);
+    --shadow-modal-value:    0 20px 25px -5px rgba(13,148,136,0.10), 0 10px 10px -5px rgba(15,23,42,0.04);
   }
 }
 
@@ -158,51 +159,60 @@
    ============================================================ */
 @layer base {
   .dark {
-    /* Brand / Accent — lighter navy so it reads on dark surfaces */
-    --primary:            213 53% 65%;   /* lifted navy */
-    --primary-hover:      213 53% 72%;
-    --primary-light:      213 52% 20%;   /* dark navy tint for pill/badge bg */
-    --primary-foreground: 222 47% 11%;   /* dark text on the light-navy accent */
+    /* Brand / Accent — Dark Violet (site-3-dark)
+       Sleek, focused enterprise admin. Violet primary with a soft glow,
+       cyan secondary accent, deep near-black layered surfaces. */
+    --primary:            258 90% 66%;   /* #8B5CF6 violet */
+    --primary-hover:      262 83% 58%;   /* #7C3AED */
+    --primary-light:      259 38% 16%;   /* #241A3A dark violet tint for pill/badge bg */
+    --primary-foreground: 0 0% 100%;     /* #FFFFFF — white text/icons on violet */
 
-    /* Neutrals — near-black slate canvas with layered surfaces */
-    --background:         222 47% 7%;    /* near-black slate */
-    --surface:            222 40% 11%;   /* cards, panels, modals */
-    --surface-raised:     217 33% 17%;   /* hover rows, subtle insets */
-    --surface-tertiary:   215 25% 22%;   /* nested insets, quick-action hover */
-    --border:             215 25% 22%;
-    --border-soft:        215 20% 18%;
-    --border-strong:      215 25% 30%;
+    /* Neutrals — deep near-black canvas with layered dark surfaces */
+    --background:         225 21% 7%;    /* #0F1117 page background */
+    --surface:            225 21% 11%;   /* #171A23 cards, sidebar, top bar */
+    --surface-raised:     226 22% 15%;   /* #1F2330 table headers, muted panels, inputs */
+    --surface-tertiary:   225 19% 20%;   /* #2A2F3E nested insets, quick-action hover */
+    --border:             225 19% 20%;   /* #2A2F3E */
+    --border-soft:        225 19% 16%;   /* #222632 */
+    --border-strong:      221 16% 27%;   /* #3A4150 input borders */
 
     /* Text */
-    --text-base:          210 20% 92%;   /* primary copy */
-    --text-muted:         215 16% 65%;   /* secondary labels, metadata */
-    --text-subtle:        215 12% 55%;   /* placeholder, disabled */
-    --text-inverse:       222 47% 11%;   /* text on light/colored fills */
+    --text-base:          220 13% 91%;   /* #E5E7EB primary copy */
+    --text-muted:         218 11% 65%;   /* #9CA3AF secondary labels, metadata */
+    --text-subtle:        220 9% 46%;    /* #6B7280 placeholder, disabled */
+    --text-inverse:       225 21% 7%;    /* near-black text on light/colored fills */
 
     /* Semantic states — hues kept, lightness raised for visibility;
-       *-light variants become dark tints for badge/callout backgrounds */
-    --success:            142 60% 52%;
-    --success-light:      142 50% 14%;
-    --warning:            32 90% 58%;
-    --warning-light:      32 60% 15%;
-    --danger:             0 72% 62%;
-    --danger-light:       0 50% 16%;
-    --info:               192 80% 52%;
-    --info-light:         192 60% 14%;
+       *-light variants become dark tints for translucent badge backgrounds */
+    --success:            158 64% 52%;   /* #34D399 */
+    --success-light:      156 47% 11%;   /* dark green tint */
+    --warning:            43 96% 56%;    /* #FBBF24 */
+    --warning-light:      46 45% 11%;    /* dark amber tint */
+    --danger:             0 91% 71%;     /* #F87171 */
+    --danger-light:       351 33% 12%;   /* dark rose tint */
+    --info:               188 86% 53%;   /* #22D3EE cyan accent */
+    --info-light:         191 52% 12%;   /* dark cyan tint */
 
-    /* Chart / data-visualization palette (dark mode) */
-    --chart-primary:      213 60% 68%;
-    --chart-success:      142 60% 52%;
-    --chart-warning:      32 90% 58%;
-    --chart-danger:       0 72% 62%;
-    --chart-info:         192 80% 52%;
-    --chart-muted:        215 15% 45%;
-    --chart-grid:         215 25% 22%;   /* subtle grid on dark */
-    --chart-axis:         215 20% 35%;
-    --chart-axis-tick:    215 16% 65%;
+    /* Chart / data-visualization palette (dark mode) — violet-led, cyan accent */
+    --chart-primary:      258 90% 66%;   /* violet */
+    --chart-success:      158 64% 52%;
+    --chart-warning:      43 96% 56%;
+    --chart-danger:       0 91% 71%;
+    --chart-info:         188 86% 53%;   /* cyan accent */
+    --chart-muted:        218 11% 45%;
+    --chart-grid:         225 19% 20%;   /* subtle grid on dark */
+    --chart-axis:         225 19% 30%;
+    --chart-axis-tick:    218 11% 65%;
 
-    /* Shadows — darker base + higher alpha for depth on dark surfaces */
-    --shadow-card-value:     0 1px 2px rgba(0,0,0,0.40), 0 1px 3px rgba(0,0,0,0.30);
+    /* Radius — sleeker (site-3 uses 12px card radius) */
+    --radius-sm-value:   4px;
+    --radius-base-value: 8px;
+    --radius-card-value: 12px;
+    --radius-lg-value:   16px;
+    --radius-2xl-value:  20px;
+
+    /* Shadows — heavier/darker for depth on dark surfaces */
+    --shadow-card-value:     0 1px 2px rgba(0,0,0,0.40), 0 4px 16px rgba(0,0,0,0.30);
     --shadow-card-sm-value:  0 1px 2px rgba(0,0,0,0.35);
     --shadow-dropdown-value: 0 4px 6px -1px rgba(0,0,0,0.45), 0 2px 4px -1px rgba(0,0,0,0.35);
     --shadow-modal-value:    0 20px 25px -5px rgba(0,0,0,0.55), 0 10px 10px -5px rgba(0,0,0,0.40);
@@ -365,6 +375,23 @@
   }
   .animate-page-in {
     animation: pageFadeIn 200ms ease-out;
+  }
+
+  /* Drill-down sidebar: new level slides in from the right (drilling in)
+     or from the left (going back). */
+  @keyframes drillIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes drillBack {
+    from { opacity: 0; transform: translateX(-16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .drill-enter-forward {
+    animation: drillIn 220ms ease-out;
+  }
+  .drill-enter-back {
+    animation: drillBack 180ms ease-out;
   }
 
   /* Popover / dialog scale-in (used by ColorPicker) */

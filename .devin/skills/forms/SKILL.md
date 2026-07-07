@@ -17,7 +17,7 @@ Allows building custom forms using a drag-and-drop interface, sharing them via u
 - **Theme System:** 6 one-click theme presets, custom colors, font picker, progress bar/steps, conversational (one-question-per-screen) layout mode.
 
 ## Architecture
-- `FormsShell.jsx` — tab navigation shell (Dashboard, Forms, Templates, Analytics)
+- `FormsShell.jsx` — pass-through shell rendering `<Outlet />` (section nav lives in the sidebar drill-down/accordion)
 - `FormsDashboard.jsx` — form cards grid with status badges, stats, filters, sort, overflow menu
 - `FormsList.jsx` — list view of all forms with management actions
 - `FormsBuilder.jsx` — 3-pane editor: left `FieldPalette`, center `FormCanvas`, right `PropertiesPanel` / live `FormRenderer` preview

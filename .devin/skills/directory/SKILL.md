@@ -11,8 +11,8 @@ organization's team members. It is currently driven entirely by **mock data** �
 is no backend route, no database models, and no API integration yet.
 
 ## Current State (built)
-- **DirectoryShell.jsx** — tab wrapper that registers TopBar tabs (Dashboard, Browse)
-  and renders child routes via `<Outlet />`.
+- **DirectoryShell.jsx** — pass-through shell rendering `<Outlet />` (section nav
+  lives in the sidebar drill-down/accordion as children of the Directory parent).
 - **DirectoryDashboard.jsx** — bento-style dashboard with stat cards (team members,
   departments, searchable), a quick-actions panel, a recent-members list, and a bar
   chart of members by department. All stats are derived from the in-file mock array.

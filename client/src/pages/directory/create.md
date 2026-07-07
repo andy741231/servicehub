@@ -6,7 +6,7 @@
 What's built (frontend, all using mock data):
 - `DirectoryDashboard.jsx` — bento-style dashboard with stats, recent members, and a departments chart
 - `index.jsx` — browse page with full-text search and department filter
-- `DirectoryShell.jsx` — shell with Dashboard and Browse tabs
+- `DirectoryShell.jsx` — pass-through shell for nested routes (Dashboard and Browse are sidebar drill-down children of the Directory parent)
 
 What's still pending:
 - No `server/src/routes/directory.js` backend route

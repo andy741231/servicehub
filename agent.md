@@ -32,9 +32,9 @@ Service Hub is a **monorepo, single-backend, multi-frontend** web platform. All 
 service-hub/
 ├── client/                         # React frontend (Vite)
 │   ├── src/
-│   │   ├── components/             # Shared UI (Button, Modal, Table, etc.)
+│   │   ├── components/             # Shared UI (Button, Modal, Table, GlobalSearch, etc.)
 │   │   ├── layouts/
-│   │   │   ├── AppShell.jsx        # Sidebar + topbar wrapper
+│   │   │   ├── AppShell.jsx        # Sidebar (drill-down/accordion) + topbar wrapper
 │   │   │   └── AuthLayout.jsx      # Login/register pages
 │   │   ├── pages/
 │   │   │   ├── auth/               # Login, Register
@@ -44,7 +44,11 @@ service-hub/
 │   │   │   ├── email/              # App 3 - Email Sender
 │   │   │   ├── directory/          # App 4 - Directory
 │   │   │   ├── portal/             # App 5 - Portal
+│   │   │   ├── Welcome.jsx         # Post-login landing page
+│   │   │   ├── Search.jsx          # Full search results page
 │   │   │   └── public/             # Public renderer
+│   │   ├── search/                 # Global search registry (pluggable providers)
+│   │   │   └── registry.js
 │   │   ├── store/                  # Zustand global stores
 │   │   │   └── authStore.js        # JWT + user state (permissions via user.permissions array)
 │   │   └── utils/                  # api.js (axios instance), helpers
@@ -96,13 +100,24 @@ Every sub-app is registered in **two places**. Permissions, sidebar nav, and rou
 **`client/src/layouts/AppShell.jsx`** (frontend app registry):
 ```js
 export const APPS = [
-  { id: APP_IDS.WEB,       label: 'Website',      path: '/hub-admin/web/dashboard',  Icon: Globe,         sub: null },
-  { id: APP_IDS.FORMS,     label: 'Form Builder',  path: '/hub-admin/forms/dashboard', Icon: ClipboardList, sub: null },
-  { id: APP_IDS.EMAIL,     label: 'Email Sender',  path: '/hub-admin/email/dashboard', Icon: Mail,          sub: null },
-  { id: APP_IDS.DIRECTORY, label: 'Directory',     path: '/hub-admin/directory/dashboard', Icon: BookOpen,      sub: null },
-  { id: APP_IDS.PORTAL,    label: 'Portal',        path: '/hub-admin/portal/dashboard',    Icon: LayoutDashboard, sub: null },
+  {
+    id: APP_IDS.WEB, label: 'Website', path: '/hub-admin/web/dashboard', Icon: Globe,
+    children: [
+      { label: 'Dashboard',       path: '/hub-admin/web/dashboard',     Icon: Gauge },
+      { label: 'Pages',           path: '/hub-admin/web/pages',         Icon: Files },
+      { label: 'Header & Footer', path: '/hub-admin/web/header-footer', Icon: PanelTop },
+      { label: 'Styles',          path: '/hub-admin/web/styles',        Icon: Palette },
+      { label: 'Assets',          path: '/hub-admin/web/assets',        Icon: Images },
+      { label: 'Draft Templates', path: '/hub-admin/web/templates',     Icon: FileStack },
+    ],
+  },
+  // ... other apps follow the same pattern with their own children
 ];
 ```
+
+Each app entry has: `id` (APP_IDS key), `label`, `path` (dashboard route),
+`Icon` (lucide-react), and `children` (array of section pages shown as
+drill-down/accordion items in the sidebar).
 
 **`shared/constants.js`** (backend app IDs):
 ```js
@@ -117,10 +132,57 @@ export const APP_IDS = {
 
 To add a new sub-app:
 1. Add the ID to `shared/constants.js`
-2. Add the app object to the `APPS` array in `client/src/layouts/AppShell.jsx`
-3. Create the page folder in `client/src/pages/`
-4. Add the route in the frontend router
+2. Add the app object (with `children`) to the `APPS` array in `client/src/layouts/AppShell.jsx`
+3. Create the page folder in `client/src/pages/` (include a `<App>Shell.jsx` pass-through)
+4. Add the route in the frontend router (`client/src/App.jsx`)
 5. Add the backend route in `server/src/routes/`
+6. (Optional) Add a search provider in `client/src/search/registry.js`
+
+---
+
+## Navigation & Shell Architecture
+
+### Sidebar (Conditional)
+
+The sidebar in `AppShell.jsx` renders differently based on how many apps the
+user can access:
+
+- **Single app** → **Accordion sidebar**: the one app is a parent row with a
+  `ChevronDown` that expands/collapses inline to show its section children.
+- **Multiple apps** → **Drill-down sidebar**: clicking a parent navigates
+  *into* that level (replacing the list with children), with a Back button to
+  return. Stack-based navigation with slide animations.
+
+Both variants share the `APPS` registry's `children` arrays for their nav items.
+
+### Sub-App Shells
+
+Each sub-app has a `<App>Shell.jsx` that is a **pass-through wrapper** rendering
+`<Outlet />`. Section navigation lives in the sidebar (as drill-down/accordion
+children), not in the TopBar. Shells may optionally register TopBar actions via
+`useTopBar().registerActions` (e.g. WebShell's "View site" link).
+
+### TopBar
+
+The TopBar layout is: **left** (hamburger on mobile + sub-app title), **center**
+(global search bar, hidden on mobile), **right** (sub-app actions + shared user
+menu with theme toggle + logout). The TopBar no longer hosts sub-app section
+tabs — those moved into the sidebar.
+
+### Welcome Page (`/hub-admin/welcome`)
+
+Shown after login for all users with at least one accessible sub-app. Contains:
+user greeting, app cards grid, quick stats (scoped to accessible apps), and
+recent activity. Login redirect logic in `Login.jsx` sends users here.
+
+### Global Search
+
+A global search bar in the TopBar searches across app content, scoped to the
+user's accessible apps. Uses a pluggable provider pattern
+(`client/src/search/registry.js`): each app registers a provider with
+`{ appId, label, Icon, search(query) }`. The registry filters by accessible app
+IDs at query time. A dropdown shows live results; pressing Enter navigates to
+the full search page at `/hub-admin/search`.
 
 ---
 
@@ -373,7 +435,7 @@ Work through these in order. Complete each phase before moving to the next.
 | **2** | Database | `prisma/schema.prisma` (core tables + soft delete patterns), `prisma db push`, seed script |
 | **3** | Auth & Security | Register, login, logout, JWT & CSRF middlewares, refresh token |
 | **4** | User Management | User CRUD, role assignment, app permission toggles (`/admin/users`) |
-| **5** | App Shell | React Router v6, lazy-loaded routes, sidebar from `APPS` registry, permission guards |
+| **5** | App Shell | React Router v6, lazy-loaded routes, conditional sidebar (drill-down/accordion) from `APPS` registry, welcome page, global search, permission guards |
 | **6** | App 1 — CMS | Block editor UI, public homepage render, image upload |
 | **7** | App 2 — Forms | Drag-and-drop builder, submission inbox, CSV export |
 | **8** | App 3 — Email | Template builder, mailing lists, campaign scheduler, send logs |
@@ -428,15 +490,17 @@ Production env vars are set directly on the Azure App Service (not in any commit
 
 When you're ready to add App 4, 5, etc.:
 
-- [ ] Add entry to `client/src/layouts/AppShell.jsx` (`APPS` array)
-- [ ] Add entry to `shared/constants.js`
-- [ ] Create `client/src/pages/<appname>/` (copy from `_template/`)
+- [ ] Add entry to `shared/constants.js` (`APP_IDS`)
+- [ ] Add entry to `client/src/layouts/AppShell.jsx` (`APPS` array with `children`)
+- [ ] Create `client/src/pages/<appname>/` (include `<App>Shell.jsx` pass-through + `<App>Dashboard.jsx`)
+- [ ] Add the frontend route in `client/src/App.jsx` (nest under `<AppShell>`)
 - [ ] Create `server/src/routes/<appname>.js`
 - [ ] Register route in `server/src/routes/index.js`
 - [ ] Add Prisma models to `schema.prisma`, run `npx prisma db push`
 - [ ] Seed default `AppPermission` rows for existing users
+- [ ] (Optional) Add a search provider in `client/src/search/registry.js`
 
-That's it. Auth, permissions, sidebar, and nav update automatically.
+That's it. Auth, permissions, sidebar, nav, and search update automatically.
 
 ---
 

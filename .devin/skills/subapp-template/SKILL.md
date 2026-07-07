@@ -19,11 +19,15 @@ backend route registry. Follow these steps in order (see AGENT.md "App Registry"
    (e.g. `INVOICES: 'invoices'`).
 2. **Register the app** in the `APPS` array in `client/src/layouts/AppShell.jsx`.
    Each entry needs: `id` (the APP_IDS key), `label`, `path` (like
-   `/hub-admin/<app>/dashboard`), `Icon` (a lucide-react icon), and `sub` (usually
-   `null`). Sidebar nav and permission guards derive from this array.
+   `/hub-admin/<app>/dashboard`), `Icon` (a lucide-react icon), and a `children`
+   array listing the sub-app's sections as drill-down sidebar items (each child
+   has `label`, `path`, and `Icon`). Sidebar nav, drill-down children, and
+   permission guards all derive from this array.
 3. **Create the page folder** in `client/src/pages/<app-id>/`. At minimum, scaffold:
-   - `<App>Shell.jsx` — tab/wrapper layout that registers TopBar tabs and renders an
-     `<Outlet />` (see `DirectoryShell.jsx` for a reference pattern).
+   - `<App>Shell.jsx` — pass-through wrapper that renders an `<Outlet />` (and
+     optionally registers TopBar actions via `useTopBar().registerActions`).
+     Section navigation lives in the sidebar as drill-down children, not in the
+     TopBar. See `DirectoryShell.jsx` for a reference pattern.
    - `<App>Dashboard.jsx` — the dashboard landing page.
    - `index.jsx` — additional pages (browse, list, etc.) as needed.
 4. **Add the frontend routes** in `client/src/App.jsx`. Import your shell and page

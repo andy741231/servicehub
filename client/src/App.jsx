@@ -6,6 +6,7 @@ import AuthLayout from './layouts/AuthLayout';
 import AppShell from './layouts/AppShell';
 import Login from './pages/auth/Login';
 import Users from './pages/admin/Users';
+import Settings from './pages/Settings';
 import WebIndex from './pages/web/index';
 import WebPages from './pages/web/Pages';
 import WebStyles from './pages/web/Styles';
@@ -27,6 +28,8 @@ import Directory from './pages/directory/index';
 import DirectoryShell from './pages/directory/DirectoryShell';
 import PortalShell from './pages/portal/PortalShell';
 import PortalDashboard from './pages/portal/PortalDashboard';
+import Welcome from './pages/Welcome';
+import SearchPage from './pages/Search';
 import PublicHome from './pages/public/Home';
 import FormView from './pages/public/FormView';
 import WebDashboard from './pages/web/WebDashboard';
@@ -85,6 +88,12 @@ export default function App() {
 
           {/* Protected sub-apps */}
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+            {/* Welcome landing page (shown after login for multi-app users) */}
+            <Route path="welcome" element={<Welcome />} />
+
+            {/* Global search page */}
+            <Route path="search" element={<SearchPage />} />
+
             {/* Web builder — nested under WebShell for tab nav */}
             <Route path="web" element={<WebShell />}>
               <Route index                  element={<Navigate to="/hub-admin/web/dashboard" replace />} />
@@ -132,6 +141,9 @@ export default function App() {
 
             {/* Admin */}
             <Route path="admin/users" element={<Users />} />
+
+            {/* Account settings (self-service, any authenticated user) */}
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Route>
       </Routes>

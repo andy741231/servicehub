@@ -12,11 +12,17 @@ This file is the **single source of truth** for all visual design decisions.
 
 ## Design Personality
 
-**Style:** Clean, professional B2B SaaS  
+**Style:** Modern Teal (light) + Dark Violet (dark) — friendly, airy SaaS by
+day; sleek, focused enterprise admin by night.  
 **Reference apps:** Linear, Vercel, Notion  
+**Inspiration:** `.sample/pushpay/site-2-modern-teal` (light) and
+`.sample/pushpay/site-3-dark` (dark).  
 **Principles:**
 - Spacious layouts — breathing room builds trust
-- Neutral base with a single confident accent color
+- **Light mode:** teal-tinted surfaces, pill-shaped/rounder corners (16px cards),
+  generous whitespace, a single confident teal accent with amber highlights
+- **Dark mode:** deep near-black layered surfaces, violet primary with a soft
+  glow, cyan secondary accent, heavier shadows for depth
 - Subtle borders and shadows — nothing garish
 - Typography does the heavy lifting, not decoration
 
@@ -24,50 +30,55 @@ This file is the **single source of truth** for all visual design decisions.
 
 ## Color Palette
 
-**Theme:** Professional navy with an emerald/amber semantic set on a cool-slate
-neutral canvas. Colors are stored as **HSL triplets** (`H S% L%`) in CSS
-variables in `client/src/index.css` `:root`, then exposed as Tailwind tokens via
-the `@theme` block and `tailwind.config.js`. The HSL values below are the source
-of truth and must match `:root` exactly.
+**Light theme:** Modern Teal — teal-600 primary, amber-500 accent, emerald/amber/
+rose semantic set on a faint teal-tinted off-white canvas with teal-tinted
+surfaces.  
+**Dark theme:** Dark Violet — violet primary with a soft glow, cyan accent,
+emerald/amber/rose semantic set on deep near-black layered surfaces.
+
+Colors are stored as **HSL triplets** (`H S% L%`) in CSS variables in
+`client/src/index.css` `:root` (light) and `.dark` (dark), then exposed as
+Tailwind tokens via the `@theme` block and `tailwind.config.js`. The HSL values
+below are the source of truth and must match `:root` / `.dark` exactly.
 
 ### Brand / Accent
 | Token | HSL (`:root`) | Hex | Usage |
 |-------|---------------|-----|-------|
-| `primary` | `213 53% 25%` | `#1E3A5F` (navy) | Buttons, links, active states, focus rings |
-| `primary-hover` | `213 53% 18%` | `#152A45` | Button hover |
-| `primary-light` | `213 52% 94%` | `#E2EBF5` | Tinted backgrounds, pill badges |
+| `primary` | `175 84% 32%` | `#0D9488` (teal-600) | Buttons, links, active states, focus rings |
+| `primary-hover` | `175 77% 26%` | `#0F766E` (teal-700) | Button hover |
+| `primary-light` | `166 76% 97%` | `#F0FDFA` (teal-50) | Tinted backgrounds, pill badges |
 | `primary-foreground` | `0 0% 100%` | `#FFFFFF` | Text/icons on primary backgrounds |
 
 ### Neutrals (base UI)
 | Token | HSL (`:root`) | Hex | Usage |
 |-------|---------------|-----|-------|
-| `background` | `210 40% 98%` | `#F8FAFC` | Page / app background |
+| `background` | `160 43% 99%` | `#FAFDFC` | Page / app background (faint teal-tinted off-white) |
 | `surface` | `0 0% 100%` | `#FFFFFF` | Cards, panels, modals |
-| `surface-raised` | `214 32% 95%` | `#E9EEF5` | Hover rows, subtle insets, secondary buttons |
-| `surface-tertiary` | `214 24% 90%` | `#D9E0EA` | QuickAction hover, nested insets |
-| `border` | `215 20% 82%` | `#CBD5E1` | Card borders, dividers |
-| `border-soft` | `215 24% 90%` | `#DDE4ED` | Subtle dividers inside cards, bento tile borders |
-| `border-strong` | `215 16% 72%` | `#A4B1C2` | Input borders (default) |
+| `surface-raised` | `166 76% 97%` | `#F0FDFA` (teal-50) | Hover rows, subtle insets, table headers, secondary buttons |
+| `surface-tertiary` | `167 85% 89%` | `#CCFBF1` (teal-100) | QuickAction hover, nested insets |
+| `border` | `214 32% 91%` | `#E2E8F0` (slate-200) | Card borders, dividers |
+| `border-soft` | `160 82% 98%` | `#F5FEFB` | Subtle dividers inside cards, bento tile borders |
+| `border-strong` | `213 27% 84%` | `#CBD5E1` (slate-300) | Input borders (default) |
 
 ### Text
 | Token | HSL (`:root`) | Hex | Usage |
 |-------|---------------|-----|-------|
-| `text-base` | `222 47% 11%` | `#0F172A` | Body copy, headings (utility class `text-text-base`) |
-| `text-muted` | `215 16% 45%` | `#475569` | Secondary labels, metadata (utility class `text-muted`) |
-| `text-subtle` | `215 12% 60%` | `#64748B` | Placeholder text, disabled (utility class `text-text-subtle`) |
-| `text-inverse` | `0 0% 100%` | `#FFFFFF` | Text on dark/colored backgrounds (`text-text-inverse`) |
+| `text-base` | `176 21% 14%` | `#1C2B2A` | Body copy, headings — dark teal-slate (utility class `text-text-base`) |
+| `text-muted` | `215 16% 47%` | `#64748B` (slate-500) | Secondary labels, metadata (utility class `text-muted`) |
+| `text-subtle` | `215 20% 65%` | `#94A3B8` (slate-400) | Placeholder text, disabled (utility class `text-subtle`) |
+| `text-inverse` | `0 0% 100%` | `#FFFFFF` | Text on dark/colored backgrounds (`text-inverse`) |
 
 ### Semantic States
 | Token | HSL (`:root`) | Hex | Usage |
 |-------|---------------|-----|-------|
-| `success` | `142 72% 37%` | `#16A34A` | Success messages, active badges |
-| `success-light` | `138 76% 97%` | `#F0FDF4` | Success backgrounds |
-| `warning` | `32 95% 44%` | `#D97706` | Warnings, pending states |
-| `warning-light` | `48 100% 96%` | `#FFFBEB` | Warning backgrounds |
-| `danger` | `0 72% 51%` | `#DC2626` | Errors, destructive actions |
-| `danger-light` | `0 86% 97%` | `#FEF2F2` | Error backgrounds |
-| `info` | `192 91% 37%` | `#0891B2` | Informational callouts |
-| `info-light` | `183 100% 96%` | `#ECFEFF` | Info backgrounds |
+| `success` | `161 94% 30%` | `#059669` (emerald-600) | Success messages, active badges |
+| `success-light` | `138 76% 97%` | `#F0FDF4` (emerald-50) | Success backgrounds |
+| `warning` | `32 95% 44%` | `#D97706` (amber-600) | Warnings, pending states |
+| `warning-light` | `48 100% 96%` | `#FFFBEB` (amber-50) | Warning backgrounds |
+| `danger` | `347 77% 50%` | `#E11D48` (rose-600) | Errors, destructive actions |
+| `danger-light` | `356 100% 97%` | `#FFF1F2` (rose-50) | Error backgrounds |
+| `info` | `192 91% 36%` | `#0891B2` (cyan-600) | Informational callouts |
+| `info-light` | `183 100% 96%` | `#ECFEFF` (cyan-50) | Info backgrounds |
 
 ### Chart / Data Visualization
 Charts render to SVG where CSS `var()` does not resolve inside `stroke`/`fill`
@@ -79,15 +90,15 @@ chart components.
 
 | Token | HSL (`:root`) | Hex | Usage |
 |-------|---------------|-----|-------|
-| `chart-primary` | `213 53% 25%` | `#1E3A5F` | Primary series (navy) |
-| `chart-success` | `142 72% 37%` | `#16A34A` | Positive series |
+| `chart-primary` | `175 84% 32%` | `#0D9488` | Primary series (teal) |
+| `chart-success` | `161 94% 30%` | `#059669` | Positive series |
 | `chart-warning` | `32 95% 44%` | `#D97706` | Caution series |
-| `chart-danger` | `0 72% 51%` | `#DC2626` | Negative series |
-| `chart-info` | `192 91% 37%` | `#0891B2` | Info series |
+| `chart-danger` | `347 77% 50%` | `#E11D48` | Negative series |
+| `chart-info` | `192 91% 36%` | `#0891B2` | Info series |
 | `chart-muted` | `215 20% 65%` | `#94A3B8` | Neutral / "other" series |
 | `chart-grid` | `214 32% 91%` | `#E2E8F0` | Cartesian grid lines |
 | `chart-axis` | `215 20% 65%` | `#94A3B8` | Axis + tick lines |
-| `chart-axis-tick` | `215 16% 45%` | `#475569` | Axis tick labels |
+| `chart-axis-tick` | `215 16% 47%` | `#64748B` | Axis tick labels |
 
 The `useChartColors()` hook also exposes `onPrimary` (`--primary-foreground`,
 for sparklines on the primary hero card), `surface`, `border`, and `text` (for
@@ -131,25 +142,32 @@ Base unit: `8px`. All spacing uses multiples of 8.
 
 ## Borders & Radius
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `rounded-sm` | `4px` | Badges, tags, small elements |
-| `rounded-base` | `8px` | Inputs, buttons |
-| `rounded-card` | `12px` | Cards, panels, modals |
-| `rounded-lg` | `16px` | Large modals, drawers |
-| `rounded-2xl` | `20px` | Bento tiles, hero cards |
-| `rounded-full` | `9999px` | Avatars, pill buttons |
+Light mode uses rounder, friendlier corners (site-2 Modern Teal); dark mode uses
+sleeker corners (site-3 Dark Violet). Radius values are redefined per theme in
+`index.css` (`:root` for light, `.dark` for dark).
+
+| Token | Light | Dark | Usage |
+|-------|-------|------|-------|
+| `rounded-sm` | `6px` | `4px` | Badges, tags, small elements |
+| `rounded-base` | `10px` | `8px` | Inputs, buttons |
+| `rounded-card` | `16px` | `12px` | Cards, panels, modals |
+| `rounded-lg` | `20px` | `16px` | Large modals, drawers |
+| `rounded-2xl` | `24px` | `20px` | Bento tiles, hero cards |
+| `rounded-full` | `9999px` | `9999px` | Avatars, pill buttons |
 
 ---
 
 ## Shadows
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `shadow-card` | `0 1px 2px rgba(30,58,95,0.05), 0 1px 3px rgba(30,58,95,0.04)` | Cards (subtle) |
-| `shadow-card-sm` | `0 1px 2px rgba(30,58,95,0.04)` | Card hover, bento tiles |
-| `shadow-dropdown` | `0 4px 6px -1px rgba(30,58,95,0.06), 0 2px 4px -1px rgba(30,58,95,0.03)` | Dropdowns, popovers |
-| `shadow-modal` | `0 20px 25px -5px rgba(30,58,95,0.08), 0 10px 10px -5px rgba(30,58,95,0.03)` | Modals |
+Light-mode shadows are teal-tinged and soft (site-2); dark-mode shadows are
+heavier/darker to create depth on dark surfaces (site-3).
+
+| Token | Light value | Dark value | Usage |
+|-------|-------------|------------|-------|
+| `shadow-card` | `0 1px 3px rgba(13,148,136,0.08), 0 4px 12px rgba(15,23,42,0.05)` | `0 1px 2px rgba(0,0,0,0.40), 0 4px 16px rgba(0,0,0,0.30)` | Cards |
+| `shadow-card-sm` | `0 1px 2px rgba(13,148,136,0.06)` | `0 1px 2px rgba(0,0,0,0.35)` | Card hover, bento tiles |
+| `shadow-dropdown` | `0 4px 6px -1px rgba(13,148,136,0.08), 0 2px 4px -1px rgba(15,23,42,0.04)` | `0 4px 6px -1px rgba(0,0,0,0.45), 0 2px 4px -1px rgba(0,0,0,0.35)` | Dropdowns, popovers |
+| `shadow-modal` | `0 20px 25px -5px rgba(13,148,136,0.10), 0 10px 10px -5px rgba(15,23,42,0.04)` | `0 20px 25px -5px rgba(0,0,0,0.55), 0 10px 10px -5px rgba(0,0,0,0.40)` | Modals |
 
 ---
 
@@ -211,19 +229,77 @@ inline-flex items-center px-2 py-0.5 rounded-sm text-small font-medium
 | Neutral/Draft | `bg-surface-raised text-muted` |
 | Info | `bg-primary-light text-primary` |
 
-### Sidebar Navigation
+### Sidebar Navigation (Conditional)
 
+The sidebar renders differently based on how many sub-apps the user can access:
+
+- **Single app** → **Accordion sidebar** (`AccordionSidebar`): the one app is a
+  parent row with a `ChevronDown` that rotates 180° when expanded. Clicking
+  toggles expand/collapse inline (children render indented below, no level
+  navigation). Auto-expanded if the current route belongs to that app.
+- **Multiple apps** → **Drill-down sidebar** (`DrilldownSidebar`): clicking a
+  sub-app parent navigates *into* that level — the app list is replaced by the
+  app's section children, and a Back button appears to return to the parent
+  level. Stack-based navigation (like iOS Settings), not an accordion. The
+  active app auto-drills on route change.
+
+Both variants share:
 - Width: `240px` fixed
 - Background: `surface` with right `border-r border-border`
-- Nav item: `flex items-center gap-3 px-3 py-2 rounded-base text-body text-muted hover:bg-surface-raised hover:text-base transition-colors`
-- Active item: `bg-primary-light text-primary font-medium`
+- Apps and children defined in the `APPS` registry in `AppShell.jsx`
+- Brand row (`h-14`, `border-b border-border`): "Service Hub" link + mobile
+  close button
+- "Users & Roles" admin link (super_admin only) below a divider
+
+**Drill-down specific:**
+- Context bar (`border-b border-border-soft`): at root shows an "Applications"
+  label; when drilled in shows a Back button (`ArrowLeft` + "Back") and the
+  current app label as a title.
+- Parent row: `flex items-center gap-3 px-3 min-h-[44px] text-body font-medium
+  rounded-base` button — click drills in. Trailing `ChevronRight` icon.
+  Active parent: `text-primary font-semibold`.
+- Child row: `NavLink` with active state `bg-primary-light text-primary
+  font-semibold`, inactive `text-muted hover:bg-surface-raised
+  hover:text-base`.
+- Slide animation: nav list re-mounts on level change (React `key`) and plays
+  `.drill-enter-forward` (slide from right, 220ms) when drilling in or
+  `.drill-enter-back` (slide from left, 180ms) when going back. Keyframes
+  `drillIn` / `drillBack` defined in `index.css`.
+
+**Accordion specific:**
+- Parent row: same styling as drill-down parent but with `ChevronDown` (rotates
+  180° when open). Uses `aria-expanded` / `aria-controls` for accessibility.
+- Child row: `NavLink` with `pl-11` indent, `min-h-[36px]`, active state
+  `bg-primary-light text-primary font-medium`, inactive `text-muted
+  hover:bg-surface-raised hover:text-base`.
+
 - Section label: `text-label text-subtle uppercase tracking-widest px-3 mb-1 mt-4`
+
+### Welcome Page
+
+Shown after login for all users with at least one accessible sub-app
+(`/hub-admin/welcome`). Users with zero apps fall back to the login page.
+
+- **User greeting:** "Welcome back, {name}" (`text-display`) + role badge
+  (`bg-primary-light text-primary rounded-full` pill) + email
+- **App cards grid:** `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4`. Each
+  card (`bg-surface border border-border rounded-card shadow-card p-6`,
+  `hover:shadow-card-sm hover:border-border-strong transition-all cursor-pointer`)
+  shows the app icon, label, description, and navigates to the app's dashboard
+  on click.
+- **Quick stats:** `grid-cols-2 lg:grid-cols-4 gap-4` bento row showing
+  platform-wide counts (Total Pages, Total Forms, Total Campaigns, Mailing
+  Lists). Always renders the numeric count (shows "0" when empty). Data fetched
+  via `Promise.allSettled` so one failing endpoint doesn't break the page.
+- **Recent activity:** merged list of latest items across apps (pages, forms,
+  campaigns), sorted by date desc, top 8. Empty state: centered "No recent
+  activity".
 
 ### Page Layout
 
 ```
 background min-h-screen
-├── Sidebar (240px fixed left)
+├── Sidebar (240px fixed left, drill-down parents + children)
 └── Main content area
     ├── Top bar (h-14, border-b border-border bg-surface)
     └── Page body (p-8)
@@ -233,24 +309,34 @@ background min-h-screen
         └── Content
 ```
 
-### Tab Bar (TopBar)
+### TopBar
 
-Sub-app tabs in the TopBar. Uses `NavLink` with a bottom-border active state
-and horizontal scroll on overflow.
+The TopBar no longer hosts sub-app section tabs — those moved into the sidebar
+drill-down. The TopBar layout is: **left** (hamburger on mobile + sub-app title),
+**center** (global search bar, hidden on mobile), **right** (sub-app actions +
+shared user menu with theme toggle + logout).
 
-```
-<nav className="flex items-center gap-0 min-w-0 h-full overflow-x-auto scrollbar-none -mb-px">
-  <NavLink
-    className="flex items-center gap-1.5 px-3 h-full text-sm font-medium text-muted
-               hover:text-text-base border-b-2 border-transparent transition-colors
-               whitespace-nowrap [&.active]:text-primary [&.active]:border-primary"
-  />
-</nav>
-```
+### Global Search
 
-- `.scrollbar-none` utility hides the scrollbar on the horizontal scroll container.
-- Active state is detected via NavLink's `.active` class (Tailwind v4 arbitrary
-  variant: `[&.active]:`).
+A global search bar lives in the TopBar center, always visible on `sm+`
+screens. It searches across app content scoped to the user's accessible apps.
+
+- **Search bar** (`GlobalSearch.jsx`): `pl-9 pr-4 py-2 min-h-[36px] text-sm
+  bg-surface-raised border border-border rounded-base` with a `Search` icon on
+  the left. Debounced 200ms after last keystroke. Dropdown panel appears below
+  with live results grouped by app, keyboard-navigable (ArrowUp/Down to move,
+  Enter to open result or go to full search page, Escape to close).
+- **Dropdown panel**: `bg-surface border border-border rounded-base
+  shadow-dropdown max-h-[400px] overflow-y-auto`. Results grouped by app with
+  sticky group headers. Active item: `bg-primary-light text-primary`.
+- **Full search page** (`/hub-admin/search?q=...`): `max-w-3xl` centered layout
+  with a large search input, results grouped by app in cards.
+- **Search registry** (`client/src/search/registry.js`): scalable provider
+  pattern. Each app registers a provider with `{ appId, label, Icon, search(query)
+  }`. The registry filters providers by the user's accessible app IDs at query
+  time and runs them in parallel via `Promise.allSettled`. To add a new app to
+  search scope, add a provider object to the `PROVIDERS` array — no changes
+  needed to the search bar or search page.
 
 ### Icon Buttons
 
@@ -450,43 +536,49 @@ always renders light regardless of the user's toggle.
 - An inline script in `client/index.html` applies the stored/OS theme **before
   first paint** to avoid a flash of the wrong theme (FOUC). It checks
   `window.location.pathname` and only applies `.dark` on admin routes.
-- The topbar toggle (Sun/Moon) lives in `client/src/components/TopBar.jsx`
-  (`min-w-[44px] min-h-[44px]` touch target) and calls `toggleTheme`.
+- The theme toggle lives inside the **user dropdown menu** (top-right avatar) in
+  `client/src/components/TopBar.jsx`. It renders as a switch row ("Dark mode" with
+  a Sun/Moon icon and an animated track/knob) and calls `toggleTheme`. The
+  dropdown closes on Escape and outside-click; the toggle is a
+  `role="menuitemcheckbox"` with `aria-checked` reflecting the current theme.
 
-**Dark palette** (`.dark` block in `index.css`, HSL `H S% L%`)
+**Dark palette** (`.dark` block in `index.css`, HSL `H S% L%`) — Dark Violet
+(site-3): violet primary with a soft glow, cyan accent, deep near-black layered
+surfaces. All text meets 4.5:1 contrast on dark surfaces.
 
-| Token | Dark HSL | Notes |
-|-------|----------|-------|
-| `primary` | `213 53% 65%` | Lifted navy so it reads on dark surfaces |
-| `primary-hover` | `213 53% 72%` | |
-| `primary-light` | `213 52% 20%` | Dark navy tint for pill/badge backgrounds |
-| `primary-foreground` | `222 47% 11%` | Dark text on the light-navy accent |
-| `background` | `222 47% 7%` | Near-black slate canvas |
-| `surface` | `222 40% 11%` | Cards, panels, modals |
-| `surface-raised` | `217 33% 17%` | Hover rows, subtle insets |
-| `surface-tertiary` | `215 25% 22%` | Nested insets, quick-action hover |
-| `border` | `215 25% 22%` | |
-| `border-soft` | `215 20% 18%` | |
-| `border-strong` | `215 25% 30%` | |
-| `text-base` | `210 20% 92%` | |
-| `text-muted` | `215 16% 65%` | |
-| `text-subtle` | `215 12% 55%` | |
-| `text-inverse` | `222 47% 11%` | |
-| `success` / `success-light` | `142 60% 52%` / `142 50% 14%` | State hue kept, lightness raised; `-light` becomes a dark tint |
-| `warning` / `warning-light` | `32 90% 58%` / `32 60% 15%` | |
-| `danger` / `danger-light` | `0 72% 62%` / `0 50% 16%` | |
-| `info` / `info-light` | `192 80% 52%` / `192 60% 14%` | |
-| `chart-primary` | `213 60% 68%` | |
-| `chart-success` | `142 60% 52%` | |
-| `chart-warning` | `32 90% 58%` | |
-| `chart-danger` | `0 72% 62%` | |
-| `chart-info` | `192 80% 52%` | |
-| `chart-muted` | `215 15% 45%` | |
-| `chart-grid` | `215 25% 22%` | |
-| `chart-axis` | `215 20% 35%` | |
-| `chart-axis-tick` | `215 16% 65%` | |
+| Token | Dark HSL | Hex | Notes |
+|-------|----------|-----|-------|
+| `primary` | `258 90% 66%` | `#8B5CF6` | Violet — primary buttons, active nav pill, active tab underline |
+| `primary-hover` | `262 83% 58%` | `#7C3AED` | Primary button hover |
+| `primary-light` | `259 38% 16%` | `#241A3A` | Dark violet tint for pill/badge backgrounds |
+| `primary-foreground` | `0 0% 100%` | `#FFFFFF` | White text/icons on violet |
+| `background` | `225 21% 7%` | `#0F1117` | Page background — near-black |
+| `surface` | `225 21% 11%` | `#171A23` | Cards, sidebar, top bar |
+| `surface-raised` | `226 22% 15%` | `#1F2330` | Table headers, muted panels, inputs |
+| `surface-tertiary` | `225 19% 20%` | `#2A2F3E` | Nested insets, quick-action hover |
+| `border` | `225 19% 20%` | `#2A2F3E` | Card/table/input borders |
+| `border-soft` | `225 19% 16%` | `#222632` | Subtle dividers |
+| `border-strong` | `221 16% 27%` | `#3A4150` | Input borders (default) |
+| `text-base` | `220 13% 91%` | `#E5E7EB` | Primary text |
+| `text-muted` | `218 11% 65%` | `#9CA3AF` | Secondary labels, metadata |
+| `text-subtle` | `220 9% 46%` | `#6B7280` | Placeholder, disabled |
+| `text-inverse` | `225 21% 7%` | `#0F1117` | Text on light/colored fills |
+| `success` / `success-light` | `158 64% 52%` / `156 47% 11%` | `#34D399` / dark tint | State hue kept, lightness raised; `-light` becomes a dark tint |
+| `warning` / `warning-light` | `43 96% 56%` / `46 45% 11%` | `#FBBF24` / dark tint | |
+| `danger` / `danger-light` | `0 91% 71%` / `351 33% 12%` | `#F87171` / dark tint | |
+| `info` / `info-light` | `188 86% 53%` / `191 52% 12%` | `#22D3EE` (cyan) / dark tint | Cyan doubles as the secondary accent |
+| `chart-primary` | `258 90% 66%` | `#8B5CF6` | Violet |
+| `chart-success` | `158 64% 52%` | `#34D399` | |
+| `chart-warning` | `43 96% 56%` | `#FBBF24` | |
+| `chart-danger` | `0 91% 71%` | `#F87171` | |
+| `chart-info` | `188 86% 53%` | `#22D3EE` | Cyan accent |
+| `chart-muted` | `218 11% 45%` | — | |
+| `chart-grid` | `225 19% 20%` | — | Subtle grid on dark |
+| `chart-axis` | `225 19% 30%` | — | |
+| `chart-axis-tick` | `218 11% 65%` | — | |
 
-Shadows in dark mode use a darker base color with higher alpha for depth.
+Shadows in dark mode use a darker base color with higher alpha for depth. Radius
+values are also redefined in `.dark` (sleeker 12px cards vs. light mode's 16px).
 
 ---
 
@@ -515,7 +607,7 @@ To change colors, fonts, spacing, or any token:
 - [x] **Dashboard patterns** — Bento stats grid, hero stat card, stat tile with sparkline, QuickAction card, ChartCard, dashboard skeleton loading, and CTA bar are all implemented and documented in the Dashboard Patterns section above.
 - [x] **Hex cleanup (theme tokens)** — `FormAnalytics.jsx` SVG grid/point strokes now use `var(--chart-grid)` / `var(--surface)`. `FormRenderer.jsx` star rating fallback uses `var(--text-subtle)`.
 - [x] **`badge-*` classes** — `.badge-success`, `.badge-warning`, `.badge-danger`, `.badge-info`, `.badge-neutral` defined in `index.css` (`@layer utilities`). Documented in Badges / Status Pills section and Ready-made Utility Classes section.
-- [x] **`scrollbar-none`** — Utility class defined in `index.css` (`@layer utilities`). Documented in Ready-made Utility Classes section and Tab Bar pattern.
+- [x] **`scrollbar-none`** — Utility class defined in `index.css` (`@layer utilities`). Documented in Ready-made Utility Classes section. (Formerly used for TopBar tab scroll; tabs moved to sidebar drill-down.)
 - [x] **Text token naming** — Standardized: `text-text-base` (kept — `text-base` conflicts with Tailwind's font-size utility), `text-subtle` (short form, alias of `--color-subtle`), `text-inverse` (short form, alias of `--color-inverse`), `text-muted` (already short). All `text-text-subtle` → `text-subtle` and `text-text-inverse` → `text-inverse` migrations complete.
 - [x] **`bg-muted`** — Works correctly. `--color-muted` is defined in `index.css` as `hsl(var(--text-muted))`, so `bg-muted` produces a medium-gray background that adapts to dark mode. Used in FormsList for "closed" status dots and InlineEditor for unpublished indicator.
 - [x] **Opacity variants** — `bg-primary-light/30`, `bg-primary-light/50`, `bg-primary-foreground/20`, `bg-primary/20` documented as acceptable opacity modifiers. See Opacity Modifiers section in Component Patterns.
@@ -524,13 +616,17 @@ To change colors, fonts, spacing, or any token:
 - [x] **Batch action bar** — Documented in Batch Action Bar section.
 - [x] **Empty state** — `.empty-state` utility class documented in Ready-made Utility Classes. Pattern documented in Empty State section (including ChartCard `empty` prop for charts).
 - [x] **Folder sidebar** — Documented in Folder Sidebar section.
-- [x] **Tab bar (TopBar)** — Documented in Tab Bar section.
+- [x] **Tab bar (TopBar)** — Replaced by conditional sidebar (drill-down for multi-app, accordion for single-app). TopBar now hosts title + global search + actions + user menu. See Sidebar Navigation (Conditional) and Global Search sections.
 - [x] **Recharts tooltip styling** — Custom `ChartTooltip.jsx` component created. Uses semantic tokens (surface, border, text, shadow-dropdown). All 4 chart components (SimpleAreaChart, SimpleBarChart, SimpleLineChart, SimplePieChart) updated to use it.
 - [x] **Chart axis & grid colors** — All chart components use `useChartColors()` for axis (`c.axis`), tick labels (`c.axisTick`), and grid lines (`c.grid`). These resolve from `--chart-axis`, `--chart-axis-tick`, `--chart-grid` CSS variables and adapt to dark mode.
 - [x] **Empty chart state** — `ChartCard` now supports `empty` and `emptyMessage` props. When `empty={true}`, renders a centered "No data yet" message with a chart icon instead of children.
 - [x] **Removed page headers** — Documented in Dashboard Patterns section: "Dashboards omit an `h1` page title (the sidebar/topbar already identifies the app)."
 - [x] **Standard dashboard wrapper** — Documented in Dashboard Patterns section: `bg-background min-h-screen` > `max-w-7xl mx-auto p-6 lg:p-8`.
 - [x] **Dashboard section order** — Documented in Dashboard Patterns section: "(1) bento stats grid → (2) CTA bar → (3) charts row."
+- [x] **Conditional sidebar (drill-down / accordion)** — Single-app users get an accordion sidebar; multi-app users get a stack-based drill-down with Back button and slide animations. Documented in Sidebar Navigation (Conditional) section.
+- [x] **Welcome page** — Post-login landing at `/hub-admin/welcome` with user greeting, app cards, access-scoped quick stats, and recent activity. Documented in Welcome Page section.
+- [x] **Global search** — Always-visible search bar in TopBar with dropdown results + full search page at `/hub-admin/search`. Pluggable provider registry at `client/src/search/registry.js`, scoped to user's accessible apps. Documented in Global Search section.
+- [x] **Drill-down animations** — `@keyframes drillIn` / `drillBack` and `.drill-enter-forward` / `.drill-enter-back` utility classes defined in `index.css`.
 
 ### Intentional hex / raw color exceptions (user-content, not theme tokens)
 

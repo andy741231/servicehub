@@ -160,7 +160,7 @@ model CampaignMetrics {
 > Changed from the parent skill's version: `EmailLog.recipient` (a raw string) is now `EmailLog.recipientId` (a foreign key to `Recipient`), added indexes on the fields analytics/send-filtering actually query, added `EmailTemplate`, and added `Recipient.consentSource`/`consentAt` for GDPR. If you're copying the parent `service-hub` skill's schema block instead of this one, apply these same changes — this version supersedes it for the email sub-app.
 
 ### Component Structure
-- **EmailShell.jsx:** Tab navigation shell (Dashboard, Campaigns, Mailing Lists, Templates)
+- **EmailShell.jsx:** Pass-through shell rendering `<Outlet />` (section nav lives in the sidebar drill-down/accordion)
 - **EmailDashboard.jsx:** List of all campaigns with quick stats
 - **CampaignComposer.jsx:** Rich text editor for email content
 - **NewsletterBuilder.jsx:** Newsletter template builder

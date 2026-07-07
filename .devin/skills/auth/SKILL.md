@@ -13,7 +13,7 @@ Handles user authentication flows on the client side, including:
 ## Architecture & State
 - **State Store:** Uses `authStore` (Zustand) to manage `user` (decoded JWT payload), `isAuthenticated`, and loading states. The store currently exposes `checkAuth`, `login`, `logout`, and `dismissLoggedOutMessage` — there is **no `register` action** yet.
 - **CSRF:** The backend relies on SameSite cookie configuration for CSRF protection. The client does **not** auto-fetch a CSRF token on page load, and `utils/api.js` does **not** attach any CSRF header to axios requests. (A CSRF endpoint may exist on the backend, but the client does not currently wire it up.)
-- **Routing:** Directs users to `/` after successful login. If already authenticated, redirect away from `/login` to `/`. Note: there is **no `/register` route** wired in `App.jsx` today.
+- **Routing:** After successful login, users are redirected to `/hub-admin/welcome` (the post-login landing page) if they have at least one accessible sub-app. If already authenticated, redirect away from `/login` to the welcome page. The redirect logic lives in `getPostLoginPath()` in `Login.jsx`. Register redirects to `/hub-admin/welcome` as well.
 
 ## Key Files
 - `Login.jsx` - Contains the username/password form with validations. (Implemented and routed.)

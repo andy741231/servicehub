@@ -119,6 +119,84 @@ export const me = async (req, res) => {
   }
 };
 
+// Shape a user record into the public user object returned to the client.
+// Kept in sync with the `me` and `login` responses so the authStore can
+// drop the result straight into state.
+const shapeUser = async (user) => {
+  const roles = await prisma.userRole.findMany({ where: { userId: user.id }, include: { role: true } });
+  const permissions = await prisma.appPermission.findMany({ where: { userId: user.id, canAccess: true } });
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    roles: roles.map((r) => r.role.name),
+    permissions: permissions.map((p) => p.appId),
+    preferences: user.preferences ? JSON.parse(user.preferences) : {},
+  };
+};
+
+// Update the authenticated user's own profile.
+// Body (all optional, sent as separate sections from the client):
+//   { name, email, username }                      — profile section
+//   { currentPassword, newPassword }               — password section
+// Username and email are checked for duplicates (excluding the current user).
+// Password changes require the current password to verify.
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, email, username, currentPassword, newPassword } = req.body;
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const data = {};
+
+    if (typeof name === 'string' && name.trim() && name !== user.name) {
+      data.name = name.trim();
+    }
+
+    if (typeof email === 'string' && email.trim() && email !== user.email) {
+      const emailTaken = await prisma.user.findFirst({
+        where: { email: email.trim(), NOT: { id: user.id } },
+        select: { id: true },
+      });
+      if (emailTaken) return res.status(409).json({ error: 'That email is already in use' });
+      data.email = email.trim();
+    }
+
+    if (typeof username === 'string' && username.trim() && username !== user.username) {
+      const usernameTaken = await prisma.user.findFirst({
+        where: { username: username.trim(), NOT: { id: user.id } },
+        select: { id: true },
+      });
+      if (usernameTaken) return res.status(409).json({ error: 'That username is already taken' });
+      data.username = username.trim();
+    }
+
+    // Password change is a separate concern — require current password.
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required to change your password' });
+      }
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters' });
+      }
+      data.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    if (Object.keys(data).length === 0) {
+      return res.json({ user: await shapeUser(user), message: 'No changes' });
+    }
+
+    const updated = await prisma.user.update({ where: { id: user.id }, data });
+    res.json({ user: await shapeUser(updated), message: 'Profile updated' });
+  } catch (error) {
+    console.error('updateProfile error:', error);
+    res.status(500).json({ error: 'Server error while updating profile' });
+  }
+};
+
 // Update the authenticated user's preferences (merge, not replace).
 // Body: { theme: 'dark' | 'light', ... } — any subset is fine.
 export const updatePreferences = async (req, res) => {

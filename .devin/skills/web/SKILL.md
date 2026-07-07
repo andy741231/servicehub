@@ -56,7 +56,7 @@ theme tokens as the source of truth for colors, typography, and spacing.
 client/src/pages/web/
 ├── index.jsx            # Re-exports InlineEditor (default editor)
 ├── InlineEditor.jsx     # Main editor: SectionWrapper, AddSectionModal, block palette
-├── WebShell.jsx         # Tab navigation shell for the Web sub-app
+├── WebShell.jsx         # Pass-through shell (renders Outlet, registers "View site" TopBar action)
 ├── Pages.jsx            # Page list / management
 ├── Styles.jsx           # Site-wide style/token editor
 ├── DraftTemplates.jsx   # Draft template management

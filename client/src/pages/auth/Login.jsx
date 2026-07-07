@@ -4,11 +4,18 @@ import { LogIn, Lock, User } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { APPS } from '../../layouts/AppShell';
 
-function getFirstAccessiblePath(user) {
+function getAccessibleApps(user) {
   const hasSuperAdminRole = user?.roles?.includes('super_admin');
   const hasAdminRole = user?.roles?.includes('admin');
-  const accessibleApp = APPS.find((app) => user?.permissions?.includes(app.id) || hasAdminRole || hasSuperAdminRole);
-  return accessibleApp?.path || '/hub-admin';
+  return APPS.filter((app) => user?.permissions?.includes(app.id) || hasAdminRole || hasSuperAdminRole);
+}
+
+// Any accessible apps → land on the welcome page.
+// Zero apps → fall back to /hub-admin (login page).
+function getPostLoginPath(user) {
+  const apps = getAccessibleApps(user);
+  if (apps.length >= 1) return '/hub-admin/welcome';
+  return '/hub-admin';
 }
 
 export default function Login() {
@@ -23,14 +30,14 @@ export default function Login() {
   const navigate = useNavigate();
 
   if (isLoading) return <div className="text-muted">Loading...</div>;
-  if (isAuthenticated) return <Navigate to={getFirstAccessiblePath(user)} replace />;
+  if (isAuthenticated) return <Navigate to={getPostLoginPath(user)} replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await login(username, password, rememberMe);
       const updatedUser = useAuthStore.getState().user;
-      navigate(getFirstAccessiblePath(updatedUser));
+      navigate(getPostLoginPath(updatedUser));
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
     }

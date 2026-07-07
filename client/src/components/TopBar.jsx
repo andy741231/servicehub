@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { LogOut, ChevronDown, Menu, Sun, Moon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, ChevronDown, Menu, Sun, Moon, Settings as SettingsIcon } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
+import GlobalSearch from './GlobalSearch';
 
-// ── Theme toggle ───────────────────────────────────────────────────────────
-function ThemeToggle() {
+// ── Theme toggle (switch row, used inside the user dropdown) ───────────────
+function ThemeToggleRow() {
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
   const isDark = theme === 'dark';
@@ -13,12 +14,28 @@ function ThemeToggle() {
   return (
     <button
       type="button"
+      role="menuitemcheckbox"
+      aria-checked={isDark}
       onClick={toggleTheme}
-      className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-base text-muted hover:bg-surface-raised hover:text-text-base transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="w-full flex items-center justify-between gap-2 px-3 py-2.5 min-h-[44px] text-sm font-medium text-muted hover:bg-surface-raised hover:text-text-base transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
     >
-      {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      <span className="flex items-center gap-2">
+        {isDark ? <Moon className="w-4 h-4 flex-shrink-0" /> : <Sun className="w-4 h-4 flex-shrink-0" />}
+        Dark mode
+      </span>
+      {/* Switch track + knob */}
+      <span
+        aria-hidden="true"
+        className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors duration-200 ${
+          isDark ? 'bg-primary' : 'bg-surface-tertiary'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+            isDark ? 'translate-x-4' : 'translate-x-0'
+          }`}
+        />
+      </span>
     </button>
   );
 }
@@ -31,18 +48,16 @@ function ThemeToggle() {
 const TopBarContext = createContext(null);
 
 export function TopBarProvider({ children }) {
-  const [tabs, setTabs] = useState([]);
   const [actions, setActions] = useState(null);
   const [title, setTitle] = useState('');
 
   // Stable setters so sub-app useEffect deps don't churn on every render.
-  const registerTabs = useCallback((next) => setTabs(next), []);
   const registerActions = useCallback((next) => setActions(next), []);
   const registerTitle = useCallback((next) => setTitle(next ?? ''), []);
 
   const value = useMemo(
-    () => ({ tabs, actions, title, registerTabs, registerActions, registerTitle }),
-    [tabs, actions, title, registerTabs, registerActions, registerTitle]
+    () => ({ actions, title, registerActions, registerTitle }),
+    [actions, title, registerActions, registerTitle]
   );
 
   return <TopBarContext.Provider value={value}>{children}</TopBarContext.Provider>;
@@ -119,6 +134,17 @@ function UserMenu({ user, onLogout }) {
               <p className="text-sm font-medium text-text-base truncate">{user?.name}</p>
               <p className="text-xs text-subtle truncate">{user?.email}</p>
             </div>
+            <ThemeToggleRow />
+            <div className="h-px bg-border-soft my-1" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setOpen(false); navigate('/hub-admin/settings'); }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 min-h-[44px] text-sm font-medium text-muted hover:bg-surface-raised hover:text-text-base transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+            >
+              <SettingsIcon className="w-4 h-4 flex-shrink-0" />
+              Settings
+            </button>
             <button
               type="button"
               role="menuitem"
@@ -137,12 +163,12 @@ function UserMenu({ user, onLogout }) {
 
 // ── TopBar ───────────────────────────────────────────────────────────────
 export default function TopBar({ onMenuClick }) {
-  const { tabs, actions, title } = useTopBar();
+  const { actions, title } = useTopBar();
   const { user } = useAuthStore();
 
   return (
-    <header className="bg-surface border-b border-border flex items-center justify-between px-3 sm:px-6 h-14 shrink-0 z-30">
-      {/* Left: hamburger (mobile) + sub-app tabs or title */}
+    <header className="bg-surface border-b border-border flex items-center gap-3 px-3 sm:px-6 h-14 shrink-0 z-30">
+      {/* Left: hamburger (mobile) + sub-app title */}
       {onMenuClick && (
         <button
           type="button"
@@ -153,34 +179,17 @@ export default function TopBar({ onMenuClick }) {
           <Menu className="w-5 h-5" />
         </button>
       )}
-      {tabs.length > 0 ? (
-        <nav aria-label="Sub-app sections" className="flex items-center gap-0 min-w-0 h-full overflow-x-auto scrollbar-none -mb-px">
-          {tabs.map(({ label, path, Icon }) => (
-            <NavLink
-              key={path}
-              to={path}
-              className={({ isActive }) =>
-                `relative flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[44px] text-sm font-medium border-b-2 transition-colors duration-150 ease-out whitespace-nowrap -mb-px flex-shrink-0 ${
-                  isActive
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted hover:text-text-base hover:border-border-strong'
-                }`
-              }
-            >
-              {Icon && <Icon className="w-4 h-4" />}
-              {label}
-            </NavLink>
-          ))}
-        </nav>
-      ) : (
-        <h1 className="text-base font-semibold text-text-base truncate">{title}</h1>
-      )}
+      <h1 className="text-base font-semibold text-text-base truncate flex-shrink-0 hidden sm:block">{title}</h1>
 
-      {/* Right: sub-app actions + shared user menu */}
-      <div className="flex items-center gap-2 flex-shrink-0">
+      {/* Center: global search (hidden on mobile, visible on sm+) */}
+      <div className="hidden sm:flex flex-1 justify-center max-w-md mx-auto">
+        <GlobalSearch />
+      </div>
+
+      {/* Right: sub-app actions + shared user menu (theme toggle lives inside) */}
+      <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
         {actions}
         <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
-        <ThemeToggle />
         <UserMenu user={user} />
       </div>
     </header>

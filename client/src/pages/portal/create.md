@@ -5,7 +5,7 @@
 
 What exists (frontend, placeholder only):
 - `PortalDashboard.jsx` — "Coming Soon" placeholder with feature previews and sample chart
-- `PortalShell.jsx` — shell with a single Dashboard tab
+- `PortalShell.jsx` — pass-through shell for nested routes (Dashboard is a sidebar drill-down child of the Portal parent)
 
 What's still pending:
 - No `index.jsx` browse/landing page

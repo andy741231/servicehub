@@ -1,16 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Gauge, Files, PanelTop, Palette, Images, ExternalLink, FileStack } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useTopBar } from '../../components/TopBar';
-
-const TABS = [
-  { label: 'Dashboard',      path: '/hub-admin/web/dashboard',      Icon: Gauge },
-  { label: 'Pages',          path: '/hub-admin/web/pages',          Icon: Files     },
-  { label: 'Header & Footer', path: '/hub-admin/web/header-footer',  Icon: PanelTop  },
-  { label: 'Styles',         path: '/hub-admin/web/styles',         Icon: Palette   },
-  { label: 'Assets',         path: '/hub-admin/web/assets',         Icon: Images    },
-  { label: 'Draft Templates', path: '/hub-admin/web/templates',      Icon: FileStack },
-];
 
 // "View site" action rendered into the TopBar's right slot (sub-app section).
 function ViewSiteAction() {
@@ -29,17 +20,11 @@ function ViewSiteAction() {
 
 export default function WebShell() {
   const location = useLocation();
-  const { registerTabs, registerActions } = useTopBar();
+  const { registerActions } = useTopBar();
 
-  // Don't render the shell chrome for the editor route — clear tabs/actions
+  // Don't render the shell chrome for the editor route — clear actions
   // so the global TopBar shows only the shared user menu.
   const isEditor = location.pathname.includes('/web/editor/');
-  const tabs = useMemo(() => (isEditor ? [] : TABS), [isEditor]);
-
-  useEffect(() => {
-    registerTabs(tabs);
-    return () => registerTabs([]);
-  }, [tabs, registerTabs]);
 
   useEffect(() => {
     registerActions(isEditor ? null : <ViewSiteAction />);

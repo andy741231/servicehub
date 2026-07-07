@@ -123,13 +123,19 @@ export default function Users() {
 
     try {
       if (selectedUser) {
-        // Update user
-        await api.put(`/users/${selectedUser.id}`, {
+        // Update user — username/email are now editable; password is optional.
+        const payload = {
+          username: formData.username,
           name: formData.name,
+          email: formData.email,
           isActive: formData.isActive,
           roles: formData.roles,
-          permissions: formData.permissions
-        });
+          permissions: formData.permissions,
+        };
+        if (formData.password) {
+          payload.password = formData.password;
+        }
+        await api.put(`/users/${selectedUser.id}`, payload);
         setSuccess('User updated successfully!');
       } else {
         // Create user
@@ -344,13 +350,15 @@ export default function Users() {
                       type="text"
                       name="username"
                       required
-                      disabled={!!selectedUser}
                       value={formData.username}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-surface-raised disabled:text-muted"
+                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       placeholder="jane_doe"
                     />
                   </div>
+                  {selectedUser && (
+                    <p className="mt-1.5 text-xs text-subtle">Must be unique — no two users can share a username.</p>
+                  )}
                 </div>
 
                 {/* Name */}
@@ -379,33 +387,39 @@ export default function Users() {
                       type="email"
                       name="email"
                       required
-                      disabled={!!selectedUser}
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-surface-raised disabled:text-muted"
+                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       placeholder="jane@example.com"
                     />
                   </div>
+                  {selectedUser && (
+                    <p className="mt-1.5 text-xs text-subtle">Must be unique — no two users can share an email.</p>
+                  )}
                 </div>
 
-                {/* Password (only on Create) */}
-                {!selectedUser && (
-                  <div>
-                    <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle" />
-                      <input
-                        type="password"
-                        name="password"
-                        required
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                        placeholder="••••••••"
-                      />
-                    </div>
+                {/* Password — required on Create, optional on Edit */}
+                <div>
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+                    Password{selectedUser && ' (optional)'}
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle" />
+                    <input
+                      type="password"
+                      name="password"
+                      required={!selectedUser}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      placeholder={selectedUser ? 'Leave blank to keep current password' : '••••••••'}
+                      minLength={selectedUser ? undefined : 1}
+                    />
                   </div>
-                )}
+                  {selectedUser && (
+                    <p className="mt-1.5 text-xs text-subtle">Enter a new password to reset it (min 6 characters). Leave blank to keep the current one.</p>
+                  )}
+                </div>
 
                 {/* Status Toggle (on Edit) */}
                 {selectedUser && (

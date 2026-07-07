@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drill-Down Menu Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <button id="back-btn" class="back-btn" aria-label="Go back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          <span>Back</span>
+        </button>
+        <h2 id="menu-title" class="menu-title">Menu</h2>
+      </div>
+      <nav id="menu-root" class="menu-list" aria-label="Drill-down menu"></nav>
+    </aside>
+
+    <main class="content">
+      <h1>Drill-Down Menu Example</h1>
+      <p>Click any item with a chevron in the left sidebar to drill into its children.</p>
+      <p id="selected-path" class="selected-path">Selected: —</p>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

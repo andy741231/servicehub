@@ -15,7 +15,7 @@ export default function Register() {
     e.preventDefault();
     try {
       await register(name, email, password);
-      navigate('/hub-admin/web');
+      navigate('/hub-admin/welcome');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
     }
