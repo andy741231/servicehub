@@ -124,13 +124,7 @@ export default function MailingLists() {
   }
 
   return (
-    <div className="p-8">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-display font-bold text-base mb-2">Mailing Lists</h1>
-        <p className="text-body text-muted">Manage your contact lists and import subscribers</p>
-      </div>
-
+    <div className="max-w-7xl mx-auto p-6 lg:p-8">
       {/* Action Bar */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3 flex-1">
@@ -162,7 +156,7 @@ export default function MailingLists() {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
           >
             <Plus className="h-4 w-4" />
             <span className="text-body">New List</span>
@@ -184,7 +178,7 @@ export default function MailingLists() {
                   <p className="text-small text-muted">{list.description}</p>
                 </div>
               </div>
-              <button className="p-1 min-h-[32px] min-w-[32px] text-subtle hover:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors">
+              <button className="p-1 min-h-[44px] min-w-[44px] text-subtle hover:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors">
                 <MoreVertical className="h-4 w-4" />
               </button>
             </div>
@@ -196,14 +190,14 @@ export default function MailingLists() {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleExportList(list)}
-                  className="p-2 min-h-[36px] min-w-[36px] text-subtle hover:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors"
+                  className="p-2 min-h-[44px] min-w-[44px] text-subtle hover:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors"
                   title="Export list"
                 >
                   <Download className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleDeleteList(list.id)}
-                  className="p-2 min-h-[36px] min-w-[36px] text-subtle hover:text-danger focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors"
+                  className="p-2 min-h-[44px] min-w-[44px] text-subtle hover:text-danger focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors"
                   title="Delete list"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -219,9 +213,10 @@ export default function MailingLists() {
         <div 
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
           onMouseDown={e => { if (e.target === e.currentTarget) setShowCreateModal(false); }}
+          onKeyDown={e => { if (e.key === 'Escape') setShowCreateModal(false); }}
         >
           <div 
-            className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out]"
             onMouseDown={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -259,7 +254,7 @@ export default function MailingLists() {
                 <button
                   onClick={handleCreateList}
                   disabled={!newList.name}
-                  className="px-4 py-2.5 bg-primary text-text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2.5 bg-primary text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Create List
                 </button>
@@ -274,9 +269,10 @@ export default function MailingLists() {
         <div 
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
           onMouseDown={e => { if (e.target === e.currentTarget) setShowImportModal(false); }}
+          onKeyDown={e => { if (e.key === 'Escape') setShowImportModal(false); }}
         >
           <div 
-            className="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4 overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out]"
             onMouseDown={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -365,7 +361,7 @@ export default function MailingLists() {
                 <button
                   onClick={handleImport}
                   disabled={!csvFile || !selectedList}
-                  className="px-4 py-2.5 bg-primary text-text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2.5 bg-primary text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Import
                 </button>
@@ -380,9 +376,10 @@ export default function MailingLists() {
         <div 
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
           onMouseDown={e => { if (e.target === e.currentTarget) setShowAddRecipientModal(false); }}
+          onKeyDown={e => { if (e.key === 'Escape') setShowAddRecipientModal(false); }}
         >
           <div 
-            className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out]"
             onMouseDown={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -449,7 +446,7 @@ export default function MailingLists() {
                 <button
                   onClick={handleAddRecipient}
                   disabled={!newRecipient.email || !selectedList}
-                  className="px-4 py-2.5 bg-primary text-text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2.5 bg-primary text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Add Email
                 </button>

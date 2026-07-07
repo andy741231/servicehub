@@ -192,7 +192,7 @@ export default function CampaignComposer() {
             </button>
             <button
               onClick={handleSend}
-              className="flex items-center gap-2 px-3 py-2 bg-primary text-text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
+              className="flex items-center gap-2 px-3 py-2 bg-primary text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
               title="Send immediately"
             >
               <Send className="h-4 w-4" />
@@ -270,9 +270,10 @@ export default function CampaignComposer() {
         <div 
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
           onMouseDown={e => { if (e.target === e.currentTarget) setShowSchedule(false); }}
+          onKeyDown={e => { if (e.key === 'Escape') setShowSchedule(false); }}
         >
           <div 
-            className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out]"
             onMouseDown={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -299,7 +300,7 @@ export default function CampaignComposer() {
                 <button
                   onClick={handleSchedule}
                   disabled={!scheduledDate}
-                  className="px-4 py-2.5 bg-primary text-text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2.5 bg-primary text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Schedule
                 </button>

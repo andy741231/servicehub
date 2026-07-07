@@ -39,12 +39,13 @@ export const login = async (req, res) => {
     const permissions = await prisma.appPermission.findMany({ where: { userId: user.id, canAccess: true } });
 
     console.log('Login successful for:', username);
-    res.json({ 
-      user: { 
-        id: user.id, username: user.username, email: user.email, name: user.name, 
+    res.json({
+      user: {
+        id: user.id, username: user.username, email: user.email, name: user.name,
         roles: roles.map(r => r.role.name),
-        permissions: permissions.map(p => p.appId)
-      } 
+        permissions: permissions.map(p => p.appId),
+        preferences: user.preferences ? JSON.parse(user.preferences) : {}
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -105,13 +106,35 @@ export const me = async (req, res) => {
     const roles = await prisma.userRole.findMany({ where: { userId: user.id }, include: { role: true }});
     const permissions = await prisma.appPermission.findMany({ where: { userId: user.id, canAccess: true } });
 
-    res.json({ 
-      user: { 
-        id: user.id, username: user.username, email: user.email, name: user.name, 
+    res.json({
+      user: {
+        id: user.id, username: user.username, email: user.email, name: user.name,
         roles: roles.map(r => r.role.name),
-        permissions: permissions.map(p => p.appId)
-      } 
+        permissions: permissions.map(p => p.appId),
+        preferences: user.preferences ? JSON.parse(user.preferences) : {}
+      }
     });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Update the authenticated user's preferences (merge, not replace).
+// Body: { theme: 'dark' | 'light', ... } — any subset is fine.
+export const updatePreferences = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const current = user.preferences ? JSON.parse(user.preferences) : {};
+    const merged = { ...current, ...req.body };
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { preferences: JSON.stringify(merged) },
+    });
+
+    res.json({ preferences: merged });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }

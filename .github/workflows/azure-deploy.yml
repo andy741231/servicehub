@@ -195,9 +195,11 @@ jobs:
 
       - name: Health check — homepage (HTTP 200)
         run: |
+          # `|| true` swallows curl's non-zero exit (e.g. 28=timeout) so set -e
+          # doesn't abort the step before we can inspect the status code.
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             --max-time 30 \
-            "https://houstonservicehub-staging.azurewebsites.net/")
+            "https://houstonservicehub-staging.azurewebsites.net/" || true)
           echo "Homepage status: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "Homepage smoke test FAILED (got $STATUS)"
@@ -208,7 +210,7 @@ jobs:
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             --max-time 30 \
-            "https://houstonservicehub-staging.azurewebsites.net/api/health")
+            "https://houstonservicehub-staging.azurewebsites.net/api/health" || true)
           echo "API health status: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "API health smoke test FAILED (got $STATUS)"
@@ -219,7 +221,7 @@ jobs:
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             --max-time 30 \
-            "https://houstonservicehub-staging.azurewebsites.net/login")
+            "https://houstonservicehub-staging.azurewebsites.net/login" || true)
           echo "Login page status: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "Login page smoke test FAILED (got $STATUS)"
@@ -272,20 +274,25 @@ jobs:
       - name: Wait for auto-swap to complete
         run: |
           echo "Auto-swap is configured on the staging slot — waiting for it to propagate..."
-          sleep 30
+          # Azure slot swap + iisnode cold start can take a while; give it
+          # plenty of room before we start probing production.
+          sleep 60
 
       - name: Verify production is healthy after swap
         run: |
-          for i in $(seq 1 6); do
+          # `|| true` is critical: GitHub Actions runs this with `bash -e`,
+          # so without it a curl timeout (exit 28) aborts the whole script
+          # before the retry loop can do its job.
+          for i in $(seq 1 10); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 30 \
-              "https://houstonservicehub.azurewebsites.net/api/health")
+              "https://houstonservicehub.azurewebsites.net/api/health" || true)
             echo "Attempt $i — production health: $STATUS"
             if [ "$STATUS" = "200" ]; then
               echo "Production is healthy."
               exit 0
             fi
-            sleep 10
+            sleep 15
           done
           echo "Production health check FAILED. Check Azure portal."
           exit 1

@@ -6,11 +6,13 @@ import { evaluateConditionalLogic } from '../utils/conditionalLogic';
 import { uploadFile } from '../api/formsApi';
 import { evaluateSchedule, nextTransition, formatDuration, formatDayTime } from '../utils/schedule';
 import { evaluateFormula, formatComputedValue } from '../utils/formula';
+import { useToast } from '../../../components/Toast';
+import { useAlert } from '../../../components/Dialog';
 
 // Shared inline error message rendered below a field input
 const FieldError = ({ fieldId, error }) =>
   error ? (
-    <p id={`${fieldId}-error`} role="alert" className="flex items-center gap-1 text-sm text-red-600 mt-1.5">
+    <p id={`${fieldId}-error`} role="alert" className="flex items-center gap-1 text-sm text-danger mt-1.5">
       <svg className="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
       </svg>
@@ -37,8 +39,8 @@ const FIELD_COMPONENTS = {
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder || field.label}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -58,8 +60,8 @@ const FIELD_COMPONENTS = {
         placeholder={field.placeholder || field.label}
         rows={4}
         maxLength={field.maxLength || undefined}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -68,7 +70,7 @@ const FIELD_COMPONENTS = {
         aria-describedby={error ? `${field.id}-error` : undefined}
       />
       {field.maxLength && (
-        <p className="text-xs text-gray-400 text-right mt-1">
+        <p className="text-xs text-subtle text-right mt-1">
           {(value || '').length}/{field.maxLength}
         </p>
       )}
@@ -83,8 +85,8 @@ const FIELD_COMPONENTS = {
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder || field.label}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -105,8 +107,8 @@ const FIELD_COMPONENTS = {
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder || field.label}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -125,8 +127,8 @@ const FIELD_COMPONENTS = {
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder || field.label}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -144,8 +146,8 @@ const FIELD_COMPONENTS = {
         id={field.id}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -162,8 +164,8 @@ const FIELD_COMPONENTS = {
         id={field.id}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -182,8 +184,8 @@ const FIELD_COMPONENTS = {
     </div>
   ),
   checkbox: ({ field, value, onChange, error, theme }) => (
-    <fieldset className={`space-y-3 ${error ? 'border border-red-500 rounded-lg p-4' : ''}`} aria-label={field.label}>
-      <legend className="text-sm font-medium text-gray-700">{field.label}</legend>
+    <fieldset className={`space-y-3 ${error ? 'border border-danger rounded-lg p-4' : ''}`} aria-label={field.label}>
+      <legend className="text-sm font-medium text-text-base">{field.label}</legend>
       {field.options?.map((option, index) => (
         <label key={index} className="flex items-center gap-3 cursor-pointer">
           <input
@@ -198,17 +200,17 @@ const FIELD_COMPONENTS = {
                 onChange(currentValues.filter(v => v !== option));
               }
             }}
-            className={`w-5 h-5 rounded border-gray-300 focus:ring-2 ${
-              error ? 'text-red-600 focus:ring-red-500' : ''
+            className={`w-5 h-5 rounded border-border focus:ring-2 ${
+              error ? 'text-danger focus:ring-danger' : ''
             }`}
             style={error ? undefined : { '--tw-ring-color': theme?.primaryColor, color: theme?.primaryColor }}
             aria-label={option}
           />
-          <span className="text-gray-700">{option}</span>
+          <span className="text-text-base">{option}</span>
         </label>
       ))}
       {error && (
-        <p id={`${field.id}-error`} className="text-sm text-red-600 mt-2">
+        <p id={`${field.id}-error`} className="text-sm text-danger mt-2">
           {error}
         </p>
       )}
@@ -236,21 +238,21 @@ const FIELD_COMPONENTS = {
                 <Star
                   className="h-8 w-8 transition-colors"
                   fill={currentRating >= starValue ? theme?.primaryColor : 'transparent'}
-                  stroke={currentRating >= starValue ? theme?.primaryColor : '#9ca3af'}
+                  stroke={currentRating >= starValue ? theme?.primaryColor : 'var(--text-subtle)'}
                 />
               </button>
             );
           })}
         </div>
         {error && (
-          <p id={`${field.id}-error`} className="text-sm text-red-600">
+          <p id={`${field.id}-error`} className="text-sm text-danger">
             {error}
           </p>
         )}
       </div>
     );
   },
-  file: ({ field, value, onChange, error, theme }) => {
+  file: ({ field, value, onChange, error, theme, toast }) => {
     const [isUploading, setIsUploading] = useState(false);
     // value can be a string (legacy: just the URL) or an object { url, name, size }
     const fileObj = value && typeof value === 'object' ? value : null;
@@ -265,7 +267,7 @@ const FIELD_COMPONENTS = {
       }
       if (field.maxSize && file.size > field.maxSize * 1024 * 1024) {
         onChange(null);
-        alert(`File is too large. Maximum size is ${field.maxSize}MB.`);
+        toast(`File is too large. Maximum size is ${field.maxSize}MB.`, 'error');
         return;
       }
 
@@ -275,7 +277,7 @@ const FIELD_COMPONENTS = {
         onChange({ url: result.url, name: file.name, size: file.size });
       } catch (err) {
         console.error('File upload failed:', err);
-        alert('Failed to upload file. Please try again.');
+        toast('Failed to upload file. Please try again.', 'error');
         onChange(null);
       } finally {
         setIsUploading(false);
@@ -284,7 +286,7 @@ const FIELD_COMPONENTS = {
 
     return (
       <div className="space-y-2">
-        <div className={`flex items-center gap-3 px-4 py-3 bg-white border rounded-lg ${error ? 'border-red-500' : 'border-gray-300'}`}>
+        <div className={`flex items-center gap-3 px-4 py-3 bg-surface border rounded-lg ${error ? 'border-danger' : 'border-border'}`}>
           <input
             type="file"
             id={field.id}
@@ -298,20 +300,20 @@ const FIELD_COMPONENTS = {
           />
           {fileName ? (
             <>
-              <span className="flex-1 text-sm text-gray-700 truncate" title={fileName}>
+              <span className="flex-1 text-sm text-text-base truncate" title={fileName}>
                 {fileName}
               </span>
               <button
                 type="button"
                 onClick={() => onChange(null)}
-                className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                className="text-xs text-danger hover:text-danger px-2 py-1 rounded hover:bg-danger-light transition-colors"
                 aria-label="Remove uploaded file"
               >
                 Remove
               </button>
               <label
                 htmlFor={field.id}
-                className="px-3 py-1.5 text-sm rounded-lg cursor-pointer border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1"
+                className="px-3 py-1.5 text-sm rounded-lg cursor-pointer border border-border text-muted hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1"
                 style={{ '--tw-ring-color': theme?.primaryColor }}
               >
                 Replace
@@ -321,24 +323,24 @@ const FIELD_COMPONENTS = {
             <>
               <label
                 htmlFor={field.id}
-                className={`px-4 py-2 rounded-lg cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 border border-gray-300 text-gray-600 hover:bg-gray-50 ${
+                className={`px-4 py-2 rounded-lg cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 border border-border text-muted hover:bg-surface-raised ${
                   isUploading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 style={{ '--tw-ring-color': theme?.primaryColor }}
               >
                 {isUploading ? 'Uploading…' : 'Choose file'}
               </label>
-              <span className="text-sm text-gray-400 truncate">
+              <span className="text-sm text-subtle truncate">
                 No file selected
               </span>
             </>
           )}
         </div>
         {field.maxSize && (
-          <p className="text-sm text-gray-500">Max file size: {field.maxSize}MB</p>
+          <p className="text-sm text-muted">Max file size: {field.maxSize}MB</p>
         )}
         {error && (
-          <p id={`${field.id}-error`} className="text-sm text-red-600">
+          <p id={`${field.id}-error`} className="text-sm text-danger">
             {error}
           </p>
         )}
@@ -395,7 +397,7 @@ const FIELD_COMPONENTS = {
               ref={canvasRef}
               width={600}
               height={150}
-              className={`w-full border rounded-lg bg-white cursor-crosshair ${error ? 'border-red-500' : 'border-gray-300'}`}
+              className={`w-full border rounded-lg bg-surface cursor-crosshair ${error ? 'border-danger' : 'border-border'}`}
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}
@@ -409,7 +411,7 @@ const FIELD_COMPONENTS = {
               <button
                 type="button"
                 onClick={clearSignature}
-                className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1"
+                className="flex items-center gap-1 px-3 py-2 text-sm text-muted border border-border rounded-lg hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-offset-1"
                 style={{ '--tw-ring-color': theme?.primaryColor }}
               >
                 <X className="h-4 w-4" />
@@ -424,15 +426,15 @@ const FIELD_COMPONENTS = {
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Type your signature"
-            className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-              error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+            className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              error ? 'border-danger focus:ring-danger' : 'border-border'
             }`}
             style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
             aria-label={field.label || 'Typed signature'}
           />
         )}
         {error && (
-          <p id={`${field.id}-error`} className="text-sm text-red-600">
+          <p id={`${field.id}-error`} className="text-sm text-danger">
             {error}
           </p>
         )}
@@ -487,8 +489,8 @@ const FIELD_COMPONENTS = {
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder || field.label || 'https://example.com'}
-        className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-          error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+        className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+          error ? 'border-danger focus:ring-danger' : 'border-border'
         }`}
         style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
         aria-label={field.label}
@@ -520,9 +522,9 @@ const FIELD_COMPONENTS = {
           aria-required={field.required}
           aria-invalid={!!error}
         />
-        <div className="flex justify-between text-sm text-gray-500">
+        <div className="flex justify-between text-sm text-muted">
           <span>{min}</span>
-          <span className="font-medium text-gray-700">{current}</span>
+          <span className="font-medium text-text-base">{current}</span>
           <span>{max}</span>
         </div>
         <FieldError fieldId={field.id} error={error} />
@@ -540,8 +542,8 @@ const FIELD_COMPONENTS = {
             value={v.first || ''}
             onChange={(e) => setPart('first', e.target.value)}
             placeholder="First name"
-            className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-              error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+            className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              error ? 'border-danger focus:ring-danger' : 'border-border'
             }`}
             style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
             aria-label={`${field.label} first name`}
@@ -552,8 +554,8 @@ const FIELD_COMPONENTS = {
             value={v.last || ''}
             onChange={(e) => setPart('last', e.target.value)}
             placeholder="Last name"
-            className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-              error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+            className={`w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              error ? 'border-danger focus:ring-danger' : 'border-border'
             }`}
             style={error ? undefined : { '--tw-ring-color': theme?.primaryColor }}
             aria-label={`${field.label} last name`}
@@ -567,8 +569,8 @@ const FIELD_COMPONENTS = {
   address: ({ field, value, onChange, error, theme }) => {
     const v = value || {};
     const setPart = (part, val) => onChange({ ...v, [part]: val });
-    const inputCls = `w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-      error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+    const inputCls = `w-full px-4 py-3 bg-surface border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+      error ? 'border-danger focus:ring-danger' : 'border-border'
     }`;
     const ringStyle = error ? undefined : { '--tw-ring-color': theme?.primaryColor };
     return (
@@ -590,12 +592,12 @@ const FIELD_COMPONENTS = {
     const { value, error } = evaluateFormula(field.formula, allFields, formData);
     const display = formatComputedValue(value, field.displayFormat);
     return (
-      <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+      <div className="px-4 py-3 bg-surface-raised border border-border rounded-lg">
         <div className="text-2xl font-bold" style={{ color: theme?.primaryColor }}>
           {display || '—'}
         </div>
         {error && field.formula && (
-          <div className="text-xs text-gray-400 mt-1">{error}</div>
+          <div className="text-xs text-subtle mt-1">{error}</div>
         )}
       </div>
     );
@@ -634,14 +636,14 @@ const FIELD_COMPONENTS = {
     return (
       <div className="space-y-4">
         {effectiveInstances.map((instance, index) => (
-          <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-3 relative">
+          <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Entry {index + 1}</span>
+              <span className="text-sm font-medium text-text-base">Entry {index + 1}</span>
               {effectiveInstances.length > min && (
                 <button
                   type="button"
                   onClick={() => removeInstance(index)}
-                  className="text-xs text-red-500 hover:text-red-700"
+                  className="text-xs text-danger hover:text-danger"
                 >
                   Remove
                 </button>
@@ -652,9 +654,9 @@ const FIELD_COMPONENTS = {
               if (!ChildComponent) return null;
               return (
                 <div key={childField.id}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-text-base mb-1.5">
                     {childField.label}
-                    {childField.required && <span className="text-red-500 ml-1">*</span>}
+                    {childField.required && <span className="text-danger ml-1">*</span>}
                   </label>
                   <ChildComponent
                     field={childField}
@@ -674,13 +676,13 @@ const FIELD_COMPONENTS = {
           <button
             type="button"
             onClick={addInstance}
-            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            className="w-full py-3 border-2 border-dashed border-border rounded-lg text-sm font-medium text-muted hover:border-primary hover:text-primary transition-colors"
             style={{ '--tw-ring-color': theme?.primaryColor }}
           >
             + {field.addButtonLabel || 'Add another'}
           </button>
         )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
       </div>
     );
   },
@@ -705,23 +707,23 @@ function ClosedScreen({ form, schedule, theme }) {
       className="min-h-screen flex items-center justify-center p-4"
       style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
     >
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-        <Lock className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+      <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 text-center">
+        <Lock className="h-16 w-16 mx-auto mb-4 text-subtle" />
         <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textColor }}>
           {form.title}
         </h1>
-        <p className="text-gray-600 leading-relaxed">
+        <p className="text-muted leading-relaxed">
           {schedule?.closedMessage || 'This form is currently closed. Please check back later.'}
         </p>
         {opening && (
-          <div className="mt-5 pt-5 border-t border-gray-100">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+          <div className="mt-5 pt-5 border-t border-border-soft">
+            <p className="text-xs font-semibold uppercase tracking-wider text-subtle mb-1">
               Opens
             </p>
             <p className="text-lg font-semibold" style={{ color: theme.primaryColor }}>
               {formatDayTime(opening.at)}
             </p>
-            <p className="text-sm text-gray-500 mt-1 tabular-nums">
+            <p className="text-sm text-muted mt-1 tabular-nums">
               {formatDuration(opening.at.getTime() - Date.now())}
             </p>
           </div>
@@ -737,6 +739,8 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const { toast, ToastMount } = useToast();
+  const { alertDialog, AlertDialogMount } = useAlert();
 
   // Schedule check (re-evaluates whenever form changes; skipped in preview mode)
   const scheduleStatus = preview ? { open: true, closedMessage: null } : evaluateSchedule(form?.accessSchedule);
@@ -906,7 +910,11 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     }
 
     if (preview) {
-      alert('Preview validation passed. This is a preview — no submission was saved.');
+      await alertDialog({
+        title: 'Preview Passed',
+        message: 'Preview validation passed. This is a preview — no submission was saved.',
+        variant: 'default',
+      });
       return;
     }
 
@@ -930,7 +938,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Submission error:', error);
-      alert('Failed to submit form. Please try again.');
+      toast('Failed to submit form. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -1011,7 +1019,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
         className="min-h-screen flex items-center justify-center p-4"
         style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
       >
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+        <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 text-center">
           <CheckCircle className="h-16 w-16 mx-auto mb-4" style={{ color: theme.primaryColor }} />
           <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textColor }}>
             {theme.thankYouTitle}
@@ -1021,8 +1029,8 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
             style={{ color: theme.textColor }}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(theme.thankYouMessage) }}
           />
-          <p className="text-sm text-gray-500 mb-6">
-            Confirmation ID: <span className="font-mono font-medium text-gray-700">{confirmationId}</span>
+          <p className="text-sm text-muted mb-6">
+            Confirmation ID: <span className="font-mono font-medium text-text-base">{confirmationId}</span>
           </p>
           <button
             type="button"
@@ -1065,7 +1073,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
       </div>
 
       <div className={`${layoutMaxWidth} mx-auto`}>
-        <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="bg-surface rounded-xl shadow-lg p-8">
 
           {/* (Form title moved above card) */}
           {/* Progress indicator — style controlled by theme.progressBarStyle */}
@@ -1087,10 +1095,10 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                             <div
                               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300 ${
                                 isCompleted
-                                  ? 'border-transparent text-white'
+                                  ? 'border-transparent text-primary-foreground'
                                   : isCurrent
-                                  ? 'border-transparent text-white shadow-md'
-                                  : 'bg-white text-gray-400 border-gray-200'
+                                  ? 'border-transparent text-primary-foreground shadow-md'
+                                  : 'bg-surface text-subtle border-border'
                               }`}
                               style={
                                 isCompleted || isCurrent
@@ -1107,12 +1115,12 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                                 index + 1
                               )}
                             </div>
-                            <span className="text-xs text-gray-500 text-center max-w-[80px] sm:max-w-[120px] truncate" title={row.label || `Section ${index + 1}`}>
+                            <span className="text-xs text-muted text-center max-w-[80px] sm:max-w-[120px] truncate" title={row.label || `Section ${index + 1}`}>
                               {row.label || `Section ${index + 1}`}
                             </span>
                           </div>
                           {index < pages.length - 1 && (
-                            <div className="flex-1 mx-1 h-0.5 rounded-full overflow-hidden bg-gray-200 self-start mt-4">
+                            <div className="flex-1 mx-1 h-0.5 rounded-full overflow-hidden bg-surface-tertiary self-start mt-4">
                               <div
                                 className="h-full transition-all duration-500"
                                 style={{ width: index < currentPage ? '100%' : '0%', backgroundColor: theme.primaryColor }}
@@ -1127,7 +1135,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
 
                 {/* Thin bar + percentage (only for 'bar' style) */}
                 {style === 'bar' && <div className="flex items-center gap-3">
-                  <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="flex-1 h-1.5 bg-surface-tertiary rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${pageProgress * 100}%`, backgroundColor: theme.primaryColor }}
@@ -1143,7 +1151,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
 
           {/* Section heading (shown on the page) */}
           {currentRow && (
-            <div className="mb-6 pb-4 border-b border-gray-100">
+            <div className="mb-6 pb-4 border-b border-border-soft">
               <h2 className="text-xl font-semibold" style={{ color: theme.textColor }}>
                 {currentRow.label || `Section ${currentPage + 1}`}
               </h2>
@@ -1185,7 +1193,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                           </span>
                         )}
                         {field.label}
-                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                        {field.required && <span className="text-danger ml-1">*</span>}
                       </label>
                     )}
 
@@ -1197,6 +1205,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
                       theme={theme}
                       allFields={allFields}
                       formData={formData}
+                      toast={toast}
                     />
 
                     {field.helpText && (
@@ -1209,12 +1218,12 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
               })}
             </div>
 
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-3 pt-4 border-t border-border-soft">
               {currentPage > 0 && (
                 <button
                   type="button"
                   onClick={handlePrevious}
-                  className="flex-1 px-6 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors min-h-[48px]"
+                  className="flex-1 px-6 py-3 rounded-lg border border-border bg-surface text-text-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors min-h-[48px]"
                   style={{ '--tw-ring-color': theme.primaryColor }}
                 >
                   ← Back
@@ -1244,6 +1253,8 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
           </form>
         </div>
       </div>
+      {ToastMount}
+      {AlertDialogMount}
     </div>
   );
 }

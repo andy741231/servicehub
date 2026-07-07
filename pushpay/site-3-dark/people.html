@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>People — Pushpay ChMS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="theme.css" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: 'var(--primary)',
+          'primary-hover': 'var(--primary-hover)',
+          'on-primary': 'var(--on-primary)',
+          accent: 'var(--accent)',
+          bg: 'var(--bg)',
+          surface: 'var(--surface)',
+          'surface-2': 'var(--surface-2)',
+          body: 'var(--text)',
+          muted: 'var(--text-muted)',
+          line: 'var(--border)',
+          positive: 'var(--positive)',
+          warning: 'var(--warning)',
+          negative: 'var(--negative)',
+        },
+        fontFamily: { sans: ['var(--font-sans)'] },
+        borderRadius: { card: 'var(--radius)' },
+        boxShadow: { card: 'var(--shadow-card)' },
+      },
+    },
+  };
+</script>
+</head>
+<body class="bg-bg text-body font-sans antialiased">
+
+<!-- ===== Sidebar ===== -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full transform flex-col border-r border-line bg-surface transition-transform duration-200 lg:translate-x-0">
+  <div class="flex h-16 items-center gap-3 border-b border-line px-5">
+    <div class="glow-primary flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-on-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="1" y2="4"/><line x1="10" x2="10" y1="1" y2="4"/><line x1="14" x2="14" y1="1" y2="4"/></svg>
+    </div>
+    <div>
+      <p class="text-sm font-bold leading-tight">Pushpay ChMS</p>
+      <p class="text-xs text-muted leading-tight">Grace Fellowship</p>
+    </div>
+  </div>
+      <nav class="flex-1 overflow-y-auto p-3 space-y-0.5" aria-label="Primary">
+      <a href="index.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="people.html" class="glow-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-primary cursor-pointer" aria-current="page" style="background: rgba(167,139,250,.15)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        People
+      </a>
+      <a href="groups.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
+        Groups
+      </a>
+      <a href="queues.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+        Processes
+      </a>
+      <a href="schedules.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M16 14v2l1 1"/></svg>
+        Schedules
+      </a>
+      <a href="events.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>
+        Events
+      </a>
+      <a href="checkin.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        Check-In
+      </a>
+      <a href="giving.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        Giving
+      </a>
+      <a href="communications.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Communications
+      </a>
+      <a href="reports.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        Reports
+      </a>
+      <a href="settings.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        Settings
+      </a>
+    </nav>
+
+  <div class="border-t border-line p-4">
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-primary" style="background: rgba(139,92,246,.2)">DR</div>
+      <div class="min-w-0">
+        <p class="truncate text-sm font-semibold">Dana Reyes</p>
+        <p class="truncate text-xs text-muted">Staff Admin</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Sidebar backdrop -->
+<div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden"></div>
+
+<!-- ===== Top bar ===== -->
+<header class="fixed left-0 right-0 top-0 z-30 flex h-16 items-center gap-4 border-b border-line bg-surface px-6 lg:left-64">
+  <button id="nav-toggle" class="mr-2 -ml-1 cursor-pointer rounded-lg p-2 text-muted hover:bg-surface-2 lg:hidden" aria-label="Open navigation">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+  </button>
+  <div class="mx-auto flex w-full max-w-xl items-center">
+    <label class="relative w-full">
+      <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" placeholder="Search people, groups, events…" class="w-full rounded-lg border border-line bg-surface-2 py-2 pl-10 pr-4 text-sm text-body placeholder:text-muted transition-colors duration-200 focus:border-primary focus:outline-none" />
+    </label>
+  </div>
+  <button aria-label="Notifications" class="cursor-pointer rounded-lg p-2 text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+  </button>
+  <button aria-label="Account" class="glow-primary flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary transition-colors duration-200 hover:bg-primary-hover">DR</button>
+</header>
+
+<!-- ===== Main ===== -->
+<main class="pt-16 lg:ml-64">
+  <div class="mx-auto max-w-screen-2xl p-8">
+
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold">People</h1>
+        <p class="mt-1 text-sm text-muted">1,284 members across all campuses</p>
+      </div>
+      <button class="glow-primary flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors duration-200 hover:bg-primary-hover">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21a8 8 0 0 1 13.29-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/></svg>
+        Add Person
+      </button>
+    </div>
+
+    <!-- Sticky search + filter bar -->
+    <div class="sticky top-16 z-20 -mx-2 mb-4 rounded-card border border-line bg-surface p-4 shadow-card">
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="relative min-w-[240px] flex-1">
+          <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" placeholder="Filter by name, email, or phone…" class="w-full rounded-lg border border-line bg-surface-2 py-2 pl-10 pr-4 text-sm text-body placeholder:text-muted transition-colors duration-200 focus:border-primary focus:outline-none" />
+        </label>
+        <select class="cursor-pointer rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-body transition-colors duration-200 focus:border-primary focus:outline-none">
+          <option>All Campuses</option><option>Downtown Campus</option><option>North Campus</option><option>Westside Campus</option>
+        </select>
+        <select class="cursor-pointer rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-body transition-colors duration-200 focus:border-primary focus:outline-none">
+          <option>All Membership Types</option><option>Member</option><option>Regular Attender</option><option>Guest</option><option>Inactive</option>
+        </select>
+        <select class="cursor-pointer rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-body transition-colors duration-200 focus:border-primary focus:outline-none">
+          <option>All Groups</option><option>Young Adults Community</option><option>Marriage Builders</option><option>Prayer Team</option><option>Worship Team</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Bulk actions toolbar -->
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+      <span class="mr-2 text-sm text-muted"><span class="font-semibold text-body">2 selected</span> of 10 shown</span>
+      <button class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        Send Email
+      </button>
+      <button class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+        Add to Group
+      </button>
+      <button class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+        Add to Queue
+      </button>
+      <button class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Export CSV
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-line bg-surface-2 text-left text-xs font-medium uppercase tracking-wide text-muted">
+            <th class="w-12 px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select all" /></th>
+            <th class="px-4 py-3 font-medium">Name</th>
+            <th class="px-4 py-3 font-medium">Contact</th>
+            <th class="px-4 py-3 font-medium">Household</th>
+            <th class="px-4 py-3 font-medium">Campus</th>
+            <th class="px-4 py-3 font-medium">Status</th>
+            <th class="w-28 px-4 py-3 font-medium text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" checked class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Sarah Mitchell" /></td>
+            <td class="px-4 py-3">
+              <a href="profile.html" class="flex cursor-pointer items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-primary" style="background: rgba(139,92,246,.2)">SM</span>
+                <span class="font-medium text-accent transition-colors duration-200 hover:text-body">Sarah Mitchell</span>
+              </a>
+            </td>
+            <td class="px-4 py-3"><p>sarah.mitchell@gmail.com</p><p class="text-xs text-muted">(512) 555-0147</p></td>
+            <td class="px-4 py-3 text-muted">Mitchell Household</td>
+            <td class="px-4 py-3 text-muted">Downtown</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">Member</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Sarah" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Sarah" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select James Whitaker" /></td>
+            <td class="px-4 py-3">
+              <a href="profile.html" class="flex cursor-pointer items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-accent" style="background: rgba(34,211,238,.15)">JW</span>
+                <span class="font-medium text-accent transition-colors duration-200 hover:text-body">James Whitaker</span>
+              </a>
+            </td>
+            <td class="px-4 py-3"><p>j.whitaker@outlook.com</p><p class="text-xs text-muted">(512) 555-0193</p></td>
+            <td class="px-4 py-3 text-muted">Whitaker Household</td>
+            <td class="px-4 py-3 text-muted">Downtown</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">Member</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email James" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call James" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Maria Perez" /></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-positive" style="background: rgba(52,211,153,.15)">MP</span>
+                <span class="font-medium">Maria Perez</span>
+              </div>
+            </td>
+            <td class="px-4 py-3"><p>maria.perez88@gmail.com</p><p class="text-xs text-muted">(512) 555-0121</p></td>
+            <td class="px-4 py-3 text-muted">Perez Household</td>
+            <td class="px-4 py-3 text-muted">North</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-warning" style="background: rgba(251,191,36,.15)">Pending</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Maria" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Maria" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" checked class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select David Kim" /></td>
+            <td class="px-4 py-3">
+              <a href="profile.html" class="flex cursor-pointer items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-warning" style="background: rgba(251,191,36,.15)">DK</span>
+                <span class="font-medium text-accent transition-colors duration-200 hover:text-body">David Kim</span>
+              </a>
+            </td>
+            <td class="px-4 py-3"><p>davidkim.atx@gmail.com</p><p class="text-xs text-muted">(737) 555-0165</p></td>
+            <td class="px-4 py-3 text-muted">Kim Household</td>
+            <td class="px-4 py-3 text-muted">Westside</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">Member</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email David" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call David" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Aisha Bello" /></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-primary" style="background: rgba(139,92,246,.2)">AB</span>
+                <span class="font-medium">Aisha Bello</span>
+              </div>
+            </td>
+            <td class="px-4 py-3"><p>aisha.bello@yahoo.com</p><p class="text-xs text-muted">(512) 555-0139</p></td>
+            <td class="px-4 py-3 text-muted">Bello Household</td>
+            <td class="px-4 py-3 text-muted">North</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-accent" style="background: rgba(34,211,238,.15)">Guest</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Aisha" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Aisha" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Hiro Nakamura" /></td>
+            <td class="px-4 py-3">
+              <a href="profile.html" class="flex cursor-pointer items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-accent" style="background: rgba(34,211,238,.15)">HN</span>
+                <span class="font-medium text-accent transition-colors duration-200 hover:text-body">Hiro Nakamura</span>
+              </a>
+            </td>
+            <td class="px-4 py-3"><p>hiro.nakamura@gmail.com</p><p class="text-xs text-muted">(512) 555-0102</p></td>
+            <td class="px-4 py-3 text-muted">Nakamura Household</td>
+            <td class="px-4 py-3 text-muted">Downtown</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">Member</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Hiro" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Hiro" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Lucia Vasquez" /></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-positive" style="background: rgba(52,211,153,.15)">LV</span>
+                <span class="font-medium">Lucia Vasquez</span>
+              </div>
+            </td>
+            <td class="px-4 py-3"><p>lucia.vasquez@hotmail.com</p><p class="text-xs text-muted">(737) 555-0188</p></td>
+            <td class="px-4 py-3 text-muted">Vasquez Household</td>
+            <td class="px-4 py-3 text-muted">Westside</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">Member</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Lucia" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Lucia" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Jordan Tran" /></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-warning" style="background: rgba(251,191,36,.15)">JT</span>
+                <span class="font-medium">Jordan Tran</span>
+              </div>
+            </td>
+            <td class="px-4 py-3"><p>jordan.tran21@gmail.com</p><p class="text-xs text-muted">(512) 555-0174</p></td>
+            <td class="px-4 py-3 text-muted">—</td>
+            <td class="px-4 py-3 text-muted">Downtown</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-accent" style="background: rgba(34,211,238,.15)">Guest</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Jordan" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Jordan" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Ruth Okafor" /></td>
+            <td class="px-4 py-3">
+              <a href="profile.html" class="flex cursor-pointer items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-primary" style="background: rgba(139,92,246,.2)">RO</span>
+                <span class="font-medium text-accent transition-colors duration-200 hover:text-body">Ruth Okafor</span>
+              </a>
+            </td>
+            <td class="px-4 py-3"><p>ruth.okafor@gmail.com</p><p class="text-xs text-muted">(512) 555-0156</p></td>
+            <td class="px-4 py-3 text-muted">Okafor Household</td>
+            <td class="px-4 py-3 text-muted">North</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">Member</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Ruth" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Ruth" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Thomas Anders" /></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-accent" style="background: rgba(34,211,238,.15)">TA</span>
+                <span class="font-medium">Thomas Anders</span>
+              </div>
+            </td>
+            <td class="px-4 py-3"><p>t.anders@protonmail.com</p><p class="text-xs text-muted">(737) 555-0110</p></td>
+            <td class="px-4 py-3 text-muted">Anders Household</td>
+            <td class="px-4 py-3 text-muted">Downtown</td>
+            <td class="px-4 py-3"><span class="rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted">Inactive</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Thomas" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Thomas" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="group transition-colors duration-150 hover:bg-surface-2">
+            <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 cursor-pointer accent-[#8B5CF6]" aria-label="Select Priya Fernandes" /></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-positive" style="background: rgba(52,211,153,.15)">PF</span>
+                <span class="font-medium">Priya Fernandes</span>
+              </div>
+            </td>
+            <td class="px-4 py-3"><p>priya.fernandes@gmail.com</p><p class="text-xs text-muted">(512) 555-0182</p></td>
+            <td class="px-4 py-3 text-muted">Fernandes Household</td>
+            <td class="px-4 py-3 text-muted">Westside</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-warning" style="background: rgba(251,191,36,.15)">Pending</span></td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <button aria-label="Email Priya" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></button>
+                <button aria-label="Call Priya" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button aria-label="More options" class="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-200 hover:bg-surface hover:text-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination footer -->
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface-2 px-4 py-3">
+        <p class="text-sm text-muted">Showing <span class="font-medium text-body">1–10</span> of <span class="font-medium text-body">1,284</span></p>
+        <div class="flex items-center gap-1">
+          <button class="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition-colors duration-200 hover:border-primary hover:text-body">Previous</button>
+          <button class="glow-primary cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary">1</button>
+          <button class="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition-colors duration-200 hover:border-primary hover:text-body">2</button>
+          <button class="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition-colors duration-200 hover:border-primary hover:text-body">3</button>
+          <span class="px-1 text-sm text-muted">…</span>
+          <button class="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition-colors duration-200 hover:border-primary hover:text-body">129</button>
+          <button class="cursor-pointer rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition-colors duration-200 hover:border-primary hover:text-body">Next</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  function openSidebar() { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('opacity-0','pointer-events-none'); }
+  function closeSidebar() { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('opacity-0','pointer-events-none'); }
+  toggle.addEventListener('click', openSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+  sidebar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', closeSidebar));
+</script>
+
+</body>
+</html>

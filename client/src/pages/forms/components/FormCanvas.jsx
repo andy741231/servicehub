@@ -145,7 +145,7 @@ const FIELD_COMPONENTS = {
         id={field.id}
         disabled={isPreview}
         accept={field.accept || undefined}
-        className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px] file:mr-4 file:py-2 file:px-4 file:rounded-base file:border-0 file:bg-primary file:text-white file:text-body"
+        className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px] file:mr-4 file:py-2 file:px-4 file:rounded-base file:border-0 file:bg-primary file:text-primary-foreground file:text-body"
         aria-label={field.label || 'File upload'}
       />
       {field.maxSize && (
@@ -194,7 +194,7 @@ const FIELD_COMPONENTS = {
         {field.imageUrl ? (
           <img src={field.imageUrl} alt={field.label || 'Image'} style={{ maxWidth: bs.width ? `${bs.width}px` : '100%', height: 'auto', display: 'inline-block', borderRadius: '8px' }} />
         ) : (
-          <div className="w-full h-32 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400">
+          <div className="w-full h-32 bg-surface-raised border-2 border-dashed border-border rounded-lg flex items-center justify-center text-subtle">
             <span className="text-sm">Image placeholder (upload in properties)</span>
           </div>
         )}
@@ -443,14 +443,14 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
             )}
             <button
               onClick={() => { onSelectField(field.id); onDuplicateField(field.id); }}
-              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95"
+              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
               title="Duplicate block"
             >
               <Copy className="h-4 w-4" aria-hidden="true" />
             </button>
             <button
               onClick={() => onDeleteField(field.id)}
-              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-red-500 hover:bg-red-50 rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95"
+              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
               title="Delete block"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -510,7 +510,7 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
                 );
               })()}
               {field.required && (
-                <span className="text-red-500 text-small flex-shrink-0" aria-label="Required field">*</span>
+                <span className="text-danger text-small flex-shrink-0" aria-label="Required field">*</span>
               )}
               {hasConditionalLogic(field) && (
                 <span
@@ -545,7 +545,7 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
           >
             <button
               onClick={() => { onSelectField(field.id); onDuplicateField(field.id); }}
-              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95"
+              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
               title="Duplicate field"
               aria-label={`Duplicate ${field.label || 'field'}`}
             >
@@ -553,7 +553,7 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
             </button>
             <button
               onClick={() => onDeleteField(field.id)}
-              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-red-500 hover:bg-red-50 rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95"
+              className="flex items-center justify-center p-2 bg-surface/90 backdrop-blur-sm text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
               title="Delete field"
               aria-label={`Delete ${field.label || 'field'}`}
             >
@@ -627,7 +627,7 @@ export default function FormCanvas({
                         className="block text-body font-medium text-base"
                       >
                         {field.label || 'Untitled field'}
-                        {field.required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
+                        {field.required && <span className="text-danger ml-1" aria-label="required">*</span>}
                       </label>
                     )}
                     {FieldComponent ? (
@@ -675,7 +675,7 @@ export default function FormCanvas({
         <div className="mt-5 flex items-center justify-center gap-2.5 flex-wrap">
           <button
             onClick={onStartBuilding}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium shadow-sm transition-all duration-150 active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium shadow-sm transition-all duration-150 active:scale-95"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             Add your first field
@@ -723,7 +723,7 @@ export default function FormCanvas({
                     className="group flex items-center gap-3 p-3 border border-border rounded-base bg-surface hover:border-primary hover:elevation-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary text-left"
                     aria-label={`Use ${tpl.title} template`}
                   >
-                    <div className={`flex-shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br ${tpl.color} flex items-center justify-center text-white shadow-sm`}>
+                    <div className={`flex-shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br ${tpl.color} flex items-center justify-center text-primary-foreground shadow-sm`}>
                       <Icon className="h-4.5 w-4.5" aria-hidden="true" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -874,7 +874,7 @@ export default function FormCanvas({
                   {rows.length > 1 && (
                     <button
                       onClick={() => onRemoveRow(row.id)}
-                      className="flex items-center justify-center w-8 h-8 text-subtle hover:text-red-500 hover:bg-red-50 rounded-base transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 active:scale-95"
+                      className="flex items-center justify-center w-8 h-8 text-subtle hover:text-danger hover:bg-danger-light rounded-base transition-all focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1 active:scale-95"
                       title="Remove section"
                       aria-label="Remove section"
                     >
@@ -895,7 +895,7 @@ export default function FormCanvas({
                       <p className="text-body text-muted mb-3">This section is empty</p>
                       <button
                         onClick={() => onInsertField(row.id)}
-                        className="inline-flex items-center gap-2 px-3.5 py-2 bg-primary text-white rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] text-small font-medium transition-all duration-150 active:scale-95"
+                        className="inline-flex items-center gap-2 px-3.5 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] text-small font-medium transition-all duration-150 active:scale-95"
                         aria-label="Insert new field into this section"
                       >
                         <Plus className="h-4 w-4" aria-hidden="true" />
@@ -960,7 +960,7 @@ export default function FormCanvas({
                                             <p className="text-xs text-muted">Click to edit this group field</p>
                                             <button
                                               onClick={(e) => { e.stopPropagation(); onDeleteField(child.id); }}
-                                              className="absolute top-1.5 right-1.5 p-1 text-subtle hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover/child:opacity-100 transition-opacity"
+                                              className="absolute top-1.5 right-1.5 p-1 text-subtle hover:text-danger hover:bg-danger-light rounded opacity-0 group-hover/child:opacity-100 transition-opacity"
                                               title="Remove from group"
                                               aria-label="Remove field from group"
                                             >

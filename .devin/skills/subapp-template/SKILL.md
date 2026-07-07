@@ -1,19 +1,50 @@
 ---
 name: service-hub-subapp-template
-description: Boilerplate walkthrough and checkpoints to follow when copying this folder for a new sub-app.
+description: "[subapp-template] Boilerplate walkthrough and checkpoints to follow when copying this folder for a new sub-app."
 ---
 
 # New Sub-App Template (`client/src/pages/_template`)
 
-## How to use this template
+> **Note:** A `_template/` folder is planned at `client/src/pages/_template` to hold
+> copyable boilerplate, but it does **not** exist yet (the folder is empty — there are
+> no scaffold files to copy). Until it is populated, scaffold a new sub-app manually
+> using the steps below.
 
-1. **Copy the directory:** Copy this `_template` folder to `client/src/pages/<new-app-id>`.
-2. **Rename components:** Rename internal boilerplate file and component references to match your new sub-app.
-3. **Register the app:** Open `client/src/config/apps.js` and add your app's meta config (id, path, icon, description).
-4. **Define routes:**
-   - Import your main container component in the app shell routing structure.
-   - Attach route guards mapping to your sub-app id.
+## How to scaffold a new sub-app
 
-## Default Scaffold Files
+Every sub-app is registered in **two places** and wired through the frontend router and
+backend route registry. Follow these steps in order (see AGENT.md "App Registry"):
+
+1. **Add the app ID** to the `APP_IDS` object in `shared/constants.js`
+   (e.g. `INVOICES: 'invoices'`).
+2. **Register the app** in the `APPS` array in `client/src/layouts/AppShell.jsx`.
+   Each entry needs: `id` (the APP_IDS key), `label`, `path` (like
+   `/hub-admin/<app>/dashboard`), `Icon` (a lucide-react icon), and `sub` (usually
+   `null`). Sidebar nav and permission guards derive from this array.
+3. **Create the page folder** in `client/src/pages/<app-id>/`. At minimum, scaffold:
+   - `<App>Shell.jsx` — tab/wrapper layout that registers TopBar tabs and renders an
+     `<Outlet />` (see `DirectoryShell.jsx` for a reference pattern).
+   - `<App>Dashboard.jsx` — the dashboard landing page.
+   - `index.jsx` — additional pages (browse, list, etc.) as needed.
+4. **Add the frontend routes** in `client/src/App.jsx`. Import your shell and page
+   components, then nest them under the protected `AppShell` route, e.g.:
+   ```jsx
+   <Route path="<app-id>" element={<AppShell />}>
+     <Route index element={<Navigate to="/hub-admin/<app-id>/dashboard" replace />} />
+     <Route path="dashboard" element={<AppDashboard />} />
+     {/* ...other pages... */}
+   </Route>
+   ```
+5. **Add the backend route** in `server/src/routes/` (e.g. `<app>.js`) and register it
+   in `server/src/routes/index.js`:
+   ```js
+   import appRoutes from './<app>.js';
+   router.use('/<app>', appRoutes);
+   ```
+   Apply `verifyToken` and `requireAppAccess(APP_IDS.<APP>)` middleware on protected
+   endpoints.
+
+## Planned Scaffold Files (not yet present)
+When the `_template/` folder is populated, it is expected to contain:
 - `index.jsx` - Standard entry point wrapper checking permission access.
 - `Dashboard.jsx` - Boilerplate workspace layout.

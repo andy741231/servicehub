@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
+import { LogIn, Lock, User } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { APPS } from '../../layouts/AppShell';
 
@@ -7,11 +8,6 @@ function getFirstAccessiblePath(user) {
   const hasSuperAdminRole = user?.roles?.includes('super_admin');
   const hasAdminRole = user?.roles?.includes('admin');
   const accessibleApp = APPS.find((app) => user?.permissions?.includes(app.id) || hasAdminRole || hasSuperAdminRole);
-  console.log('User:', user);
-  console.log('Has admin role:', hasAdminRole);
-  console.log('Permissions:', user?.permissions);
-  console.log('Accessible app:', accessibleApp);
-  console.log('Redirecting to:', accessibleApp?.path || '/hub-admin');
   return accessibleApp?.path || '/hub-admin';
 }
 
@@ -26,7 +22,7 @@ export default function Login() {
   const isLoading = useAuthStore((state) => state.isLoading);
   const navigate = useNavigate();
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div className="text-muted">Loading...</div>;
   if (isAuthenticated) return <Navigate to={getFirstAccessiblePath(user)} replace />;
 
   const handleSubmit = async (e) => {
@@ -41,34 +37,58 @@ export default function Login() {
   };
 
   return (
-    <div>
-      <div>
-        <h2 className="text-center text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
+    <div className="w-full max-w-md mx-auto">
+      <div className="text-center mb-8">
+        <div className="w-14 h-14 rounded-2xl bg-primary-light text-primary flex items-center justify-center mx-auto mb-4">
+          <LogIn className="w-7 h-7" />
+        </div>
+        <h2 className="text-2xl font-bold text-text-base">Sign in to Service Hub</h2>
+        <p className="text-sm text-muted mt-1">Enter your credentials to access the admin dashboard.</p>
       </div>
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-        {error && <div role="alert" aria-live="polite" className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</div>}
-        <div className="rounded-md shadow-sm -space-y-px">
-          <div>
-            <input
-              type="text"
-              required
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {error && (
+          <div role="alert" aria-live="polite" className="text-sm text-danger text-center bg-danger-light border border-danger/10 p-3 rounded-base">
+            {error}
           </div>
+        )}
+
+        <div className="space-y-4">
           <div>
-            <input
-              type="password"
-              required
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <label htmlFor="username" className="block text-label text-muted mb-1.5">Username</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+              <input
+                id="username"
+                type="text"
+                required
+                autoComplete="username"
+                className="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-body placeholder:text-subtle min-h-[44px]"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-label text-muted mb-1.5">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-body placeholder:text-subtle min-h-[44px]"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
         </div>
+
         <div className="flex items-center">
           <input
             id="remember-me"
@@ -76,20 +96,19 @@ export default function Login() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
           />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+          <label htmlFor="remember-me" className="ml-2 block text-sm text-muted cursor-pointer">
             Trust this computer, remember me
           </label>
         </div>
-        <div>
-          <button
-            type="submit"
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Sign in
-          </button>
-        </div>
+
+        <button
+          type="submit"
+          className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-base text-sm font-medium bg-primary text-primary-foreground hover:bg-primary-hover active:scale-[0.98] transition-transform focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary min-h-[44px]"
+        >
+          Sign in
+        </button>
       </form>
     </div>
   );

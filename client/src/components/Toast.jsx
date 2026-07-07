@@ -16,10 +16,10 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Check, X, AlertTriangle, Info, AlertCircle } from 'lucide-react';
 
 const CONFIGS = {
-  success: { Icon: Check,         bg: 'bg-gray-900',  text: 'text-white',         iconBg: 'bg-green-500'  },
-  error:   { Icon: AlertCircle,   bg: 'bg-gray-900',  text: 'text-white',         iconBg: 'bg-red-500'    },
-  warning: { Icon: AlertTriangle, bg: 'bg-gray-900',  text: 'text-white',         iconBg: 'bg-amber-500'  },
-  info:    { Icon: Info,          bg: 'bg-gray-900',  text: 'text-white',         iconBg: 'bg-blue-500'   },
+  success: { Icon: Check,         bg: 'bg-text-base',  text: 'text-inverse',  iconBg: 'bg-success'  },
+  error:   { Icon: AlertCircle,   bg: 'bg-text-base',  text: 'text-inverse',  iconBg: 'bg-danger'   },
+  warning: { Icon: AlertTriangle, bg: 'bg-text-base',  text: 'text-inverse',  iconBg: 'bg-warning'  },
+  info:    { Icon: Info,          bg: 'bg-text-base',  text: 'text-inverse',  iconBg: 'bg-info'     },
 };
 
 let _id = 0;
@@ -44,7 +44,7 @@ function ToastItem({ id, message, type = 'success', onDismiss }) {
         transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
     >
       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${cfg.iconBg}`}>
-        <cfg.Icon className="w-3.5 h-3.5 text-white" />
+        <cfg.Icon className="w-3.5 h-3.5 text-primary-foreground" />
       </div>
       <span className="flex-1 text-sm font-medium">{message}</span>
       <button

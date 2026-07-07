@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from './store/authStore';
+import useThemeStore from './store/themeStore';
 import AuthLayout from './layouts/AuthLayout';
 import AppShell from './layouts/AppShell';
 import Login from './pages/auth/Login';
@@ -13,16 +14,24 @@ import WebHeaderFooter from './pages/web/HeaderFooter';
 import WebDraftTemplates from './pages/web/DraftTemplates';
 import WebShell from './pages/web/WebShell';
 import FormsIndex from './pages/forms/index';
+import FormsList from './pages/forms/FormsList';
 import FormsBuilder from './pages/forms/FormsBuilder';
 import Submissions from './pages/forms/Submissions';
 import FormAnalytics from './pages/forms/FormAnalytics';
 import FormTemplates from './pages/forms/FormTemplates';
+import FormsShell from './pages/forms/FormsShell';
 import EmailIndex from './pages/email/index';
 import EmailShell from './pages/email/EmailShell';
-import NewsletterBuilder from './pages/email/NewsletterBuilder';
+import MailingLists from './pages/email/MailingLists';
 import Directory from './pages/directory/index';
+import DirectoryShell from './pages/directory/DirectoryShell';
+import PortalShell from './pages/portal/PortalShell';
+import PortalDashboard from './pages/portal/PortalDashboard';
 import PublicHome from './pages/public/Home';
 import FormView from './pages/public/FormView';
+import WebDashboard from './pages/web/WebDashboard';
+import EmailDashboard from './pages/email/EmailDashboard';
+import DirectoryDashboard from './pages/directory/DirectoryDashboard';
 
 
 function ProtectedRoute({ children }) {
@@ -32,24 +41,39 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// Re-applies the theme on every route change: dark mode is an internal
+// (admin) preference, so public routes are always forced light.
+function ThemeRouteSync() {
+  const location = useLocation();
+  const syncThemeForPath = useThemeStore((s) => s.syncThemeForPath);
+  useEffect(() => {
+    syncThemeForPath(location.pathname);
+  }, [location.pathname, syncThemeForPath]);
+  return null;
+}
+
 export default function App() {
   const { checkAuth } = useAuthStore();
 
   useEffect(() => {
-    // Only check auth on admin routes — public routes (/, /form/:slug, /:slug)
-    // don't need a session and would otherwise produce 401 console noise.
+    // Check auth on admin routes and the dedicated login page. Other public
+    // routes (/, /form/:slug, /:slug) don't need a session.
     const path = window.location.pathname;
-    if (path.startsWith('/hub-admin')) {
+    if (path.startsWith('/hub-admin') || path === '/login') {
       checkAuth();
     }
   }, [checkAuth]);
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ThemeRouteSync />
       <Routes>
         {/* ── Public site routes ── */}
         <Route path="/" element={<PublicHome />} />
         <Route path="/form/:formSlug" element={<FormView />} />
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+        </Route>
         <Route path="/:slug" element={<PublicHome />} />
 
         {/* ── Admin backend (/hub-admin/*) ── */}
@@ -63,7 +87,8 @@ export default function App() {
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
             {/* Web builder — nested under WebShell for tab nav */}
             <Route path="web" element={<WebShell />}>
-              <Route index                  element={<WebPages />} />
+              <Route index                  element={<Navigate to="/hub-admin/web/dashboard" replace />} />
+              <Route path="dashboard"       element={<WebDashboard />} />
               <Route path="pages"           element={<WebPages />} />
               <Route path="header-footer"   element={<WebHeaderFooter />} />
               <Route path="styles"          element={<WebStyles />} />
@@ -72,20 +97,38 @@ export default function App() {
               <Route path="editor/:slug"    element={<WebIndex />} />
             </Route>
 
-            {/* Other sub-apps */}
-            <Route path="forms" element={<FormsIndex />} />
-            <Route path="forms/builder/:formSlug?" element={<FormsBuilder />} />
-            <Route path="forms/submissions" element={<Submissions />} />
-            <Route path="forms/analytics/:formSlug?" element={<FormAnalytics />} />
-            <Route path="forms/templates" element={<FormTemplates />} />
-            <Route path="email" element={<EmailShell />}>
-              <Route index element={<EmailIndex />} />
-              <Route path="campaigns/new" element={<NewsletterBuilder />} />
-              <Route path="lists" element={<div className="p-8"><h1 className="text-2xl font-bold">Mailing Lists</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
-              <Route path="templates" element={<div className="p-8"><h1 className="text-2xl font-bold">Email Templates</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+            {/* Forms — nested under FormsShell for tab nav */}
+            <Route path="forms" element={<FormsShell />}>
+              <Route index element={<Navigate to="/hub-admin/forms/dashboard" replace />} />
+              <Route path="dashboard" element={<FormsIndex />} />
+              <Route path="list" element={<FormsList />} />
+              <Route path="builder/:formSlug?" element={<FormsBuilder />} />
+              <Route path="submissions" element={<Submissions />} />
+              <Route path="analytics/:formSlug?" element={<FormAnalytics />} />
+              <Route path="templates" element={<FormTemplates />} />
             </Route>
-            <Route path="directory" element={<Directory />} />
-            <Route path="portal" element={<div className="p-8"><h1 className="text-2xl font-bold">Portal</h1><p className="text-gray-500 mt-2">Coming soon.</p></div>} />
+
+            {/* Email — nested under EmailShell for tab nav */}
+            <Route path="email" element={<EmailShell />}>
+              <Route index element={<Navigate to="/hub-admin/email/dashboard" replace />} />
+              <Route path="dashboard" element={<EmailDashboard />} />
+              <Route path="campaigns/*" element={<EmailIndex />} />
+              <Route path="lists" element={<MailingLists />} />
+              <Route path="templates" element={<div className="max-w-7xl mx-auto p-6 lg:p-8"><p className="text-subtle">Coming soon.</p></div>} />
+            </Route>
+
+            {/* Directory — nested under DirectoryShell for tab nav */}
+            <Route path="directory" element={<DirectoryShell />}>
+              <Route index element={<Navigate to="/hub-admin/directory/dashboard" replace />} />
+              <Route path="dashboard" element={<DirectoryDashboard />} />
+              <Route path="browse" element={<Directory />} />
+            </Route>
+
+            {/* Portal — nested under PortalShell for tab nav */}
+            <Route path="portal" element={<PortalShell />}>
+              <Route index element={<Navigate to="/hub-admin/portal/dashboard" replace />} />
+              <Route path="dashboard" element={<PortalDashboard />} />
+            </Route>
 
             {/* Admin */}
             <Route path="admin/users" element={<Users />} />

@@ -34,7 +34,7 @@ service-hub/
 │   ├── src/
 │   │   ├── components/             # Shared UI (Button, Modal, Table, etc.)
 │   │   ├── layouts/
-│   │   │   ├── AppShell.jsx        # Sidebar + topbar wrapper, also holds the APPS registry
+│   │   │   ├── AppShell.jsx        # Sidebar + topbar wrapper
 │   │   │   └── AuthLayout.jsx      # Login/register pages
 │   │   ├── pages/
 │   │   │   ├── auth/               # Login, Register
@@ -44,12 +44,9 @@ service-hub/
 │   │   │   ├── email/              # App 3 - Email Sender
 │   │   │   ├── directory/          # App 4 - Directory
 │   │   │   ├── portal/             # App 5 - Portal
-│   │   │   ├── public/             # Public renderer
-│   │   │   └── _template/          # Copy this folder for new sub-apps
+│   │   │   └── public/             # Public renderer
 │   │   ├── store/                  # Zustand global stores
-│   │   │   ├── authStore.js        # JWT + user state
-│   │   │   └── permissionsStore.js
-│   │   ├── hooks/                  # useAuth, usePermissions, useApi
+│   │   │   └── authStore.js        # JWT + user state (permissions via user.permissions array)
 │   │   └── utils/                  # api.js (axios instance), helpers
 │   └── public/
 │
@@ -60,13 +57,13 @@ service-hub/
 │   │   │   ├── auth.js
 │   │   │   ├── users.js
 │   │   │   ├── web.js
+│   │   │   ├── email.js
 │   │   │   ├── forms.js
-│   │   │   └── email.js
+│   │   │   └── hub-admin.js        # directory/portal handled here (placeholder — frontend-only for now)
 │   │   ├── middleware/
 │   │   │   ├── auth.js             # JWT verify
 │   │   │   └── permissions.js      # App-level access guard
 │   │   ├── controllers/            # Business logic, one file per domain
-│   │   ├── validators/             # Zod schemas per model — see "Input Validation" below
 │   │   ├── models/                 # Prisma schema / query helpers
 │   │   └── db/
 │   │       └── client.js           # Prisma client singleton
@@ -78,12 +75,11 @@ service-hub/
 │
 ├── prisma/
 │   ├── schema.prisma               # Single source of truth for DB schema
-│   ├── migrations/                 # Committed migration history — see "Database Migrations" below
 │   └── seed.js                     # Seeds roles + admin user
 │
 ├── .github/
 │   └── workflows/
-│       └── azure-deploy.yml        # CI/CD: build → migrate → zip → Kudu deploy on push to main
+│       └── azure-deploy.yml        # CI/CD: build → zip → Kudu deploy on push to main
 │
 ├── web.config                      # IIS/iisnode config for Azure App Service (Windows)
 ├── .env                            # Local dev secrets — never commit
@@ -100,11 +96,11 @@ Every sub-app is registered in **two places**. Permissions, sidebar nav, and rou
 **`client/src/layouts/AppShell.jsx`** (frontend app registry):
 ```js
 export const APPS = [
-  { id: APP_IDS.WEB,       label: 'Website',      path: '/hub-admin/web/pages',  Icon: Globe,         sub: null },
-  { id: APP_IDS.FORMS,     label: 'Form Builder',  path: '/hub-admin/forms',      Icon: ClipboardList, sub: null },
-  { id: APP_IDS.EMAIL,     label: 'Email Sender',  path: '/hub-admin/email',      Icon: Mail,          sub: null },
-  { id: APP_IDS.DIRECTORY, label: 'Directory',     path: '/hub-admin/directory',  Icon: BookOpen,      sub: null },
-  { id: APP_IDS.PORTAL,    label: 'Portal',        path: '/hub-admin/portal',     Icon: LayoutDashboard, sub: null },
+  { id: APP_IDS.WEB,       label: 'Website',      path: '/hub-admin/web/dashboard',  Icon: Globe,         sub: null },
+  { id: APP_IDS.FORMS,     label: 'Form Builder',  path: '/hub-admin/forms/dashboard', Icon: ClipboardList, sub: null },
+  { id: APP_IDS.EMAIL,     label: 'Email Sender',  path: '/hub-admin/email/dashboard', Icon: Mail,          sub: null },
+  { id: APP_IDS.DIRECTORY, label: 'Directory',     path: '/hub-admin/directory/dashboard', Icon: BookOpen,      sub: null },
+  { id: APP_IDS.PORTAL,    label: 'Portal',        path: '/hub-admin/portal/dashboard',    Icon: LayoutDashboard, sub: null },
 ];
 ```
 
@@ -139,7 +135,7 @@ model User {
   password     String
   name         String
   isActive     Boolean  @default(true)
-  refreshToken String?  // hashed, single active token — see "Refresh Token Rotation" below
+  refreshToken String?
   createdAt    DateTime @default(now())
   roles        UserRole[]
   permissions  AppPermission[]
@@ -203,7 +199,7 @@ model WebSection {
   marginTop      Int        @default(0)
   marginBottom   Int        @default(0)
   backgroundColor String?               // optional hex / CSS colour
-  page           WebPage    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  page           WebPage    @relation(fields: [pageId], references: [id])
   blocks         WebBlock[]
 }
 
@@ -214,11 +210,10 @@ model WebBlock {
   type      String      // "hero" | "text" | "image" | "features" | ...
   order     Int
   content   String      // JSON serialized — parsed/serialized in controller
-  page      WebPage     @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  section   WebSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  page      WebPage     @relation(fields: [pageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  section   WebSection? @relation(fields: [sectionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 ```
-> Cascade note: `WebSection` and `WebBlock` cascade-delete with their parent `WebPage`. `WebBlock.sectionId` is set to null (not deleted) if its section is removed, since a block can exist without a section. If your Azure SQL setup rejects multiple cascade paths on the same table, handle the `WebBlock` cleanup explicitly in the `WebPage` delete controller instead of relying on `onDelete: Cascade` in both relations.
 
 ### App 2 — Form Builder
 ```prisma
@@ -228,7 +223,7 @@ model Form {
   schema      String           @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
-  deletedAt   DateTime?        // Soft delete — see "Soft Delete Convention" below
+  deletedAt   DateTime?        // Soft delete support
   submissions FormSubmission[]
   versions    FormVersion[]
 }
@@ -260,7 +255,7 @@ model EmailCampaign {
   id             String             @id @default(uuid())
   name           String
   subject        String
-  bodyHtml       String             // sanitized on write — see "Input Validation" below
+  bodyHtml       String
   status         String             // "draft" | "scheduled" | "sent" | "paused"
   scheduledAt    DateTime?
   sentAt         DateTime?
@@ -268,7 +263,7 @@ model EmailCampaign {
   mailingList    MailingList?       @relation(fields: [mailingListId], references: [id])
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime?          // Soft delete — see "Soft Delete Convention" below
+  deletedAt      DateTime?          // Soft delete support
   logs           EmailLog[]
   metrics        CampaignMetrics?
 }
@@ -344,31 +339,12 @@ model WebAsset {
 
 ---
 
-## Soft Delete Convention
-
-Soft delete (`deletedAt DateTime?`) applies to models where preserving history matters or where users expect an "undo"/trash view: `Form`, `EmailCampaign`. Everything else (`User`, `WebPage`, `MailingList`, etc.) is hard-deleted directly, relying on cascade rules to clean up dependents.
-
-When adding a new model, default to **hard delete** unless the data has audit, compliance, or "restore" requirements — don't add `deletedAt` reflexively. If you do add it, every query against that model (`findMany`, `findUnique`, counts) must filter `deletedAt: null`; wrap this in a Prisma extension or a `findActive` helper rather than repeating the filter ad hoc in every controller.
-
----
-
-## Input Validation
-
-Every JSON-serialized field (`WebBlock.content`, `WebPage.header`/`footer`, `Form.schema`, `EmailCampaign.bodyHtml`, `Recipient.customFields`, etc.) is user-controlled input, not trusted data. Before it touches the database or gets rendered:
-
-- Define a Zod schema per model in `server/src/validators/`, matching the JSON shape expected by the frontend editor for that field.
-- Validate on every write (create and update controllers), not just on the initial create.
-- `EmailCampaign.bodyHtml` and any other field rendered as raw HTML (in-app or in outbound email) must be sanitized with an HTML sanitizer (e.g. `sanitize-html`) on write, not just escaped on read — this content gets sent to real inboxes and rendered in browsers.
-- Reject, don't silently coerce: if a payload doesn't match the schema, return a 400 with the validation errors rather than trying to guess intent.
-
----
-
 ## Auth System & Security
 
 - **JWT** stored in `httpOnly` cookie (not localStorage)
 - **CSRF Protection:** SameSite cookie configuration + anti-CSRF double-submit token verification
 - Access token: 15 min expiry
-- Refresh token: 7 days, stored in DB (hashed, not plaintext)
+- Refresh token: 7 days, stored in DB
 - Middleware chain: `verifyToken` → `checkAppPermission(appId)`
 
 ```js
@@ -385,12 +361,6 @@ export const requireAppAccess = (appId) => async (req, res, next) => {
 router.get('/forms', verifyToken, requireAppAccess('forms'), formsController.list);
 ```
 
-### Refresh Token Rotation
-
-- On every use of a refresh token, issue a new one and invalidate the old one (rotate-on-use). Store only a hash of the current token on `User.refreshToken`, never the raw value.
-- If a refresh token is presented that doesn't match the stored hash (i.e. an already-rotated or forged token), treat it as reuse: invalidate the session (`refreshToken = null`) and require re-login. This catches stolen-token replay.
-- `User.refreshToken` as a single field only supports one active session per user. If multi-device login is a requirement, this needs to become a separate `RefreshToken` table keyed by device/session — flag this to the user before building it, since it's a schema change, not just a logic change.
-
 ---
 
 ## Build Phases
@@ -400,14 +370,14 @@ Work through these in order. Complete each phase before moving to the next.
 | Phase | Focus | Key Deliverables |
 |-------|-------|-----------------|
 | **1** | Monorepo scaffold | Folder structure, `package.json` workspaces, Turborepo setup, `.env.example` |
-| **2** | Database | `prisma/schema.prisma` (core tables + soft delete patterns), initial migration via `prisma migrate dev`, seed script |
-| **3** | Auth & Security | Register, login, logout, JWT & CSRF middlewares, refresh token rotation |
+| **2** | Database | `prisma/schema.prisma` (core tables + soft delete patterns), `prisma db push`, seed script |
+| **3** | Auth & Security | Register, login, logout, JWT & CSRF middlewares, refresh token |
 | **4** | User Management | User CRUD, role assignment, app permission toggles (`/admin/users`) |
 | **5** | App Shell | React Router v6, lazy-loaded routes, sidebar from `APPS` registry, permission guards |
-| **6** | App 1 — CMS | Block editor UI, public homepage render, image upload, input validation on all block content |
-| **7** | App 2 — Forms | Drag-and-drop builder, submission inbox, CSV export, schema validation |
-| **8** | App 3 — Email | Template builder, mailing lists, campaign scheduler, send logs, HTML sanitization on send |
-| **9** | Azure Deploy | GitHub Actions CI/CD, `prisma migrate deploy` step, env secrets on Azure App Service |
+| **6** | App 1 — CMS | Block editor UI, public homepage render, image upload |
+| **7** | App 2 — Forms | Drag-and-drop builder, submission inbox, CSV export |
+| **8** | App 3 — Email | Template builder, mailing lists, campaign scheduler, send logs |
+| **9** | Azure Deploy | GitHub Actions CI/CD, env secrets on Azure App Service |
 
 ---
 
@@ -415,7 +385,7 @@ Work through these in order. Complete each phase before moving to the next.
 
 ```bash
 # .env (local dev — never commit this file)
-DATABASE_URL="sqlserver://houstonservice-test.database.windows.net;database=free-test-servicehub;user=servicehub_dev;password=<DB_PASSWORD>;encrypt=true;trustServerCertificate=false;"
+DATABASE_URL="sqlserver://houstonservice-test.database.windows.net;database=free-test-servicehub;user=servicehub_dev;password=Sh@Dev2024!;encrypt=true;trustServerCertificate=false;"
 JWT_SECRET=change_me_in_production
 JWT_REFRESH_SECRET=change_me_too
 CLIENT_URL=http://localhost:3000
@@ -430,20 +400,7 @@ SMTP_PASS=
 AZURE_STORAGE_CONNECTION_STRING=
 ```
 
-> **If a real password was ever committed to this file or its history, rotate the `servicehub_dev` credential in Azure SQL now** — treat any credential that touched version control as compromised, regardless of whether the repo is private.
-
 Production env vars are set directly on the Azure App Service (not in any committed file).
-
----
-
-## Database Migrations
-
-Use Prisma's migration workflow, not `db push`, once there's any data worth preserving (i.e. from Phase 2 onward):
-
-- **Local dev:** `npx prisma migrate dev --name <change-description>` — generates a migration file, applies it to `free-test-servicehub`, and regenerates the client. Commit the generated migration under `prisma/migrations/`.
-- **CI/CD:** the `azure-deploy.yml` workflow runs `npx prisma migrate deploy` against `free-production-servicehub` as a discrete step before the app restarts — this applies pending migrations without ever diffing/dropping columns to match the schema.
-- **Never run `prisma db push` against `free-production-servicehub`.** `db push` has no migration history and can silently drop or alter columns to match the schema file — fine for early throwaway scaffolding, not fine once production has real rows in it.
-- If a migration needs a manual data backfill (e.g. populating a new required column), write it as a two-step migration: add the column as optional, backfill, then a follow-up migration to make it required.
 
 ---
 
@@ -454,15 +411,14 @@ Use Prisma's migration workflow, not `db push`, once there's any data worth pres
 | App Service `houstonservicehub` | Hosts Express server + built React frontend (Windows, iisnode) |
 | Azure SQL `free-test-servicehub` | Development database |
 | Azure SQL `free-production-servicehub` | Production database |
-| GitHub Actions `azure-deploy.yml` | CI/CD: builds, migrates, assembles self-contained package, deploys via Kudu ZIP API |
+| GitHub Actions `azure-deploy.yml` | CI/CD: builds, assembles self-contained package, deploys via Kudu ZIP API |
 
 **Deploy flow on push to `main`:**
 1. Install all dependencies (`npm ci`)
 2. Build React frontend (`npm run build`)
 3. Generate Prisma client with Windows + Linux binaries (`npx prisma generate`)
-4. Run `npx prisma migrate deploy` against production
-5. Assemble a self-contained `deploy/` folder (no workspace symlinks — Windows compatible)
-6. Upload via Kudu ZIP Deploy API using `AZURE_DEPLOY_USER` / `AZURE_DEPLOY_PWD` secrets
+4. Assemble a self-contained `deploy/` folder (no workspace symlinks — Windows compatible)
+5. Upload via Kudu ZIP Deploy API using `AZURE_DEPLOY_USER` / `AZURE_DEPLOY_PWD` secrets
 
 **iisnode note:** The entry point is `server/app.cjs` (a CJS shim that dynamically imports the ESM `src/index.js`). The `web.config` at root configures IIS to route all traffic through iisnode.
 
@@ -477,9 +433,7 @@ When you're ready to add App 4, 5, etc.:
 - [ ] Create `client/src/pages/<appname>/` (copy from `_template/`)
 - [ ] Create `server/src/routes/<appname>.js`
 - [ ] Register route in `server/src/routes/index.js`
-- [ ] Add Prisma models to `schema.prisma`, run `npx prisma migrate dev --name add-<appname>`
-- [ ] Add Zod validators for any new JSON-serialized fields in `server/src/validators/`
-- [ ] Decide soft-delete vs. hard-delete for new models per the convention above
+- [ ] Add Prisma models to `schema.prisma`, run `npx prisma db push`
 - [ ] Seed default `AppPermission` rows for existing users
 
 That's it. Auth, permissions, sidebar, and nav update automatically.
@@ -507,12 +461,11 @@ The project uses a semantic token design system. All visual decisions (colors, s
 ## Coding Conventions
 
 - **React:** functional components + hooks only. No class components.
-- **State:** Zustand for global state (auth, permissions) instead of React Context providers. Local `useState` for component state.
+- **State:** Zustand for global state (auth, permissions) instead of React Context providers. Local `useState` for component state. App-specific stores live under each sub-app's folder (e.g. `client/src/pages/forms/store/formStore.js`, `client/src/pages/email/store/emailStore.js`); only the shared auth store lives in `client/src/store/authStore.js`.
 - **API calls:** centralized `client/src/utils/api.js` (axios instance with base URL + interceptors, handles CSRF header attachment automatically).
 - **Styling:** Tailwind utility classes only, using semantic token names from `THEME.md`. No raw color values.
 - **Backend:** async/await throughout. No callbacks. Errors bubble to a global Express error handler.
 - **ORM:** Prisma for all DB access. No raw SQL except for complex reports.
-- **Validation:** every write path validated with a Zod schema before it reaches Prisma — see "Input Validation."
 - **Commits:** conventional commits (`feat:`, `fix:`, `chore:`) on feature branches. PRs to `main`.
 
 ---

@@ -54,7 +54,7 @@ export default function NewsletterBuilder() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/hub-admin/email')}
-            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-colors duration-150"
             title="Back to campaigns"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -72,14 +72,14 @@ export default function NewsletterBuilder() {
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-base hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="h-4 w-4" />
             <span className="text-body">{isSaving ? 'Saving...' : 'Save Draft'}</span>
           </button>
           <button
             onClick={handleSend}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-base hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+            className="flex items-center gap-2 px-4 py-2 bg-success text-primary-foreground rounded-base hover:bg-success focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
           >
             <Send className="h-4 w-4" />
             <span className="text-body">Send</span>
@@ -157,7 +157,7 @@ export default function NewsletterBuilder() {
           <div className="bg-surface-raised border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-base">Recipients</h2>
-              <button className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-base hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150">
+              <button className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150">
                 <Plus className="h-4 w-4" />
                 <span className="text-body">Add List</span>
               </button>

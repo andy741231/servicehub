@@ -1,7 +1,17 @@
 # Directory App
 
 ## Status
-**Planned** - This sub-app is currently in the planning phase.
+**In Progress — Frontend UI complete (mock data), backend pending.**
+
+What's built (frontend, all using mock data):
+- `DirectoryDashboard.jsx` — bento-style dashboard with stats, recent members, and a departments chart
+- `index.jsx` — browse page with full-text search and department filter
+- `DirectoryShell.jsx` — shell with Dashboard and Browse tabs
+
+What's still pending:
+- No `server/src/routes/directory.js` backend route
+- No Prisma models for directory entries in `prisma/schema.prisma`
+- No API integration — all data is hardcoded mock data
 
 ## Overview
 The Directory sub-app will provide a searchable, filterable directory of items, people, or resources. It will feature:

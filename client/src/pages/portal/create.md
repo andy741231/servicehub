@@ -1,7 +1,16 @@
 # Portal App
 
 ## Status
-**Planned** - This sub-app is currently in the planning phase.
+**In Progress — Placeholder UI only, backend pending.**
+
+What exists (frontend, placeholder only):
+- `PortalDashboard.jsx` — "Coming Soon" placeholder with feature previews and sample chart
+- `PortalShell.jsx` — shell with a single Dashboard tab
+
+What's still pending:
+- No `index.jsx` browse/landing page
+- No `server/src/routes/portal.js` backend route
+- No Prisma models for portal configurations in `prisma/schema.prisma`
 
 ## Overview
 The Portal sub-app will serve as a customizable dashboard and landing page experience for users. It will feature:

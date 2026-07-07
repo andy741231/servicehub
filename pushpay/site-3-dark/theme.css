@@ -1,0 +1,54 @@
+/* Pushpay ChMS Mockup — Site 3: Dark Violet theme
+   Token contract per ../DESIGN_SYSTEM.md */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #A78BFA;        /* violet-400 — sidebar active, primary buttons */
+  --primary-hover: #C4B5FD;
+  --on-primary: #FFFFFF;     /* text on primary */
+  --accent: #22D3EE;         /* cyan — charts, links, chips */
+  --bg: #0F1117;             /* page background */
+  --surface: #171A23;        /* card background */
+  --surface-2: #1F2330;      /* muted panels, table header rows */
+  --text: #E5E7EB;           /* primary text */
+  --text-muted: #9CA3AF;     /* secondary text */
+  --border: #2A2F3E;
+  --ring: #8B5CF6;           /* focus ring */
+  --positive: #34D399;
+  --warning: #FBBF24;
+  --negative: #F87171;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --radius: 12px;            /* base card radius */
+  --shadow-card: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* Visible focus ring for every interactive element */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Violet glow on primary/active elements (theme personality) */
+.glow-primary {
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, .35), 0 0 18px rgba(167, 139, 250, .25);
+}
+
+::selection {
+  background: rgba(167, 139, 250, .45);
+  color: #FFFFFF;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -17,13 +17,19 @@ Allows building custom forms using a drag-and-drop interface, sharing them via u
 - **Theme System:** 6 one-click theme presets, custom colors, font picker, progress bar/steps, conversational (one-question-per-screen) layout mode.
 
 ## Architecture
+- `FormsShell.jsx` — tab navigation shell (Dashboard, Forms, Templates, Analytics)
 - `FormsDashboard.jsx` — form cards grid with status badges, stats, filters, sort, overflow menu
+- `FormsList.jsx` — list view of all forms with management actions
 - `FormsBuilder.jsx` — 3-pane editor: left `FieldPalette`, center `FormCanvas`, right `PropertiesPanel` / live `FormRenderer` preview
+- `FormAnalytics.jsx` — analytics view with submission trends and field completion rates
+- `FormTemplates.jsx` — template gallery that clones rows+fields into a new form
+- `Submissions.jsx` — submission inbox table with search, filter, CSV export
 - `FormCanvas.jsx` — sections (rows) with 1-4 column layouts, drag-and-drop via `@hello-pangea/dnd`, collapsible sections, `FieldCard` rendering
 - `FormRenderer.jsx` — public form with theming, validation, multi-page, conditional logic, access-schedule gating, computed-field auto-evaluation, repeating groups
 - `PropertiesPanel.jsx` — field/section/form properties with General/Advanced/Logic tabs; dedicated panels for content blocks, image blocks, computed fields, repeating groups
+- `AccessSchedulePanel.jsx` — form access-schedule editor (date ranges, weekly hours)
+- `VersionHistoryPanel.jsx` — form version history with restore
 - `FieldPalette.jsx` — categorized (Basic/Choice/Advanced/Personal/Layout) searchable field registry
-- `FormTemplates.jsx` — template gallery that clones rows+fields into a new form
 - `store/formStore.js` — Zustand store with undo/redo (50 snapshots), API + localStorage fallback, form/submission CRUD
 - `utils/formula.js` — safe formula evaluation for computed fields (`${Field Label}` references, sanitized math)
 - `utils/conditionalLogic.js` — conditional show/hide evaluation

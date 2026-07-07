@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — Pushpay ChMS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="theme.css" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: 'var(--primary)',
+          'primary-hover': 'var(--primary-hover)',
+          'on-primary': 'var(--on-primary)',
+          accent: 'var(--accent)',
+          bg: 'var(--bg)',
+          surface: 'var(--surface)',
+          'surface-2': 'var(--surface-2)',
+          body: 'var(--text)',
+          muted: 'var(--text-muted)',
+          line: 'var(--border)',
+          positive: 'var(--positive)',
+          warning: 'var(--warning)',
+          negative: 'var(--negative)',
+        },
+        fontFamily: { sans: ['var(--font-sans)'] },
+        borderRadius: { card: 'var(--radius)' },
+        boxShadow: { card: 'var(--shadow-card)' },
+      },
+    },
+  };
+</script>
+</head>
+<body class="bg-bg text-body font-sans antialiased">
+
+<!-- ===== Sidebar ===== -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full transform flex-col border-r border-line bg-surface transition-transform duration-200 lg:translate-x-0">
+  <div class="flex h-16 items-center gap-3 border-b border-line px-5">
+    <div class="glow-primary flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-on-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="1" y2="4"/><line x1="10" x2="10" y1="1" y2="4"/><line x1="14" x2="14" y1="1" y2="4"/></svg>
+    </div>
+    <div>
+      <p class="text-sm font-bold leading-tight">Pushpay ChMS</p>
+      <p class="text-xs text-muted leading-tight">Grace Fellowship</p>
+    </div>
+  </div>
+      <nav class="flex-1 overflow-y-auto p-3 space-y-0.5" aria-label="Primary">
+      <a href="index.html" class="glow-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-primary cursor-pointer" aria-current="page" style="background: rgba(167,139,250,.15)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="people.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        People
+      </a>
+      <a href="groups.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
+        Groups
+      </a>
+      <a href="queues.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+        Processes
+      </a>
+      <a href="schedules.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M16 14v2l1 1"/></svg>
+        Schedules
+      </a>
+      <a href="events.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg>
+        Events
+      </a>
+      <a href="checkin.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        Check-In
+      </a>
+      <a href="giving.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        Giving
+      </a>
+      <a href="communications.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Communications
+      </a>
+      <a href="reports.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        Reports
+      </a>
+      <a href="settings.html" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        Settings
+      </a>
+    </nav>
+
+  <div class="border-t border-line p-4">
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-primary" style="background: rgba(139,92,246,.2)">DR</div>
+      <div class="min-w-0">
+        <p class="truncate text-sm font-semibold">Dana Reyes</p>
+        <p class="truncate text-xs text-muted">Staff Admin</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Sidebar backdrop -->
+<div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden"></div>
+
+<!-- ===== Top bar ===== -->
+<header class="fixed left-0 right-0 top-0 z-30 flex h-16 items-center gap-4 border-b border-line bg-surface px-6 lg:left-64">
+  <button id="nav-toggle" class="mr-2 -ml-1 cursor-pointer rounded-lg p-2 text-muted hover:bg-surface-2 lg:hidden" aria-label="Open navigation">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+  </button>
+  <div class="mx-auto flex w-full max-w-xl items-center">
+    <label class="relative w-full">
+      <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" placeholder="Search people, groups, events…" class="w-full rounded-lg border border-line bg-surface-2 py-2 pl-10 pr-4 text-sm text-body placeholder:text-muted transition-colors duration-200 focus:border-primary focus:outline-none" />
+    </label>
+  </div>
+  <button aria-label="Notifications" class="cursor-pointer rounded-lg p-2 text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-body">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+  </button>
+  <button aria-label="Account" class="glow-primary flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary transition-colors duration-200 hover:bg-primary-hover">DR</button>
+</header>
+
+<!-- ===== Main ===== -->
+<main class="pt-16 lg:ml-64">
+  <div class="mx-auto max-w-screen-2xl p-8">
+
+    <!-- Page title + quick actions -->
+    <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold">Dashboard</h1>
+        <p class="mt-1 text-sm text-muted">Church health at a glance — week of Mar 8, 2026</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="glow-primary flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors duration-200 hover:bg-primary-hover">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21a8 8 0 0 1 13.29-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/></svg>
+          Add Person
+        </button>
+        <button class="flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-2 px-4 py-2 text-sm font-medium text-body transition-colors duration-200 hover:border-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M12 14v4"/><path d="M10 16h4"/></svg>
+          Add Event
+        </button>
+        <button class="flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-2 px-4 py-2 text-sm font-medium text-body transition-colors duration-200 hover:border-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          Send Message
+        </button>
+        <button class="flex cursor-pointer items-center gap-2 rounded-lg border border-line bg-surface-2 px-4 py-2 text-sm font-medium text-body transition-colors duration-200 hover:border-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          Open Check-In
+        </button>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div class="rounded-card border border-line bg-surface p-5 shadow-card">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted">Total Members</p>
+        <p class="mt-2 text-2xl font-bold">1,284</p>
+        <p class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 7-10 10"/><path d="M8 7h9v9"/></svg>
+          +3.2% this quarter
+        </p>
+      </div>
+      <div class="rounded-card border border-line bg-surface p-5 shadow-card">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted">First-Time Guests</p>
+        <p class="mt-2 text-2xl font-bold">37</p>
+        <p class="mt-1 text-xs text-muted">this month</p>
+      </div>
+      <div class="rounded-card border border-line bg-surface p-5 shadow-card">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted">Active Groups</p>
+        <p class="mt-2 text-2xl font-bold">52</p>
+        <p class="mt-1 text-xs text-muted">across 3 campuses</p>
+      </div>
+      <div class="rounded-card border border-line bg-surface p-5 shadow-card">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted">Weekly Attendance</p>
+        <p class="mt-2 text-2xl font-bold">861</p>
+        <p class="mt-1 text-xs text-muted">Sun, Mar 8</p>
+      </div>
+      <div class="rounded-card border border-line bg-surface p-5 shadow-card">
+        <p class="text-xs font-medium uppercase tracking-wide text-muted">Giving vs Goal</p>
+        <p class="mt-2 text-2xl font-bold">92%</p>
+        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+          <div class="h-full rounded-full bg-accent" style="width: 92%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bento widgets -->
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+      <!-- People to Follow Up -->
+      <section class="rounded-card border border-line bg-surface p-6 shadow-card xl:col-span-1">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-base font-semibold">People to Follow Up</h2>
+          <a href="queues.html" class="cursor-pointer text-sm font-medium text-accent transition-colors duration-200 hover:text-body">View queue</a>
+        </div>
+        <ul class="divide-y divide-line">
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary" style="background: rgba(139,92,246,.2)">JT</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Jordan Tran</p>
+              <p class="truncate text-xs text-muted">New guest · Downtown Campus</p>
+            </div>
+            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium text-negative" style="background: rgba(248,113,113,.15)">Overdue</span>
+            <button class="shrink-0 cursor-pointer rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Done</button>
+          </li>
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-accent" style="background: rgba(34,211,238,.15)">MP</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Maria Perez</p>
+              <p class="truncate text-xs text-muted">Membership journey</p>
+            </div>
+            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium text-warning" style="background: rgba(251,191,36,.15)">Due today</span>
+            <button class="shrink-0 cursor-pointer rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Done</button>
+          </li>
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-positive" style="background: rgba(52,211,153,.15)">DK</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">David Kim</p>
+              <p class="truncate text-xs text-muted">Baptism follow-up</p>
+            </div>
+            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium text-warning" style="background: rgba(251,191,36,.15)">Due Mar 11</span>
+            <button class="shrink-0 cursor-pointer rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Done</button>
+          </li>
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-warning" style="background: rgba(251,191,36,.15)">AB</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Aisha Bello</p>
+              <p class="truncate text-xs text-muted">New guest · North Campus</p>
+            </div>
+            <span class="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted">Due Mar 13</span>
+            <button class="shrink-0 cursor-pointer rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Done</button>
+          </li>
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-primary" style="background: rgba(139,92,246,.2)">CW</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Caleb Wright</p>
+              <p class="truncate text-xs text-muted">Volunteer onboarding</p>
+            </div>
+            <span class="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted">Due Mar 15</span>
+            <button class="shrink-0 cursor-pointer rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Done</button>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Attendance Trend -->
+      <section class="rounded-card border border-line bg-surface p-6 shadow-card xl:col-span-2">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-base font-semibold">Attendance Trend</h2>
+          <span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-positive" style="background: rgba(52,211,153,.15)">+6.4% vs last 8 weeks</span>
+        </div>
+        <svg viewBox="0 0 640 220" class="h-52 w-full" role="img" aria-label="Weekly attendance line chart, Jan through Mar 2026">
+          <defs>
+            <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <g stroke="var(--border)" stroke-width="1">
+            <line x1="40" y1="30" x2="620" y2="30"/><line x1="40" y1="80" x2="620" y2="80"/>
+            <line x1="40" y1="130" x2="620" y2="130"/><line x1="40" y1="180" x2="620" y2="180"/>
+          </g>
+          <g fill="var(--text-muted)" font-size="11">
+            <text x="6" y="34">900</text><text x="6" y="84">800</text><text x="6" y="134">700</text><text x="6" y="184">600</text>
+            <text x="60" y="205">Jan 11</text><text x="140" y="205">Jan 18</text><text x="220" y="205">Jan 25</text><text x="300" y="205">Feb 1</text>
+            <text x="375" y="205">Feb 8</text><text x="450" y="205">Feb 22</text><text x="525" y="205">Mar 1</text><text x="592" y="205">Mar 8</text>
+          </g>
+          <path d="M70,142 L150,128 L230,138 L310,104 L385,96 L460,78 L535,66 L605,50 L605,180 L70,180 Z" fill="url(#fillGrad)"/>
+          <path d="M70,142 L150,128 L230,138 L310,104 L385,96 L460,78 L535,66 L605,50" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <g fill="var(--accent)">
+            <circle cx="70" cy="142" r="3.5"/><circle cx="150" cy="128" r="3.5"/><circle cx="230" cy="138" r="3.5"/><circle cx="310" cy="104" r="3.5"/>
+            <circle cx="385" cy="96" r="3.5"/><circle cx="460" cy="78" r="3.5"/><circle cx="535" cy="66" r="3.5"/>
+          </g>
+          <circle cx="605" cy="50" r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+        </svg>
+      </section>
+
+      <!-- Upcoming Events -->
+      <section class="rounded-card border border-line bg-surface p-6 shadow-card">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-base font-semibold">Upcoming Events</h2>
+          <a href="#" class="cursor-pointer text-sm font-medium text-accent transition-colors duration-200 hover:text-body">Calendar</a>
+        </div>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-4 rounded-lg border border-line bg-surface-2 p-3 transition-colors duration-200 hover:border-primary">
+            <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg text-primary" style="background: rgba(139,92,246,.15)">
+              <span class="text-[10px] font-semibold uppercase">Mar</span><span class="text-sm font-bold leading-none">12</span>
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium">Midweek Worship Night</p>
+              <p class="text-xs text-muted">Thu 7:00 PM · Main Auditorium</p>
+            </div>
+          </li>
+          <li class="flex items-center gap-4 rounded-lg border border-line bg-surface-2 p-3 transition-colors duration-200 hover:border-primary">
+            <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg text-primary" style="background: rgba(139,92,246,.15)">
+              <span class="text-[10px] font-semibold uppercase">Mar</span><span class="text-sm font-bold leading-none">14</span>
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium">Volunteer Training Brunch</p>
+              <p class="text-xs text-muted">Sat 10:00 AM · Fellowship Hall</p>
+            </div>
+          </li>
+          <li class="flex items-center gap-4 rounded-lg border border-line bg-surface-2 p-3 transition-colors duration-200 hover:border-primary">
+            <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg text-primary" style="background: rgba(139,92,246,.15)">
+              <span class="text-[10px] font-semibold uppercase">Mar</span><span class="text-sm font-bold leading-none">15</span>
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium">Newcomers Lunch</p>
+              <p class="text-xs text-muted">Sun 12:30 PM · Room 204</p>
+            </div>
+          </li>
+          <li class="flex items-center gap-4 rounded-lg border border-line bg-surface-2 p-3 transition-colors duration-200 hover:border-primary">
+            <div class="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg text-primary" style="background: rgba(139,92,246,.15)">
+              <span class="text-[10px] font-semibold uppercase">Mar</span><span class="text-sm font-bold leading-none">21</span>
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium">Spring Serve Day</p>
+              <p class="text-xs text-muted">Sat 8:00 AM · All Campuses</p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Recent Giving -->
+      <section class="rounded-card border border-line bg-surface p-6 shadow-card">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-base font-semibold">Recent Giving</h2>
+          <a href="#" class="cursor-pointer text-sm font-medium text-accent transition-colors duration-200 hover:text-body">All batches</a>
+        </div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-line text-left text-xs font-medium uppercase tracking-wide text-muted">
+              <th class="pb-2 font-medium">Donor</th>
+              <th class="pb-2 font-medium">Fund</th>
+              <th class="pb-2 text-right font-medium">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr><td class="py-2.5 font-medium">H. Nakamura</td><td class="py-2.5 text-muted">General</td><td class="py-2.5 text-right font-semibold">$250.00</td></tr>
+            <tr><td class="py-2.5 font-medium">S. Mitchell</td><td class="py-2.5 text-muted">Missions</td><td class="py-2.5 text-right font-semibold">$120.00</td></tr>
+            <tr><td class="py-2.5 font-medium">R. Okafor</td><td class="py-2.5 text-muted">General</td><td class="py-2.5 text-right font-semibold">$500.00</td></tr>
+            <tr><td class="py-2.5 font-medium">L. Vasquez</td><td class="py-2.5 text-muted">Building</td><td class="py-2.5 text-right font-semibold">$75.00</td></tr>
+            <tr><td class="py-2.5 font-medium">T. Anders</td><td class="py-2.5 text-muted">General</td><td class="py-2.5 text-right font-semibold">$1,000.00</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- At-Risk Donors -->
+      <section class="rounded-card border border-line bg-surface p-6 shadow-card">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-base font-semibold">At-Risk Donors</h2>
+          <span class="rounded-full px-2.5 py-0.5 text-xs font-medium text-warning" style="background: rgba(251,191,36,.15)">4 flagged</span>
+        </div>
+        <p class="mb-4 text-sm text-muted">Recurring donors whose giving has lapsed 60+ days.</p>
+        <ul class="divide-y divide-line">
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-negative" style="background: rgba(248,113,113,.15)">GB</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Grant Bishop</p>
+              <p class="text-xs text-muted">Last gift Dec 28, 2025</p>
+            </div>
+            <button class="shrink-0 cursor-pointer rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Reach out</button>
+          </li>
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-negative" style="background: rgba(248,113,113,.15)">PF</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Priya Fernandes</p>
+              <p class="text-xs text-muted">Last gift Jan 4, 2026</p>
+            </div>
+            <button class="shrink-0 cursor-pointer rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Reach out</button>
+          </li>
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-negative" style="background: rgba(248,113,113,.15)">MW</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Marcus Webb</p>
+              <p class="text-xs text-muted">Last gift Jan 9, 2026</p>
+            </div>
+            <button class="shrink-0 cursor-pointer rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Reach out</button>
+          </li>
+          <li class="flex items-center gap-3 py-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-negative" style="background: rgba(248,113,113,.15)">EC</div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">Elaine Cho</p>
+              <p class="text-xs text-muted">Last gift Jan 11, 2026</p>
+            </div>
+            <button class="shrink-0 cursor-pointer rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-medium text-body transition-colors duration-200 hover:border-primary hover:text-primary">Reach out</button>
+          </li>
+        </ul>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  function openSidebar() { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('opacity-0','pointer-events-none'); }
+  function closeSidebar() { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('opacity-0','pointer-events-none'); }
+  toggle.addEventListener('click', openSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+  sidebar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', closeSidebar));
+</script>
+
+</body>
+</html>

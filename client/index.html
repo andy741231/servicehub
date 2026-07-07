@@ -4,11 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Service Hub</title>
+    <script>
+      // No-FOUC: apply the stored (or OS) theme before first paint so the
+      // very first render already matches. Kept in sync with themeStore.js.
+      // Dark mode is an internal (admin) preference only — public site routes
+      // always render light.
+      (function () {
+        try {
+          var path = window.location.pathname;
+          var isAdmin = path.indexOf('/hub-admin') === 0 || path === '/login';
+          var stored = localStorage.getItem('theme');
+          var dark = isAdmin && (stored === 'dark' ||
+            (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches));
+          var root = document.documentElement;
+          root.classList.toggle('dark', dark);
+          root.classList.toggle('light', !dark);
+          root.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <a
       href="#main-content"
-      class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg"
+      class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg"
     >
       Skip to main content
     </a>

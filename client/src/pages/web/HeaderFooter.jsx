@@ -7,7 +7,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Save, Check, AlertCircle, Plus, Trash2, GripVertical, Globe, RefreshCw, Upload } from 'lucide-react';
 import api from '../../utils/api';
+import PageHeader from '../../components/PageHeader';
 import { useToast } from '../../components/Toast';
+import ColorPicker from '../../components/ColorPicker';
 
 const resolveUrl = (url) => {
   if (!url) return '';
@@ -42,8 +44,8 @@ const DEFAULT_FOOTER = {
 function Field({ label, hint, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {hint && <p className="text-xs text-gray-400 mb-1.5">{hint}</p>}
+      <label className="field-label">{label}</label>
+      {hint && <p className="field-hint">{hint}</p>}
       {children}
     </div>
   );
@@ -56,7 +58,7 @@ function TextInput({ value, onChange, placeholder, mono }) {
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${mono ? 'font-mono' : ''}`}
+      className={`input-field ${mono ? 'font-mono' : ''}`}
     />
   );
 }
@@ -64,19 +66,19 @@ function TextInput({ value, onChange, placeholder, mono }) {
 function ColorRow({ label, value, onChange }) {
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-sm text-gray-700">{label}</span>
+      <span className="text-sm text-text-base">{label}</span>
       <div className="flex items-center gap-2">
-        <input
-          type="color"
+        <ColorPicker
           value={value}
-          onChange={e => onChange(e.target.value)}
-          className="w-8 h-8 rounded-md border border-gray-200 cursor-pointer p-0.5 bg-white"
+          onChange={onChange}
+          label={label}
+          allowAlpha={false}
         />
         <input
           type="text"
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-24 px-2 py-1 text-xs font-mono border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-24 px-2 py-1 text-xs font-mono border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
     </div>
@@ -96,19 +98,19 @@ function FooterSectionEditor({ section, onChange, onDelete }) {
   const update = (key, val) => onChange({ ...section, [key]: val });
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+    <div className="bg-surface-raised border border-border rounded-card p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-gray-300" />
+          <GripVertical className="w-4 h-4 text-subtle" />
           <select
             value={section.type}
             onChange={e => update('type', e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="text-sm border border-border rounded-base px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {SECTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
           </select>
         </div>
-        <button onClick={onDelete} className="p-3 min-w-[44px] min-h-[44px] hover:bg-red-50 text-red-400 rounded-lg" aria-label="Delete">
+        <button onClick={onDelete} className="p-3 min-w-[44px] min-h-[44px] hover:bg-danger-light text-danger rounded-base" aria-label="Delete">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
@@ -129,7 +131,7 @@ function FooterSectionEditor({ section, onChange, onDelete }) {
           onChange={e => update('content', e.target.value)}
           rows={3}
           placeholder="Text content…"
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          className="textarea-field"
         />
       )}
 
@@ -142,18 +144,18 @@ function FooterSectionEditor({ section, onChange, onDelete }) {
                 value={link.label}
                 onChange={e => { const ls = [...(section.links||[])]; ls[i] = { ...ls[i], label: e.target.value }; update('links', ls); }}
                 placeholder="Label"
-                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field flex-1"
               />
               <input
                 type="text"
                 value={link.href}
                 onChange={e => { const ls = [...(section.links||[])]; ls[i] = { ...ls[i], href: e.target.value }; update('links', ls); }}
                 placeholder="URL"
-                className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field flex-1 font-mono"
               />
               <button
                 onClick={() => update('links', (section.links||[]).filter((_,j) => j !== i))}
-                className="p-1 text-red-400 hover:bg-red-50 rounded"
+                className="p-1 text-danger hover:bg-danger-light rounded"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -161,7 +163,7 @@ function FooterSectionEditor({ section, onChange, onDelete }) {
           ))}
           <button
             onClick={() => update('links', [...(section.links||[]), { label: '', href: '' }])}
-            className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-xs text-primary hover:text-primary flex items-center gap-1"
           >
             <Plus className="w-3.5 h-3.5" /> Add Link
           </button>
@@ -261,50 +263,41 @@ export default function HeaderFooter() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-4 max-w-4xl mx-auto animate-pulse">
-        <div className="h-8 bg-gray-200 rounded w-40" />
-        <div className="h-64 bg-gray-100 rounded-xl" />
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-4 animate-pulse">
+        <div className="h-8 bg-surface-tertiary rounded w-40" />
+        <div className="h-64 bg-surface-raised rounded-card" />
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Header & Footer</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Shared across every page on your site.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isDirty && (
-            <button onClick={handleReset} className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg flex items-center gap-1.5">
-              <RefreshCw className="w-4 h-4" /> Reset
-            </button>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={!isDirty || saving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-          >
+    <div className="max-w-7xl mx-auto p-6 lg:p-8">
+      <PageHeader>
+        {isDirty && (
+          <button onClick={handleReset} className="btn-ghost">
+            <RefreshCw className="w-4 h-4" /> Reset
+          </button>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={!isDirty || saving}
+          className="btn-primary"
+        >
             {saving
               ? <AlertCircle className="w-4 h-4 animate-spin" />
               : <Save className="w-4 h-4" />}
             {saving ? 'Saving…' : 'Save'}
           </button>
-        </div>
-      </div>
+      </PageHeader>
 
       {/* Tab switcher */}
-      <div className="flex gap-2 bg-gray-100 p-1 rounded-xl mb-6 w-fit">
+      <div className="flex gap-2 bg-surface-raised p-1 rounded-card mb-6 w-fit">
         {[{ id: 'header', label: 'Header' }, { id: 'footer', label: 'Footer' }].map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-5 py-2 text-sm font-medium rounded-lg transition-colors ${
-              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            className={`px-5 py-2 text-sm font-medium rounded-base transition-colors ${
+              tab === t.id ? 'bg-surface text-text-base shadow-sm' : 'text-muted hover:text-text-base'
             }`}
           >
             {t.label}
@@ -317,7 +310,7 @@ export default function HeaderFooter() {
         <div className="space-y-5">
           {/* Live preview */}
           <div
-            className="rounded-xl overflow-hidden border border-gray-200 px-6 py-4 flex items-center justify-between"
+            className="rounded-card overflow-hidden border border-border px-6 py-4 flex items-center justify-between"
             style={{ backgroundColor: header.styles?.backgroundColor, color: header.styles?.textColor }}
           >
             <div className="flex items-center gap-2 font-bold text-lg">
@@ -340,9 +333,9 @@ export default function HeaderFooter() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+          <div className="bg-surface border border-border rounded-card divide-y divide-border-soft">
             <div className="px-5 py-4 space-y-4">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Logo</h2>
+              <h2 className="text-sm font-semibold text-text-base uppercase tracking-wide">Logo</h2>
               <Field label="Site Name" hint="Shown in the header when no logo image is set.">
                 <TextInput
                   value={header.logo?.text || ''}
@@ -368,19 +361,19 @@ export default function HeaderFooter() {
                   <button
                     onClick={() => logoFileInput.current?.click()}
                     disabled={logoUploading}
-                    className="flex-shrink-0 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1.5"
+                    className="flex-shrink-0 px-3 py-2 border border-border-strong rounded-base text-sm hover:bg-surface-raised disabled:opacity-50 flex items-center gap-1.5"
                     title="Upload logo"
                   >
                     {logoUploading ? <AlertCircle className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     {logoUploading ? 'Uploading…' : 'Upload'}
                   </button>
                 </div>
-                {logoUploadError && <p className="text-xs text-red-500 mt-1">{logoUploadError}</p>}
+                {logoUploadError && <p className="text-xs text-danger mt-1">{logoUploadError}</p>}
                 {header.logo?.imageUrl && (
                   <img
                     src={resolveUrl(header.logo.imageUrl)}
                     alt="Logo preview"
-                    className="mt-2 h-8 w-auto object-contain rounded border border-gray-200"
+                    className="mt-2 h-8 w-auto object-contain rounded border border-border"
                     onError={e => { e.target.style.display = 'none'; }}
                     onLoad={e => { e.target.style.display = ''; }}
                   />
@@ -395,7 +388,7 @@ export default function HeaderFooter() {
                     value={header.logo?.width ?? ''}
                     onChange={e => updateHeader('logo', { ...header.logo, width: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
                     placeholder="Auto"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-field"
                   />
                 </Field>
                 <Field label="Logo Height" hint="Optional. Pixels.">
@@ -405,7 +398,7 @@ export default function HeaderFooter() {
                     value={header.logo?.height ?? ''}
                     onChange={e => updateHeader('logo', { ...header.logo, height: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
                     placeholder="Auto"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-field"
                   />
                 </Field>
               </div>
@@ -415,7 +408,7 @@ export default function HeaderFooter() {
                   <div className="grid grid-cols-4 gap-2">
                     {['top', 'right', 'bottom', 'left'].map(side => (
                       <div key={side}>
-                        <label className="block text-[10px] uppercase text-gray-500 tracking-wide mb-0.5">{side}</label>
+                        <label className="block text-[10px] uppercase text-muted tracking-wide mb-0.5">{side}</label>
                         <input
                           type="number"
                           min={0}
@@ -424,7 +417,7 @@ export default function HeaderFooter() {
                             ...header.logo,
                             padding: { ...header.logo.padding, [side]: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }
                           })}
-                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="input-field"
                         />
                       </div>
                     ))}
@@ -435,7 +428,7 @@ export default function HeaderFooter() {
                   <div className="grid grid-cols-4 gap-2">
                     {['top', 'right', 'bottom', 'left'].map(side => (
                       <div key={side}>
-                        <label className="block text-[10px] uppercase text-gray-500 tracking-wide mb-0.5">{side}</label>
+                        <label className="block text-[10px] uppercase text-muted tracking-wide mb-0.5">{side}</label>
                         <input
                           type="number"
                           min={0}
@@ -444,7 +437,7 @@ export default function HeaderFooter() {
                             ...header.logo,
                             margin: { ...header.logo.margin, [side]: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }
                           })}
-                          className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="input-field"
                         />
                       </div>
                     ))}
@@ -454,7 +447,7 @@ export default function HeaderFooter() {
             </div>
 
             <div className="px-5 py-4 space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Colors</h2>
+              <h2 className="text-sm font-semibold text-text-base uppercase tracking-wide">Colors</h2>
               <ColorRow
                 label="Background"
                 value={header.styles?.backgroundColor || 'hsl(var(--surface))'}
@@ -475,7 +468,7 @@ export default function HeaderFooter() {
         <div className="space-y-5">
           {/* Live preview */}
           <div
-            className="rounded-xl overflow-hidden border border-gray-200 px-6 py-5"
+            className="rounded-card overflow-hidden border border-border px-6 py-5"
             style={{ backgroundColor: footer.styles?.backgroundColor, color: footer.styles?.textColor }}
           >
             <p className="text-xs text-center opacity-60 mt-2">
@@ -483,9 +476,9 @@ export default function HeaderFooter() {
             </p>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+          <div className="bg-surface border border-border rounded-card divide-y divide-border-soft">
             <div className="px-5 py-4 space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Colors</h2>
+              <h2 className="text-sm font-semibold text-text-base uppercase tracking-wide">Colors</h2>
               <ColorRow
                 label="Background"
                 value={footer.styles?.backgroundColor || 'hsl(var(--surface-raised))'}
@@ -499,7 +492,7 @@ export default function HeaderFooter() {
             </div>
 
             <div className="px-5 py-4 space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Copyright</h2>
+              <h2 className="text-sm font-semibold text-text-base uppercase tracking-wide">Copyright</h2>
               <Field label="Copyright line" hint="Supports basic HTML like &amp;copy;.">
                 <TextInput
                   value={footer.copyright || ''}
@@ -511,16 +504,16 @@ export default function HeaderFooter() {
 
             <div className="px-5 py-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Sections</h2>
+                <h2 className="text-sm font-semibold text-text-base uppercase tracking-wide">Sections</h2>
                 <button
                   onClick={addSection}
-                  className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
+                  className="flex items-center gap-1.5 text-sm text-primary hover:text-primary"
                 >
                   <Plus className="w-4 h-4" /> Add Section
                 </button>
               </div>
               {footer.sections.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">No sections yet. Add one above.</p>
+                <p className="text-sm text-subtle italic">No sections yet. Add one above.</p>
               ) : (
                 <div className="space-y-3">
                   {footer.sections.map((section, i) => (

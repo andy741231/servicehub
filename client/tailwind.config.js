@@ -36,7 +36,7 @@ export default {
         },
         // Text
         "text-base":    "hsl(var(--text-base) / <alpha-value>)",
-        "text-muted":   "hsl(var(--text-muted) / <alpha-value>)",
+        "muted":        "hsl(var(--text-muted) / <alpha-value>)",
         "text-subtle":  "hsl(var(--text-subtle) / <alpha-value>)",
         "text-inverse": "hsl(var(--text-inverse) / <alpha-value>)",
         // Semantic states
@@ -55,6 +55,18 @@ export default {
         info: {
           DEFAULT: "hsl(var(--info) / <alpha-value>)",
           light:   "hsl(var(--info-light) / <alpha-value>)",
+        },
+        // Chart / data-visualization tokens (kept in sync with @theme + index.css)
+        chart: {
+          primary:  "hsl(var(--chart-primary) / <alpha-value>)",
+          success:  "hsl(var(--chart-success) / <alpha-value>)",
+          warning:  "hsl(var(--chart-warning) / <alpha-value>)",
+          danger:   "hsl(var(--chart-danger) / <alpha-value>)",
+          info:     "hsl(var(--chart-info) / <alpha-value>)",
+          muted:    "hsl(var(--chart-muted) / <alpha-value>)",
+          grid:     "hsl(var(--chart-grid) / <alpha-value>)",
+          axis:     "hsl(var(--chart-axis) / <alpha-value>)",
+          "axis-tick": "hsl(var(--chart-axis-tick) / <alpha-value>)",
         },
       },
 

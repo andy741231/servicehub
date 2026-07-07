@@ -62,14 +62,14 @@ export default function FormView() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
-          <AlertCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Form Not Found</h1>
-          <p className="text-gray-600 mb-6">The form you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
+          <AlertCircle className="h-16 w-16 text-subtle mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-text-base mb-2">Form Not Found</h1>
+          <p className="text-muted mb-6">The form you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
           <button
             onClick={() => navigate('/')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
           >
             Go to Homepage
           </button>
@@ -80,22 +80,22 @@ export default function FormView() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
       </div>
     );
   }
 
   if (!form) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
-          <AlertCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Form Not Found</h1>
-          <p className="text-gray-600 mb-6">The form you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
+          <AlertCircle className="h-16 w-16 text-subtle mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-text-base mb-2">Form Not Found</h1>
+          <p className="text-muted mb-6">The form you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
           <button
             onClick={() => navigate('/')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
           >
             Go to Homepage
           </button>

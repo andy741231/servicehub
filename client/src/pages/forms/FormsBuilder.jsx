@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, Eye, Download, ArrowLeft, Share2, Check, Plus, X, Undo2, Redo2, History, Smartphone, Tablet, Monitor, Loader2, Search, PanelsTopLeft, MoreHorizontal, ChevronDown, Pencil, ChevronLeft, ChevronRight, PanelLeft, PanelRight, Type, List, Calculator, User, SeparatorHorizontal, Code, Copy } from 'lucide-react';
+import { Save, Eye, Download, ArrowLeft, Share2, Check, Plus, X, Undo2, Redo2, History, Smartphone, Tablet, Monitor, Loader2, Search, PanelsTopLeft, MoreHorizontal, ChevronDown, Pencil, ChevronLeft, ChevronRight, PanelLeft, PanelRight, Type, List, Calculator, User, SeparatorHorizontal, Code, Copy, AlertTriangle } from 'lucide-react';
 import FormCanvas from './components/FormCanvas';
 import FormRenderer from './components/FormRenderer';
 import FieldPalette from './components/FieldPalette';
@@ -227,6 +227,14 @@ export default function FormsBuilder() {
   const currentForm = forms.find((f) => f.id === currentFormId);
   const findFormBySlug = (slug) => forms.find((f) => f.slug === slug || f.id === slug);
 
+  // Live validation: detect duplicate form names as the user types.
+  // Treated as a validation requirement (not a transient error) — blocks save
+  // and is shown prominently inline on the title input.
+  const isDuplicateTitle = useMemo(
+    () => formTitle.trim().length > 0 && isDuplicateName(formTitle, forms, currentFormId),
+    [formTitle, forms, currentFormId]
+  );
+
   useEffect(() => {
     loadForms();
   }, [loadForms]);
@@ -405,8 +413,10 @@ export default function FormsBuilder() {
     setSaveError(null);
     const latestForms = useFormStore.getState().forms;
     const latestCurrentFormId = useFormStore.getState().currentFormId;
+    // Duplicate name is a validation requirement — the inline validation on the
+    // title input already surfaces this prominently, so just bail out here
+    // without setting a transient saveError.
     if (latestCurrentFormId && isDuplicateName(formTitle, latestForms, latestCurrentFormId)) {
-      setSaveError('A form with this name already exists. Please use a unique name.');
       setSaveStatus('error');
       return;
     }
@@ -427,8 +437,17 @@ export default function FormsBuilder() {
       }
     } catch (e) {
       console.error('Error saving form:', e);
-      const message = e?.response?.data?.error || e?.message || 'Failed to save form. Please try again.';
-      setSaveError(message);
+      const isConflict = e?.response?.status === 409;
+      if (isConflict) {
+        // The backend knows about a form with this name that our local list
+        // doesn't reflect (stale state, failed delete, or concurrent edit).
+        // Reload the forms list so the conflicting form becomes visible.
+        loadForms();
+        setSaveError('A form with this name already exists but was not visible in your form list. The list has been refreshed — check it now.');
+      } else {
+        const message = e?.response?.data?.error || e?.message || 'Failed to save form. Please try again.';
+        setSaveError(message);
+      }
       setSaveStatus('error');
     } finally {
       setIsSaving(false);
@@ -454,7 +473,7 @@ export default function FormsBuilder() {
   };
 
   const handleBackToDashboard = () => {
-    navigate('/hub-admin/forms');
+    navigate('/hub-admin/forms/list');
   };
 
   const handleShareForm = async () => {
@@ -543,7 +562,7 @@ export default function FormsBuilder() {
       {/* Skip-to-content link for keyboard users */}
       <a
         href="#form-canvas"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-3 focus:py-2 focus:bg-primary focus:text-white focus:rounded-base focus:shadow-modal focus:text-small focus:font-medium"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-3 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-base focus:shadow-modal focus:text-small focus:font-medium"
       >
         Skip to canvas
       </a>
@@ -670,7 +689,7 @@ export default function FormsBuilder() {
             {isNarrow && (
               <button
                 onClick={() => setLeftDrawerOpen((v) => !v)}
-                className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95"
+                className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
                 title="Toggle field palette"
                 aria-label="Toggle field palette"
               >
@@ -679,7 +698,7 @@ export default function FormsBuilder() {
             )}
             <button
               onClick={handleBackToDashboard}
-              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95"
+              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
               title="Back to dashboard"
               aria-label="Back to dashboard"
             >
@@ -689,7 +708,7 @@ export default function FormsBuilder() {
             <button
               onClick={undo}
               disabled={!_history.length}
-              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
+              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
               title="Undo (Ctrl+Z)"
               aria-label="Undo"
             >
@@ -698,7 +717,7 @@ export default function FormsBuilder() {
             <button
               onClick={redo}
               disabled={!_future.length}
-              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
+              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
               title="Redo (Ctrl+Y)"
               aria-label="Redo"
             >
@@ -770,7 +789,7 @@ export default function FormsBuilder() {
             {isNarrow && (
               <button
                 onClick={() => setRightDrawerOpen((v) => !v)}
-                className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[40px] min-h-[40px] transition-all duration-150 active:scale-95"
+                className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
                 title="Toggle properties panel"
                 aria-label="Toggle properties panel"
               >
@@ -779,7 +798,7 @@ export default function FormsBuilder() {
             )}
             <button
               onClick={() => setShowPreview(true)}
-              className="flex items-center gap-1.5 px-2.5 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] transition-all duration-150 active:scale-95"
+              className="flex items-center gap-1.5 px-2.5 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-all duration-150 active:scale-95"
               title="Preview form"
               aria-label="Preview form"
             >
@@ -788,7 +807,7 @@ export default function FormsBuilder() {
             </button>
             <button
               onClick={handleShareForm}
-              className="flex items-center gap-1.5 px-2.5 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] transition-all duration-150 active:scale-95"
+              className="flex items-center gap-1.5 px-2.5 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-all duration-150 active:scale-95"
               title="Share form"
               aria-label="Share form"
             >
@@ -809,7 +828,7 @@ export default function FormsBuilder() {
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
-                className={`flex items-center gap-1 px-2 py-2 border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] transition-all duration-150 active:scale-95 ${showMoreMenu ? 'bg-surface border-border-strong shadow-sm' : 'bg-surface-raised border-border hover:bg-surface'}`}
+                className={`flex items-center gap-1 px-2 py-2 border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-all duration-150 active:scale-95 ${showMoreMenu ? 'bg-surface border-border-strong shadow-sm' : 'bg-surface-raised border-border hover:bg-surface'}`}
                 title="More actions"
                 aria-label="More actions"
                 aria-haspopup="menu"
@@ -847,10 +866,11 @@ export default function FormsBuilder() {
             <div className="h-6 w-px bg-border mx-0.5" aria-hidden="true" />
             <button
               onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-3.5 py-2 bg-primary text-white rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] font-medium transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
-              title="Save form (Ctrl+S)"
+              disabled={isSaving || isDuplicateTitle}
+              className="flex items-center gap-2 px-3.5 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
+              title={isDuplicateTitle ? 'Fix the duplicate form name before saving' : 'Save form (Ctrl+S)'}
               aria-label="Save form"
+              aria-disabled={isDuplicateTitle}
             >
               <Save className="h-4 w-4" aria-hidden="true" />
               <span className="text-body">{isSaving ? 'Saving…' : 'Save'}</span>
@@ -889,9 +909,24 @@ export default function FormsBuilder() {
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 placeholder="Untitled Form"
-                className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-base placeholder:text-subtle px-0"
+                aria-invalid={isDuplicateTitle}
+                className={`w-full text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 text-base placeholder:text-subtle px-0 ${isDuplicateTitle ? 'text-danger' : ''}`}
                 aria-label="Form title"
+                aria-describedby={isDuplicateTitle ? 'form-title-duplicate-warning' : undefined}
               />
+              {isDuplicateTitle && (
+                <div
+                  id="form-title-duplicate-warning"
+                  role="alert"
+                  className="mt-2 flex items-start gap-2 text-small text-danger bg-danger-light border border-danger/30 px-3 py-2 rounded-base"
+                >
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                  <span>
+                    A form named <strong>"{formTitle.trim()}"</strong> already exists.
+                    Choose a different name to save this form.
+                  </span>
+                </div>
+              )}
               <label htmlFor="form-description" className="sr-only">Form description</label>
               <textarea
                 id="form-description"
@@ -1143,12 +1178,15 @@ export default function FormsBuilder() {
       {/* Insert new field modal */}
       {showFieldModal && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] animate-in fade-in duration-200"
           onClick={() => { setShowFieldModal(false); setTargetRowId(null); setTargetGroupId(null); }}
         >
           <div
-            className="bg-surface rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300"
+            className="bg-surface rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] mx-4 overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="field-modal-title"
           >
             {/* Header */}
             <div className="p-6 border-b border-border bg-surface-raised flex items-center justify-between">
@@ -1157,7 +1195,7 @@ export default function FormsBuilder() {
                   <Plus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-base">
+                  <h3 id="field-modal-title" className="text-xl font-semibold text-base">
                     {targetGroupId ? 'Add field to group' : 'Insert new field'}
                   </h3>
                   <p className="text-small text-muted">
@@ -1187,13 +1225,13 @@ export default function FormsBuilder() {
                     onClick={() => setFieldModalCategory(cat)}
                     className={`px-3 py-1.5 rounded-full text-small font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
                       isActive
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary text-primary-foreground'
                         : 'text-muted hover:text-base hover:bg-surface-raised border border-border'
                     }`}
                     aria-pressed={isActive}
                   >
                     {cat === 'all' ? 'All' : cat}
-                    <span className={`ml-1.5 text-xs ${isActive ? 'text-white/70' : 'text-subtle'}`}>{count}</span>
+                    <span className={`ml-1.5 text-xs ${isActive ? 'text-primary-foreground/70' : 'text-subtle'}`}>{count}</span>
                   </button>
                 );
               })}
@@ -1244,12 +1282,15 @@ export default function FormsBuilder() {
       {/* Command palette — press '/' to insert a field by typing */}
       {showCommandPalette && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-start justify-center pt-[15vh] z-50"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-start justify-center pt-[15vh] z-[9999]"
           onClick={() => { setShowCommandPalette(false); setPaletteQuery(''); }}
         >
           <div
-            className="bg-surface rounded-xl shadow-modal w-full max-w-lg overflow-hidden flex flex-col"
+            className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col animate-[fadeInScale_0.15s_ease-out]"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
           >
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
               <Search className="h-4 w-4 text-subtle" />

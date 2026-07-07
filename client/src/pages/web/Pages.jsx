@@ -63,6 +63,7 @@ import {
   X, Check, AlertCircle, GripVertical, FolderPlus, Settings
 } from 'lucide-react';
 import api from '../../utils/api';
+import PageHeader from '../../components/PageHeader';
 import { useConfirm } from '../../components/Dialog';
 import { useToast } from '../../components/Toast';
 
@@ -140,16 +141,17 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999]"
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
     >
-      <div ref={containerRef} className="bg-white rounded-xl shadow-2xl w-[440px]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div ref={containerRef} className="bg-surface rounded-2xl shadow-2xl w-[440px] animate-[fadeInScale_0.15s_ease-out]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h3 id="item-modal-title" className="font-semibold text-text-base">
             {isEdit ? 'Edit Item' : parentId ? 'Add Sub-menu Item' : 'Add Navigation Item'}
           </h3>
-          <button onClick={onClose} className="p-3 min-w-[44px] min-h-[44px] hover:bg-gray-100 rounded" aria-label="Close"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-3 min-w-[44px] min-h-[44px] hover:bg-surface-raised rounded" aria-label="Close"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-6 space-y-4">
@@ -160,8 +162,8 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
                 <button
                   key={id}
                   onClick={() => setType(id)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                    type === id ? 'bg-blue-50 border-blue-400 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-base border text-sm font-medium transition-colors ${
+                    type === id ? 'bg-primary-light border-primary-light text-primary' : 'border-border text-muted hover:bg-surface-raised'
                   }`}
                 >
                   <Icon className="w-4 h-4" />{label}
@@ -172,12 +174,12 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
 
           {/* Label */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Navigation Label</label>
+            <label className="field-label">Navigation Label</label>
             <input
               type="text"
               value={navLabel || title}
               onChange={e => { setNavLabel(e.target.value); setTitle(e.target.value); if (!slugManual) setSlug(slugify(e.target.value)); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-field"
               placeholder="About Us"
               autoFocus
             />
@@ -185,9 +187,9 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
 
           {type === 'page' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">URL Path</label>
-              <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
-                <span className="px-3 py-2 bg-gray-50 text-gray-400 text-sm border-r border-gray-300 select-none">/</span>
+              <label className="field-label">URL Path</label>
+              <div className="flex items-center border border-border-strong rounded-base overflow-hidden focus-within:ring-2 focus-within:ring-primary">
+                <span className="px-3 py-2 bg-surface-raised text-subtle text-sm border-r border-border-strong select-none">/</span>
                 <input
                   type="text"
                   value={slug}
@@ -196,16 +198,16 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
                   placeholder="about-us"
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-1 font-mono">/{slug || '…'}</p>
+              <p className="text-xs text-subtle mt-1 font-mono">/{slug || '…'}</p>
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+              <label className="field-label">URL</label>
               <input
                 type="url"
                 value={href}
                 onChange={e => setHref(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field"
                 placeholder="https://example.com"
               />
             </div>
@@ -214,13 +216,13 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
           {/* Published toggle (pages only) */}
           {type === 'page' && (
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Published</label>
+              <label className="text-sm font-medium text-text-base">Published</label>
               <button
                 onClick={() => setIsPublished(p => !p)}
-                className={`relative w-10 h-6 rounded-full transition-colors ${isPublished ? 'bg-blue-500' : 'bg-gray-300'}`}
+                className={`relative w-10 h-6 rounded-full transition-colors ${isPublished ? 'bg-primary' : 'bg-surface-tertiary'}`}
                 aria-label={isPublished ? 'Unpublish' : 'Publish'}
               >
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${isPublished ? 'left-5' : 'left-1'}`} />
+                <span className={`absolute top-1 w-4 h-4 bg-surface rounded-full shadow transition-transform ${isPublished ? 'left-5' : 'left-1'}`} />
               </button>
             </div>
           )}
@@ -228,13 +230,13 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
           {/* Hide from main nav toggle (pages only) */}
           {type === 'page' && (
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Hide from Main Nav</label>
+              <label className="text-sm font-medium text-text-base">Hide from Main Nav</label>
               <button
                 onClick={() => setHideFromNav(p => !p)}
-                className={`relative w-10 h-6 rounded-full transition-colors ${hideFromNav ? 'bg-blue-500' : 'bg-gray-300'}`}
+                className={`relative w-10 h-6 rounded-full transition-colors ${hideFromNav ? 'bg-primary' : 'bg-surface-tertiary'}`}
                 aria-label={hideFromNav ? 'Show in nav' : 'Hide from nav'}
               >
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${hideFromNav ? 'left-5' : 'left-1'}`} />
+                <span className={`absolute top-1 w-4 h-4 bg-surface rounded-full shadow transition-transform ${hideFromNav ? 'left-5' : 'left-1'}`} />
               </button>
             </div>
           )}
@@ -243,42 +245,42 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
           {type === 'page' && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Reserved Path</label>
-                <span className="text-xs text-gray-400">(System use)</span>
+                <label className="text-sm font-medium text-text-base">Reserved Path</label>
+                <span className="text-xs text-subtle">(System use)</span>
               </div>
               <button
                 onClick={() => setIsReserved(p => !p)}
-                className={`relative w-10 h-6 rounded-full transition-colors ${isReserved ? 'bg-amber-500' : 'bg-gray-300'}`}
+                className={`relative w-10 h-6 rounded-full transition-colors ${isReserved ? 'bg-warning' : 'bg-surface-tertiary'}`}
                 aria-label={isReserved ? 'Unmark as reserved' : 'Mark as reserved'}
               >
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${isReserved ? 'left-5' : 'left-1'}`} />
+                <span className={`absolute top-1 w-4 h-4 bg-surface rounded-full shadow transition-transform ${isReserved ? 'left-5' : 'left-1'}`} />
               </button>
             </div>
           )}
 
           {/* Reserved path warning */}
           {type === 'page' && isReserved && (
-            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-amber-800">
+            <div className="flex items-start gap-2 bg-warning-light border border-warning-light rounded-base p-3">
+              <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-warning">
                 <strong>Reserved path:</strong> This path is reserved for system use and will be shown in a separate group.
               </div>
             </div>
           )}
 
           {error && (
-            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-2 text-danger text-sm bg-danger-light px-3 py-2 rounded-base">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />{error}
             </div>
           )}
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 active:bg-gray-200 active:scale-95 transition-transform rounded-lg">Cancel</button>
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border">
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform disabled:opacity-50 flex items-center gap-2"
+            className="btn-primary"
           >
             {saving ? <AlertCircle className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {isEdit ? 'Save Changes' : 'Add Item'}
@@ -295,7 +297,7 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
 function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild, onTogglePublished, onToggleReserved, isLink }) {
   return (
     <div
-      className={`flex items-center gap-2 group rounded-xl px-3 py-2.5 hover:bg-gray-50/80 transition-colors border border-transparent hover:border-gray-100 ${depth > 0 ? 'ml-7' : ''}`}
+      className={`flex items-center gap-2 group rounded-card px-3 py-2.5 hover:bg-surface-raised/80 transition-colors border border-transparent hover:border-border-soft ${depth > 0 ? 'ml-7' : ''}`}
     >
       {/* Drag handle — only this element triggers drag */}
       <div
@@ -303,20 +305,20 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
         className="cursor-grab flex-shrink-0"
         onClick={e => e.stopPropagation()}
       >
-        <GripVertical className="w-4 h-4 text-gray-200 group-hover:text-gray-400 transition-colors" />
+        <GripVertical className="w-4 h-4 text-surface-tertiary group-hover:text-subtle transition-colors" />
       </div>
 
       {/* Icon */}
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${isLink ? 'bg-purple-50 ring-1 ring-purple-100' : 'bg-blue-50 ring-1 ring-blue-100'}`}>
+      <div className={`w-8 h-8 rounded-base flex items-center justify-center flex-shrink-0 shadow-sm ${isLink ? 'bg-info-light ring-1 ring-info-light' : 'bg-primary-light ring-1 ring-primary-light'}`}>
         {isLink
-          ? <LinkIcon className="w-3.5 h-3.5 text-purple-500" />
-          : <Globe    className="w-3.5 h-3.5 text-blue-500" />}
+          ? <LinkIcon className="w-3.5 h-3.5 text-info" />
+          : <Globe    className="w-3.5 h-3.5 text-primary" />}
       </div>
 
       {/* Label + path */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-gray-800">{page.navLabel || page.title}</span>
+          <span className="text-sm font-semibold text-text-base">{page.navLabel || page.title}</span>
           {!isLink && (
             <>
               {/* Published toggle badge */}
@@ -325,8 +327,8 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
                 title={page.isPublished ? 'Click to unpublish (set to Draft)' : 'Click to publish'}
                 className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
                   page.isPublished
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200 hover:ring-green-400'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:ring-gray-400'
+                    ? 'bg-success-light text-success hover:bg-success/20 hover:ring-success'
+                    : 'bg-surface-raised text-muted hover:bg-surface-tertiary hover:ring-border-strong'
                 }`}
               >
                 {page.isPublished ? 'Published' : 'Draft'}
@@ -337,19 +339,19 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
                 title={page.isReserved ? 'Click to remove Reserved flag (moves to Pages group)' : 'Click to mark as Reserved (moves to Reserved group)'}
                 className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
                   page.isReserved
-                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 hover:ring-amber-400'
-                    : 'bg-gray-50 text-gray-400 border border-dashed border-gray-300 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300 hover:ring-amber-300'
+                    ? 'bg-warning-light text-warning hover:bg-warning/20 hover:ring-warning'
+                    : 'bg-surface-raised text-subtle border border-dashed border-border-strong hover:bg-warning-light hover:text-warning hover:border-warning hover:ring-warning'
                 }`}
               >
                 {page.isReserved ? 'Reserved' : 'Set reserved'}
               </button>
               {page.hideFromNav && (
-                <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">Hidden</span>
+                <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-surface-raised text-muted">Hidden</span>
               )}
             </>
           )}
         </div>
-        <span className="text-xs text-gray-400 font-mono leading-tight">
+        <span className="text-xs text-subtle font-mono leading-tight">
           {isLink ? (page.href || 'external link') : `/${page.slug}`}
         </span>
       </div>
@@ -360,7 +362,7 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
           <>
             <Link
               to={`/hub-admin/web/editor/${page.slug}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-base hover:bg-primary-hover active:scale-95 transition-all shadow-sm"
               title="Open in page editor"
             >
               <Pencil className="w-3.5 h-3.5" />
@@ -370,7 +372,7 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
               href={page.slug === 'home' ? '/' : `/${page.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 active:scale-95 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-muted bg-surface border border-border rounded-base hover:bg-surface-raised hover:border-border-strong active:scale-95 transition-all shadow-sm"
               title="View live page"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -384,7 +386,7 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
           {depth === 0 && (
             <button
               onClick={() => onAddChild(page.id)}
-              className="p-1.5 hover:bg-blue-50 text-blue-400 hover:text-blue-600 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-primary-light text-primary hover:text-primary rounded-base transition-colors"
               aria-label="Add sub-menu item"
               title="Add sub-menu item"
             >
@@ -393,7 +395,7 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
           )}
           <button
             onClick={() => onEdit(page)}
-            className="p-1.5 hover:bg-gray-100 text-gray-400 hover:text-gray-700 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-surface-raised text-subtle hover:text-text-base rounded-base transition-colors"
             aria-label="Page settings"
             title="Page settings"
           >
@@ -401,7 +403,7 @@ function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild
           </button>
           <button
             onClick={() => onDelete(page.id)}
-            className="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-danger-light text-subtle hover:text-danger rounded-base transition-colors"
             aria-label="Delete"
             title="Delete"
           >
@@ -568,39 +570,30 @@ export default function Pages() {
   const childrenOf = (id) => pages.filter(p => p.parentId === id);
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pages & Navigation</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Drag to reorder · Items appear in the order shown on the public site.
-          </p>
-        </div>
+    <div className="max-w-7xl mx-auto p-6 lg:p-8">
+      <PageHeader>
         <button
           onClick={() => setModal({ mode: 'add' })}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+          className="btn-primary"
         >
           <Plus className="w-4 h-4" />
           Add Item
         </button>
-      </div>
-
-
+      </PageHeader>
 
       {/* List */}
       {loading ? (
         <div className="space-y-2">
-          {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="h-16 bg-surface-raised rounded-card animate-pulse" />)}
         </div>
       ) : topLevel.length === 0 ? (
-        <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
-          <Globe className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-600 font-semibold">No navigation items yet</p>
-          <p className="text-gray-400 text-sm mt-1">Add a page or link to build your nav bar.</p>
+        <div className="empty-state">
+          <Globe className="w-12 h-12 text-subtle mx-auto mb-3" />
+          <p className="text-muted font-semibold">No navigation items yet</p>
+          <p className="text-subtle text-sm mt-1">Add a page or link to build your nav bar.</p>
           <button
             onClick={() => setModal({ mode: 'add' })}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+            className="mt-4 btn-primary"
           >
             <Plus className="w-4 h-4" /> Add your first item
           </button>
@@ -612,15 +605,15 @@ export default function Pages() {
             {topLevel.filter(p => !p.isReserved).length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2 px-1">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pages</h3>
-                  <div className="flex-1 h-px bg-gray-100" />
+                  <h3 className="text-xs font-semibold text-muted uppercase tracking-wider">Pages</h3>
+                  <div className="flex-1 h-px bg-surface-raised" />
                 </div>
                 <Droppable droppableId="regular">
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`space-y-1 bg-white border border-gray-200 rounded-2xl p-2 shadow-sm transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50 border-blue-200' : ''}`}
+                      className={`space-y-1 bg-surface border border-border rounded-card p-2 shadow-sm transition-colors ${snapshot.isDraggingOver ? 'bg-primary-light/50 border-primary-light' : ''}`}
                     >
                       {topLevel.filter(p => !p.isReserved).map((page, index) => {
                         const kids = childrenOf(page.id);
@@ -653,7 +646,7 @@ export default function Pages() {
                                       <div
                                         ref={cp.innerRef}
                                         {...cp.droppableProps}
-                                        className={`mt-0.5 border-l-2 border-gray-100 ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-blue-200 bg-blue-50/30' : ''}`}
+                                        className={`mt-0.5 border-l-2 border-border-soft ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-primary-light bg-primary-light/30' : ''}`}
                                       >
                                         {kids.map((child, ci) => (
                                           <Draggable key={child.id} draggableId={child.id} index={ci}>
@@ -699,16 +692,16 @@ export default function Pages() {
             {topLevel.filter(p => p.isReserved).length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2 px-1">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                  <h3 className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Reserved Paths</h3>
-                  <div className="flex-1 h-px bg-amber-100" />
+                  <AlertCircle className="w-3.5 h-3.5 text-warning" />
+                  <h3 className="text-xs font-semibold text-warning uppercase tracking-wider">Reserved Paths</h3>
+                  <div className="flex-1 h-px bg-warning-light" />
                 </div>
                 <Droppable droppableId="reserved">
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`space-y-1 bg-amber-50/60 border border-amber-200 rounded-2xl p-2 transition-colors ${snapshot.isDraggingOver ? 'bg-amber-100 border-amber-300' : ''}`}
+                      className={`space-y-1 bg-warning-light/60 border border-warning-light rounded-card p-2 transition-colors ${snapshot.isDraggingOver ? 'bg-warning-light border-warning' : ''}`}
                     >
                       {topLevel.filter(p => p.isReserved).map((page, index) => {
                         const kids = childrenOf(page.id);
@@ -737,7 +730,7 @@ export default function Pages() {
                                       <div
                                         ref={cp.innerRef}
                                         {...cp.droppableProps}
-                                        className={`mt-0.5 border-l-2 border-amber-100 ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-amber-300 bg-amber-50/60' : ''}`}
+                                        className={`mt-0.5 border-l-2 border-warning-light ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-warning bg-warning-light/60' : ''}`}
                                       >
                                         {kids.map((child, ci) => (
                                           <Draggable key={child.id} draggableId={child.id} index={ci}>
@@ -776,7 +769,7 @@ export default function Pages() {
                     </div>
                   )}
                 </Droppable>
-                <p className="mt-2 text-xs text-amber-600/80 px-2 flex items-center gap-1.5">
+                <p className="mt-2 text-xs text-warning/80 px-2 flex items-center gap-1.5">
                   <AlertCircle className="w-3 h-3" />
                   Reserved for system use — may conflict with built-in routes.
                 </p>
@@ -788,7 +781,7 @@ export default function Pages() {
 
       {/* Footer hint */}
       {!loading && topLevel.length > 0 && (
-        <div className="mt-4 flex items-center gap-4 text-xs text-gray-400 px-1">
+        <div className="mt-4 flex items-center gap-4 text-xs text-subtle px-1">
           <span className="flex items-center gap-1.5">
             <GripVertical className="w-3.5 h-3.5" /> Drag rows to reorder
           </span>

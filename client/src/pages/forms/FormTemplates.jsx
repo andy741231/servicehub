@@ -161,27 +161,23 @@ export default function FormTemplates() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-8">
-        <div className="mb-8 flex items-center gap-3">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+        <div className="mb-6">
           <button
-            onClick={() => navigate('/hub-admin/forms')}
-            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary min-w-[36px] min-h-[36px] transition-colors"
+            onClick={() => navigate('/hub-admin/forms/list')}
+            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary min-w-[44px] min-h-[44px] transition-colors"
             aria-label="Back to forms"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-base">Form Templates</h1>
-            <p className="text-body text-muted mt-1">Start fast with a prebuilt form</p>
-          </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-base text-sm text-red-700 flex items-start justify-between gap-3">
+          <div className="mb-6 p-4 bg-danger-light border border-danger/20 rounded-base text-sm text-danger flex items-start justify-between gap-3">
             <span>{error}</span>
             <button
               onClick={() => setError(null)}
-              className="text-red-500 hover:text-red-700 p-1 -m-1 rounded"
+              className="text-danger hover:text-danger p-1 -m-1 rounded"
               aria-label="Dismiss error"
             >
               <X className="h-4 w-4" />
@@ -196,7 +192,7 @@ export default function FormTemplates() {
             return (
               <div key={t.id} className="bg-surface-raised border border-border rounded-xl overflow-hidden hover:shadow-card transition-all duration-200 flex flex-col">
                 <div className={`h-24 bg-gradient-to-r ${t.color} flex items-center justify-center`}>
-                  <Icon className="h-10 w-10 text-white/90" aria-hidden="true" />
+                  <Icon className="h-10 w-10 text-primary-foreground/90" aria-hidden="true" />
                 </div>
                 <div className="p-5 flex-1 flex flex-col">
                   <h3 className="text-lg font-bold text-base mb-1">{t.title}</h3>
@@ -205,7 +201,7 @@ export default function FormTemplates() {
                   <button
                     onClick={() => useTemplate(t)}
                     disabled={isCreating}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-base hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[40px] transition-colors disabled:opacity-60"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors disabled:opacity-60"
                   >
                     {isCreating ? (
                       <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> Creating…</>

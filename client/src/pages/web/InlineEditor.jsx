@@ -11,6 +11,7 @@ import {
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import api from '../../utils/api';
+import ColorPicker from '../../components/ColorPicker';
 
 const resolveUrl = (url) => {
   if (!url) return '';
@@ -249,7 +250,7 @@ const TextToolbar = ({ format = {}, onChange, onDelete, position = 'top' }) => {
           <button
             key={id}
             onClick={() => update('textAlign', id)}
-            className={`p-2 min-h-[36px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+            className={`p-2 min-h-[44px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
               textAlign === id 
                 ? 'bg-surface shadow-card text-primary' 
                 : 'text-muted hover:bg-surface'
@@ -267,7 +268,7 @@ const TextToolbar = ({ format = {}, onChange, onDelete, position = 'top' }) => {
       <div className="flex items-center bg-surface-raised rounded-base p-0.5">
         <button
           onClick={toggleBold}
-          className={`p-2 min-h-[36px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+          className={`p-2 min-h-[44px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
             fontWeight === 'bold' 
               ? 'bg-surface shadow-card text-primary' 
               : 'text-muted hover:bg-surface'
@@ -278,7 +279,7 @@ const TextToolbar = ({ format = {}, onChange, onDelete, position = 'top' }) => {
         </button>
         <button
           onClick={toggleItalic}
-          className={`p-2 min-h-[36px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+          className={`p-2 min-h-[44px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
             fontStyle === 'italic' 
               ? 'bg-surface shadow-card text-primary' 
               : 'text-muted hover:bg-surface'
@@ -294,7 +295,7 @@ const TextToolbar = ({ format = {}, onChange, onDelete, position = 'top' }) => {
           <div className="w-px h-5 bg-border mx-1" />
           <button
             onClick={onDelete}
-            className="p-2 min-h-[36px] hover:bg-danger-light text-danger rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1"
+            className="p-2 min-h-[44px] hover:bg-danger-light text-danger rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1"
             title="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -444,7 +445,7 @@ const MarkdownContentEditor = ({ value, onChange }) => {
       {/* Editor / Preview area */}
       {showPreview ? (
         <div
-          className="prose prose-sm max-w-none px-4 py-3 min-h-[220px] bg-surface prose-headings:font-bold prose-p:mb-3 prose-a:text-blue-600"
+          className="prose prose-sm max-w-none px-4 py-3 min-h-[220px] bg-surface prose-headings:font-bold prose-p:mb-3 prose-a:text-primary"
           dangerouslySetInnerHTML={{ __html: renderMarkdownPreview(value) }}
         />
       ) : (
@@ -705,9 +706,9 @@ const BaseEditableImage = ({
 
       {/* URL dialog */}
       {showUrlDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-lg shadow-modal p-6 max-w-md w-full">
-            <h3 className="text-heading font-semibold mb-4">Edit Image</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999]" onMouseDown={e => { if (e.target === e.currentTarget) setShowUrlDialog(false); }} onKeyDown={e => { if (e.key === 'Escape') setShowUrlDialog(false); }}>
+          <div className="bg-surface rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-[fadeInScale_0.15s_ease-out]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="url-dialog-title">
+            <h3 id="url-dialog-title" className="text-heading font-semibold mb-4">Edit Image</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-label text-muted mb-2">Image URL</label>
@@ -820,9 +821,9 @@ const BaseEditableButton = ({
 
       {/* Edit dialog */}
       {showEditDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-lg shadow-modal p-6 max-w-md w-full">
-            <h3 className="text-heading font-semibold mb-4">Edit Button</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999]" onMouseDown={e => { if (e.target === e.currentTarget) setShowEditDialog(false); }} onKeyDown={e => { if (e.key === 'Escape') setShowEditDialog(false); }}>
+          <div className="bg-surface rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-[fadeInScale_0.15s_ease-out]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="edit-dialog-title">
+            <h3 id="edit-dialog-title" className="text-heading font-semibold mb-4">Edit Button</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-label text-muted mb-2">Button Text</label>
@@ -928,10 +929,10 @@ const BackgroundImageDialog = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300]">
-      <div className="bg-surface rounded-lg shadow-modal p-6 max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999]" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }} onKeyDown={e => { if (e.key === 'Escape') onClose(); }}>
+      <div className="bg-surface rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 animate-[fadeInScale_0.15s_ease-out]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="bg-image-title">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-heading font-semibold">Background Image</h3>
+          <h3 id="bg-image-title" className="text-heading font-semibold">Background Image</h3>
           <button onClick={onClose} className="p-3 min-w-[44px] min-h-[44px] hover:bg-surface-raised rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1" aria-label="Close">
             <X className="w-4 h-4" />
           </button>
@@ -981,7 +982,7 @@ const BackgroundImageDialog = ({
               type="text"
               value={url}
               onChange={(e) => { setUrl(e.target.value); setUploadError(''); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border-strong rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="https://example.com/image.jpg"
             />
           </div>
@@ -1103,14 +1104,14 @@ const EditableBlock = ({
           <div className="flex items-center gap-1 pr-2 border-r border-border">
             <button
               onClick={() => setShowQuickActions(!showQuickActions)}
-              className={`p-2 min-h-[36px] rounded-base hover:bg-surface-raised transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${showQuickActions ? 'bg-primary-light text-primary' : 'text-muted'}`}
+              className={`p-2 min-h-[44px] rounded-base hover:bg-surface-raised transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${showQuickActions ? 'bg-primary-light text-primary' : 'text-muted'}`}
               title="Quick actions"
             >
               <Settings className="w-4 h-4" />
             </button>
             <button
               onClick={() => setShowStylePanel(!showStylePanel)}
-              className={`p-2 min-h-[36px] rounded-base hover:bg-surface-raised transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${showStylePanel ? 'bg-primary-light text-primary' : 'text-muted'}`}
+              className={`p-2 min-h-[44px] rounded-base hover:bg-surface-raised transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${showStylePanel ? 'bg-primary-light text-primary' : 'text-muted'}`}
               title="Style panel"
             >
               <Palette className="w-4 h-4" />
@@ -1123,7 +1124,7 @@ const EditableBlock = ({
               <button
                 onClick={() => onMoveUp(index)}
                 disabled={index === 0}
-                className="p-2 min-h-[36px] rounded-base hover:bg-surface-raised disabled:opacity-40 disabled:cursor-not-allowed text-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed"
+                className="p-2 min-h-[44px] rounded-base hover:bg-surface-raised disabled:opacity-40 disabled:cursor-not-allowed text-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed"
                 title="Move up"
               >
                 <ChevronUp className="w-4 h-4" />
@@ -1131,7 +1132,7 @@ const EditableBlock = ({
               <button
                 onClick={() => onMoveDown(index)}
                 disabled={false}
-                className="p-2 min-h-[36px] rounded-base hover:bg-surface-raised disabled:opacity-40 disabled:cursor-not-allowed text-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed"
+                className="p-2 min-h-[44px] rounded-base hover:bg-surface-raised disabled:opacity-40 disabled:cursor-not-allowed text-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed"
                 title="Move down"
               >
                 <ChevronDown className="w-4 h-4" />
@@ -1139,14 +1140,14 @@ const EditableBlock = ({
               <div className="w-px h-5 bg-border mx-1" />
               <button
                 onClick={() => onDuplicate(index)}
-                className="p-2 min-h-[36px] rounded-base hover:bg-surface-raised text-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                className="p-2 min-h-[44px] rounded-base hover:bg-surface-raised text-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                 title="Duplicate"
               >
                 <Copy className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onDelete(index)}
-                className="p-2 min-h-[36px] rounded-base hover:bg-danger-light text-danger transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1"
+                className="p-2 min-h-[44px] rounded-base hover:bg-danger-light text-danger transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1"
                 title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
@@ -1164,10 +1165,10 @@ const EditableBlock = ({
       {showStylePanel && (
         <>
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[200] transition-opacity"
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[9998] transition-opacity"
             onClick={() => setShowStylePanel(false)}
           />
-          <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-[201] flex flex-col animate-in slide-in-from-right duration-300">
+          <div className="fixed right-0 top-0 h-full w-96 bg-surface shadow-2xl z-[9999] flex flex-col animate-in slide-in-from-right duration-300">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-raised">
               <div className="flex items-center gap-3">
@@ -1181,10 +1182,10 @@ const EditableBlock = ({
               </div>
               <button 
                 onClick={() => setShowStylePanel(false)} 
-                className="p-2 min-h-[36px] hover:bg-surface rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                className="p-2 min-h-[44px] hover:bg-surface rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                 title="Close (Esc)"
               >
-                <X className="w-5 h-5 text-gray-600" />
+                <X className="w-5 h-5 text-muted" />
               </button>
             </div>
 
@@ -1195,7 +1196,7 @@ const EditableBlock = ({
                 
                 {/* Background Image - Only for hero blocks */}
                 {block.type === 'hero' && (
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="bg-surface-raised rounded-lg p-4">
                     <label className="block text-label text-muted mb-2">Background Image</label>
                     <div className="space-y-3">
                       <div className="flex gap-2">
@@ -1238,15 +1239,11 @@ const EditableBlock = ({
                 <div className="bg-surface-raised rounded-base p-4">
                   <label className="block text-label text-muted mb-2">Background Color</label>
                   <div className="flex gap-3 items-center">
-                    <div className="relative">
-                      <input 
-                        type="color" 
-                        value={block.style?.backgroundColor || '#ffffff'} 
-                        onChange={(e) => handleStyleUpdate({ backgroundColor: e.target.value })} 
-                        className="w-12 h-12 border-2 border-border rounded-base cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1" 
-                      />
-                      <div className="absolute inset-0 pointer-events-none rounded-base border border-black/10" />
-                    </div>
+                    <ColorPicker
+                      value={block.style?.backgroundColor || '#ffffff'}
+                      onChange={(v) => handleStyleUpdate({ backgroundColor: v })}
+                      label="Background Color"
+                    />
                     <input 
                       type="text" 
                       value={block.style?.backgroundColor || '#ffffff'} 
@@ -1266,15 +1263,11 @@ const EditableBlock = ({
                 <div className="bg-surface-raised rounded-base p-4">
                   <label className="block text-label text-muted mb-2">Text Color</label>
                   <div className="flex gap-3 items-center">
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={block.style?.color || '#000000'}
-                        onChange={(e) => handleStyleUpdate({ color: e.target.value })}
-                        className="w-12 h-12 border-2 border-border rounded-base cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
-                      />
-                      <div className="absolute inset-0 pointer-events-none rounded-base border border-black/10" />
-                    </div>
+                    <ColorPicker
+                      value={block.style?.color || '#000000'}
+                      onChange={(v) => handleStyleUpdate({ color: v })}
+                      label="Text Color"
+                    />
                     <input 
                       type="text" 
                       value={block.style?.color || '#000000'} 
@@ -1365,15 +1358,12 @@ const EditableBlock = ({
                     </div>
                     <div>
                       <span className="text-small text-subtle mb-1 block">Color</span>
-                      <div className="relative">
-                        <input 
-                          type="color" 
-                          value={block.style?.borderColor || '#e5e7eb'} 
-                          onChange={(e) => handleStyleUpdate({ borderColor: e.target.value })} 
-                          className="w-full h-10 border border-border rounded-base cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1" 
-                        />
-                        <div className="absolute inset-0 pointer-events-none rounded-base border border-black/10" />
-                      </div>
+                      <ColorPicker
+                        value={block.style?.borderColor || '#e5e7eb'}
+                        onChange={(v) => handleStyleUpdate({ borderColor: v })}
+                        label="Border Color"
+                        className="w-full"
+                      />
                     </div>
                     <div>
                       <span className="text-small text-subtle mb-1 block">Radius</span>
@@ -1446,14 +1436,15 @@ const EditableBlock = ({
       {/* Block settings (gear) — fixed centered modal */}
       {showBlockMenu && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200]"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999]"
           onMouseDown={(e) => { if (e.target === e.currentTarget) setShowBlockMenu(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowBlockMenu(false); }}
         >
-          <div className="bg-surface rounded-lg shadow-modal w-80" onMouseDown={(e) => e.stopPropagation()}>
+          <div className="bg-surface rounded-2xl shadow-2xl w-80 mx-4 animate-[fadeInScale_0.15s_ease-out]" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="block-menu-title">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h4 className="font-semibold text-base capitalize">{block.type} Block Settings</h4>
-              <button onClick={() => setShowBlockMenu(false)} className="p-2 min-h-[36px] hover:bg-surface-raised rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
+              <button onClick={() => setShowBlockMenu(false)} className="p-2 min-h-[44px] hover:bg-surface-raised rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1478,7 +1469,7 @@ const EditableBlock = ({
                   onClick={() => handleUpdate('hidden', !block.hidden)}
                   className={`relative w-10 h-6 rounded-full transition-colors duration-150 ${block.hidden ? 'bg-border' : 'bg-primary'}`}
                 >
-                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${block.hidden ? 'left-1' : 'left-5'}`} />
+                  <span className={`absolute top-1 w-4 h-4 bg-surface rounded-full shadow transition-transform ${block.hidden ? 'left-1' : 'left-5'}`} />
                 </button>
               </div>
 
@@ -1612,42 +1603,42 @@ const AddSectionModal = ({ onClose, onAdd }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] animate-in fade-in duration-200" onClick={onClose} onKeyDown={e => { if (e.key === 'Escape') onClose(); }}>
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="add-section-title">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+        <div className="p-6 border-b border-border bg-surface-raised flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <Rows3 className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center">
+              <Rows3 className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">Add Section</h3>
-              <p className="text-sm text-gray-500">Choose a layout for your new section</p>
+              <h3 id="add-section-title" className="text-xl font-semibold text-text-base">Add Section</h3>
+              <p className="text-sm text-muted">Choose a layout for your new section</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
+          <button onClick={onClose} className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors">
+            <X className="w-5 h-5 text-muted" />
           </button>
         </div>
 
         <div className="p-6 space-y-6">
           {/* Layout picker */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Layout</h4>
+            <h4 className="text-sm font-semibold text-text-base mb-3 uppercase tracking-wide">Layout</h4>
             <div className="grid grid-cols-3 gap-3">
               {SECTION_LAYOUTS.map(layout => (
                 <button
                   key={layout.columns}
                   onClick={() => setSelectedLayout(layout)}
-                  className={`p-4 border-2 rounded-xl text-left transition-all duration-150 ${selectedLayout.columns === layout.columns ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                  className={`p-4 border-2 rounded-xl text-left transition-all duration-150 ${selectedLayout.columns === layout.columns ? 'border-primary bg-primary-light' : 'border-border hover:border-primary-light hover:bg-primary-light/50'}`}
                 >
                   {/* Mini column preview */}
                   <div className="flex gap-1 mb-2 h-8">
                     {layout.preview.map((w, i) => (
-                      <div key={i} className={`rounded h-full ${selectedLayout.columns === layout.columns ? 'bg-blue-300' : 'bg-gray-200'}`} style={{ flex: w }} />
+                      <div key={i} className={`rounded h-full ${selectedLayout.columns === layout.columns ? 'bg-primary-light' : 'bg-surface-tertiary'}`} style={{ flex: w }} />
                     ))}
                   </div>
-                  <div className={`text-sm font-medium ${selectedLayout.columns === layout.columns ? 'text-blue-700' : 'text-gray-700'}`}>{layout.label}</div>
+                  <div className={`text-sm font-medium ${selectedLayout.columns === layout.columns ? 'text-primary' : 'text-text-base'}`}>{layout.label}</div>
                 </button>
               ))}
             </div>
@@ -1655,13 +1646,13 @@ const AddSectionModal = ({ onClose, onAdd }) => {
 
           {/* Padding */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Vertical Padding</h4>
+            <h4 className="text-sm font-semibold text-text-base mb-3 uppercase tracking-wide">Vertical Padding</h4>
             <div className="flex gap-2 mb-3">
               {SPACING_PRESETS.map(p => (
                 <button
                   key={p.label}
                   onClick={() => { setPaddingPreset(p.label); setPaddingCustomTop(''); setPaddingCustomBottom(''); }}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${paddingPreset === p.label && paddingCustomTop === '' && paddingCustomBottom === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${paddingPreset === p.label && paddingCustomTop === '' && paddingCustomBottom === '' ? 'bg-primary text-primary-foreground' : 'bg-surface-raised text-muted hover:bg-surface-tertiary'}`}
                 >
                   {p.label}
                 </button>
@@ -1669,46 +1660,46 @@ const AddSectionModal = ({ onClose, onAdd }) => {
             </div>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 mb-1">Top (px)</label>
-                <input type="number" value={paddingCustomTop} onChange={e => setPaddingCustomTop(e.target.value)} placeholder={String(SPACING_PRESETS.find(p => p.label === paddingPreset)?.value ?? 48)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Top (px)</label>
+                <input type="number" value={paddingCustomTop} onChange={e => setPaddingCustomTop(e.target.value)} placeholder={String(SPACING_PRESETS.find(p => p.label === paddingPreset)?.value ?? 48)} className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 mb-1">Bottom (px)</label>
-                <input type="number" value={paddingCustomBottom} onChange={e => setPaddingCustomBottom(e.target.value)} placeholder={String(SPACING_PRESETS.find(p => p.label === paddingPreset)?.value ?? 48)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Bottom (px)</label>
+                <input type="number" value={paddingCustomBottom} onChange={e => setPaddingCustomBottom(e.target.value)} placeholder={String(SPACING_PRESETS.find(p => p.label === paddingPreset)?.value ?? 48)} className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
             </div>
           </div>
 
           {/* Margin */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Vertical Margin</h4>
+            <h4 className="text-sm font-semibold text-text-base mb-3 uppercase tracking-wide">Vertical Margin</h4>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 mb-1">Top (px)</label>
-                <input type="number" value={marginTop} onChange={e => setMarginTop(Number(e.target.value))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Top (px)</label>
+                <input type="number" value={marginTop} onChange={e => setMarginTop(Number(e.target.value))} className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 mb-1">Bottom (px)</label>
-                <input type="number" value={marginBottom} onChange={e => setMarginBottom(Number(e.target.value))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Bottom (px)</label>
+                <input type="number" value={marginBottom} onChange={e => setMarginBottom(Number(e.target.value))} className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
             </div>
           </div>
 
           {/* Background color */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Background Color</h4>
+            <h4 className="text-sm font-semibold text-text-base mb-3 uppercase tracking-wide">Background Color</h4>
             <div className="flex items-center gap-3">
-              <input type="color" value={bgColor || '#ffffff'} onChange={e => setBgColor(e.target.value)} className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5" />
-              <input type="text" value={bgColor} onChange={e => setBgColor(e.target.value)} placeholder="e.g. #f9fafb or transparent" className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              {bgColor && <button onClick={() => setBgColor('')} className="text-sm text-gray-500 hover:text-gray-700">Clear</button>}
+              <ColorPicker value={bgColor || '#ffffff'} onChange={setBgColor} label="Background Color" />
+              <input type="text" value={bgColor} onChange={e => setBgColor(e.target.value)} placeholder="e.g. #f9fafb or transparent" className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              {bgColor && <button onClick={() => setBgColor('')} className="text-sm text-muted hover:text-text-base">Clear</button>}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium">Cancel</button>
-          <button onClick={handleAdd} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center gap-2">
+        <div className="p-6 border-t border-border flex justify-end gap-3">
+          <button onClick={onClose} className="px-5 py-2.5 border border-border text-text-base rounded-xl hover:bg-surface-raised transition-colors font-medium">Cancel</button>
+          <button onClick={handleAdd} className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary-hover transition-colors font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Section
           </button>
@@ -1743,29 +1734,29 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Section hover outline */}
-      <div className={`absolute inset-0 border-2 border-dashed pointer-events-none transition-opacity duration-150 z-10 ${isHovered ? 'border-blue-400 opacity-100' : 'border-transparent opacity-0'}`} />
+      <div className={`absolute inset-0 border-2 border-dashed pointer-events-none transition-opacity duration-150 z-10 ${isHovered ? 'border-primary-light opacity-100' : 'border-transparent opacity-0'}`} />
 
       {/* Section actions toolbar — top-left on hover */}
-      <div className={`absolute top-2 left-2 z-20 flex items-center gap-1 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-1 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <span className="px-2 text-xs font-medium text-gray-500 border-r border-gray-200 mr-1">Section {sectionIndex + 1}</span>
+      <div className={`absolute top-2 left-2 z-20 flex items-center gap-1 bg-surface/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-1 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        <span className="px-2 text-xs font-medium text-muted border-r border-border mr-1">Section {sectionIndex + 1}</span>
         <button
           onClick={() => setShowSettings(s => !s)}
           title="Section settings"
-          className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-800 transition-colors"
+          className="p-1.5 hover:bg-surface-raised rounded text-muted hover:text-text-base transition-colors"
         >
           <Settings className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => onDuplicateSection(sectionIndex)}
           title="Duplicate section"
-          className="p-1.5 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-800 transition-colors"
+          className="p-1.5 hover:bg-surface-raised rounded text-muted hover:text-text-base transition-colors"
         >
           <Copy className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => onDeleteSection(sectionIndex)}
           title="Delete section"
-          className="p-1.5 hover:bg-red-50 rounded text-gray-500 hover:text-red-600 transition-colors"
+          className="p-1.5 hover:bg-danger-light rounded text-muted hover:text-danger transition-colors"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -1773,47 +1764,47 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
 
       {/* Inline settings panel */}
       {showSettings && (
-        <div className="absolute top-10 left-2 z-30 bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-72" onClick={e => e.stopPropagation()}>
+        <div className="absolute top-10 left-2 z-30 bg-surface border border-border rounded-xl shadow-xl p-4 w-72" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-800">Section Settings</h4>
-            <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-4 h-4 text-gray-500" /></button>
+            <h4 className="text-sm font-semibold text-text-base">Section Settings</h4>
+            <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-surface-raised rounded"><X className="w-4 h-4 text-muted" /></button>
           </div>
           <div className="space-y-3">
             {/* Columns */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Columns</label>
+              <label className="block text-xs font-medium text-muted mb-1">Columns</label>
               <div className="flex gap-1">
                 {[1,2,3,4,5,6].map(n => (
                   <button key={n} onClick={() => onUpdateSection(sectionIndex, { columns: n })}
-                    className={`flex-1 py-1 text-xs rounded ${section.columns === n ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{n === 1 ? 'Full' : n}</button>
+                    className={`flex-1 py-1 text-xs rounded ${section.columns === n ? 'bg-primary text-primary-foreground' : 'bg-surface-raised text-muted hover:bg-surface-tertiary'}`}>{n === 1 ? 'Full' : n}</button>
                 ))}
               </div>
             </div>
             {/* Padding */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Padding Top</label>
-                <input type="number" value={section.paddingTop ?? 48} onChange={e => onUpdateSection(sectionIndex, { paddingTop: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Padding Top</label>
+                <input type="number" value={section.paddingTop ?? 48} onChange={e => onUpdateSection(sectionIndex, { paddingTop: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Padding Bottom</label>
-                <input type="number" value={section.paddingBottom ?? 48} onChange={e => onUpdateSection(sectionIndex, { paddingBottom: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Padding Bottom</label>
+                <input type="number" value={section.paddingBottom ?? 48} onChange={e => onUpdateSection(sectionIndex, { paddingBottom: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Margin Top</label>
-                <input type="number" value={section.marginTop ?? 0} onChange={e => onUpdateSection(sectionIndex, { marginTop: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Margin Top</label>
+                <input type="number" value={section.marginTop ?? 0} onChange={e => onUpdateSection(sectionIndex, { marginTop: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Margin Bottom</label>
-                <input type="number" value={section.marginBottom ?? 0} onChange={e => onUpdateSection(sectionIndex, { marginBottom: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <label className="block text-xs text-muted mb-1">Margin Bottom</label>
+                <input type="number" value={section.marginBottom ?? 0} onChange={e => onUpdateSection(sectionIndex, { marginBottom: Number(e.target.value) })} className="w-full px-2 py-1 text-xs border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
             </div>
             {/* Background color */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Background Color</label>
+              <label className="block text-xs font-medium text-muted mb-1">Background Color</label>
               <div className="flex items-center gap-2">
-                <input type="color" value={section.backgroundColor || '#ffffff'} onChange={e => onUpdateSection(sectionIndex, { backgroundColor: e.target.value })} className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5" />
-                <input type="text" value={section.backgroundColor || ''} onChange={e => onUpdateSection(sectionIndex, { backgroundColor: e.target.value || null })} placeholder="transparent" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <ColorPicker value={section.backgroundColor || '#ffffff'} onChange={(v) => onUpdateSection(sectionIndex, { backgroundColor: v })} label="Section Background Color" />
+                <input type="text" value={section.backgroundColor || ''} onChange={e => onUpdateSection(sectionIndex, { backgroundColor: e.target.value || null })} placeholder="transparent" className="flex-1 px-2 py-1 text-xs border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary" />
               </div>
             </div>
           </div>
@@ -1829,7 +1820,7 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
       <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <button
           onClick={() => onAddSectionBelow(sectionIndex)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-full text-xs font-semibold shadow-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-full text-xs font-semibold shadow-lg hover:bg-primary-hover transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           Add Section
@@ -1846,7 +1837,7 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
 const AddBlockButton = ({ onClick }) => (
   <button
     onClick={onClick}
-    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-150 text-sm font-medium group"
+    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-border rounded-xl text-subtle hover:border-primary-light hover:text-primary hover:bg-primary-light transition-all duration-150 text-sm font-medium group"
   >
     <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
     Add Block
@@ -2224,7 +2215,7 @@ export default function InlineEditor() {
                     ubc({ items });
                   }}
                   placeholder="Feature Title"
-                  className="text-xl font-semibold text-gray-900 mb-2 block"
+                  className="text-xl font-semibold text-text-base mb-2 block"
                   tag="h3"
                 />
                 <EditableText
@@ -2235,7 +2226,7 @@ export default function InlineEditor() {
                     ubc({ items });
                   }}
                   placeholder="Feature Description"
-                  className="text-gray-600 block"
+                  className="text-muted block"
                   tag="div"
                   multiline
                 />
@@ -2311,7 +2302,7 @@ export default function InlineEditor() {
               content={block.content.title}
               onChange={(value) => ubc({ title: value })}
               placeholder="Gallery Title"
-              className="text-3xl font-bold text-gray-800 mb-12 text-center block"
+              className="text-3xl font-bold text-text-base mb-12 text-center block"
               tag="h2"
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2718,15 +2709,15 @@ export default function InlineEditor() {
               {/* Empty state */}
               {sections.length === 0 && (
                 <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-                  <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center">
-                    <Rows3 className="w-10 h-10 text-blue-400" />
+                  <div className="w-20 h-20 rounded-2xl bg-primary-light flex items-center justify-center">
+                    <Rows3 className="w-10 h-10 text-primary" />
                   </div>
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Start building your page</h2>
-                    <p className="text-gray-500 mb-6">Add your first section to get started</p>
+                    <h2 className="text-2xl font-bold text-text-base mb-2">Start building your page</h2>
+                    <p className="text-muted mb-6">Add your first section to get started</p>
                     <button
                       onClick={() => setAddSectionAfterIndex(-1)}
-                      className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg font-semibold text-lg"
+                      className="inline-flex items-center gap-3 px-8 py-4 bg-primary text-primary-foreground rounded-xl hover:bg-primary-hover transition-all duration-200 shadow-lg font-semibold text-lg"
                     >
                       <Plus className="w-6 h-6" />
                       Add Section
@@ -2855,16 +2846,16 @@ export default function InlineEditor() {
 
               {/* Bottom "Add Section" button — shown when page has sections */}
               {sections.length > 0 && (
-                <div className="p-8 text-center border-t border-gray-200 bg-gradient-to-b from-white to-gray-50">
+                <div className="p-8 text-center border-t border-border bg-gradient-to-b from-surface to-surface-raised">
                   <button
                     onClick={() => setAddSectionAfterIndex(sections.length - 1)}
-                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 font-semibold text-lg"
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-primary-hover text-primary-foreground rounded-xl hover:from-primary-hover hover:to-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 font-semibold text-lg"
                   >
                     <Plus className="w-6 h-6" />
                     Add Section
                   </button>
-                  <p className="mt-3 text-sm text-gray-500">
-                    or press <kbd className="px-2 py-0.5 bg-gray-200 rounded text-xs font-mono">+</kbd> to add a section
+                  <p className="mt-3 text-sm text-muted">
+                    or press <kbd className="px-2 py-0.5 bg-surface-tertiary rounded text-xs font-mono">+</kbd> to add a section
                   </p>
                 </div>
               )}
@@ -2884,25 +2875,25 @@ export default function InlineEditor() {
 
       {/* Block palette modal — for adding blocks inside a section */}
       {blockPaletteTarget !== null && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
-            <div className="p-6 border-b border-gray-200 bg-gray-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] animate-in fade-in duration-200" onMouseDown={e => { if (e.target === e.currentTarget) setBlockPaletteTarget(null); }} onKeyDown={e => { if (e.key === 'Escape') setBlockPaletteTarget(null); }}>
+          <div className="bg-surface rounded-2xl shadow-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="block-palette-title">
+            <div className="p-6 border-b border-border bg-surface-raised">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <Plus className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center">
+                    <Plus className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Add Block</h3>
-                    <p className="text-sm text-gray-500">Choose a block type to add to this section</p>
+                    <h3 id="block-palette-title" className="text-xl font-semibold text-text-base">Add Block</h3>
+                    <p className="text-sm text-muted">Choose a block type to add to this section</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setBlockPaletteTarget(null)}
-                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors"
                   title="Close (Esc)"
                 >
-                  <X className="w-5 h-5 text-gray-600" />
+                  <X className="w-5 h-5 text-muted" />
                 </button>
               </div>
             </div>
@@ -2912,15 +2903,15 @@ export default function InlineEditor() {
                   <button
                     key={id}
                     onClick={() => addBlockToSection(blockPaletteTarget.sectionIndex, id)}
-                    className="p-5 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 text-left group"
+                    className="p-5 border-2 border-border rounded-xl hover:border-primary-light hover:bg-primary-light hover:shadow-lg transition-all duration-200 text-left group"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors">
-                        <Icon className="w-6 h-6 text-gray-600 group-hover:text-blue-600 transition-colors" />
+                      <div className="w-12 h-12 rounded-xl bg-surface-raised group-hover:bg-primary-light flex items-center justify-center flex-shrink-0 transition-colors">
+                        <Icon className="w-6 h-6 text-muted group-hover:text-primary transition-colors" />
                       </div>
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{name}</div>
-                        <div className="text-sm text-gray-500 leading-relaxed">{description}</div>
+                        <div className="font-semibold text-text-base mb-1 group-hover:text-primary transition-colors">{name}</div>
+                        <div className="text-sm text-muted leading-relaxed">{description}</div>
                       </div>
                     </div>
                   </button>
@@ -2933,25 +2924,25 @@ export default function InlineEditor() {
 
       {/* Improved keyboard shortcuts help modal */}
       {showKeyboardHelp && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
-            <div className="p-6 border-b border-gray-200 bg-gray-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] animate-in fade-in duration-200" onMouseDown={e => { if (e.target === e.currentTarget) setShowKeyboardHelp(false); }} onKeyDown={e => { if (e.key === 'Escape') setShowKeyboardHelp(false); }}>
+          <div className="bg-surface rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="keyboard-help-title">
+            <div className="p-6 border-b border-border bg-surface-raised">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                    <Type className="w-5 h-5 text-purple-600" />
+                  <div className="w-10 h-10 rounded-xl bg-info-light flex items-center justify-center">
+                    <Type className="w-5 h-5 text-info" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Keyboard Shortcuts</h3>
-                    <p className="text-sm text-gray-500">Speed up your editing workflow</p>
+                    <h3 id="keyboard-help-title" className="text-xl font-semibold text-text-base">Keyboard Shortcuts</h3>
+                    <p className="text-sm text-muted">Speed up your editing workflow</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowKeyboardHelp(false)}
-                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors"
                   title="Close (Esc)"
                 >
-                  <X className="w-5 h-5 text-gray-600" />
+                  <X className="w-5 h-5 text-muted" />
                 </button>
               </div>
             </div>
@@ -2967,37 +2958,37 @@ export default function InlineEditor() {
                     { action: 'Close Dialog', shortcut: 'Esc' },
                     { action: 'Show Help', shortcut: '?' },
                   ].map(({ action, shortcut }) => (
-                    <div key={action} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-gray-700 font-medium">{action}</span>
-                      <kbd className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-mono shadow-sm">{shortcut}</kbd>
+                    <div key={action} className="flex justify-between items-center p-3 bg-surface-raised rounded-lg">
+                      <span className="text-text-base font-medium">{action}</span>
+                      <kbd className="px-3 py-1.5 bg-surface border border-border-strong rounded-lg text-sm font-mono shadow-sm">{shortcut}</kbd>
                     </div>
                   ))}
                 </div>
                 
-                <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                  <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <div className="p-5 bg-gradient-to-br from-primary-light to-info-light rounded-xl border border-primary-light">
+                  <h4 className="font-semibold text-primary mb-3 flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     Pro Tips
                   </h4>
-                  <ul className="text-sm text-blue-800 space-y-2">
+                  <ul className="text-sm text-primary space-y-2">
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
+                      <span className="text-primary mt-0.5">•</span>
                       <span>Click any text to edit it inline with auto-save</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
+                      <span className="text-primary mt-0.5">•</span>
                       <span>Hover over blocks to reveal action toolbar</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
+                      <span className="text-primary mt-0.5">•</span>
                       <span>Drag blocks to reorder them on the page</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
+                      <span className="text-primary mt-0.5">•</span>
                       <span>Use the style panel (palette icon) for advanced styling</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-0.5">•</span>
+                      <span className="text-primary mt-0.5">•</span>
                       <span>Switch device previews to see responsive layouts</span>
                     </li>
                   </ul>

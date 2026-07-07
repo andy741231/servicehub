@@ -1,0 +1,67 @@
+/* ============================================================
+   Site 1 — "Classic Pushpay" theme
+   Light-mode, enterprise SaaS. Deep Pushpay purple + dark navy.
+   Token contract per ../DESIGN_SYSTEM.md — do not rename vars.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #4C2A85;        /* brand: sidebar active, primary buttons */
+  --primary-hover: #3D2169;
+  --on-primary: #FFFFFF;
+  --accent: #1E3A5F;         /* dark navy: chart bars, links, chips */
+  --bg: #F7F8FA;             /* page background */
+  --surface: #FFFFFF;        /* card background */
+  --surface-2: #F1F2F6;      /* muted panels, table header rows */
+  --text: #1F2430;
+  --text-muted: #6B7280;
+  --border: #E4E6EB;
+  --ring: #4C2A85;
+  --positive: #16A34A;
+  --warning: #D97706;
+  --negative: #DC2626;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --radius: 12px;
+  --shadow-card: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* Visible focus ring on every interactive element */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Active sidebar nav item — primary-tinted pill */
+.nav-active {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border-radius: 9999px;
+}
+
+/* Badge recipes (soft tint + strong text) */
+.badge-positive { color: #15803D; background: color-mix(in srgb, var(--positive) 12%, white); }
+.badge-warning  { color: #B45309; background: color-mix(in srgb, var(--warning) 14%, white); }
+.badge-negative { color: #B91C1C; background: color-mix(in srgb, var(--negative) 12%, white); }
+.badge-neutral  { color: var(--text-muted); background: var(--surface-2); }
+.badge-primary  { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, white); }
+.badge-accent   { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, white); }
+
+/* Avatar initial tints (deterministic per person) */
+.av-purple { background: #EDE7F6; color: #4C2A85; }
+.av-navy   { background: #E3EAF3; color: #1E3A5F; }
+.av-green  { background: #E2F3E9; color: #166534; }
+.av-amber  { background: #FBF0DC; color: #92400E; }
+.av-rose   { background: #FBE4E7; color: #9F1239; }
+.av-teal   { background: #DDF1F1; color: #0F5B5B; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

@@ -1,6 +1,6 @@
 ---
 name: service-hub-admin-page
-description: Guide for building and maintaining the User Management and App Permissions toggle board.
+description: "[admin] Guide for building and maintaining the User Management and App Permissions toggle board."
 ---
 
 # User Management Board (`client/src/pages/admin`)

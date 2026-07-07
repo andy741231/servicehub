@@ -1,0 +1,49 @@
+/* ============================================================
+   Pushpay ChMS Mockups — Site 2: "Modern Teal"
+   Light, airy, friendly modern SaaS. Teal heritage (CCB).
+   Token contract per ../DESIGN_SYSTEM.md — identical variable
+   names across all three theme sites.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #0D9488;        /* brand color — sidebar active, primary buttons */
+  --primary-hover: #0F766E;
+  --on-primary: #FFFFFF;     /* text on primary */
+  --accent: #F59E0B;         /* warm amber — highlights, charts */
+  --bg: #FAFDFC;             /* page background */
+  --surface: #FFFFFF;        /* card background */
+  --surface-2: #F0FDFA;      /* muted panels, table header rows */
+  --text: #1C2B2A;           /* primary text — dark teal-slate */
+  --text-muted: #475569;     /* secondary text — slate-600, ~7:1 on white */
+  --border: #E2E8F0;
+  --ring: #0D9488;           /* focus ring */
+  --positive: #059669;
+  --warning: #D97706;
+  --negative: #E11D48;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --radius: 16px;            /* base card radius */
+  --shadow-card: 0 1px 3px rgba(13, 148, 136, .08), 0 4px 12px rgba(15, 23, 42, .05);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* Visible focus ring on every interactive element */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Gentle motion; respect reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -8,6 +8,8 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { uploadFile } from '../api/formsApi';
 import { getFormulaPreview } from '../utils/formula';
+import ColorPicker from '../../../components/ColorPicker';
+import { useToast } from '../../../components/Toast';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Tag },
@@ -247,7 +249,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                   value={style.fontSize || ''}
                   onChange={(e) => handleStyle({ fontSize: e.target.value ? parseInt(e.target.value, 10) : undefined })}
                   placeholder="Default"
-                  className="w-24 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[40px]"
+                  className="w-24 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px]"
                 />
                 <span className="text-small text-muted">px</span>
               </div>
@@ -257,24 +259,17 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
             <section>
               <label className="block text-small font-medium text-base mb-2">Text Color</label>
               <div className="flex items-center gap-3">
-                <label className="relative flex items-center gap-2 cursor-pointer">
-                  <div
-                    className="w-8 h-8 rounded-lg border-2 border-border shadow-sm"
-                    style={{ backgroundColor: style.color || '#000000' }}
-                  />
-                  <span className="text-small text-muted">{style.color || 'Default'}</span>
-                  <input
-                    type="color"
-                    value={style.color || '#000000'}
-                    onChange={(e) => handleStyle({ color: e.target.value })}
-                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                    aria-label="Text color"
-                  />
-                </label>
+                <ColorPicker
+                  value={style.color || '#000000'}
+                  onChange={(v) => handleStyle({ color: v })}
+                  label="Text Color"
+                  allowAlpha={false}
+                />
+                <span className="text-small text-muted">{style.color || 'Default'}</span>
                 {style.color && (
                   <button
                     onClick={() => handleStyle({ color: undefined })}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-500 rounded border border-border hover:border-red-300 transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-danger rounded border border-border hover:border-danger/30 transition-colors"
                   >
                     <X className="h-3 w-3" /> Reset
                   </button>
@@ -302,7 +297,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                         value={style[key] ?? ''}
                         onChange={(e) => handleStyle({ [key]: e.target.value !== '' ? parseInt(e.target.value, 10) : undefined })}
                         placeholder="0"
-                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                       />
                       <span className="text-xs text-subtle">px</span>
                     </div>
@@ -365,7 +360,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                             const newConds = field.conditionalLogic.conditions.filter((_, i) => i !== index);
                             handleLogic({ conditions: newConds });
                           }}
-                          className="ml-auto p-1 text-subtle hover:text-red-500 rounded"
+                          className="ml-auto p-1 text-subtle hover:text-danger rounded"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -377,7 +372,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                           newConds[index] = { ...condition, fieldId: e.target.value };
                           handleLogic({ conditions: newConds });
                         }}
-                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                       >
                         <option value="">Select a field…</option>
                         {otherFields.map((f) => (
@@ -392,7 +387,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                             newConds[index] = { ...condition, operator: e.target.value };
                             handleLogic({ conditions: newConds });
                           }}
-                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                         >
                           {CONDITION_OPERATORS.map((op) => (
                             <option key={op.value} value={op.value}>{op.label}</option>
@@ -407,7 +402,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                             handleLogic({ conditions: newConds });
                           }}
                           placeholder="Value"
-                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                         />
                       </div>
                     </div>
@@ -417,7 +412,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
                     onClick={() => handleLogic({
                       conditions: [...(field.conditionalLogic?.conditions || []), { fieldId: '', operator: 'equals', value: '' }],
                     })}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[40px] transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] transition-colors"
                   >
                     <Plus className="h-4 w-4" /> Add Condition
                   </button>
@@ -433,6 +428,7 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
 
 function ImageBlockPropertiesPanel({ field, updateField }) {
   const { fields } = useFormStore();
+  const { toast, ToastMount } = useToast();
   const [activeTab, setActiveTab] = useState('style');
   const [isUploading, setIsUploading] = useState(false);
   const style = field.blockStyle || {};
@@ -449,7 +445,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File is too large. Maximum size is 5MB.');
+      toast('File is too large. Maximum size is 5MB.', 'error');
       return;
     }
 
@@ -459,7 +455,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
       updateField(field.id, { imageUrl: result.url });
     } catch (err) {
       console.error('File upload failed:', err);
-      alert('Failed to upload file. Please try again.');
+      toast('Failed to upload file. Please try again.', 'error');
     } finally {
       setIsUploading(false);
     }
@@ -501,7 +497,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                     value={field.imageUrl || ''}
                     onChange={(e) => updateField(field.id, { imageUrl: e.target.value })}
                     placeholder="https://example.com/image.jpg"
-                    className="flex-1 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[40px]"
+                    className="flex-1 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px]"
                   />
                 </div>
                 <div className="flex items-center gap-4">
@@ -562,7 +558,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                   value={style.width || ''}
                   onChange={(e) => handleStyle({ width: e.target.value ? parseInt(e.target.value, 10) : undefined })}
                   placeholder="100%"
-                  className="w-24 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[40px]"
+                  className="w-24 px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body min-h-[44px]"
                 />
                 <span className="text-small text-muted">px</span>
               </div>
@@ -587,7 +583,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                         value={style[key] ?? ''}
                         onChange={(e) => handleStyle({ [key]: e.target.value !== '' ? parseInt(e.target.value, 10) : undefined })}
                         placeholder="0"
-                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                       />
                       <span className="text-xs text-subtle">px</span>
                     </div>
@@ -649,7 +645,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                             const newConds = field.conditionalLogic.conditions.filter((_, i) => i !== index);
                             handleLogic({ conditions: newConds });
                           }}
-                          className="ml-auto p-1 text-subtle hover:text-red-500 rounded"
+                          className="ml-auto p-1 text-subtle hover:text-danger rounded"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -661,7 +657,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                           newConds[index] = { ...condition, fieldId: e.target.value };
                           handleLogic({ conditions: newConds });
                         }}
-                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                        className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                       >
                         <option value="">Select a field…</option>
                         {otherFields.map((f) => (
@@ -676,7 +672,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                             newConds[index] = { ...condition, operator: e.target.value };
                             handleLogic({ conditions: newConds });
                           }}
-                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                         >
                           {CONDITION_OPERATORS.map((op) => (
                             <option key={op.value} value={op.value}>{op.label}</option>
@@ -691,7 +687,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                             handleLogic({ conditions: newConds });
                           }}
                           placeholder="Value"
-                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                          className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                         />
                       </div>
                     </div>
@@ -701,7 +697,7 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
                     onClick={() => handleLogic({
                       conditions: [...(field.conditionalLogic?.conditions || []), { fieldId: '', operator: 'equals', value: '' }],
                     })}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[40px] transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] transition-colors"
                   >
                     <Plus className="h-4 w-4" /> Add Condition
                   </button>
@@ -957,23 +953,17 @@ function SectionPropertiesPanel({ selectedSection }) {
             <section>
               <h3 className="text-small font-medium text-base mb-3">Background Color</h3>
               <div className="flex items-center gap-3">
-                <label className="relative flex items-center gap-2 cursor-pointer">
-                  <div
-                    className="w-8 h-8 rounded-lg border-2 border-border shadow-sm"
-                    style={{ backgroundColor: sectionBg || '#ffffff' }}
-                  />
-                  <span className="text-small text-muted">{sectionBg || 'None'}</span>
-                  <input
-                    type="color"
-                    value={sectionBg || '#ffffff'}
-                    onChange={(e) => handleUpdate({ backgroundColor: e.target.value })}
-                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                  />
-                </label>
+                <ColorPicker
+                  value={sectionBg || '#ffffff'}
+                  onChange={(v) => handleUpdate({ backgroundColor: v })}
+                  label="Section Background Color"
+                  allowAlpha={false}
+                />
+                <span className="text-small text-muted">{sectionBg || 'None'}</span>
                 {sectionBg && (
                   <button
                     onClick={() => handleUpdate({ backgroundColor: '' })}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-red-500 rounded border border-border hover:border-red-300 transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted hover:text-danger rounded border border-border hover:border-danger/30 transition-colors"
                   >
                     <X className="h-3 w-3" /> Clear
                   </button>
@@ -1037,7 +1027,7 @@ function SectionPropertiesPanel({ selectedSection }) {
                               const newConds = row.conditionalLogic.conditions.filter((_, i) => i !== index);
                               handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
                             }}
-                            className="ml-auto p-1 text-subtle hover:text-red-500 rounded"
+                            className="ml-auto p-1 text-subtle hover:text-danger rounded"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -1049,7 +1039,7 @@ function SectionPropertiesPanel({ selectedSection }) {
                             newConds[index] = { ...condition, fieldId: e.target.value };
                             handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
                           }}
-                          className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                          className="w-full px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                         >
                           <option value="">Select a field…</option>
                           {otherFields.map((f) => (
@@ -1064,7 +1054,7 @@ function SectionPropertiesPanel({ selectedSection }) {
                               newConds[index] = { ...condition, operator: e.target.value };
                               handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
                             }}
-                            className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                            className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                           >
                             {CONDITION_OPERATORS.map((op) => (
                               <option key={op.value} value={op.value}>{op.label}</option>
@@ -1080,7 +1070,7 @@ function SectionPropertiesPanel({ selectedSection }) {
                                 handleUpdate({ conditionalLogic: { ...row.conditionalLogic, conditions: newConds } });
                               }}
                               placeholder="Value"
-                              className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[36px]"
+                              className="flex-1 px-2 py-1.5 bg-background border border-border rounded text-small focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                             />
                           )}
                         </div>
@@ -1095,7 +1085,7 @@ function SectionPropertiesPanel({ selectedSection }) {
                         conditions: [...(row.conditionalLogic?.conditions || []), { fieldId: '', operator: 'equals', value: '' }],
                       },
                     })}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[40px] transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px] transition-colors"
                   >
                     <Plus className="h-4 w-4" /> Add Condition
                   </button>
@@ -1106,6 +1096,7 @@ function SectionPropertiesPanel({ selectedSection }) {
         )}
 
       </div>
+      {ToastMount}
     </div>
   );
 }
@@ -1237,13 +1228,11 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                 Primary Color
               </label>
               <div className="flex items-center gap-3">
-                <input
-                  id="theme-primary"
-                  type="color"
+                <ColorPicker
                   value={theme.primaryColor}
-                  onChange={(e) => updateFormTheme({ primaryColor: e.target.value })}
-                  className="h-10 w-10 rounded border border-border cursor-pointer"
-                  aria-label="Primary color"
+                  onChange={(v) => updateFormTheme({ primaryColor: v })}
+                  label="Primary Color"
+                  allowAlpha={false}
                 />
                 <span className="text-body text-muted">{theme.primaryColor}</span>
               </div>
@@ -1253,13 +1242,11 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                 Button Color
               </label>
               <div className="flex items-center gap-3">
-                <input
-                  id="theme-button"
-                  type="color"
+                <ColorPicker
                   value={theme.buttonColor}
-                  onChange={(e) => updateFormTheme({ buttonColor: e.target.value })}
-                  className="h-10 w-10 rounded border border-border cursor-pointer"
-                  aria-label="Button color"
+                  onChange={(v) => updateFormTheme({ buttonColor: v })}
+                  label="Button Color"
+                  allowAlpha={false}
                 />
                 <span className="text-body text-muted">{theme.buttonColor}</span>
               </div>
@@ -1269,13 +1256,11 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                 Background Color
               </label>
               <div className="flex items-center gap-3">
-                <input
-                  id="theme-background"
-                  type="color"
+                <ColorPicker
                   value={theme.backgroundColor}
-                  onChange={(e) => updateFormTheme({ backgroundColor: e.target.value })}
-                  className="h-10 w-10 rounded border border-border cursor-pointer"
-                  aria-label="Background color"
+                  onChange={(v) => updateFormTheme({ backgroundColor: v })}
+                  label="Background Color"
+                  allowAlpha={false}
                 />
                 <span className="text-body text-muted">{theme.backgroundColor}</span>
               </div>
@@ -1285,13 +1270,11 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                 Text Color
               </label>
               <div className="flex items-center gap-3">
-                <input
-                  id="theme-text"
-                  type="color"
+                <ColorPicker
                   value={theme.textColor}
-                  onChange={(e) => updateFormTheme({ textColor: e.target.value })}
-                  className="h-10 w-10 rounded border border-border cursor-pointer"
-                  aria-label="Text color"
+                  onChange={(v) => updateFormTheme({ textColor: v })}
+                  label="Text Color"
+                  allowAlpha={false}
                 />
                 <span className="text-body text-muted">{theme.textColor}</span>
               </div>
@@ -1605,7 +1588,7 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                         const newOptions = field.options.filter((_, i) => i !== index);
                         handleUpdate({ options: newOptions });
                       }}
-                      className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+                      className="p-2 text-subtle hover:text-danger hover:bg-danger-light rounded focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-colors duration-150"
                       title="Remove option"
                       aria-label={`Remove option ${index + 1}`}
                     >
@@ -1920,7 +1903,7 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                             const newConditions = field.conditionalLogic.conditions.filter((_, i) => i !== index);
                             handleUpdate({ conditionalLogic: { ...field.conditionalLogic, conditions: newConditions } });
                           }}
-                          className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+                          className="p-2 text-subtle hover:text-danger hover:bg-danger-light rounded focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-colors duration-150"
                           aria-label={`Remove condition ${index + 1}`}
                         >
                           <Trash2 className="h-4 w-4" />

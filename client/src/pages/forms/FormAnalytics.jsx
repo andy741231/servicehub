@@ -49,7 +49,7 @@ function SimpleLineChart({ data, color }) {
             x={p.x}
             y={height - 10}
             textAnchor="middle"
-            className="text-xs fill-gray-500"
+            className="text-xs fill-muted"
           >
             {p.label}
           </text>
@@ -144,24 +144,16 @@ export default function FormAnalytics() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <button
-                onClick={() => navigate('/hub-admin/forms')}
-                className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
-                aria-label="Back to forms"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <h1 className="text-2xl font-bold text-base">Form Analytics</h1>
-            </div>
-            <p className="text-body text-muted">
-              Track form performance and submission trends
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+        {/* Back button */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/hub-admin/forms/list')}
+            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-colors duration-150"
+            aria-label="Back to forms"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Filters */}
@@ -190,7 +182,7 @@ export default function FormAnalytics() {
                 onClick={() => setRange(days)}
                 className={`px-3 py-2 rounded text-body text-small transition-colors duration-150 ${
                   range === days
-                    ? 'bg-primary text-white'
+                    ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-surface-raised text-muted'
                 }`}
               >

@@ -109,14 +109,7 @@ export default function Directory() {
   });
 
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-base mb-2">Company Directory</h1>
-          <p className="text-body text-muted">Find and connect with team members</p>
-        </div>
-
+    <div className="max-w-7xl mx-auto p-6 lg:p-8">
         {/* Search and Filters */}
         <div className="mb-6 space-y-4">
           <div className="flex gap-4">
@@ -152,7 +145,7 @@ export default function Directory() {
                     onClick={() => setSelectedDepartment(dept)}
                     className={`px-4 py-2 rounded-base text-body transition-colors duration-150 ${
                       selectedDepartment === dept
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary text-primary-foreground'
                         : 'bg-background border border-border hover:border-primary'
                     }`}
                   >
@@ -185,7 +178,7 @@ export default function Directory() {
               >
                 {/* Avatar and Name */}
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center text-body font-bold flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-body font-bold flex-shrink-0">
                     {person.avatar}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -228,7 +221,6 @@ export default function Directory() {
             ))}
           </div>
         )}
-      </div>
     </div>
   );
 }

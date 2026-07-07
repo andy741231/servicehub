@@ -18,10 +18,19 @@
  *   // 2. Alert dialog (replaces window.alert)
  *   const { alertDialog, AlertDialogMount } = useAlert();
  *   await alertDialog({ title: 'Saved!', message: 'Your changes have been saved.' });
+ *
+ *   // 3. Prompt dialog (replaces window.prompt)
+ *   const { promptDialog, PromptDialogMount } = usePrompt();
+ *   const name = await promptDialog({
+ *     title: 'Folder name:',
+ *     defaultValue: 'New Folder',
+ *     confirmLabel: 'Create',
+ *   });
+ *   if (!name) return;
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { X, Trash2, AlertTriangle, Info } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Info, MessageSquare } from 'lucide-react';
 
 // ─── Focus trap hook ────────────────────────────────────────────────────────
 
@@ -85,6 +94,17 @@ function useFocusTrap(isActive) {
 function ModalShell({ onClose, children }) {
   const containerRef = useFocusTrap(true);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
@@ -92,7 +112,7 @@ function ModalShell({ onClose, children }) {
     >
       <div
         ref={containerRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out]"
+        className="bg-surface rounded-2xl shadow-modal w-full max-w-md mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out]"
         onMouseDown={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -107,22 +127,22 @@ function ModalShell({ onClose, children }) {
 
 const VARIANTS = {
   danger: {
-    iconBg:   'bg-red-100',
-    iconColor: 'text-red-600',
+    iconBg:   'bg-danger-light',
+    iconColor: 'text-danger',
     Icon:      Trash2,
-    confirmCls: 'bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white',
+    confirmCls: 'bg-danger hover:bg-danger/90 focus:ring-danger text-primary-foreground',
   },
   warning: {
-    iconBg:   'bg-amber-100',
-    iconColor: 'text-amber-600',
+    iconBg:   'bg-warning-light',
+    iconColor: 'text-warning',
     Icon:      AlertTriangle,
-    confirmCls: 'bg-amber-500 hover:bg-amber-600 focus:ring-amber-400 text-white',
+    confirmCls: 'bg-warning hover:bg-warning/90 focus:ring-warning text-primary-foreground',
   },
   default: {
-    iconBg:   'bg-blue-100',
-    iconColor: 'text-blue-600',
+    iconBg:   'bg-primary-light',
+    iconColor: 'text-primary',
     Icon:      Info,
-    confirmCls: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white',
+    confirmCls: 'bg-primary hover:bg-primary-hover focus:ring-primary text-primary-foreground',
   },
 };
 
@@ -138,18 +158,18 @@ function ConfirmDialog({ title, message, confirmLabel = 'Confirm', cancelLabel =
             <v.Icon className={`w-5 h-5 ${v.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-            {message && <p className="mt-1 text-sm text-gray-500 leading-relaxed">{message}</p>}
+            <h3 className="text-base font-semibold text-text-base">{title}</h3>
+            {message && <p className="mt-1 text-sm text-muted leading-relaxed">{message}</p>}
           </div>
-          <button onClick={onCancel} className="flex-shrink-0 p-3 min-w-[44px] min-h-[44px] text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" aria-label="Close">
+          <button onClick={onCancel} className="flex-shrink-0 p-3 min-w-[44px] min-h-[44px] text-subtle hover:text-text-base rounded-lg hover:bg-surface-raised" aria-label="Close">
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
-      <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
+      <div className="flex justify-end gap-3 px-6 py-4 bg-surface-raised border-t border-border-soft">
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+          className="px-4 py-2 text-sm font-medium text-text-base bg-surface border border-border rounded-lg hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
         >
           {cancelLabel}
         </button>
@@ -177,12 +197,12 @@ function AlertDialog({ title, message, okLabel = 'OK', variant = 'default', onCl
             <v.Icon className={`w-5 h-5 ${v.iconColor}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-            {message && <p className="mt-1 text-sm text-gray-500 leading-relaxed">{message}</p>}
+            <h3 className="text-base font-semibold text-text-base">{title}</h3>
+            {message && <p className="mt-1 text-sm text-muted leading-relaxed">{message}</p>}
           </div>
         </div>
       </div>
-      <div className="flex justify-end px-6 py-4 bg-gray-50 border-t border-gray-100">
+      <div className="flex justify-end px-6 py-4 bg-surface-raised border-t border-border-soft">
         <button
           onClick={onClose}
           autoFocus
@@ -191,6 +211,68 @@ function AlertDialog({ title, message, okLabel = 'OK', variant = 'default', onCl
           {okLabel}
         </button>
       </div>
+    </ModalShell>
+  );
+}
+
+// ─── PromptDialog ────────────────────────────────────────────────────────────
+
+function PromptDialog({ title, message, defaultValue = '', placeholder = '', confirmLabel = 'OK', cancelLabel = 'Cancel', variant = 'default', onConfirm, onCancel }) {
+  const v = VARIANTS[variant] || VARIANTS.default;
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onConfirm(inputRef.current?.value || '');
+  };
+
+  return (
+    <ModalShell onClose={onCancel}>
+      <form onSubmit={handleSubmit}>
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${v.iconBg}`}>
+              <MessageSquare className={`w-5 h-5 ${v.iconColor}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-semibold text-text-base">{title}</h3>
+              {message && <p className="mt-1 text-sm text-muted leading-relaxed">{message}</p>}
+              <input
+                ref={inputRef}
+                type="text"
+                defaultValue={defaultValue}
+                placeholder={placeholder}
+                className="mt-3 w-full px-3 py-2 text-sm border border-border-strong rounded-lg bg-surface text-text-base focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
+            </div>
+            <button type="button" onClick={onCancel} className="flex-shrink-0 p-3 min-w-[44px] min-h-[44px] text-subtle hover:text-text-base rounded-lg hover:bg-surface-raised" aria-label="Close">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 px-6 py-4 bg-surface-raised border-t border-border-soft">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-text-base bg-surface border border-border rounded-lg hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            type="submit"
+            className={`px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${v.confirmCls}`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </form>
     </ModalShell>
   );
 }
@@ -256,4 +338,38 @@ export function useAlert() {
   ) : null;
 
   return { alertDialog, AlertDialogMount };
+}
+
+/**
+ * usePrompt()
+ * Returns { promptDialog, PromptDialogMount }
+ * - promptDialog(options) → Promise<string|null>  (null if cancelled)
+ * - PromptDialogMount: mount this once anywhere in the component's JSX
+ */
+export function usePrompt() {
+  const [state, setState] = useState(null);
+
+  const promptDialog = useCallback((options) =>
+    new Promise((resolve) => {
+      setState({ ...options, resolve });
+    }), []);
+
+  const handleConfirm = (value) => { state?.resolve(value); setState(null); };
+  const handleCancel  = () => { state?.resolve(null);  setState(null); };
+
+  const PromptDialogMount = state ? (
+    <PromptDialog
+      title={state.title}
+      message={state.message}
+      defaultValue={state.defaultValue}
+      placeholder={state.placeholder}
+      confirmLabel={state.confirmLabel}
+      cancelLabel={state.cancelLabel}
+      variant={state.variant}
+      onConfirm={handleConfirm}
+      onCancel={handleCancel}
+    />
+  ) : null;
+
+  return { promptDialog, PromptDialogMount };
 }

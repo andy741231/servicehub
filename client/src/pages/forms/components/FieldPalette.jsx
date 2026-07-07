@@ -39,11 +39,11 @@ export { CATEGORY_ORDER };
 // Functional color accents per category — subtle tints to aid scannability
 // (productivity-tool guidance: use functional colors, not a monochrome palette)
 const CATEGORY_ACCENT = {
-  Basic:     { chip: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',     ring: 'group-hover:text-blue-600' },
-  Choice:    { chip: 'bg-violet-50 text-violet-600 group-hover:bg-violet-100', ring: 'group-hover:text-violet-600' },
-  Advanced:  { chip: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100',   ring: 'group-hover:text-amber-600' },
-  Personal:  { chip: 'bg-teal-50 text-teal-600 group-hover:bg-teal-100',      ring: 'group-hover:text-teal-600' },
-  Layout:    { chip: 'bg-slate-100 text-slate-600 group-hover:bg-slate-200',  ring: 'group-hover:text-slate-600' },
+  Basic:     { chip: 'bg-info-light text-info group-hover:bg-info-light',     ring: 'group-hover:text-info' },
+  Choice:    { chip: 'bg-primary-light text-primary group-hover:bg-primary-light', ring: 'group-hover:text-primary' },
+  Advanced:  { chip: 'bg-warning-light text-warning group-hover:bg-warning-light',   ring: 'group-hover:text-warning' },
+  Personal:  { chip: 'bg-success-light text-success group-hover:bg-success-light',      ring: 'group-hover:text-success' },
+  Layout:    { chip: 'bg-surface-raised text-muted group-hover:bg-surface-tertiary',  ring: 'group-hover:text-muted' },
 };
 const accentFor = (category) => CATEGORY_ACCENT[category] || CATEGORY_ACCENT.Basic;
 export { CATEGORY_ACCENT, accentFor };

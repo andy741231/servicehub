@@ -92,15 +92,7 @@ export default function Submissions() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-base">Form Submissions</h1>
-          <p className="text-body text-muted mt-1">
-            View and manage form submissions
-          </p>
-        </div>
-
+      <div className="max-w-7xl mx-auto p-6 lg:p-8">
         {/* Toolbar */}
         <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
           <div className="flex-1 flex items-center gap-3">
@@ -239,7 +231,7 @@ export default function Submissions() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setSelectedSubmission(submission)}
-                            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+                            className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-colors duration-150"
                             title="View details"
                             aria-label="View submission details"
                           >
@@ -247,7 +239,7 @@ export default function Submissions() {
                           </button>
                           <button
                             onClick={() => handleDeleteSubmission(submission.id)}
-                            className="p-2 text-subtle hover:text-red-500 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+                            className="p-2 text-subtle hover:text-danger hover:bg-danger-light rounded focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-colors duration-150"
                             title="Delete submission"
                             aria-label="Delete submission"
                           >
@@ -268,9 +260,10 @@ export default function Submissions() {
           <div 
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
             onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedSubmission(null); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') setSelectedSubmission(null); }}
           >
             <div 
-              className="bg-surface rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-border"
+              className="bg-surface rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-border animate-[fadeInScale_0.15s_ease-out]"
               onMouseDown={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -280,7 +273,7 @@ export default function Submissions() {
                 <h2 id="submission-details-title" className="text-lg font-bold text-base">Submission Details</h2>
                 <button
                   onClick={() => setSelectedSubmission(null)}
-                  className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[36px] min-h-[36px] transition-colors duration-150"
+                  className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-colors duration-150"
                   aria-label="Close submission details"
                 >
                   <X className="h-4 w-4" />
@@ -305,7 +298,7 @@ export default function Submissions() {
               <div className="flex justify-end gap-2 p-4 border-t border-border">
                 <button
                   onClick={() => handleDeleteSubmission(selectedSubmission.id)}
-                  className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-base hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
+                  className="px-4 py-2 bg-danger-light text-danger border border-danger/20 rounded-base hover:bg-danger-light focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1 min-h-[44px] transition-colors duration-150"
                 >
                   Delete
                 </button>

@@ -2,7 +2,7 @@
 name: web
 argument-hint: "[page|block|template]"
 description: >
-  Master blueprint for the Web sub-app: a Squarespace-like visual page builder.
+  [web] Master blueprint for the Web sub-app: a Squarespace-like visual page builder.
   Use this skill whenever working on the web builder, public renderer, themes,
   blocks, or CMS data model. Trigger at the start of any Web sub-app session.
 allowed-tools:
@@ -34,9 +34,10 @@ block has a `type`, `order`, `content` (JSON), and optional `style`. Grid blocks
 can contain nested blocks, and the page header/footer are separate page-level
 fields. The public renderer maps `type` to a themed React component.
 
-**Initial reference design:** the `escape-velocity` template should visually
-match `html5up-escape-velocity/index.html`, including its dark header, colored
-section wrappers, feature grids, highlights, and footer.
+**Design direction:** the visual design is defined by `THEME.md` and the design
+tokens in `client/src/index.css` (CSS custom properties / Tailwind theme). The
+bundled `html5up-escape-velocity` reference template has been removed; use the
+theme tokens as the source of truth for colors, typography, and spacing.
 
 ## 2. Stack & Conventions
 
@@ -53,20 +54,31 @@ section wrappers, feature grids, highlights, and footer.
 
 ```
 client/src/pages/web/
-├── index.jsx            # Web Builder admin UI (re-exports InlineEditor)
+├── index.jsx            # Re-exports InlineEditor (default editor)
 ├── InlineEditor.jsx     # Main editor: SectionWrapper, AddSectionModal, block palette
+├── WebShell.jsx         # Tab navigation shell for the Web sub-app
+├── Pages.jsx            # Page list / management
+├── Styles.jsx           # Site-wide style/token editor
+├── DraftTemplates.jsx   # Draft template management
+├── Assets.jsx           # Media asset library
+├── HeaderFooter.jsx     # Header & footer editor
+├── WebDashboard.jsx     # Dashboard overview
 client/src/pages/public/
 ├── Home.jsx             # Public dynamic renderer
 server/src/controllers/
-├── web.js               # GET /api/web/:slug, PUT /api/web/:slug
+├── web.js               # Legacy/aggregate controller (GET/PUT /api/web/:slug)
+├── webPages.js          # Page CRUD
+├── webStyles.js         # Site style (WebSiteStyle) CRUD
+├── webDraftTemplates.js # Draft template CRUD
+├── webAssets.js         # Media asset upload/list
 server/src/routes/
 ├── web.js               # Route wiring + auth/permission guards
 prisma/schema.prisma
 ├── WebPage              # slug, title, template, header, footer
 ├── WebSection           # pageId, order, columns, gap, padding, margin, backgroundColor
 ├── WebBlock             # pageId, sectionId (FK), type, order, content (String)
-html5up-escape-velocity/
-├── index.html           # Reference design for the escape-velocity theme
+├── WebSiteStyle         # tokens (JSON), draftTemplates (JSON)
+├── WebAsset             # filename, mimeType, size, url
 ```
 
 ## 4. Data Model
@@ -173,16 +185,19 @@ Current block types and their `content` schemas:
 
 ### Adding a new block type
 
-1. **Add default content** in `addBlock()` in `client/src/pages/web/index.jsx`.
-2. **Add the editor form** in the switch statement that renders block controls.
+1. **Add default content** in `addBlock()` in `client/src/pages/web/InlineEditor.jsx`
+   (`index.jsx` is just a re-export of `InlineEditor`).
+2. **Add the editor form** in the switch statement that renders block controls
+   (also in `InlineEditor.jsx`).
 3. **Add styles** in `updateBlockStyle` switch (optional).
 4. **Add the public renderer** in `client/src/pages/public/Home.jsx` inside the
-   `pageData.blocks.map(...)` switch.
-5. **Add theme-specific classes** to `THEME_STYLES` in `Home.jsx` for each
-   template that needs custom styling.
-6. **Keep `server/src/controllers/web.js` unchanged for block content** — it is
-   type-agnostic. Update it only when `WebPage` itself gains new fields such as
-   `header` or `footer`.
+   block render switch.
+5. **Apply theme styling** via the design tokens in `client/src/index.css` /
+   `THEME.md`. There is no `THEME_STYLES` constant in `Home.jsx`; theming is
+   driven by CSS custom properties and Tailwind theme tokens.
+6. **Keep the controllers type-agnostic for block content** — `webPages.js` /
+   `web.js` do not inspect `block.type`. Update them only when `WebPage` itself
+   gains new fields such as `header` or `footer`.
 
 ## 6. Grid Layouts
 
@@ -280,14 +295,16 @@ block content.
 
 - Render the header before the first block.
 - Render the footer after the last block.
-- Use template-specific header/footer classes from `THEME_STYLES`.
+- Use template-specific header/footer classes from the design tokens / Tailwind theme.
 
 ## 8. Templates
 
 Templates are defined in two places:
 
-- **Builder UI:** `TEMPLATES` array in `client/src/pages/web/index.jsx`.
-- **Renderer styles:** `THEME_STYLES` object in `client/src/pages/public/Home.jsx`.
+- **Builder UI:** `TEMPLATES` array in `client/src/pages/web/InlineEditor.jsx`
+  (legacy copy in `OldWebBuilder.jsx`).
+- **Renderer styles:** design tokens in `client/src/index.css` / `THEME.md`,
+  applied via the Tailwind theme (there is no `THEME_STYLES` object in `Home.jsx`).
 
 ### Current templates
 
@@ -301,9 +318,9 @@ Templates are defined in two places:
 ### Adding a new template
 
 1. Add `{ id, name, description }` to `TEMPLATES` in the builder.
-2. Add a matching key to `THEME_STYLES` in `Home.jsx` with `container`,
-   `hero`, `heroTitle`, `heroSubtitle`, `textBlock`, and any extra keys for
-   other block types.
+2. Add matching styles via the design tokens in `client/src/index.css` /
+   `THEME.md` (container, hero, heroTitle, heroSubtitle, textBlock, and any
+   extra keys for other block types).
 3. Ensure `Home.jsx` has a fallback to `modern` if a saved template is missing.
 
 ## 9. API Endpoints
@@ -366,7 +383,7 @@ behavior as the "publish" step and write draft rows to a separate table.
 ## 11. Public Renderer Patterns
 
 - Fetches `/api/web/home` on mount.
-- Selects the template from `THEME_STYLES` (fallback `modern`).
+- Selects the template (fallback `modern`) and applies styles from the design tokens.
 - Renders the page header if `pageData.header` exists.
 - Renders the footer after the block list if `pageData.footer` exists.
 - Maps each block to a themed section by `type`.
@@ -398,7 +415,7 @@ behavior as the "publish" step and write draft rows to a separate table.
 ### Add a new template
 
 1. Add to `TEMPLATES`.
-2. Add to `THEME_STYLES`.
+2. Add matching styles via the design tokens in `client/src/index.css` / `THEME.md`.
 3. Test by selecting the template in the builder and previewing every block.
 
 ### Edit header or footer
@@ -455,13 +472,14 @@ To add an explicit page creation flow:
 
 ### Replicate the Escape Velocity template
 
-Use the HTML5 UP Escape Velocity layout as the first reference design. The goal
-is to make the public renderer output match the structure and styling of
-`html5up-escape-velocity/index.html`.
+The bundled `html5up-escape-velocity` reference HTML has been removed from the
+repo. Use `THEME.md` and the design tokens in `client/src/index.css` as the
+source of truth for colors, typography, and spacing when building the
+`escape-velocity` template styling.
 
-1. **Template styles:** Add `escape-velocity` to `THEME_STYLES` in
-   `client/src/pages/public/Home.jsx`. Include the dark header, colored section
-   backgrounds, wrapper classes, and the distinctive section title bar.
+1. **Template styles:** Define `escape-velocity` styling via the design tokens
+   in `client/src/index.css` / `THEME.md`. Include the dark header, colored
+   section backgrounds, wrapper classes, and the distinctive section title bar.
 2. **Header:** Add a `header` block with a logo, a dark background, and a
    dropdown-capable navigation menu matching the `nav` element in the reference.
 3. **Intro block:** Add an `intro` block with a section title bar, centered
@@ -577,7 +595,7 @@ Before considering a Web sub-app change complete:
 7. Preview renders correctly on desktop, tablet, and mobile.
 8. All existing block types still render on the public site.
 9. Existing templates still work.
-10. The Escape Velocity template visually matches `html5up-escape-velocity/index.html`.
+10. The Escape Velocity template matches the design tokens in `THEME.md` / `client/src/index.css`.
 
 ## 15. Tailwind CSS Gotchas
 

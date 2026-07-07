@@ -544,17 +544,31 @@ const useFormStore = create((set, get) => ({
     }
   },
 
-  deleteForm: (formId) => set((state) => {
-    deleteFormApi(formId).catch((e) => {
-      console.warn('Failed to delete form on API:', e);
-    });
-
-    return {
+  deleteForm: async (formId) => {
+    const state = get();
+    const formToRemove = state.forms.find((f) => f.id === formId);
+    // Optimistically remove from local state
+    set({
       forms: state.forms.filter((f) => f.id !== formId),
       currentFormId: state.currentFormId === formId ? null : state.currentFormId,
       fields: state.currentFormId === formId ? [] : state.fields,
-    };
-  }),
+    });
+    try {
+      await deleteFormApi(formId);
+    } catch (e) {
+      console.warn('Failed to delete form on API, reverting local state:', e);
+      // Revert so the form stays visible — otherwise the backend would still
+      // have it (causing phantom "duplicate name" conflicts on future saves)
+      // while it disappears from the user's list.
+      set((s) => ({
+        forms: formToRemove ? [...s.forms, formToRemove] : s.forms,
+        currentFormId: state.currentFormId === formId ? formId : s.currentFormId,
+      }));
+      const err = new Error('Failed to delete form. Please try again.');
+      err.code = 'DELETE_FAILED';
+      throw err;
+    }
+  },
 
   // Rename any form (not just the current one) — updates title + slug and
   // persists via the API. Resolves with the new slug, or rejects on conflict.

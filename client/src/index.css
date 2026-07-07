@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 /* ============================================================
+   DARK MODE VARIANT (Tailwind v4)
+   Class-based dark mode: toggling `.dark` on <html> activates
+   every `dark:` variant. This replaces the v3 `darkMode: 'class'`
+   config approach, which does not apply in v4.
+   ============================================================ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
    SERVICE HUB — DESIGN SYSTEM TOKENS
    Source of truth: THEME.md at the project root.
    To change the theme: edit THEME.md and update the values below.
@@ -23,9 +31,11 @@
   --color-border-strong:      hsl(var(--border-strong));
 
   --color-text-base:          hsl(var(--text-base));
-  --color-text-muted:         hsl(var(--text-muted));
+  --color-muted:              hsl(var(--text-muted));
   --color-text-subtle:        hsl(var(--text-subtle));
+  --color-subtle:             hsl(var(--text-subtle));
   --color-text-inverse:       hsl(var(--text-inverse));
+  --color-inverse:            hsl(var(--text-inverse));
 
   --color-success:            hsl(var(--success));
   --color-success-light:      hsl(var(--success-light));
@@ -35,6 +45,17 @@
   --color-danger-light:       hsl(var(--danger-light));
   --color-info:               hsl(var(--info));
   --color-info-light:         hsl(var(--info-light));
+
+  /* --- Chart tokens (data visualization) --- */
+  --color-chart-primary:      hsl(var(--chart-primary));
+  --color-chart-success:      hsl(var(--chart-success));
+  --color-chart-warning:      hsl(var(--chart-warning));
+  --color-chart-danger:       hsl(var(--chart-danger));
+  --color-chart-info:         hsl(var(--chart-info));
+  --color-chart-muted:        hsl(var(--chart-muted));
+  --color-chart-grid:         hsl(var(--chart-grid));
+  --color-chart-axis:         hsl(var(--chart-axis));
+  --color-chart-axis-tick:    hsl(var(--chart-axis-tick));
 
   /* --- Radius --- */
   --radius-sm:   var(--radius-sm-value);
@@ -71,50 +92,129 @@
    ============================================================ */
 @layer base {
   :root {
-    /* Brand / Accent — blue-600 */
-    --primary:            221 83% 53%;   /* #2563EB */
-    --primary-hover:      224 71% 47%;   /* #1D4ED8 */
-    --primary-light:      214 100% 97%;  /* #EFF6FF */
-    --primary-foreground: 0 0% 100%;     /* #FFFFFF */
+    /* Brand / Accent — professional navy with emerald accent
+       Generated from ui-ux-pro-max design direction for a modern builder UI. */
+    --primary:            213 53% 25%;   /* #1E3A5F */
+    --primary-hover:      213 53% 18%;   /* #152A45 */
+    --primary-light:      213 52% 94%;   /* #E2EBF5 */
+    --primary-foreground: 0 0% 100%;      /* #FFFFFF */
 
-    /* Neutrals */
-    --background:         210 20% 98%;   /* #F9FAFB */
-    --surface:            0 0% 100%;     /* #FFFFFF */
-    --surface-raised:     220 14% 96%;   /* #F3F4F6 */
-    --surface-tertiary:   240 10% 93%;   /* #E8E8ED */
-    --border:             220 13% 91%;   /* #E5E7EB */
-    --border-soft:        240 15% 91%;   /* #E5E5EA */
-    --border-strong:      216 12% 84%;   /* #D1D5DB */
+    /* Neutrals — cool slate for a clean canvas feel */
+    --background:         210 40% 98%;   /* #F8FAFC */
+    --surface:            0 0% 100%;      /* #FFFFFF */
+    --surface-raised:     214 32% 95%;    /* #E9EEF5 */
+    --surface-tertiary:   214 24% 90%;    /* #D9E0EA */
+    --border:             215 20% 82%;    /* #CBD5E1 */
+    --border-soft:        215 24% 90%;    /* #DDE4ED */
+    --border-strong:      215 16% 72%;    /* #A4B1C2 */
 
     /* Text */
-    --text-base:          222 47% 11%;   /* #111827 */
-    --text-muted:         220 9% 46%;    /* #6B7280 */
-    --text-subtle:        218 11% 65%;   /* #9CA3AF */
-    --text-inverse:       0 0% 100%;     /* #FFFFFF */
+    --text-base:          222 47% 11%;    /* #0F172A */
+    --text-muted:         215 16% 45%;    /* #475569 */
+    --text-subtle:        215 12% 60%;    /* #64748B */
+    --text-inverse:       0 0% 100%;      /* #FFFFFF */
 
     /* Semantic states */
     --success:            142 72% 37%;   /* #16A34A */
     --success-light:      138 76% 97%;   /* #F0FDF4 */
-    --warning:            32 95% 44%;    /* #D97706 */
+    --warning:            32 95% 44%;     /* #D97706 */
     --warning-light:      48 100% 96%;   /* #FFFBEB */
     --danger:             0 72% 51%;     /* #DC2626 */
     --danger-light:       0 86% 97%;     /* #FEF2F2 */
     --info:               192 91% 37%;   /* #0891B2 */
     --info-light:         183 100% 96%;  /* #ECFEFF */
 
-    /* Radius */
-    --radius-sm-value:   4px;
-    --radius-base-value: 6px;
-    --radius-card-value: 8px;
-    --radius-lg-value:   12px;
-    --radius-2xl-value:  16px;
+    /* Chart / data-visualization palette (light mode) */
+    --chart-primary:      213 53% 25%;   /* #1E3A5F — navy */
+    --chart-success:      142 72% 37%;   /* #16A34A */
+    --chart-warning:      32 95% 44%;    /* #D97706 */
+    --chart-danger:       0 72% 51%;     /* #DC2626 */
+    --chart-info:         192 91% 37%;   /* #0891B2 */
+    --chart-muted:        215 20% 65%;   /* #94A3B8 — slate-400 */
+    --chart-grid:         214 32% 91%;   /* #E2E8F0 — grid lines */
+    --chart-axis:         215 20% 65%;   /* #94A3B8 — axis lines */
+    --chart-axis-tick:    215 16% 45%;   /* #475569 — tick labels */
 
-    /* Shadows */
-    --shadow-card-value:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-card-sm-value:  0 1px 3px rgba(0,0,0,0.04);
-    --shadow-dropdown-value: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
-    --shadow-modal-value:    0 20px 25px -5px rgba(0,0,0,0.10), 0 10px 10px -5px rgba(0,0,0,0.04);
+    /* Radius — slightly softer corners */
+    --radius-sm-value:   4px;
+    --radius-base-value: 8px;
+    --radius-card-value: 12px;
+    --radius-lg-value:   16px;
+    --radius-2xl-value:  20px;
+
+    /* Shadows — softer, layered depth */
+    --shadow-card-value:     0 1px 2px rgba(30,58,95,0.05), 0 1px 3px rgba(30,58,95,0.04);
+    --shadow-card-sm-value:  0 1px 2px rgba(30,58,95,0.04);
+    --shadow-dropdown-value: 0 4px 6px -1px rgba(30,58,95,0.06), 0 2px 4px -1px rgba(30,58,95,0.03);
+    --shadow-modal-value:    0 20px 25px -5px rgba(30,58,95,0.08), 0 10px 10px -5px rgba(30,58,95,0.03);
   }
+}
+
+/* ============================================================
+   DARK MODE VARIABLE VALUES
+   Activated by adding `.dark` to the <html> element (see themeStore).
+   Every token from :root is redefined here with a dark palette.
+   Colors are in HSL format: H S% L%
+   ============================================================ */
+@layer base {
+  .dark {
+    /* Brand / Accent — lighter navy so it reads on dark surfaces */
+    --primary:            213 53% 65%;   /* lifted navy */
+    --primary-hover:      213 53% 72%;
+    --primary-light:      213 52% 20%;   /* dark navy tint for pill/badge bg */
+    --primary-foreground: 222 47% 11%;   /* dark text on the light-navy accent */
+
+    /* Neutrals — near-black slate canvas with layered surfaces */
+    --background:         222 47% 7%;    /* near-black slate */
+    --surface:            222 40% 11%;   /* cards, panels, modals */
+    --surface-raised:     217 33% 17%;   /* hover rows, subtle insets */
+    --surface-tertiary:   215 25% 22%;   /* nested insets, quick-action hover */
+    --border:             215 25% 22%;
+    --border-soft:        215 20% 18%;
+    --border-strong:      215 25% 30%;
+
+    /* Text */
+    --text-base:          210 20% 92%;   /* primary copy */
+    --text-muted:         215 16% 65%;   /* secondary labels, metadata */
+    --text-subtle:        215 12% 55%;   /* placeholder, disabled */
+    --text-inverse:       222 47% 11%;   /* text on light/colored fills */
+
+    /* Semantic states — hues kept, lightness raised for visibility;
+       *-light variants become dark tints for badge/callout backgrounds */
+    --success:            142 60% 52%;
+    --success-light:      142 50% 14%;
+    --warning:            32 90% 58%;
+    --warning-light:      32 60% 15%;
+    --danger:             0 72% 62%;
+    --danger-light:       0 50% 16%;
+    --info:               192 80% 52%;
+    --info-light:         192 60% 14%;
+
+    /* Chart / data-visualization palette (dark mode) */
+    --chart-primary:      213 60% 68%;
+    --chart-success:      142 60% 52%;
+    --chart-warning:      32 90% 58%;
+    --chart-danger:       0 72% 62%;
+    --chart-info:         192 80% 52%;
+    --chart-muted:        215 15% 45%;
+    --chart-grid:         215 25% 22%;   /* subtle grid on dark */
+    --chart-axis:         215 20% 35%;
+    --chart-axis-tick:    215 16% 65%;
+
+    /* Shadows — darker base + higher alpha for depth on dark surfaces */
+    --shadow-card-value:     0 1px 2px rgba(0,0,0,0.40), 0 1px 3px rgba(0,0,0,0.30);
+    --shadow-card-sm-value:  0 1px 2px rgba(0,0,0,0.35);
+    --shadow-dropdown-value: 0 4px 6px -1px rgba(0,0,0,0.45), 0 2px 4px -1px rgba(0,0,0,0.35);
+    --shadow-modal-value:    0 20px 25px -5px rgba(0,0,0,0.55), 0 10px 10px -5px rgba(0,0,0,0.40);
+  }
+
+  /* Respect the OS setting until the user makes an explicit choice.
+     themeStore adds `.dark` (or `.light`) to <html>; when only `.light`
+     is present we must NOT fall back to the media query. */
+  :root:not(.light):not(.dark) {
+    color-scheme: light;
+  }
+  .dark { color-scheme: dark; }
 }
 
 /* ============================================================
@@ -247,5 +347,241 @@
   /* Smooth width/opacity transition for collapsible sidebars */
   .sidebar-transition {
     transition: width 200ms ease-out, opacity 150ms ease-out;
+  }
+
+  /* Hide scrollbar (for horizontal tab scroll on mobile) */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Page fade-in animation */
+  @keyframes pageFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-page-in {
+    animation: pageFadeIn 200ms ease-out;
+  }
+
+  /* Popover / dialog scale-in (used by ColorPicker) */
+  @keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* ColorPicker alpha slider — visible thumb on top of the gradient track */
+  .cp-alpha-range {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+  }
+  .cp-alpha-range::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 100%;
+  }
+  .cp-alpha-range::-moz-range-track {
+    background: transparent;
+    height: 100%;
+  }
+  .cp-alpha-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 2px solid hsl(var(--primary));
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    margin-top: -2px;
+  }
+  .cp-alpha-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 2px solid hsl(var(--primary));
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+  }
+
+  /* Skeleton shimmer for loading states */
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--surface-raised)) 25%,
+      hsl(var(--surface-tertiary)) 50%,
+      hsl(var(--surface-raised)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--radius-base-value);
+  }
+  .skeleton-line {
+    height: 12px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-sm-value);
+  }
+
+  /* ─── Consistent page chrome ─────────────────────────────────────── */
+  .page-container {
+    padding: 2rem; /* p-8 */
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: hsl(var(--text-base));
+  }
+  .page-subtitle {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: hsl(var(--text-muted));
+    margin-top: 0.25rem;
+  }
+
+  /* Button system */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem; /* py-2.5 px-4 */
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    color: hsl(var(--primary-foreground));
+    background-color: hsl(var(--primary));
+    border-radius: var(--radius-base-value);
+    transition: all 150ms ease-out;
+  }
+  .btn-primary:hover { background-color: hsl(var(--primary-hover)); }
+  .btn-primary:active { transform: scale(0.95); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    color: hsl(var(--text-base));
+    background-color: hsl(var(--surface-raised));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-base-value);
+    transition: all 150ms ease-out;
+  }
+  .btn-secondary:hover { background-color: hsl(var(--surface-tertiary)); }
+  .btn-secondary:active { transform: scale(0.95); }
+  .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem; /* py-2 px-3 */
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: hsl(var(--text-muted));
+    border-radius: var(--radius-base-value);
+    transition: all 150ms ease-out;
+  }
+  .btn-ghost:hover {
+    color: hsl(var(--text-base));
+    background-color: hsl(var(--surface-raised));
+  }
+
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    color: hsl(var(--primary-foreground));
+    background-color: hsl(var(--danger));
+    border-radius: var(--radius-base-value);
+    transition: all 150ms ease-out;
+  }
+  .btn-danger:hover { background-color: hsl(var(--danger) / 0.9); }
+  .btn-danger:active { transform: scale(0.95); }
+  .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Form controls */
+  .input-field,
+  .textarea-field {
+    width: 100%;
+    padding: 0.5rem 0.75rem; /* py-2 px-3 */
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: hsl(var(--text-base));
+    background-color: hsl(var(--surface));
+    border: 1px solid hsl(var(--border-strong));
+    border-radius: var(--radius-base-value);
+    transition: all 150ms ease-out;
+  }
+  .textarea-field { resize: none; }
+  .input-field::placeholder,
+  .textarea-field::placeholder { color: hsl(var(--text-subtle)); }
+  .input-field:focus,
+  .textarea-field:focus {
+    outline: none;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(var(--text-base));
+    margin-bottom: 0.375rem;
+  }
+  .field-hint {
+    font-size: 0.75rem;
+    color: hsl(var(--text-subtle));
+    margin-bottom: 0.375rem;
+  }
+
+  /* Section headers */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: hsl(var(--text-base));
+  }
+
+  /* Empty state canvas */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    border: 2px dashed hsl(var(--border));
+    border-radius: var(--radius-card-value);
+    background-color: hsl(var(--surface-raised) / 0.5);
   }
 }

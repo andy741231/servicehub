@@ -74,8 +74,8 @@ export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
 
         {!versionsLoading && versionsError && (
           <div className="flex flex-col items-center py-12 text-center gap-3">
-            <AlertCircle className="h-10 w-10 text-red-400" />
-            <p className="text-small text-red-600">{versionsError}</p>
+            <AlertCircle className="h-10 w-10 text-danger" />
+            <p className="text-small text-danger">{versionsError}</p>
             <button
               onClick={refresh}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border rounded-base hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary"
@@ -94,7 +94,7 @@ export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
         )}
 
         {(restoreError) && (
-          <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-base text-small text-red-600">
+          <div className="mb-4 px-3 py-2 bg-danger-light border border-danger/20 rounded-base text-small text-danger">
             {restoreError}
           </div>
         )}
@@ -124,7 +124,7 @@ export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
                     <span
                       className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
                         isLatest
-                          ? 'bg-primary text-white'
+                          ? 'bg-primary text-primary-foreground'
                           : 'bg-surface-raised text-muted'
                       }`}
                     >
@@ -160,7 +160,7 @@ export default function VersionHistoryPanel({ formId, onClose, onRestored }) {
                         <button
                           onClick={() => handleRestore(v.id)}
                           disabled={!!restoringId}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white rounded-base text-small font-medium hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-base text-small font-medium hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {isRestoring ? (
                             <>

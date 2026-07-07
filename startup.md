@@ -46,7 +46,13 @@ git clone https://github.com/andy741231/servicehub.git
 cd servicehub
 ```
 
-### Step 1.5: Set up GitHub authentication for pushing
+### Step 1.5: Install CLI tools
+
+This step covers the CLIs the team uses day-to-day. The **GitHub CLI** and **Azure CLI** are recommended for all developers (needed for pushing changes and any Azure infrastructure work). The **AI coding CLIs** (Claude Code, ChatGPT/Codex, Antigravity) are **optional** — install only the ones you want to use.
+
+> **🤖 AI agent note:** Before installing any of the optional AI coding CLIs below, **ask the user first** which ones (if any) they want. Do not install them unprompted. The GitHub and Azure CLIs are safe to install without asking since they're part of the standard dev setup.
+
+#### GitHub CLI (recommended for pushing)
 
 If you plan to push changes, you need to authenticate first. The easiest method is using the GitHub CLI.
 
@@ -79,6 +85,82 @@ gh auth setup-git
 - **Personal Access Token:** Create a token at https://github.com/settings/tokens with `repo` scope, then push with: `git push https://<TOKEN>@github.com/andy741231/servicehub.git <branch>`
 - **SSH Keys:** Generate SSH keys and add the public key to your GitHub account, then change remote URL: `git remote set-url origin git@github.com:andy741231/servicehub.git`
 
+#### Azure CLI (recommended for infra tasks)
+
+Needed for managing Azure SQL firewall rules, viewing App Service logs, and other infrastructure tasks. Not required for day-to-day feature work.
+
+- **macOS:** `brew install azure-cli`
+- **Windows:** `winget install Microsoft.AzureCLI`
+- **Linux:** See https://learn.microsoft.com/cli/azure/install-azure-cli
+
+**Verify:**
+```bash
+az --version
+az login
+```
+
+#### Claude Code CLI (optional — ask user before installing)
+
+Anthropic's terminal-based AI coding agent. Requires a Claude Pro, Max, Teams, Enterprise, or Console (API) account.
+
+- **All platforms (npm):**
+  ```bash
+  npm install -g @anthropic-ai/claude-code
+  ```
+- **macOS (Homebrew):** `brew install --cask claude-code`
+
+**Verify:**
+```bash
+claude --version
+```
+
+Docs: https://code.claude.com/docs/en/quickstart
+
+#### ChatGPT / Codex CLI (optional — ask user before installing)
+
+OpenAI's official terminal coding agent is the **Codex CLI** (the modern successor to the older `chatgpt` npm package). Requires an OpenAI account with API access or a ChatGPT Plus/Pro/Team subscription.
+
+- **All platforms (npm):**
+  ```bash
+  npm install -g @openai/codex
+  ```
+
+**Verify:**
+```bash
+codex --version
+```
+
+Docs: https://developers.openai.com/codex/cli
+
+#### Google Antigravity CLI (optional — ask user before installing)
+
+Google's terminal AI agent (`agy`), Gemini-powered. Requires a Google account.
+
+- **macOS / Linux:**
+  ```bash
+  curl -fsSL https://antigravity.google/cli/install.sh | bash
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  irm https://antigravity.google/cli/install.ps1 | iex
+  ```
+- **Windows (CMD):**
+  ```cmd
+  curl -fsSL https://antigravity.google/cli/install.cmd -o install.cmd && install.cmd && del install.cmd
+  ```
+
+> **PATH note:** If the installer reports that `~/.local/bin` is not in your PATH, add it manually:
+> ```bash
+> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+> ```
+
+**Verify:**
+```bash
+agy --version
+```
+
+Update later with `agy update`. Docs: https://antigravity.google/docs/home
+
 ### Step 2: Install dependencies
 
 This project uses npm Workspaces + Turborepo. Run once from the project root:
@@ -93,34 +175,277 @@ This installs dependencies for all packages: `client/`, `server/`, and `shared/`
 
 The [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill provides design intelligence — accessibility rules, interaction patterns, animation guidelines, color/typography/style recommendations, and UX validation — for UI work.
 
-Install it via the official CLI, then mirror the generated bundle into `.devin/skills/` so Devin can invoke it:
+Install it via the official CLI directly into `.devin/skills/` (Devin's canonical skill directory — no `.windsurf/` copy needed):
 
 ```bash
 # 1. Install the CLI globally
 npm install -g ui-ux-pro-max-cli
 
-# 2. Generate the skill bundle for Windsurf (writes to .windsurf/skills/ui-ux-pro-max/)
+# 2. Generate the skill bundle directly into .devin/skills/ui-ux-pro-max/
 uipro init --ai windsurf --force
 
-# 3. Copy it into .devin/skills/ so Devin can discover it
-#    (PowerShell)
-Copy-Item -Path ".windsurf\skills\ui-ux-pro-max\*" `
-         -Destination ".devin\skills\ui-ux-pro-max\" -Recurse -Force
+# 3. Move the generated bundle from .windsurf/ to .devin/ (the CLI writes to .windsurf/ by default)
 #    (bash / macOS / Linux)
-cp -R .windsurf/skills/ui-ux-pro-max/* .devin/skills/ui-ux-pro-max/
+rm -rf .devin/skills/ui-ux-pro-max && mv .windsurf/skills/ui-ux-pro-max .devin/skills/ui-ux-pro-max
+#    (PowerShell)
+Remove-Item -Recurse -Force .devin\skills\ui-ux-pro-max; Move-Item .windsurf\skills\ui-ux-pro-max .devin\skills\ui-ux-pro-max
 ```
+
+> **Why not keep it in `.windsurf/`?** Devin is now Windsurf, and per the project rules in `AGENT.md`, new configuration should live in `.devin/`. Keeping the skill in one place avoids duplicate files and confusion about which copy is authoritative.
+
 
 > **Windows note:** If `uipro` fails with a PowerShell execution-policy error, invoke the `.cmd` shim directly:
 > `& "$env:APPDATA\npm\uipro.cmd" init --ai windsurf --force`
 
-> **Python (optional):** The skill ships Python scripts (`scripts/search.py`, `scripts/design_system.py`) for searchable database queries (`--domain`, `--design-system`). Install Python 3 to use them; the SKILL.md guidance itself works without Python.
+> **Python (optional — ask user before installing):** The skill ships Python scripts (`scripts/search.py`, `scripts/design_system.py`) that power the searchable design database. Python is **not required** for the skill to function, but it unlocks the core feature.
+>
+> **What works without Python:**
+> - Reading `SKILL.md` for the 4-step workflow and static guidance tables
+> - The pre-delivery checklist (accessibility, contrast, hover states, focus states)
+> - General design principles and the available domains/stacks reference
+>
+> **What requires Python 3:**
+> - The `--design-system` command that generates tailored recommendations (pattern, style, colors, typography, effects, anti-patterns)
+> - Domain searches (`--domain style`, `--domain color`, `--domain typography`, `--domain ux`, `--domain chart`, etc.)
+> - Querying the CSV databases (67 styles, 161 color palettes, 57 font pairings, 99 UX guidelines, 25 chart types — ~1.4MB of structured data in `data/`)
+> - The `--persist` flag that saves a `design-system/MASTER.md` source of truth
+>
+> **Recommendation:** Install Python 3 to get the full value of the skill. Without it, the agent can only read the markdown guidance and cannot run the search scripts that produce specific, tailored design recommendations.
+>
+> **Install Python 3 (if the user opts in):**
+> - **macOS:** `brew install python3`
+> - **Ubuntu/Debian:** `sudo apt update && sudo apt install python3`
+> - **Windows:** `winget install Python.Python.3.12` (then use `python` instead of `python3` to run scripts)
+>
+> **Verify:**
+> ```bash
+> python3 --version   # should print 3.x
+> ```
+>
+> **Test the skill after install:**
+> ```bash
+> python3 .devin/skills/ui-ux-pro-max/scripts/search.py "form builder dashboard" --design-system -p "Test"
+> ```
+> A successful run prints a boxed design-system recommendation (pattern, style, colors, typography, effects, avoid list, checklist).
 
 **Updating later:**
 ```bash
 uipro update                       # update the global CLI
-uipro init --ai windsurf --force   # regenerate the bundle
-# then re-run the copy command above
+uipro init --ai windsurf --force   # regenerate the bundle into .windsurf/
+rm -rf .devin/skills/ui-ux-pro-max && mv .windsurf/skills/ui-ux-pro-max .devin/skills/ui-ux-pro-max  # move into place
 ```
+
+### Step 2.6: Enable MCP Servers (Agent-Run Setup)
+
+> **⚠️ This step is performed by the AI agent, not the developer.** When you reach this step during setup, the agent should automatically configure all 5 MCP servers listed below using the `devin mcp add` commands (or by writing the config file directly). The developer does not need to run these commands manually unless they prefer to.
+>
+> **Why:** A fresh Devin CLI install ships with **zero** MCP servers. None of the servers below are built-in or enabled by default — they must all be added explicitly. An agent can fully set up all 5 using only shell/file tools (no MCP tool calls, no human intervention required), because none of these 5 require OAuth or API tokens.
+
+The following **5 MCP servers** are part of the standard Service Hub dev environment:
+
+| # | Server | Purpose | Prerequisite |
+|---|--------|---------|--------------|
+| 1 | `filesystem` | File & directory operations (read, write, edit, search, tree) | Node.js / npx |
+| 2 | `memory` | Persistent knowledge graph across sessions | Node.js / npx |
+| 3 | `sequential-thinking` | Structured step-by-step reasoning for complex debugging | Node.js / npx |
+| 4 | `puppeteer` | Headless Chrome automation (screenshots, E2E tests, UX audits) | Node.js / npx |
+| 5 | `playwright` | Modern browser automation (E2E tests, screenshots, accessibility snapshots) — Microsoft-maintained | Node.js / npx |
+
+> **Puppeteer vs. Playwright:** Both are browser-automation MCP servers. Puppeteer is the legacy Windsurf-native option; Playwright is the newer Microsoft-maintained alternative with richer accessibility snapshots and multi-browser support. We configure both so the agent can pick the right tool for the job — use Playwright for new E2E test work and accessibility audits, Puppeteer for quick screenshots and the Windsurf-native integration.
+
+> **Config file locations:**
+> - **Devin CLI (user-level):** `~/.config/devin/config.json` (macOS/Linux) · `%APPDATA%\devin\config.json` (Windows)
+> - **Devin CLI (project-level, shared):** `.devin/config.json`
+> - **Devin CLI (local, gitignored):** `.devin/config.local.json`
+> - **Windsurf (legacy/global):** `~/.codeium/windsurf/mcp_config.json`
+>
+> The `devin mcp add` commands below default to **local** scope (`.devin/config.local.json`, gitignored). Use `-s project` to share with the team via `.devin/config.json`, or `-s user` for global user-level config.
+
+#### Agent setup script (macOS / Linux)
+
+The agent should run this block during setup. It adds all 5 servers and verifies the result:
+
+```bash
+# ── Step 2.6: MCP server setup (run by the agent) ──────────────────────────
+# All 5 servers are stdio-based and need no OAuth or API tokens.
+# Prerequisites: Node.js/npx (required for all 5 servers).
+
+PROJECT_ROOT="$(pwd)"   # adjust if not run from the project root
+
+# 1. filesystem — file & directory operations
+devin mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem "$PROJECT_ROOT"
+
+# 2. memory — persistent knowledge graph
+devin mcp add memory -- npx -y @modelcontextprotocol/server-memory
+
+# 3. sequential-thinking — structured reasoning
+devin mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
+
+# 4. puppeteer — headless Chrome automation
+devin mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
+
+# 5. playwright — modern browser automation (Microsoft-maintained)
+devin mcp add playwright -- npx -y @playwright/mcp@latest
+
+# ── Verify ─────────────────────────────────────────────────────────────────
+devin mcp list
+```
+
+#### Agent setup script (Windows PowerShell)
+
+```powershell
+# ── Step 2.6: MCP server setup (run by the agent) ──────────────────────────
+$PROJECT_ROOT = (Get-Location).Path
+
+# 1. filesystem
+devin mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem $PROJECT_ROOT
+
+# 2. memory
+devin mcp add memory -- npx -y @modelcontextprotocol/server-memory
+
+# 3. sequential-thinking
+devin mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
+
+# 4. puppeteer
+devin mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
+
+# 5. playwright — modern browser automation (Microsoft-maintained)
+devin mcp add playwright -- npx -y @playwright/mcp@latest
+
+# ── Verify ─────────────────────────────────────────────────────────────────
+devin mcp list
+```
+
+> **After adding servers, fully restart Windsurf/Devin** for the servers to be picked up and launched on first use.
+
+#### Alternative: config file approach
+
+If `devin mcp add` is unavailable or the agent prefers to write the config directly, write this to `~/.config/devin/config.json` (user-level) or `.devin/config.json` (project-level, shared with team):
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/absolute/path/to/servicehub"],
+      "env": {}
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {}
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {}
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "env": {}
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "env": {}
+    }
+  }
+}
+```
+
+> **Replace `/absolute/path/to/servicehub`** with the actual project root path. On Windows, use the Windows path format (e.g. `C:\\Users\\yourname\\projects\\servicehub`) and `python` instead of `python3`.
+
+#### Server reference
+
+##### 1. `filesystem` — File System Access
+
+Direct file and directory operations: read, write, edit, search, move, tree views, and metadata.
+
+| Capability | Key Tools |
+|------------|-----------|
+| Read/write files | `read_text_file`, `write_file`, `edit_file`, `read_multiple_files` |
+| Directory ops | `list_directory`, `directory_tree`, `create_directory`, `move_file` |
+| Search | `search_files` (glob patterns) |
+| Media | `read_media_file` (images/audio as base64) |
+| Metadata | `get_file_info`, `list_directory_with_sizes` |
+
+**Setup:** `devin mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem /path/to/project`. The last arg is the allowed directory — set it to the project root.
+
+##### 2. `memory` — Knowledge Graph (Persistent Memory)
+
+Stores entities, relations, and observations in a persistent knowledge graph. Survives across conversations and sessions.
+
+| Capability | Key Tools |
+|------------|-----------|
+| Create entities/relations | `create_entities`, `create_relations` |
+| Query | `read_graph`, `search_nodes`, `open_nodes` |
+| Update | `add_observations` |
+| Delete | `delete_entities`, `delete_relations`, `delete_observations` |
+
+**Use cases:** Remember architectural decisions, track sub-app ownership, store onboarding context for new developers, persist bug patterns and resolutions across sessions.
+
+**Setup:** `devin mcp add memory -- npx -y @modelcontextprotocol/server-memory`. Data is stored locally in a JSON file — no external service required.
+
+##### 3. `sequential-thinking` — Structured Reasoning
+
+A dynamic, reflective problem-solving tool that breaks complex problems into sequential thought steps with branching and revision support.
+
+| Capability | Key Tool |
+|------------|----------|
+| Step-by-step reasoning | `sequentialthinking` (with `thoughtNumber`, `totalThoughts`, `branchId`, `isRevision`) |
+
+**Use cases:** Debugging complex multi-layer issues (e.g., Prisma + Azure SQL + Express middleware chains), planning sub-app architecture, designing database schema changes, root-cause analysis for production incidents.
+
+**Setup:** `devin mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking`. No external dependencies.
+
+##### 4. `puppeteer` — Browser Automation
+
+Headless Chrome control for navigating, clicking, filling forms, taking screenshots, and executing JavaScript in the browser.
+
+| Capability | Key Tools |
+|------------|-----------|
+| Navigation | `puppeteer_navigate` |
+| Interaction | `puppeteer_click`, `puppeteer_fill`, `puppeteer_select`, `puppeteer_hover` |
+| Inspection | `puppeteer_screenshot`, `puppeteer_evaluate` |
+
+**Use cases:** End-to-end visual testing of the React frontend, capturing screenshots for UX audits, verifying login flows, debugging client-side rendering issues.
+
+**Setup:** `devin mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer`. Ensure Puppeteer's Chromium can launch on your OS (it should on macOS and Windows; on Linux you may need `--no-sandbox`).
+
+##### 5. `playwright` — Modern Browser Automation (Microsoft-maintained)
+
+Microsoft's Playwright-based browser automation MCP server. Supports Chromium, Firefox, and WebKit. Richer than Puppeteer — includes accessibility snapshots, multi-browser support, and auto-waiting. The browser downloads automatically on first use.
+
+| Capability | Key Tools |
+|------------|-----------|
+| Navigation | `browser_navigate`, `browser_navigate_back`, `browser_navigate_forward` |
+| Interaction | `browser_click`, `browser_type`, `browser_select_option`, `browser_hover` |
+| Inspection | `browser_snapshot` (accessibility tree), `browser_take_screenshot` |
+| Tab/Session | `browser_tab_list`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
+| Files | `browser_file_upload`, `browser_pdf_save` |
+
+**Use cases:** Modern E2E testing of the React frontend, accessibility audits via the accessibility snapshot, cross-browser verification, PDF export of pages, filling and submitting forms for testing.
+
+**Setup:** `devin mcp add playwright -- npx -y @playwright/mcp@latest`. The Playwright browser binaries download automatically on first use — no manual install needed.
+
+> **Puppeteer vs. Playwright:** Both are browser-automation MCP servers. Puppeteer is the legacy Windsurf-native option; Playwright is newer with better accessibility support and multi-browser coverage. Use Playwright for new E2E test work and accessibility audits; use Puppeteer for quick screenshots and the Windsurf-native integration.
+
+#### Verification checklist
+
+After the agent runs the setup script, it should verify each server is active by performing a simple operation:
+
+| Server | Verification prompt |
+|--------|-------------------|
+| `filesystem` | "List the files in the project root" |
+| `memory` | "Create an entity called 'ServiceHub' with type 'Project'" |
+| `sequential-thinking` | "Use sequential thinking to plan a 3-step database migration" |
+| `puppeteer` | "Navigate to http://localhost:3000 and take a screenshot" |
+| `playwright` | "Use Playwright to navigate to http://localhost:3000 and take an accessibility snapshot" |
+
+> **💡 Tip:** If a server is not responding, check Windsurf Settings → MCP Servers (or run `devin mcp list`) for error indicators. Restart Windsurf/Devin after adding a new server configuration.
+>
+> **Enabling/disabling without removing:** Use `devin mcp enable <name>` / `devin mcp disable <name>` to toggle a server without losing its config or credentials.
 
 ### Step 3: Configure environment variables
 if you dont have a .env file, copy the example file:
@@ -191,9 +516,16 @@ PrismaClientInitializationError: Timed out fetching a new connection from the co
 (P2024)
 ```
 
+You may also see this surfaced in the UI at login time. If a user sees any of the following:
+
+- `Server error during login` (toast / error message on the login page)
+- `POST http://localhost:3000/api/auth/login` returning `[HTTP/1.1 500 Internal Server Error 10018ms]` (note the ~10s timeout in the duration)
+
+…this is the same cold-start issue. The login request hits the database before Azure SQL has finished waking up, so the Prisma query times out and the `/api/auth/login` route returns a 500.
+
 **Cause:** The Azure SQL server (`houstonservice-test.database.windows.net`) is a serverless/paused instance. After a period of inactivity it goes to sleep and takes **~60 seconds** to wake up on the first connection. The default Prisma connection pool timeout (10s) is shorter than the cold start time.
 
-**Fix:** Simply restart the server after waiting ~1 minute. The first connection attempt wakes the server; subsequent connections will be fast.
+**Fix:** Simply restart the server after waiting ~1 minute. The first connection attempt wakes the server; subsequent connections will be fast. Then retry the login — it should succeed within a normal response time.
 
 ```bash
 # If the server crashed, just re-run it:
@@ -462,7 +794,7 @@ servicehub/
 
 ### Adding a new sub-app
 
-See the `Adding a New Sub-App` checklist in `SKILL.md`.
+See the `Adding a New Sub-App` checklist in `AGENT.md` (the master blueprint).
 
 ### Inspecting the database
 
@@ -531,7 +863,7 @@ az webapp log tail \
 
 ---
 
-Please refer to `SKILL.md` for full architectural guidelines and patterns.
+Please refer to `AGENT.md` for full architectural guidelines and patterns.
 
 ---
 

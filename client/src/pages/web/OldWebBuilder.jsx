@@ -8,6 +8,7 @@ import { marked } from 'marked';
 import api from '../../utils/api';
 import PublicHome from '../public/Home';
 import { useToast } from '../../components/Toast';
+import ColorPicker from '../../components/ColorPicker';
 
 const TEMPLATES = [
   { id: 'escape-velocity', name: 'Escape Velocity', description: 'HTML5 UP styled theme with distinct sections' },
@@ -1071,20 +1072,18 @@ export default function OldWebBuilder() {
                                       <div className="grid grid-cols-2 gap-4">
                                         <div>
                                           <label className="block text-sm font-medium text-gray-700 mb-1">Background Color</label>
-                                          <input
-                                            type="color"
+                                          <ColorPicker
                                             value={block.style?.backgroundColor || '#ffffff'}
-                                            onChange={(e) => updateBlockStyle(index, { backgroundColor: e.target.value })}
-                                            className="w-full h-10 border border-gray-300 rounded cursor-pointer"
+                                            onChange={(v) => updateBlockStyle(index, { backgroundColor: v })}
+                                            label="Background Color"
                                           />
                                         </div>
                                         <div>
                                           <label className="block text-sm font-medium text-gray-700 mb-1">Text Color</label>
-                                          <input
-                                            type="color"
+                                          <ColorPicker
                                             value={block.style?.textColor || '#000000'}
-                                            onChange={(e) => updateBlockStyle(index, { textColor: e.target.value })}
-                                            className="w-full h-10 border border-gray-300 rounded cursor-pointer"
+                                            onChange={(v) => updateBlockStyle(index, { textColor: v })}
+                                            label="Text Color"
                                           />
                                         </div>
                                         <div>

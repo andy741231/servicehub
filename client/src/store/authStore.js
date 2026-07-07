@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../utils/api';
+import useThemeStore from './themeStore';
 
 // Load persisted state from localStorage
 const loadPersistedState = () => {
@@ -38,6 +39,8 @@ const useAuthStore = create((set, get) => ({
       const res = await api.get('/auth/me');
       set({ user: res.data.user, isAuthenticated: true, isLoading: false, wasLoggedIn: true, showLoggedOutMessage: false });
       savePersistedState(get());
+      // Apply the user's saved theme preference (per-user, from DB).
+      useThemeStore.getState().applyUserTheme(res.data.user.preferences);
     } catch (error) {
       const currentState = get();
       set({ 
@@ -54,6 +57,8 @@ const useAuthStore = create((set, get) => ({
     const res = await api.post('/auth/login', { username, password, rememberMe });
     set({ user: res.data.user, isAuthenticated: true, wasLoggedIn: true, showLoggedOutMessage: false });
     savePersistedState(get());
+    // Apply the user's saved theme preference (per-user, from DB).
+    useThemeStore.getState().applyUserTheme(res.data.user.preferences);
   },
 
   logout: async () => {

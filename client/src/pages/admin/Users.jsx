@@ -176,7 +176,7 @@ export default function Users() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[300px]">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -186,12 +186,12 @@ export default function Users() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Users & Roles</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage platform accounts, administrator roles, and application permissions.</p>
+          <h1 className="text-3xl font-bold text-text-base tracking-tight">Users &amp; Roles</h1>
+          <p className="text-sm text-muted mt-1">Manage platform accounts, administrator roles, and application permissions.</p>
         </div>
         <button
           onClick={openCreateModal}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary-hover active:bg-primary-hover active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
         >
           <Plus className="h-5 w-5 mr-1.5" />
           Add User
@@ -200,51 +200,51 @@ export default function Users() {
 
       {/* Notifications */}
       {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-700 text-sm">
+        <div className="mb-6 p-4 bg-success-light border border-success/20 rounded-lg flex items-center text-success text-sm">
           <Check className="h-5 w-5 mr-2 flex-shrink-0" />
           {success}
         </div>
       )}
       {error && (
-        <div role="alert" aria-live="polite" className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm">
+        <div role="alert" aria-live="polite" className="mb-6 p-4 bg-danger-light border border-danger/20 rounded-lg flex items-center text-danger text-sm">
           <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
           {error}
         </div>
       )}
 
       {/* Table Container */}
-      <div className="bg-white shadow-sm ring-1 ring-black/5 rounded-xl overflow-hidden">
+      <div className="bg-surface shadow-sm ring-1 ring-black/5 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-surface-raised">
               <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Roles</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">App Permissions</th>
-                <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">User</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">Roles</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-muted uppercase tracking-wider">App Permissions</th>
+                <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-muted uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody className="bg-surface divide-y divide-border-soft">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={user.id} className="hover:bg-surface-raised/50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                      <div className="h-10 w-10 rounded-full bg-primary-light flex items-center justify-center text-primary font-semibold text-sm">
                         {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-semibold text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">@{user.username}</div>
-                        <div className="text-xs text-gray-400">{user.email}</div>
+                        <div className="text-sm font-semibold text-text-base">{user.name}</div>
+                        <div className="text-sm text-muted">@{user.username}</div>
+                        <div className="text-xs text-subtle">{user.email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2.5 py-1 inline-flex text-xs font-semibold rounded-full ${
                       user.isActive !== false 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
+                        ? 'bg-success-light text-success' 
+                        : 'bg-surface-raised text-text-base'
                     }`}>
                       {user.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
@@ -254,10 +254,10 @@ export default function Users() {
                       {user.roles.map(role => (
                         <span key={role} className={`px-2.5 py-0.5 inline-flex items-center text-xs font-semibold rounded border ${
                           role === 'super_admin'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                            ? 'bg-primary-light text-primary border-primary/20'
+                            : 'bg-primary-light text-primary border-primary'
                         }`}>
-                          <Shield className={`h-3.5 w-3.5 mr-1 ${role === 'super_admin' ? 'text-purple-500' : 'text-blue-500'}`} />
+                          <Shield className={`h-3.5 w-3.5 mr-1 ${role === 'super_admin' ? 'text-primary' : 'text-primary'}`} />
                           {role}
                         </span>
                       ))}
@@ -276,9 +276,9 @@ export default function Users() {
                               checked={hasPerm || isSuperAdmin || isAdmin}
                               disabled={isSuperAdmin || isAdmin}
                               onChange={() => togglePermissionInTable(user.id, app.id, user.permissions)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                              className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                             />
-                            <span className="text-gray-700">{app.label}</span>
+                            <span className="text-text-base">{app.label}</span>
                           </label>
                         );
                       })}
@@ -288,14 +288,14 @@ export default function Users() {
                     <div className="flex items-center justify-end gap-3">
                       <button
                         onClick={() => openEditModal(user)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1 transition-colors"
+                        className="text-primary hover:text-primary flex items-center gap-1 transition-colors"
                       >
                         <Edit2 className="h-4 w-4" />
                         Edit
                       </button>
                       <button
                         onClick={() => openDeleteModal(user)}
-                        className="text-red-600 hover:text-red-900 flex items-center gap-1 transition-colors"
+                        className="text-danger hover:text-danger flex items-center gap-1 transition-colors"
                         disabled={user.username === 'admin'}
                       >
                         <Trash2 className={`h-4 w-4 ${user.username === 'admin' ? 'opacity-30' : ''}`} />
@@ -312,13 +312,23 @@ export default function Users() {
 
       {/* User Create / Edit Modal */}
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setIsFormOpen(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setIsFormOpen(false); }}
+        >
+          <div 
+            className="bg-surface rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-border-soft animate-[fadeInScale_0.15s_ease-out]"
+            onMouseDown={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="user-form-title"
+          >
+            <div className="flex justify-between items-center px-6 py-4 border-b border-border-soft">
+              <h3 id="user-form-title" className="text-lg font-bold text-text-base">
                 {selectedUser ? 'Edit User Details' : 'Create New User'}
               </h3>
-              <button onClick={() => setIsFormOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setIsFormOpen(false)} className="text-subtle hover:text-muted">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -327,9 +337,9 @@ export default function Users() {
               <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                 {/* Username */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Username</label>
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Username</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle" />
                     <input
                       type="text"
                       name="username"
@@ -337,7 +347,7 @@ export default function Users() {
                       disabled={!!selectedUser}
                       value={formData.username}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-surface-raised disabled:text-muted"
                       placeholder="jane_doe"
                     />
                   </div>
@@ -345,16 +355,16 @@ export default function Users() {
 
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Full Name</label>
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Full Name</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle" />
                     <input
                       type="text"
                       name="name"
                       required
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                       placeholder="Jane Doe"
                     />
                   </div>
@@ -362,9 +372,9 @@ export default function Users() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Email Address</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle" />
                     <input
                       type="email"
                       name="email"
@@ -372,7 +382,7 @@ export default function Users() {
                       disabled={!!selectedUser}
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                      className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-surface-raised disabled:text-muted"
                       placeholder="jane@example.com"
                     />
                   </div>
@@ -381,16 +391,16 @@ export default function Users() {
                 {/* Password (only on Create) */}
                 {!selectedUser && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Password</label>
+                    <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Password</label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-subtle" />
                       <input
                         type="password"
                         name="password"
                         required
                         value={formData.password}
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="••••••••"
                       />
                     </div>
@@ -399,24 +409,24 @@ export default function Users() {
 
                 {/* Status Toggle (on Edit) */}
                 {selectedUser && (
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-surface-raised rounded-lg">
                     <div>
-                      <div className="text-sm font-semibold text-gray-900">Active Status</div>
-                      <div className="text-xs text-gray-500">Enable or disable this user account</div>
+                      <div className="text-sm font-semibold text-text-base">Active Status</div>
+                      <div className="text-xs text-muted">Enable or disable this user account</div>
                     </div>
                     <input
                       type="checkbox"
                       name="isActive"
                       checked={formData.isActive}
                       onChange={handleInputChange}
-                      className="w-10 h-5 bg-gray-200 rounded-full appearance-none checked:bg-blue-600 transition-colors relative cursor-pointer before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:left-5.5 before:transition-all"
+                      className="w-10 h-5 bg-surface-tertiary rounded-full appearance-none checked:bg-primary transition-colors relative cursor-pointer before:content-[''] before:absolute before:w-4 before:h-4 before:bg-surface before:rounded-full before:top-0.5 before:left-0.5 checked:before:left-5.5 before:transition-all"
                     />
                   </div>
                 )}
 
                 {/* Roles Selector */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Roles Assignment</label>
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Roles Assignment</label>
                   <div className="grid grid-cols-3 gap-2">
                     {availableRoles.map(role => {
                       const isChecked = formData.roles.includes(role);
@@ -429,12 +439,12 @@ export default function Users() {
                           className={`flex items-center justify-center py-2 px-3 border rounded-lg text-sm font-semibold transition-all ${
                             isChecked
                               ? isSuperAdmin
-                                ? 'bg-purple-50 border-purple-500 text-purple-700 shadow-sm'
-                                : 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm'
-                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                ? 'bg-primary-light border-primary text-primary shadow-sm'
+                                : 'bg-primary-light border-primary text-primary shadow-sm'
+                              : 'bg-surface border-border text-muted hover:bg-surface-raised'
                           }`}
                         >
-                          {isChecked && <Check className={`h-4 w-4 mr-1.5 ${isSuperAdmin ? 'text-purple-600' : 'text-blue-600'}`} />}
+                          {isChecked && <Check className={`h-4 w-4 mr-1.5 ${isSuperAdmin ? 'text-primary' : 'text-primary'}`} />}
                           {role.charAt(0).toUpperCase() + role.slice(1)}
                         </button>
                       );
@@ -444,7 +454,7 @@ export default function Users() {
 
                 {/* Permissions Selector */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Application Access Permissions</label>
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Application Access Permissions</label>
                   <div className="space-y-2">
                     {APPS.map(app => {
                       const isChecked = formData.permissions.includes(app.id);
@@ -458,10 +468,10 @@ export default function Users() {
                           onClick={() => handlePermissionToggle(app.id)}
                           className={`w-full flex items-center justify-between p-3 border rounded-lg text-left transition-all ${
                             isSuperAdminSelected || isAdminSelected
-                              ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                              ? 'bg-surface-raised border-border text-subtle cursor-not-allowed'
                               : isChecked
-                                ? 'bg-blue-50/50 border-blue-300 text-blue-900 font-semibold'
-                                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                ? 'bg-primary-light/50 border-primary text-primary font-semibold'
+                                : 'bg-surface border-border text-text-base hover:bg-surface-raised'
                           }`}
                         >
                           <span className="text-sm">{app.label}</span>
@@ -470,7 +480,7 @@ export default function Users() {
                             checked={isChecked || isSuperAdminSelected || isAdminSelected}
                             disabled={isSuperAdminSelected || isAdminSelected}
                             readOnly
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                            className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer"
                           />
                         </button>
                       );
@@ -480,17 +490,17 @@ export default function Users() {
               </div>
 
               {/* Action Buttons */}
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+              <div className="px-6 py-4 bg-surface-raised border-t border-border-soft flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                  className="px-4 py-2 border border-border rounded-lg text-sm font-semibold text-text-base bg-surface hover:bg-surface-raised focus:outline-none"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   {selectedUser ? 'Save Changes' : 'Create User'}
                 </button>
@@ -502,27 +512,37 @@ export default function Users() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setIsDeleteOpen(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setIsDeleteOpen(false); }}
+        >
+          <div 
+            className="bg-surface rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-border-soft animate-[fadeInScale_0.15s_ease-out]"
+            onMouseDown={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-user-title"
+          >
             <div className="p-6">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 text-red-600 mb-4">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-danger-light text-danger mb-4">
                 <Trash2 className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 text-center">Delete User Account</h3>
-              <p className="text-sm text-gray-500 text-center mt-2">
+              <h3 id="delete-user-title" className="text-lg font-bold text-text-base text-center">Delete User Account</h3>
+              <p className="text-sm text-muted text-center mt-2">
                 Are you sure you want to permanently delete <strong>{selectedUser.name}</strong> ({selectedUser.email})? This action cannot be undone.
               </p>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-surface-raised border-t border-border-soft flex justify-end gap-3">
               <button
                 onClick={() => setIsDeleteOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50"
+                className="px-4 py-2 border border-border rounded-lg text-sm font-semibold text-text-base bg-surface hover:bg-surface-raised"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-primary-foreground bg-danger hover:bg-danger focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger"
               >
                 Delete Account
               </button>

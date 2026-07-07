@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Save, Check, AlertCircle, RefreshCw, Eye, EyeOff, Home, FileX } from 'lucide-react';
 import api from '../../utils/api';
+import PageHeader from '../../components/PageHeader';
+import ColorPicker from '../../components/ColorPicker';
 
 const DEFAULT = {
   homeDraft: {
-    title: 'Website Under Maintenance',
-    heading: "We'll be back soon",
+    title: 'Welcome',
+    heading: 'Welcome to our site',
     message:
-      'Our website is currently undergoing scheduled maintenance. We should be back shortly. Thank you for your patience.',
-    bgColor: '#1e293b',
-    textColor: '#f1f5f9',
-    accentColor: '#3b82f6',
+      'This is your public homepage. Open the Web Builder to add pages, edit navigation, and publish your own content.',
+    bgColor: '#f9fafb',
+    textColor: '#111827',
+    accentColor: '#2563eb',
     showLogo: true,
     logoText: '',
     showContactEmail: false,
@@ -34,13 +36,13 @@ const DEFAULT = {
 function HomeDraftPreview({ t }) {
   return (
     <div
-      className="w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm"
+      className="w-full rounded-card overflow-hidden border border-border shadow-sm"
       style={{ backgroundColor: t.bgColor, color: t.textColor, minHeight: 320 }}
     >
       <div className="flex flex-col items-center justify-center text-center px-8 py-16 gap-6">
         {t.showLogo && (
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg"
+            className="w-12 h-12 rounded-card flex items-center justify-center text-primary-foreground font-bold text-lg"
             style={{ backgroundColor: t.accentColor }}
           >
             {(t.logoText || 'S').charAt(0).toUpperCase()}
@@ -75,7 +77,7 @@ function HomeDraftPreview({ t }) {
 function PageDraftPreview({ t }) {
   return (
     <div
-      className="w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm"
+      className="w-full rounded-card overflow-hidden border border-border shadow-sm"
       style={{ backgroundColor: t.bgColor, color: t.textColor, minHeight: 320 }}
     >
       <div className="flex flex-col items-center justify-center text-center px-8 py-16 gap-6">
@@ -110,10 +112,10 @@ function PageDraftPreview({ t }) {
 
 function Field({ label, hint, children }) {
   return (
-    <div className="grid grid-cols-3 gap-4 items-start py-3 border-b border-gray-100 last:border-0">
+    <div className="grid grid-cols-3 gap-4 items-start py-3 border-b border-border-soft last:border-0">
       <div>
-        <p className="text-sm font-medium text-gray-800">{label}</p>
-        {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+        <p className="text-sm font-medium text-text-base">{label}</p>
+        {hint && <p className="text-xs text-subtle mt-0.5">{hint}</p>}
       </div>
       <div className="col-span-2">{children}</div>
     </div>
@@ -121,13 +123,11 @@ function Field({ label, hint, children }) {
 }
 
 function TextInput({ value, onChange, placeholder, multiline }) {
-  const cls =
-    'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500';
   if (multiline)
     return (
       <textarea
         rows={3}
-        className={cls}
+        className="textarea-field"
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
@@ -136,7 +136,7 @@ function TextInput({ value, onChange, placeholder, multiline }) {
   return (
     <input
       type="text"
-      className={cls}
+      className="input-field"
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
@@ -147,17 +147,17 @@ function TextInput({ value, onChange, placeholder, multiline }) {
 function ColorField({ label, value, onChange }) {
   return (
     <div className="flex items-center gap-2">
-      <input
-        type="color"
+      <ColorPicker
         value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer p-0.5 bg-white"
+        onChange={onChange}
+        label={label}
+        allowAlpha={false}
       />
       <input
         type="text"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-28 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-28 px-2 py-1.5 text-xs font-mono border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary"
       />
     </div>
   );
@@ -169,17 +169,17 @@ function Toggle({ checked, onChange, label }) {
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative w-10 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-          checked ? 'bg-blue-500' : 'bg-gray-300'
+        className={`relative w-10 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+          checked ? 'bg-primary' : 'bg-surface-tertiary'
         }`}
       >
         <span
-          className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+          className={`absolute top-1 w-4 h-4 bg-surface rounded-full shadow transition-transform ${
             checked ? 'left-5' : 'left-1'
           }`}
         />
       </button>
-      {label && <span className="text-sm text-gray-700">{label}</span>}
+      {label && <span className="text-sm text-text-base">{label}</span>}
     </label>
   );
 }
@@ -189,15 +189,15 @@ function Toggle({ checked, onChange, label }) {
 function SectionCard({ title, icon: Icon, preview, children }) {
   const [showPreview, setShowPreview] = useState(true);
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+    <div className="bg-surface border border-border rounded-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-border-soft bg-surface-raised flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <Icon className="w-4 h-4 text-gray-500" />
-          <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+          <Icon className="w-4 h-4 text-muted" />
+          <h2 className="text-sm font-semibold text-text-base">{title}</h2>
         </div>
         <button
           onClick={() => setShowPreview(v => !v)}
-          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 px-2.5 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-muted hover:text-text-base px-2.5 py-1 rounded-base hover:bg-surface-raised transition-colors"
         >
           {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           {showPreview ? 'Hide preview' : 'Show preview'}
@@ -208,7 +208,7 @@ function SectionCard({ title, icon: Icon, preview, children }) {
 
       {showPreview && (
         <div className="px-5 pb-5">
-          <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Preview</p>
+          <p className="text-xs text-subtle mb-2 font-medium uppercase tracking-wide">Preview</p>
           {preview}
         </div>
       )}
@@ -268,46 +268,34 @@ export default function DraftTemplates() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-4xl mx-auto space-y-4 animate-pulse">
-        <div className="h-8 bg-gray-200 rounded w-48" />
-        <div className="h-64 bg-gray-100 rounded-xl" />
-        <div className="h-64 bg-gray-100 rounded-xl" />
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-4 animate-pulse">
+        <div className="h-8 bg-surface-tertiary rounded w-48" />
+        <div className="h-64 bg-surface-raised rounded-card" />
+        <div className="h-64 bg-surface-raised rounded-card" />
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Draft Page Templates</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Customize what visitors see when a page is in draft mode.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isDirty && (
-            <button
-              onClick={handleReset}
-              className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Reset
-            </button>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={!isDirty || saveStatus === 'saving'}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-          >
+    <div className="max-w-7xl mx-auto p-6 lg:p-8">
+      <PageHeader>
+        {isDirty && (
+          <button onClick={handleReset} className="btn-ghost">
+            <RefreshCw className="w-4 h-4" />
+            Reset
+          </button>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={!isDirty || saveStatus === 'saving'}
+          className="btn-primary"
+        >
             {saveStatus === 'saving' && <AlertCircle className="w-4 h-4 animate-spin" />}
             {saveStatus === 'saved' && <Check className="w-4 h-4" />}
             {(saveStatus === 'idle' || saveStatus === 'error') && <Save className="w-4 h-4" />}
             {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : 'Save'}
           </button>
-        </div>
-      </div>
+      </PageHeader>
 
       <div className="space-y-6">
         {/* ── Home page draft ────────────────────────────────────────── */}

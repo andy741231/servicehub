@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sarah Mitchell — People — Pushpay ChMS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="theme.css" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: 'var(--primary)',
+          'primary-hover': 'var(--primary-hover)',
+          'on-primary': 'var(--on-primary)',
+          accent: 'var(--accent)',
+          bg: 'var(--bg)',
+          surface: 'var(--surface)',
+          'surface-2': 'var(--surface-2)',
+          body: 'var(--text)',
+          muted: 'var(--text-muted)',
+          line: 'var(--border)',
+          positive: 'var(--positive)',
+          warning: 'var(--warning)',
+          negative: 'var(--negative)',
+        },
+        fontFamily: { sans: ['var(--font-sans)'] },
+        borderRadius: { card: 'var(--radius)' },
+        boxShadow: { card: 'var(--shadow-card)' },
+      },
+    },
+  };
+</script>
+</head>
+<body class="bg-bg text-body font-sans antialiased">
+
+<!-- ============ Sidebar ============ -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full transform flex-col border-r border-line bg-surface transition-transform duration-200 lg:translate-x-0">
+  <div class="flex h-16 shrink-0 items-center gap-2.5 px-5">
+    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-on-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+    </span>
+    <span class="text-base font-extrabold tracking-tight">Pushpay <span class="text-primary">ChMS</span></span>
+  </div>
+      <nav class="flex-1 overflow-y-auto p-3 space-y-0.5" aria-label="Primary">
+      <a href="index.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="people.html" class="flex cursor-pointer items-center gap-3 rounded-full bg-primary/10 px-3.5 py-2.5 text-sm font-semibold text-primary" aria-current="page">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        People
+      </a>
+      <a href="groups.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
+        Groups
+      </a>
+      <a href="queues.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+        Processes
+      </a>
+      <a href="schedules.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 2v4"/><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5.25"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2.2l1.6 1"/></svg>
+        Schedules
+      </a>
+      <a href="events.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+        Events
+      </a>
+      <a href="checkin.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
+        Check-In
+      </a>
+      <a href="giving.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        Giving
+      </a>
+      <a href="communications.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Communications
+      </a>
+      <a href="reports.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        Reports
+      </a>
+      <a href="settings.html" class="flex cursor-pointer items-center gap-3 rounded-full px-3.5 py-2.5 text-sm font-medium text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        Settings
+      </a>
+    </nav>
+
+  <div class="shrink-0 border-t border-line px-5 py-4">
+    <p class="text-xs font-semibold">Grace Fellowship</p>
+    <p class="text-xs text-muted">North Campus · Admin</p>
+  </div>
+</aside>
+
+<!-- Backdrop for mobile sidebar -->
+<div id="sidebar-backdrop" class="fixed inset-0 z-30 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden"></div>
+
+<!-- ============ Top bar ============ -->
+<header class="fixed left-0 right-0 top-0 z-30 flex h-16 items-center gap-4 border-b border-line bg-surface/90 px-6 backdrop-blur lg:left-64">
+  <div class="hidden flex-1 lg:block"></div>
+  <button id="nav-toggle" type="button" class="mr-2 -ml-1 cursor-pointer rounded-full p-2 text-muted hover:bg-surface-2 lg:hidden" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+      </button>
+      <div class="relative mx-auto w-full max-w-md">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <input type="search" placeholder="Search people, groups, events…" class="w-full rounded-full border border-line bg-surface-2/60 py-2.5 pl-10 pr-4 text-sm placeholder:text-muted transition-colors duration-200 focus:border-primary focus:bg-surface focus:outline-none" />
+  </div>
+  <div class="flex flex-1 items-center justify-end gap-3">
+    <button type="button" aria-label="Notifications" class="relative cursor-pointer rounded-full p-2 text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent"></span>
+    </button>
+    <button type="button" class="flex cursor-pointer items-center gap-2 rounded-full p-1 pr-3 transition-colors duration-200 hover:bg-surface-2">
+      <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">DR</span>
+      <span class="hidden text-sm font-semibold md:block">Dana Reyes</span>
+    </button>
+  </div>
+</header>
+
+<!-- ============ Main ============ -->
+<main class="lg:ml-64 pt-16">
+  <div class="mx-auto max-w-screen-2xl p-8">
+
+    <div class="mb-6 flex items-center gap-2 text-sm text-muted">
+      <a href="people.html" class="cursor-pointer font-semibold text-primary transition-colors duration-200 hover:text-primary-hover">People</a>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      <span>Sarah Mitchell</span>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
+
+      <!-- ===== Left identity card ===== -->
+      <aside class="space-y-6">
+        <div class="rounded-card border border-line bg-surface p-6 text-center shadow-card">
+          <span class="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-teal-100 text-2xl font-extrabold text-teal-700">SM</span>
+          <h1 class="mt-4 text-xl font-extrabold tracking-tight">Sarah Mitchell</h1>
+          <div class="mt-2 flex items-center justify-center gap-2">
+            <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-positive">Member</span>
+            <span class="rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs font-semibold text-muted">North Campus</span>
+          </div>
+          <p class="mt-2 text-xs text-muted">Member since June 2019 · Mitchell Family</p>
+
+          <div class="mt-5 space-y-3 border-t border-line pt-5 text-left">
+            <div class="flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <span class="truncate text-sm">sarah.mitchell@gmail.com</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span class="text-sm">(555) 204-8817</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-muted"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              <span class="text-sm">1428 Cedar Grove Ln<br/>Fort Collins, CO 80526</span>
+            </div>
+          </div>
+
+          <div class="mt-5 flex flex-wrap justify-center gap-2 border-t border-line pt-5">
+            <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              Call
+            </button>
+            <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Text
+            </button>
+            <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              Email
+            </button>
+            <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+              Add to Group
+            </button>
+            <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+              Add to Queue
+            </button>
+          </div>
+        </div>
+
+        <div class="rounded-card border border-line bg-surface-2/70 p-5">
+          <p class="text-xs font-semibold uppercase tracking-wide text-muted">Engagement snapshot</p>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div><p class="text-lg font-extrabold">92%</p><p class="text-[11px] text-muted">Attendance</p></div>
+            <div><p class="text-lg font-extrabold">3</p><p class="text-[11px] text-muted">Groups</p></div>
+            <div><p class="text-lg font-extrabold">2</p><p class="text-[11px] text-muted">Volunteer roles</p></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ===== Right tabbed pane ===== -->
+      <section>
+        <!-- Tab bar -->
+        <div class="mb-6 flex flex-wrap gap-1.5 rounded-full border border-line bg-surface p-1.5 shadow-card" role="tablist" aria-label="Profile sections">
+          <button type="button" role="tab" aria-selected="true" data-tab="about" class="tab-btn cursor-pointer rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors duration-200">About</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="involvement" class="tab-btn cursor-pointer rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">Involvement</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="notes" class="tab-btn inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">
+            Notes &amp; Messages
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Permission restricted"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
+          <button type="button" role="tab" aria-selected="false" data-tab="family" class="tab-btn cursor-pointer rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary">Family</button>
+        </div>
+
+        <!-- ===== About panel ===== -->
+        <div id="panel-about" class="tab-panel space-y-6" role="tabpanel">
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 class="text-sm font-bold">Contact Info</h2>
+              <button type="button" class="cursor-pointer rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">Edit</button>
+            </div>
+            <dl class="grid grid-cols-1 gap-x-8 gap-y-4 p-6 sm:grid-cols-2">
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Email</dt><dd class="mt-1 text-sm font-medium">sarah.mitchell@gmail.com</dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Mobile phone</dt><dd class="mt-1 text-sm font-medium">(555) 204-8817</dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Home address</dt><dd class="mt-1 text-sm font-medium">1428 Cedar Grove Ln, Fort Collins, CO 80526</dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Preferred contact</dt><dd class="mt-1 text-sm font-medium">Text message</dd></div>
+            </dl>
+          </div>
+
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 class="text-sm font-bold">Personal</h2>
+              <button type="button" class="cursor-pointer rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">Edit</button>
+            </div>
+            <dl class="grid grid-cols-1 gap-x-8 gap-y-4 p-6 sm:grid-cols-2">
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Birthdate</dt><dd class="mt-1 text-sm font-medium">April 12, 1988</dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Marital status</dt><dd class="mt-1 text-sm font-medium">Married to David Mitchell</dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Baptism</dt><dd class="mt-1 text-sm font-medium"><span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-positive">Verified</span> <span class="ml-1 text-muted">Aug 2019</span></dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Allergies</dt><dd class="mt-1 text-sm font-medium">Tree nuts</dd></div>
+            </dl>
+          </div>
+
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 class="text-sm font-bold">Custom Fields</h2>
+              <button type="button" class="cursor-pointer rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">Edit</button>
+            </div>
+            <dl class="grid grid-cols-1 gap-x-8 gap-y-4 p-6 sm:grid-cols-2">
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Membership start date</dt><dd class="mt-1 text-sm font-medium">June 2, 2019</dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Background check</dt><dd class="mt-1 text-sm font-medium"><span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-positive">Cleared</span> <span class="ml-1 text-muted">exp. Jan 2027</span></dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">Spiritual gifts</dt><dd class="mt-1 text-sm font-medium">Hospitality, Teaching</dd></div>
+              <div><dt class="text-xs font-semibold uppercase tracking-wide text-muted">T-shirt size</dt><dd class="mt-1 text-sm font-medium">Medium</dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <!-- ===== Involvement panel ===== -->
+        <div id="panel-involvement" class="tab-panel hidden space-y-6" role="tabpanel">
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="border-b border-line px-6 py-4"><h2 class="text-sm font-bold">Volunteer Roles</h2></div>
+            <ul class="divide-y divide-line">
+              <li class="flex items-center justify-between px-6 py-3.5">
+                <div><p class="text-sm font-semibold">Kids Ministry — 2nd Grade Leader</p><p class="text-xs text-muted">Sundays · 9:30 AM service · since Sep 2021</p></div>
+                <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-positive">Confirmed</span>
+              </li>
+              <li class="flex items-center justify-between px-6 py-3.5">
+                <div><p class="text-sm font-semibold">Welcome Team — Greeter</p><p class="text-xs text-muted">1st &amp; 3rd Sundays · since Feb 2023</p></div>
+                <span class="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-warning">Unconfirmed Mar 22</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="border-b border-line px-6 py-4"><h2 class="text-sm font-bold">Group Memberships</h2></div>
+            <ul class="divide-y divide-line">
+              <li class="flex items-center justify-between px-6 py-3.5">
+                <div><a href="groups.html" class="cursor-pointer text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary-hover">Young Adults Community</a><p class="text-xs text-muted">Thursdays · 7:00 PM</p></div>
+                <span class="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-accent">Co-Leader</span>
+              </li>
+              <li class="flex items-center justify-between px-6 py-3.5">
+                <div><p class="text-sm font-semibold">Women's Bible Study</p><p class="text-xs text-muted">Tuesdays · 6:30 AM</p></div>
+                <span class="rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs font-semibold text-muted">Member</span>
+              </li>
+              <li class="flex items-center justify-between px-6 py-3.5">
+                <div><p class="text-sm font-semibold">Kids Ministry Volunteers</p><p class="text-xs text-muted">Serving team</p></div>
+                <span class="rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs font-semibold text-muted">Member</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="border-b border-line px-6 py-4"><h2 class="text-sm font-bold">Attendance Summary</h2></div>
+            <div class="grid grid-cols-1 gap-6 p-6 sm:grid-cols-3">
+              <div class="rounded-xl bg-surface-2/70 p-4 text-center"><p class="text-2xl font-extrabold">11 / 12</p><p class="mt-1 text-xs text-muted">Sundays last quarter</p></div>
+              <div class="rounded-xl bg-surface-2/70 p-4 text-center"><p class="text-2xl font-extrabold">9 / 10</p><p class="mt-1 text-xs text-muted">Group meetings</p></div>
+              <div class="rounded-xl bg-surface-2/70 p-4 text-center"><p class="text-2xl font-extrabold">Mar 15</p><p class="mt-1 text-xs text-muted">Last checked in</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Notes panel ===== -->
+        <div id="panel-notes" class="tab-panel hidden space-y-6" role="tabpanel">
+          <div class="flex items-center gap-2 rounded-card border border-amber-100 bg-amber-50 px-5 py-3.5 text-sm text-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span class="font-semibold">Restricted section.</span> Pastoral notes are visible only to staff with the Care Notes permission.
+          </div>
+
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 class="text-sm font-bold">Notes</h2>
+              <button type="button" class="cursor-pointer rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-on-primary transition-colors duration-200 hover:bg-primary-hover">Add Note</button>
+            </div>
+            <ul class="divide-y divide-line">
+              <li class="px-6 py-4">
+                <div class="flex items-center gap-2 text-xs text-muted">
+                  <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">DR</span>
+                  <span class="font-semibold text-body">Dana Reyes</span> · Mar 12, 2026 · 2:41 PM
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Restricted note"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <p class="mt-2 text-sm">Sarah offered to help coordinate the Easter volunteer schedule. Follow up after the March 28 training day to confirm which shifts she can cover.</p>
+              </li>
+              <li class="px-6 py-4">
+                <div class="flex items-center gap-2 text-xs text-muted">
+                  <span class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">PJ</span>
+                  <span class="font-semibold text-body">Pastor James Holt</span> · Feb 27, 2026 · 10:05 AM
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Restricted note"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <p class="mt-2 text-sm">Prayed with Sarah about her mother's upcoming surgery (scheduled Mar 20). Check in the following week.</p>
+              </li>
+              <li class="px-6 py-4">
+                <div class="flex items-center gap-2 text-xs text-muted">
+                  <span class="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-[10px] font-bold text-sky-700">MW</span>
+                  <span class="font-semibold text-body">Megan Wu</span> · Jan 18, 2026 · 4:22 PM
+                </div>
+                <p class="mt-2 text-sm">Sent co-leader onboarding packet for Young Adults Community. Completed leader agreement form the same day.</p>
+              </li>
+            </ul>
+          </div>
+
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="border-b border-line px-6 py-4"><h2 class="text-sm font-bold">Recent Messages</h2></div>
+            <ul class="divide-y divide-line">
+              <li class="flex items-center justify-between px-6 py-3.5">
+                <div><p class="text-sm font-semibold">Easter volunteer sign-up reminder</p><p class="text-xs text-muted">Email · Mar 10, 2026</p></div>
+                <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-positive">Opened</span>
+              </li>
+              <li class="flex items-center justify-between px-6 py-3.5">
+                <div><p class="text-sm font-semibold">Group meeting moved to Room 204</p><p class="text-xs text-muted">Text · Mar 5, 2026</p></div>
+                <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-positive">Delivered</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- ===== Family panel ===== -->
+        <div id="panel-family" class="tab-panel hidden space-y-6" role="tabpanel">
+          <div class="rounded-card border border-line bg-surface shadow-card">
+            <div class="flex items-center justify-between border-b border-line px-6 py-4">
+              <h2 class="text-sm font-bold">Mitchell Family Household</h2>
+              <button type="button" class="cursor-pointer rounded-full border border-line px-3 py-1.5 text-xs font-semibold transition-colors duration-200 hover:border-primary/40 hover:bg-surface-2">Manage Household</button>
+            </div>
+            <ul class="divide-y divide-line">
+              <li class="flex items-center gap-4 px-6 py-4">
+                <span class="flex h-11 w-11 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">SM</span>
+                <div class="flex-1"><p class="text-sm font-semibold">Sarah Mitchell</p><p class="text-xs text-muted">Spouse · Apr 12, 1988</p></div>
+                <span class="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">This profile</span>
+              </li>
+              <li class="flex items-center gap-4 px-6 py-4">
+                <span class="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">DM</span>
+                <div class="flex-1"><a href="profile.html" class="cursor-pointer text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary-hover">David Mitchell</a><p class="text-xs text-muted">Spouse · Sep 3, 1986</p></div>
+                <span class="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-positive">Member</span>
+              </li>
+              <li class="flex items-center gap-4 px-6 py-4">
+                <span class="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700">EM</span>
+                <div class="flex-1"><p class="text-sm font-semibold">Ella Mitchell</p><p class="text-xs text-muted">Child · Jul 22, 2016 · 2nd grade</p></div>
+                <span class="rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs font-semibold text-muted">Child</span>
+              </li>
+              <li class="flex items-center gap-4 px-6 py-4">
+                <span class="flex h-11 w-11 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700">NM</span>
+                <div class="flex-1"><p class="text-sm font-semibold">Noah Mitchell</p><p class="text-xs text-muted">Child · Feb 9, 2019 · Pre-K</p></div>
+                <span class="rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs font-semibold text-muted">Child</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Minimal vanilla-JS tab switching
+  const tabs = document.querySelectorAll('.tab-btn');
+  tabs.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tabs.forEach((b) => {
+        const active = b === btn;
+        b.setAttribute('aria-selected', active);
+        b.className = active
+          ? 'tab-btn cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition-colors duration-200'
+          : 'tab-btn cursor-pointer inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-muted transition-colors duration-200 hover:bg-surface-2 hover:text-primary';
+      });
+      document.querySelectorAll('.tab-panel').forEach((p) =>
+        p.classList.toggle('hidden', p.id !== 'panel-' + btn.dataset.tab));
+    });
+  });
+</script>
+
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  function openSidebar() {
+    sidebar.classList.remove('-translate-x-full');
+    backdrop.classList.remove('opacity-0', 'pointer-events-none');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+  }
+  function closeSidebar() {
+    sidebar.classList.add('-translate-x-full');
+    backdrop.classList.add('opacity-0', 'pointer-events-none');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', openSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+  sidebar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', closeSidebar));
+</script>
+
+</body>
+</html>

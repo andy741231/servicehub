@@ -54,8 +54,8 @@ async function main() {
     create: { userId: adminUser.id, roleId: superAdminRole.id },
   });
 
-  // Grant access to all apps
-  for (const appId of ['web', 'forms', 'email']) {
+  // Grant access to all apps (directory + portal are frontend-only for now)
+  for (const appId of ['web', 'forms', 'email', 'directory', 'portal']) {
     await prisma.appPermission.upsert({
       where: { userId_appId: { userId: adminUser.id, appId } },
       update: { canAccess: true },
@@ -90,7 +90,7 @@ async function main() {
   }
 
   // Grant access to all apps for testing
-  for (const appId of ['web', 'forms', 'email']) {
+  for (const appId of ['web', 'forms', 'email', 'directory', 'portal']) {
     await prisma.appPermission.upsert({
       where: { userId_appId: { userId: testUser.id, appId } },
       update: { canAccess: true },

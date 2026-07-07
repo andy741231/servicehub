@@ -98,10 +98,10 @@ function validate(schedule) {
 // Overlapping slots are visible because bars are semi-transparent.
 const SLOT_COLORS = [
   'bg-primary/70 border-primary',
-  'bg-blue-400/70 border-blue-500',
-  'bg-emerald-400/70 border-emerald-500',
-  'bg-violet-400/70 border-violet-500',
-  'bg-amber-400/70 border-amber-500',
+  'bg-info/70 border-info',
+  'bg-success/70 border-success',
+  'bg-primary/70 border-primary',
+  'bg-warning/70 border-warning',
 ];
 
 function timeToMinutes(t) {
@@ -203,7 +203,7 @@ function LiveStatusStrip({ schedule }) {
   const hasConstraint = schedule.dateRange?.enabled || schedule.weeklyHours?.enabled;
   if (!hasConstraint) return null;
 
-  const dot = open ? 'bg-green-500' : 'bg-red-400';
+  const dot = open ? 'bg-success' : 'bg-danger';
   const label = open ? 'Open now' : 'Closed now';
 
   let detail = '';
@@ -252,7 +252,7 @@ function DayPicker({ selected, onChange }) {
               on ? selected.filter((d) => d !== value) : [...(selected || []), value]
             )}
             className={`flex-1 py-1.5 rounded-md text-xs font-semibold border transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
-              on ? 'border-primary bg-primary text-white' : 'border-border bg-background text-muted hover:border-primary hover:text-primary'
+              on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted hover:border-primary hover:text-primary'
             }`}
             aria-pressed={on}
           >
@@ -285,7 +285,7 @@ function SlotCard({ slot, index, onUpdate, onRemove, canRemove }) {
         {canRemove && (
           <button
             onClick={onRemove}
-            className="p-1 text-muted hover:text-red-500 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="p-1 text-muted hover:text-danger rounded focus:outline-none focus:ring-2 focus:ring-danger"
             aria-label={`Remove slot ${index + 1}`}
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -312,7 +312,7 @@ function SlotCard({ slot, index, onUpdate, onRemove, canRemove }) {
                 type="time"
                 value={slot.startTime}
                 onChange={(e) => onUpdate({ startTime: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[40px]"
+                className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[44px]"
               />
             </div>
             <div>
@@ -321,7 +321,7 @@ function SlotCard({ slot, index, onUpdate, onRemove, canRemove }) {
                 type="time"
                 value={slot.endTime}
                 onChange={(e) => onUpdate({ endTime: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[40px]"
+                className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[44px]"
               />
             </div>
           </div>
@@ -377,10 +377,10 @@ export default function AccessSchedulePanel() {
       {/* Status banner */}
       <div className={`flex items-start gap-3 px-4 py-3 rounded-lg border ${
         isActive
-          ? 'bg-amber-50 border-amber-200 text-amber-800'
+          ? 'bg-warning-light border-warning/20 text-warning'
           : enabledButEmpty
-            ? 'bg-yellow-50 border-yellow-300 text-yellow-800'
-            : 'bg-green-50 border-green-200 text-green-800'
+            ? 'bg-warning-light border-warning/30 text-warning'
+            : 'bg-success-light border-success/20 text-success'
       }`}>
         {isActive
           ? <Lock className="h-5 w-5 flex-shrink-0 mt-0.5" />
@@ -412,7 +412,7 @@ export default function AccessSchedulePanel() {
       {errors.length > 0 && (
         <div className="space-y-1.5">
           {errors.map((e, i) => (
-            <div key={i} className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-base text-xs text-red-600">
+            <div key={i} className="flex items-center gap-2 px-3 py-2 bg-danger-light border border-danger/20 rounded-base text-xs text-danger">
               <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
               {e}
             </div>
@@ -460,7 +460,7 @@ export default function AccessSchedulePanel() {
                     type="date"
                     value={schedule.dateRange.startDate}
                     onChange={(e) => patchDateRange({ startDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[40px]"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[44px]"
                   />
                 </div>
                 <div>
@@ -469,7 +469,7 @@ export default function AccessSchedulePanel() {
                     type="date"
                     value={schedule.dateRange.endDate}
                     onChange={(e) => patchDateRange({ endDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[40px]"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-small min-h-[44px]"
                   />
                 </div>
               </div>

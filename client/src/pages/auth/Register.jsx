@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { UserPlus, Mail, Lock, User } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
 export default function Register() {
@@ -21,54 +22,81 @@ export default function Register() {
   };
 
   return (
-    <div>
-      <div>
-        <h2 className="text-center text-3xl font-extrabold text-gray-900">Create your account</h2>
+    <div className="w-full max-w-md mx-auto">
+      <div className="text-center mb-8">
+        <div className="w-14 h-14 rounded-2xl bg-primary-light text-primary flex items-center justify-center mx-auto mb-4">
+          <UserPlus className="w-7 h-7" />
+        </div>
+        <h2 className="text-2xl font-bold text-text-base">Create your account</h2>
+        <p className="text-sm text-muted mt-1">Sign up to start building with Service Hub.</p>
       </div>
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-        {error && <div role="alert" aria-live="polite" className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</div>}
-        <div className="rounded-md shadow-sm -space-y-px">
-          <div>
-            <input
-              type="text"
-              required
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {error && (
+          <div role="alert" aria-live="polite" className="text-sm text-danger text-center bg-danger-light border border-danger/10 p-3 rounded-base">
+            {error}
           </div>
+        )}
+
+        <div className="space-y-4">
           <div>
-            <input
-              type="email"
-              required
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <label htmlFor="name" className="block text-label text-muted mb-1.5">Full name</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+              <input
+                id="name"
+                type="text"
+                required
+                className="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-body placeholder:text-subtle min-h-[44px]"
+                placeholder="Full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
           </div>
+
           <div>
-            <input
-              type="password"
-              required
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <label htmlFor="email" className="block text-label text-muted mb-1.5">Email address</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+              <input
+                id="email"
+                type="email"
+                required
+                className="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-body placeholder:text-subtle min-h-[44px]"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-label text-muted mb-1.5">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-subtle" />
+              <input
+                id="password"
+                type="password"
+                required
+                className="w-full pl-10 pr-4 py-2.5 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-body placeholder:text-subtle min-h-[44px]"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
         </div>
-        <div>
-          <button
-            type="submit"
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Register
-          </button>
-        </div>
+
+        <button
+          type="submit"
+          className="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-base text-sm font-medium bg-primary text-primary-foreground hover:bg-primary-hover active:scale-[0.98] transition-transform focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary min-h-[44px]"
+        >
+          Register
+        </button>
+
         <div className="text-sm text-center">
-          <Link to="/hub-admin" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/hub-admin" className="font-medium text-primary hover:text-primary">
             Already have an account? Sign in
           </Link>
         </div>
