@@ -241,7 +241,7 @@ rm -rf .devin/skills/ui-ux-pro-max && mv .windsurf/skills/ui-ux-pro-max .devin/s
 >
 > **Why:** A fresh Devin install ships with **zero** MCP servers. None of the servers below are built-in or enabled by default — they must all be added explicitly. An agent can fully set up any approved subset using only shell/file tools (no MCP tool calls, no human intervention required), because none of these 5 require OAuth or API tokens.
 >
-> **How:** MCP servers are configured by writing a `mcpServers` block directly into the Devin config file. No `devin` CLI binary is required — this method works on every platform (including Windows boxes where the `devin` CLI is not on PATH). See [Write the config file](#write-the-config-file) below.
+> **How:** MCP servers are configured by writing a `mcpServers` block into **two** config files — the Devin user-level config (so the Devin agent can call the servers) **and** the Windsurf MCP config (so the servers show up in the Windsurf UI: Settings → MCP Servers panel and the MCP Marketplace connect buttons). No `devin` CLI binary is required — this method works on every platform (including Windows boxes where the `devin` CLI is not on PATH). See [Write the config files](#write-the-config-files) below.
 
 The following **5 MCP servers** are part of the standard Service Hub dev environment:
 
@@ -256,27 +256,35 @@ The following **5 MCP servers** are part of the standard Service Hub dev environ
 > **Puppeteer vs. Playwright:** Both are browser-automation MCP servers. Puppeteer is the legacy Windsurf-native option; Playwright is the newer Microsoft-maintained alternative with richer accessibility snapshots and multi-browser support. We configure both so the agent can pick the right tool for the job — use Playwright for new E2E test work and accessibility audits, Puppeteer for quick screenshots and the Windsurf-native integration.
 
 > **Config file locations (where the `mcpServers` block can be written):**
-> - **User-level (recommended):** `~/.config/devin/config.json` (macOS/Linux) · `%APPDATA%\devin\config.json` (Windows)
-> - **Project-level (shared, committed):** `.devin/config.json`
-> - **Project-local (gitignored):** `.devin/config.local.json`
-> - **Windsurf (legacy/global):** `~/.codeium/windsurf/mcp_config.json`
+> - **Devin user-level (required for the agent):** `~/.config/devin/config.json` (macOS/Linux) · `%APPDATA%\devin\config.json` (Windows)
+> - **Windsurf MCP config (required for the UI panel & Marketplace):** `~/.codeium/windsurf/mcp_config.json` (all platforms)
+> - **Devin project-level (shared, committed):** `.devin/config.json`
+> - **Devin project-local (gitignored):** `.devin/config.local.json`
 >
-> The setup below writes to the **user-level** config by default. Use the project-level file (`.devin/config.json`) if you want the servers shared with the team via version control, or `.devin/config.local.json` for a personal, gitignored config. The JSON shape is identical in all locations.
+> The setup below writes to **both** the Devin user-level config **and** the Windsurf MCP config. Both files must contain the `mcpServers` block — the Devin config powers the agent's tool calls, and the Windsurf config powers the visual UI (Settings → MCP Servers status indicators and the MCP Marketplace connect buttons). Writing to only one of them results in either a UI that shows nothing or an agent that can't call the servers. Use the Devin project-level files (`.devin/config.json` or `.devin/config.local.json`) as an alternative to the user-level Devin config if you want team-shared or personal-scoped config, but the Windsurf file is still required separately for UI visibility.
 
-#### Write the config file
+#### Write the config files
 
-Write the `mcpServers` block to the **user-level** config file. **Only include the servers the user approved** in the ask-first step; omit any denied servers.
+Write the `mcpServers` block to **two** files. **Only include the servers the user approved** in the ask-first step; omit any denied servers.
 
-| Platform | User-level config path |
-|----------|------------------------|
+**File 1 — Devin user-level config (powers the agent's tool calls):**
+
+| Platform | Devin user-level config path |
+|----------|------------------------------|
 | macOS / Linux | `~/.config/devin/config.json` |
 | **Windows** | **`%APPDATA%\devin\config.json`** (typically `C:\Users\<you>\AppData\Roaming\devin\config.json`) — **not** `~/.config/devin/config.json` |
 
-> **Path note for the agent:** On Windows the user-level Devin config is `%APPDATA%\devin\config.json`. The `~/.config/devin/config.json` path is macOS/Linux only. Getting this wrong is a common failure — the file gets written to a location Devin never reads, and the servers won't be picked up.
+**File 2 — Windsurf MCP config (powers the UI panel & Marketplace):**
 
-If you prefer a project-scoped (team-shared, committed) config instead, write to `.devin/config.json` at the project root. For a personal, gitignored config, write to `.devin/config.local.json`. The JSON shape is identical in all three locations.
+| Platform | Windsurf MCP config path |
+|----------|--------------------------|
+| All platforms | `~/.codeium/windsurf/mcp_config.json` (typically `C:\Users\<you>\.codeium\windsurf\mcp_config.json` on Windows) |
 
-The file may already exist with other content (e.g. `{"version": 1}`). **Merge** the `mcpServers` key in — do not overwrite the whole file. Read it first, parse the JSON, add/replace the `mcpServers` object, and write it back.
+> **Path note for the agent:** On Windows the Devin user-level config is `%APPDATA%\devin\config.json`. The `~/.config/devin/config.json` path is macOS/Linux only. Getting this wrong is a common failure — the file gets written to a location Devin never reads, and the servers won't be picked up. The Windsurf path (`~/.codeium/windsurf/mcp_config.json`) is the same on all platforms.
+
+If you prefer a Devin project-scoped (team-shared, committed) config instead of user-level, write to `.devin/config.json` at the project root. For a personal, gitignored config, write to `.devin/config.local.json`. The JSON shape is identical across all Devin config locations. **The Windsurf MCP config file is still required separately** regardless of which Devin config location you choose — there is no project-scoped alternative for the Windsurf file.
+
+Both files may already exist with other content (e.g. `{"version": 1}` for Devin, or empty for Windsurf). **Merge** the `mcpServers` key in — do not overwrite the whole file. Read each file first, parse the JSON, add/replace the `mcpServers` object, and write it back.
 
 ```json
 {
@@ -395,19 +403,23 @@ After the agent writes the config file, it must verify the servers are actually 
 
 **A. Verify registration (do this first):**
 
-Read the config file back and confirm the `mcpServers` block contains each approved server:
+Read **both** config files back and confirm each contains the `mcpServers` block with every approved server:
 
 ```bash
-# macOS / Linux
+# macOS / Linux — Devin user-level config
 cat ~/.config/devin/config.json
+# macOS / Linux — Windsurf MCP config
+cat ~/.codeium/windsurf/mcp_config.json
 
-# Windows (PowerShell)
+# Windows (PowerShell) — Devin user-level config
 Get-Content "$env:APPDATA\devin\config.json"
+# Windows (PowerShell) — Windsurf MCP config
+Get-Content "$HOME\.codeium\windsurf\mcp_config.json"
 
-# (or whichever config file was written: .devin/config.json / .devin/config.local.json)
+# (or whichever Devin config file was written: .devin/config.json / .devin/config.local.json)
 ```
 
-The file must contain a `"mcpServers"` object with one entry per approved server. If a server the user approved is missing, add it; if a denied server is present, remove it.
+Both files must contain a `"mcpServers"` object with one entry per approved server. If a server the user approved is missing from either file, add it; if a denied server is present in either file, remove it. **Both files must be in sync** — a server present in only one file will either be invisible to the agent or invisible in the UI.
 
 **B. Verify each server is active** by performing a simple operation (only after registration is confirmed and Windsurf/Devin has been restarted so the servers are picked up):
 
@@ -974,10 +986,12 @@ DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database
 
 - [ ] The agent asked the user which of the 5 MCP servers to enable (multi-select) and recorded approvals/denials
 - [ ] Any server the user denied is recorded as denied and skipped — not re-prompted
-- [ ] The `mcpServers` block was written/merged into the correct config file (`%APPDATA%\devin\config.json` on Windows, `~/.config/devin/config.json` on macOS/Linux, or `.devin/config.json` / `.devin/config.local.json`)
-- [ ] For each approved server (`filesystem`, `memory`, `sequential-thinking`, `puppeteer`, `playwright`), it appears in the written config file's `mcpServers` object
-- [ ] No denied server is present in the config file's `mcpServers` object
+- [ ] The `mcpServers` block was written/merged into the **Devin config file** (`%APPDATA%\devin\config.json` on Windows, `~/.config/devin/config.json` on macOS/Linux, or `.devin/config.json` / `.devin/config.local.json`)
+- [ ] The `mcpServers` block was **also** written/merged into the **Windsurf MCP config file** (`~/.codeium/windsurf/mcp_config.json` on all platforms) — required for UI panel & Marketplace visibility
+- [ ] For each approved server (`filesystem`, `memory`, `sequential-thinking`, `puppeteer`, `playwright`), it appears in **both** config files' `mcpServers` object
+- [ ] No denied server is present in either config file's `mcpServers` object
 - [ ] Windsurf/Devin has been restarted so the servers are picked up
+- [ ] After restart, the servers appear in Windsurf Settings → MCP Servers with active status
 
 ### ✅ Step 3 — Environment variables configured
 
