@@ -48,9 +48,9 @@ cd servicehub
 
 ### Step 1.5: Install CLI tools
 
-This step covers the CLIs the team uses day-to-day. The **GitHub CLI** and **Azure CLI** are recommended for all developers (needed for pushing changes and any Azure infrastructure work). The **AI coding CLIs** (Claude Code, ChatGPT/Codex, Antigravity) are **optional** — install only the ones you want to use.
+This step covers the CLIs the team uses day-to-day. All of the CLIs below — **GitHub CLI**, **Azure CLI**, **Claude Code**, **ChatGPT/Codex**, and **Google Antigravity** — are **required** parts of the standard Service Hub dev environment.
 
-> **🤖 AI agent note:** Before installing any of the optional AI coding CLIs below, **ask the user first** which ones (if any) they want. Do not install them unprompted. The GitHub and Azure CLIs are safe to install without asking since they're part of the standard dev setup.
+> **🤖 AI agent note — REQUIRED, do not skip:** This step is **required**, not optional. Before installing any CLI, you **MUST** present the full list of CLIs to the user and ask which ones they want installed. The user may deny any or all of them — denial is allowed and should be respected — but you must ask before proceeding, and you must not skip the ask. Use the `ask_user_question` tool (or an equivalent prompt) with the CLIs as selectable choices (multi-select, so the user can pick any subset or none). Do **not** install any CLI unprompted, and do **not** proceed past this step until the user has answered. Install only the CLIs the user explicitly approves; record any denials and continue to the next step.
 
 #### GitHub CLI (recommended for pushing)
 
@@ -99,7 +99,7 @@ az --version
 az login
 ```
 
-#### Claude Code CLI (optional — ask user before installing)
+#### Claude Code CLI (required — ask user before installing)
 
 Anthropic's terminal-based AI coding agent. Requires a Claude Pro, Max, Teams, Enterprise, or Console (API) account.
 
@@ -116,7 +116,7 @@ claude --version
 
 Docs: https://code.claude.com/docs/en/quickstart
 
-#### ChatGPT / Codex CLI (optional — ask user before installing)
+#### ChatGPT / Codex CLI (required — ask user before installing)
 
 OpenAI's official terminal coding agent is the **Codex CLI** (the modern successor to the older `chatgpt` npm package). Requires an OpenAI account with API access or a ChatGPT Plus/Pro/Team subscription.
 
@@ -132,7 +132,7 @@ codex --version
 
 Docs: https://developers.openai.com/codex/cli
 
-#### Google Antigravity CLI (optional — ask user before installing)
+#### Google Antigravity CLI (required — ask user before installing)
 
 Google's terminal AI agent (`agy`), Gemini-powered. Requires a Google account.
 
@@ -237,9 +237,11 @@ rm -rf .devin/skills/ui-ux-pro-max && mv .windsurf/skills/ui-ux-pro-max .devin/s
 
 ### Step 2.6: Enable MCP Servers (Agent-Run Setup)
 
-> **⚠️ This step is performed by the AI agent, not the developer.** When you reach this step during setup, the agent should automatically configure all 5 MCP servers listed below using the `devin mcp add` commands (or by writing the config file directly). The developer does not need to run these commands manually unless they prefer to.
+> **⚠️ This step is performed by the AI agent, not the developer.** This step is **required**, not optional. Before configuring any MCP server, the agent **MUST** present the full list of 5 MCP servers to the user and ask which ones they want enabled. The user may deny any or all of them — denial is allowed and should be respected — but the agent must ask before configuring anything, and must not skip the ask. Use the `ask_user_question` tool (or an equivalent prompt) with the 5 servers as selectable choices (multi-select, so the user can pick any subset or none). Do **not** configure any server unprompted, and do **not** proceed past this step until the user has answered. Configure only the servers the user explicitly approves; record any denials and continue to the next step.
 >
-> **Why:** A fresh Devin CLI install ships with **zero** MCP servers. None of the servers below are built-in or enabled by default — they must all be added explicitly. An agent can fully set up all 5 using only shell/file tools (no MCP tool calls, no human intervention required), because none of these 5 require OAuth or API tokens.
+> **Why:** A fresh Devin install ships with **zero** MCP servers. None of the servers below are built-in or enabled by default — they must all be added explicitly. An agent can fully set up any approved subset using only shell/file tools (no MCP tool calls, no human intervention required), because none of these 5 require OAuth or API tokens.
+>
+> **How:** MCP servers are configured by writing a `mcpServers` block directly into the Devin config file. No `devin` CLI binary is required — this method works on every platform (including Windows boxes where the `devin` CLI is not on PATH). See [Write the config file](#write-the-config-file) below.
 
 The following **5 MCP servers** are part of the standard Service Hub dev environment:
 
@@ -253,74 +255,28 @@ The following **5 MCP servers** are part of the standard Service Hub dev environ
 
 > **Puppeteer vs. Playwright:** Both are browser-automation MCP servers. Puppeteer is the legacy Windsurf-native option; Playwright is the newer Microsoft-maintained alternative with richer accessibility snapshots and multi-browser support. We configure both so the agent can pick the right tool for the job — use Playwright for new E2E test work and accessibility audits, Puppeteer for quick screenshots and the Windsurf-native integration.
 
-> **Config file locations:**
-> - **Devin CLI (user-level):** `~/.config/devin/config.json` (macOS/Linux) · `%APPDATA%\devin\config.json` (Windows)
-> - **Devin CLI (project-level, shared):** `.devin/config.json`
-> - **Devin CLI (local, gitignored):** `.devin/config.local.json`
+> **Config file locations (where the `mcpServers` block can be written):**
+> - **User-level (recommended):** `~/.config/devin/config.json` (macOS/Linux) · `%APPDATA%\devin\config.json` (Windows)
+> - **Project-level (shared, committed):** `.devin/config.json`
+> - **Project-local (gitignored):** `.devin/config.local.json`
 > - **Windsurf (legacy/global):** `~/.codeium/windsurf/mcp_config.json`
 >
-> The `devin mcp add` commands below default to **local** scope (`.devin/config.local.json`, gitignored). Use `-s project` to share with the team via `.devin/config.json`, or `-s user` for global user-level config.
+> The setup below writes to the **user-level** config by default. Use the project-level file (`.devin/config.json`) if you want the servers shared with the team via version control, or `.devin/config.local.json` for a personal, gitignored config. The JSON shape is identical in all locations.
 
-#### Agent setup script (macOS / Linux)
+#### Write the config file
 
-The agent should run this block during setup. It adds all 5 servers and verifies the result:
+Write the `mcpServers` block to the **user-level** config file. **Only include the servers the user approved** in the ask-first step; omit any denied servers.
 
-```bash
-# ── Step 2.6: MCP server setup (run by the agent) ──────────────────────────
-# All 5 servers are stdio-based and need no OAuth or API tokens.
-# Prerequisites: Node.js/npx (required for all 5 servers).
+| Platform | User-level config path |
+|----------|------------------------|
+| macOS / Linux | `~/.config/devin/config.json` |
+| **Windows** | **`%APPDATA%\devin\config.json`** (typically `C:\Users\<you>\AppData\Roaming\devin\config.json`) — **not** `~/.config/devin/config.json` |
 
-PROJECT_ROOT="$(pwd)"   # adjust if not run from the project root
+> **Path note for the agent:** On Windows the user-level Devin config is `%APPDATA%\devin\config.json`. The `~/.config/devin/config.json` path is macOS/Linux only. Getting this wrong is a common failure — the file gets written to a location Devin never reads, and the servers won't be picked up.
 
-# 1. filesystem — file & directory operations
-devin mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem "$PROJECT_ROOT"
+If you prefer a project-scoped (team-shared, committed) config instead, write to `.devin/config.json` at the project root. For a personal, gitignored config, write to `.devin/config.local.json`. The JSON shape is identical in all three locations.
 
-# 2. memory — persistent knowledge graph
-devin mcp add memory -- npx -y @modelcontextprotocol/server-memory
-
-# 3. sequential-thinking — structured reasoning
-devin mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
-
-# 4. puppeteer — headless Chrome automation
-devin mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
-
-# 5. playwright — modern browser automation (Microsoft-maintained)
-devin mcp add playwright -- npx -y @playwright/mcp@latest
-
-# ── Verify ─────────────────────────────────────────────────────────────────
-devin mcp list
-```
-
-#### Agent setup script (Windows PowerShell)
-
-```powershell
-# ── Step 2.6: MCP server setup (run by the agent) ──────────────────────────
-$PROJECT_ROOT = (Get-Location).Path
-
-# 1. filesystem
-devin mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem $PROJECT_ROOT
-
-# 2. memory
-devin mcp add memory -- npx -y @modelcontextprotocol/server-memory
-
-# 3. sequential-thinking
-devin mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
-
-# 4. puppeteer
-devin mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer
-
-# 5. playwright — modern browser automation (Microsoft-maintained)
-devin mcp add playwright -- npx -y @playwright/mcp@latest
-
-# ── Verify ─────────────────────────────────────────────────────────────────
-devin mcp list
-```
-
-> **After adding servers, fully restart Windsurf/Devin** for the servers to be picked up and launched on first use.
-
-#### Alternative: config file approach
-
-If `devin mcp add` is unavailable or the agent prefers to write the config directly, write this to `~/.config/devin/config.json` (user-level) or `.devin/config.json` (project-level, shared with team):
+The file may already exist with other content (e.g. `{"version": 1}`). **Merge** the `mcpServers` key in — do not overwrite the whole file. Read it first, parse the JSON, add/replace the `mcpServers` object, and write it back.
 
 ```json
 {
@@ -354,7 +310,9 @@ If `devin mcp add` is unavailable or the agent prefers to write the config direc
 }
 ```
 
-> **Replace `/absolute/path/to/servicehub`** with the actual project root path. On Windows, use the Windows path format (e.g. `C:\\Users\\yourname\\projects\\servicehub`) and `python` instead of `python3`.
+> **Replace `/absolute/path/to/servicehub`** with the actual project root path. On Windows, use the Windows path format with double backslashes (e.g. `"C:\\Users\\yourname\\CascadeProjects\\servicehub"`).
+>
+> **Windows `npx` note:** On Windows, `npx` resolves to `npx.cmd`. The `command: "npx"` value works because Devin shells out through `cmd.exe`, but if a server fails to launch on Windows, try `"command": "npx.cmd"` for that entry.
 
 #### Server reference
 
@@ -370,7 +328,7 @@ Direct file and directory operations: read, write, edit, search, move, tree view
 | Media | `read_media_file` (images/audio as base64) |
 | Metadata | `get_file_info`, `list_directory_with_sizes` |
 
-**Setup:** `devin mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem /path/to/project`. The last arg is the allowed directory — set it to the project root.
+**Config entry:** add a `"filesystem"` key to `mcpServers` with `"command": "npx"` and `"args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]`. The last arg is the allowed directory — set it to the project root.
 
 ##### 2. `memory` — Knowledge Graph (Persistent Memory)
 
@@ -385,7 +343,7 @@ Stores entities, relations, and observations in a persistent knowledge graph. Su
 
 **Use cases:** Remember architectural decisions, track sub-app ownership, store onboarding context for new developers, persist bug patterns and resolutions across sessions.
 
-**Setup:** `devin mcp add memory -- npx -y @modelcontextprotocol/server-memory`. Data is stored locally in a JSON file — no external service required.
+**Config entry:** add a `"memory"` key to `mcpServers` with `"command": "npx"` and `"args": ["-y", "@modelcontextprotocol/server-memory"]`. Data is stored locally in a JSON file — no external service required.
 
 ##### 3. `sequential-thinking` — Structured Reasoning
 
@@ -397,7 +355,7 @@ A dynamic, reflective problem-solving tool that breaks complex problems into seq
 
 **Use cases:** Debugging complex multi-layer issues (e.g., Prisma + Azure SQL + Express middleware chains), planning sub-app architecture, designing database schema changes, root-cause analysis for production incidents.
 
-**Setup:** `devin mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking`. No external dependencies.
+**Config entry:** add a `"sequential-thinking"` key to `mcpServers` with `"command": "npx"` and `"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]`. No external dependencies.
 
 ##### 4. `puppeteer` — Browser Automation
 
@@ -411,7 +369,7 @@ Headless Chrome control for navigating, clicking, filling forms, taking screensh
 
 **Use cases:** End-to-end visual testing of the React frontend, capturing screenshots for UX audits, verifying login flows, debugging client-side rendering issues.
 
-**Setup:** `devin mcp add puppeteer -- npx -y @modelcontextprotocol/server-puppeteer`. Ensure Puppeteer's Chromium can launch on your OS (it should on macOS and Windows; on Linux you may need `--no-sandbox`).
+**Config entry:** add a `"puppeteer"` key to `mcpServers` with `"command": "npx"` and `"args": ["-y", "@modelcontextprotocol/server-puppeteer"]`. Ensure Puppeteer's Chromium can launch on your OS (it should on macOS and Windows; on Linux you may need `--no-sandbox`).
 
 ##### 5. `playwright` — Modern Browser Automation (Microsoft-maintained)
 
@@ -427,13 +385,31 @@ Microsoft's Playwright-based browser automation MCP server. Supports Chromium, F
 
 **Use cases:** Modern E2E testing of the React frontend, accessibility audits via the accessibility snapshot, cross-browser verification, PDF export of pages, filling and submitting forms for testing.
 
-**Setup:** `devin mcp add playwright -- npx -y @playwright/mcp@latest`. The Playwright browser binaries download automatically on first use — no manual install needed.
+**Config entry:** add a `"playwright"` key to `mcpServers` with `"command": "npx"` and `"args": ["-y", "@playwright/mcp@latest"]`. The Playwright browser binaries download automatically on first use — no manual install needed.
 
 > **Puppeteer vs. Playwright:** Both are browser-automation MCP servers. Puppeteer is the legacy Windsurf-native option; Playwright is newer with better accessibility support and multi-browser coverage. Use Playwright for new E2E test work and accessibility audits; use Puppeteer for quick screenshots and the Windsurf-native integration.
 
 #### Verification checklist
 
-After the agent runs the setup script, it should verify each server is active by performing a simple operation:
+After the agent writes the config file, it must verify the servers are actually registered before declaring success. **Do not assume the setup worked — verify.**
+
+**A. Verify registration (do this first):**
+
+Read the config file back and confirm the `mcpServers` block contains each approved server:
+
+```bash
+# macOS / Linux
+cat ~/.config/devin/config.json
+
+# Windows (PowerShell)
+Get-Content "$env:APPDATA\devin\config.json"
+
+# (or whichever config file was written: .devin/config.json / .devin/config.local.json)
+```
+
+The file must contain a `"mcpServers"` object with one entry per approved server. If a server the user approved is missing, add it; if a denied server is present, remove it.
+
+**B. Verify each server is active** by performing a simple operation (only after registration is confirmed and Windsurf/Devin has been restarted so the servers are picked up):
 
 | Server | Verification prompt |
 |--------|-------------------|
@@ -443,18 +419,43 @@ After the agent runs the setup script, it should verify each server is active by
 | `puppeteer` | "Navigate to http://localhost:3000 and take a screenshot" |
 | `playwright` | "Use Playwright to navigate to http://localhost:3000 and take an accessibility snapshot" |
 
-> **💡 Tip:** If a server is not responding, check Windsurf Settings → MCP Servers (or run `devin mcp list`) for error indicators. Restart Windsurf/Devin after adding a new server configuration.
+> **💡 Tip:** If a server is not responding, check Windsurf Settings → MCP Servers for error indicators. Restart Windsurf/Devin after writing a new server configuration so the servers are picked up.
 >
-> **Enabling/disabling without removing:** Use `devin mcp enable <name>` / `devin mcp disable <name>` to toggle a server without losing its config or credentials.
+> **Enabling/disabling without removing:** Set `"disabled": true` on the server entry in the config file to toggle a server without losing its config.
 
 ### Step 3: Configure environment variables
-if you dont have a .env file, copy the example file:
+
+> **🤖 AI agent note — assume present, only ask if missing:** The `.env` file is gitignored and never lives in the repo, so the realistic way a developer gets it is from a teammate or a previous machine — not by typing secret values into a fresh file during setup. **Assume the developer already has a `.env` file.** Do **not** prompt them to fill in secret values or ask a teammate for `DATABASE_URL` / `JWT_SECRET` / `JWT_REFRESH_SECRET` unless `.env` is actually missing or malformed. "Assume present" still means **verify** — check that `.env` exists, is gitignored, contains all required keys, and that `DATABASE_URL` points at the dev DB (`free-test-servicehub`), not production. Only if a check fails should the agent surface it to the developer and ask how they want to proceed. Do not silently skip this step.
+
+#### A. `.env` already exists (the common case)
+
+The agent should verify, not prompt:
+
+```bash
+# 1. Confirm the file exists and is gitignored
+test -f .env && git check-ignore .env   # macOS/Linux
+# Windows (PowerShell):
+Test-Path .env; git check-ignore .env
+
+# 2. Confirm all required keys are present (without printing their values)
+grep -E '^(DATABASE_URL|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)=' .env   # macOS/Linux
+# Windows (PowerShell):
+Select-String -Path .env -Pattern '^(DATABASE_URL|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)='
+```
+
+If all four keys are present and `DATABASE_URL` contains `database=free-test-servicehub` (dev) and **not** `free-production-servicehub`, this step is done — move on to Step 4. Do not ask the developer for values.
+
+If `.env` exists but is missing a key or points at the production DB, surface the specific problem to the developer and ask how they want to fix it (e.g. get the missing value from a teammate). Do not write secret values into the file yourself unless the developer explicitly provides them.
+
+#### B. `.env` is missing (only then — ask the developer)
+
+Only if `.env` does not exist at the project root should the agent guide the developer to create one. Start from the example file:
 
 ```bash
 cp .env.example .env
 ```
 
-Then open `.env` and fill in the values. Ask a team member for the `DATABASE_URL`, `JWT_SECRET`, and `JWT_REFRESH_SECRET` values, or see the section below.
+Then the developer fills in the values. They should ask a team member for the `DATABASE_URL`, `JWT_SECRET`, and `JWT_REFRESH_SECRET` values, or use the reference below. **The agent should not generate or guess secret values** — it should tell the developer which keys to fill in and where to get them.
 
 **Required variables:**
 
@@ -474,19 +475,34 @@ sqlserver://houstonservice-test.database.windows.net:1433;database=free-test-ser
 
 ### Step 4: Apply migrations & seed the database
 
-The test database (`free-test-servicehub`) already has migrations applied and seed data. You only need to run these commands if:
-- Setting up a **fresh** database
-- The schema has changed (after pulling new Prisma model changes)
+> **🤖 AI agent note:** Before running `npx prisma db seed`, **ask the user first** whether the target database is brand-new and empty. Seeding an already-set-up database can create duplicate roles or fail on unique constraints. `npx prisma migrate deploy` is safe to run without asking — it only applies pending migrations and never drops or recreates tables.
+
+The test database (`free-test-servicehub`) is shared and already has migrations applied and seed data. **Do not run the seed command against an existing database** — it will fail or duplicate data. Follow the path below that matches your situation.
+
+#### A. Existing database (most developers — DB already set up)
+
+Only apply pending migrations. **Do not seed.**
 
 ```bash
-# Apply all pending migrations to the dev database
+# Apply any pending migrations to the dev database (safe — never drops/recreates tables)
 npx prisma migrate deploy
-
-# Seed roles and default admin user
-npx prisma db seed
 ```
 
 > **Schema changes:** Always run `npx prisma migrate deploy` after pulling changes that include `prisma/schema.prisma` modifications. To create a new migration after editing the schema, run `npx prisma migrate dev --name describe_your_change` locally first.
+
+#### B. Fresh / empty database (new DB only)
+
+Run migrations **and** seed — only if the database has no tables or seed data yet.
+
+```bash
+# 1. Apply all pending migrations to the dev database
+npx prisma migrate deploy
+
+# 2. Seed roles and default admin user (ONLY for a brand-new database)
+npx prisma db seed
+```
+
+> **Warning:** `npx prisma db seed` should only be run against a fresh database. Running it against an already-seeded database can create duplicate roles or fail on unique constraints. If you are unsure whether the DB has been seeded, check with the team or query the `Role` table first.
 
 ### Step 5: Start the development server
 
@@ -918,3 +934,76 @@ DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database
 
 
 **Cost:** ~$0.018/GB/month (Hot tier, LRS). Negligible for typical image usage.
+
+---
+
+## Final Verification Checklist (Agent-Run)
+
+> **🤖 AI agent note — REQUIRED, do not skip:** After walking the developer through Steps 1–5, the agent **MUST** run this final verification pass before declaring setup complete. Go through every step in order, verify the actual state of the system (do not assume — run the commands and read the output), and tick each box only when the verification command succeeds. If any check fails, stop, surface the failure to the developer with the exact error, and remediate before moving on. Do **not** mark setup complete until every checkbox below is confirmed.
+
+### ✅ Step 1 — Repository cloned
+
+- [ ] `git rev-parse --is-inside-work-tree` succeeds (inside the `servicehub` repo)
+- [ ] `git remote -v` shows `origin` → `github.com/andy741231/servicehub.git`
+- [ ] Current working directory is the project root (contains `client/`, `server/`, `shared/`, `prisma/`)
+
+### ✅ Step 1.5 — CLI tools installed (only those the user approved)
+
+- [ ] `node -v` prints v20+ and `npm -v` prints v9+
+- [ ] For each CLI the user approved, the verify command succeeds:
+  - GitHub CLI: `gh --version` (and `gh auth status` is authenticated)
+  - Azure CLI: `az --version` (and `az account show` returns a subscription)
+  - Claude Code: `claude --version`
+  - Codex CLI: `codex --version`
+  - Google Antigravity: `agy --version`
+- [ ] Any CLI the user denied is recorded as denied and skipped — not re-prompted
+
+### ✅ Step 2 — Dependencies installed
+
+- [ ] `node_modules/` exists at the project root
+- [ ] `npm ls --depth=0 2>&1 | head` shows no `UNMET DEPENDENCY` errors for the workspace root
+- [ ] `client/node_modules/`, `server/node_modules/`, and `shared/` resolve via npm workspaces
+
+### ✅ Step 2.5 — UI/UX Pro Max skill installed
+
+- [ ] `.devin/skills/ui-ux-pro-max/SKILL.md` exists
+- [ ] (If the user approved Python) `python --version` or `python3 --version` prints 3.x
+- [ ] (If Python installed) `uipro --design-system` (or the `.cmd` shim on Windows) runs without error
+
+### ✅ Step 2.6 — MCP servers enabled (only those the user approved)
+
+- [ ] The agent asked the user which of the 5 MCP servers to enable (multi-select) and recorded approvals/denials
+- [ ] Any server the user denied is recorded as denied and skipped — not re-prompted
+- [ ] The `mcpServers` block was written/merged into the correct config file (`%APPDATA%\devin\config.json` on Windows, `~/.config/devin/config.json` on macOS/Linux, or `.devin/config.json` / `.devin/config.local.json`)
+- [ ] For each approved server (`filesystem`, `memory`, `sequential-thinking`, `puppeteer`, `playwright`), it appears in the written config file's `mcpServers` object
+- [ ] No denied server is present in the config file's `mcpServers` object
+- [ ] Windsurf/Devin has been restarted so the servers are picked up
+
+### ✅ Step 3 — Environment variables configured
+
+- [ ] `.env` exists at the project root (and is **not** tracked by git — `git check-ignore .env` returns the path)
+- [ ] `.env` contains `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `CLIENT_URL`
+- [ ] `CLIENT_URL` is `http://localhost:3000`
+- [ ] `DATABASE_URL` points at `free-test-servicehub` (dev DB), not the production DB
+- [ ] If `.env` was already present and valid, the agent verified it and did **not** prompt the developer for secret values
+- [ ] If `.env` was missing or malformed, the agent surfaced the specific problem and guided the developer to fix it (without generating or guessing secret values itself)
+
+### ✅ Step 4 — Migrations applied (and seeded only if the DB was fresh)
+
+- [ ] `npx prisma migrate status` reports no pending migrations
+- [ ] If the database was brand-new and the user confirmed seeding: `Role` and `User` tables are populated (verify with `npx prisma studio` or a quick query)
+- [ ] If the database was already set up: `npx prisma db seed` was **not** run
+
+### ✅ Step 5 — Development server running
+
+- [ ] `npm run dev` is running (both Vite frontend and Express backend started without fatal errors)
+- [ ] `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` returns `200`
+- [ ] `curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/api/health` returns `200`
+- [ ] The developer can load `http://localhost:3000` in a browser and reach the login page
+- [ ] Login with `admin@servicehub.com` / `Admin@2024!` succeeds and lands on the Welcome page
+
+### 🎯 Sign-off
+
+- [ ] Every checkbox above is ticked. If any cannot be ticked, list the failure(s) and the remediation taken.
+- [ ] Summarize for the developer: which CLIs were installed, which were denied, which MCP servers were enabled, and whether the DB was seeded.
+- [ ] Only after every box is ticked, announce that local setup is complete and the developer is ready to build.
