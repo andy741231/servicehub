@@ -18,8 +18,8 @@ description: >
 Service Hub is a **monorepo, single-backend, multi-frontend** web platform. All sub-apps share one auth system, one database, and one shell UI. New sub-apps plug in with minimal changes.
 
 **Stack:** Node.js · React · Azure SQL (SQL Server) · Tailwind CSS  
-**Local dev DB:** Azure SQL `free-test-servicehub` (remote, no local DB needed)  
-**Production DB:** Azure SQL `free-production-servicehub`  
+**Local dev DB:** Azure SQL `test-servicehub` (remote, no local DB needed)  
+**Production DB:** Azure SQL `production-servicehub`  
 **Deploy:** Azure App Service (`houstonservicehub.azurewebsites.net`)  
 **CI/CD:** GitHub Actions → Azure (push to `main` auto-deploys)  
 **Version Control:** GitHub (`github.com/andy741231/servicehub`)
@@ -447,7 +447,7 @@ Work through these in order. Complete each phase before moving to the next.
 
 ```bash
 # .env (local dev — never commit this file)
-DATABASE_URL="sqlserver://houstonservice-test.database.windows.net;database=free-test-servicehub;user=servicehub_dev;password=Sh@Dev2024!;encrypt=true;trustServerCertificate=false;"
+DATABASE_URL="sqlserver://houstonservice-test.database.windows.net;database=test-servicehub;user=servicehub_dev;password=<ask_team>;encrypt=true;trustServerCertificate=false;"
 JWT_SECRET=change_me_in_production
 JWT_REFRESH_SECRET=change_me_too
 CLIENT_URL=http://localhost:3000
@@ -471,8 +471,8 @@ Production env vars are set directly on the Azure App Service (not in any commit
 | Azure Resource | Purpose |
 |----------------|---------|
 | App Service `houstonservicehub` | Hosts Express server + built React frontend (Windows, iisnode) |
-| Azure SQL `free-test-servicehub` | Development database |
-| Azure SQL `free-production-servicehub` | Production database |
+| Azure SQL `test-servicehub` | Development database |
+| Azure SQL `production-servicehub` | Production database |
 | GitHub Actions `azure-deploy.yml` | CI/CD: builds, assembles self-contained package, deploys via Kudu ZIP API |
 
 **Deploy flow on push to `main`:**

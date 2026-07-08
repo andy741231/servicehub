@@ -114,6 +114,8 @@ Anthropic's terminal-based AI coding agent. Requires a Claude Pro, Max, Teams, E
 claude --version
 ```
 
+First run prompts for Anthropic login (OAuth or API key) — follow the on-screen instructions.
+
 Docs: https://code.claude.com/docs/en/quickstart
 
 #### ChatGPT / Codex CLI (required — ask user before installing)
@@ -129,6 +131,8 @@ OpenAI's official terminal coding agent is the **Codex CLI** (the modern success
 ```bash
 codex --version
 ```
+
+First run prompts for OpenAI login — follow the on-screen instructions.
 
 Docs: https://developers.openai.com/codex/cli
 
@@ -159,7 +163,16 @@ Google's terminal AI agent (`agy`), Gemini-powered. Requires a Google account.
 agy --version
 ```
 
+First run prompts for Google account login — follow the on-screen instructions.
+
 Update later with `agy update`. Docs: https://antigravity.google/docs/home
+
+> **Windows + PowerShell note:** The npm-installed CLIs (`claude`, `codex`)
+> generate `.ps1` shims that PowerShell blocks under the default execution
+> policy, producing `running scripts is disabled on this system`. Either run
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or simply use
+> **Command Prompt / Git Bash** — both run the `.cmd` shims without issue.
+> `agy` is unaffected (native `.exe`, not a PS script).
 
 ### Step 2: Install dependencies
 
@@ -437,7 +450,7 @@ Both files must contain a `"mcpServers"` object with one entry per approved serv
 
 ### Step 3: Configure environment variables
 
-> **🤖 AI agent note — assume present, only ask if missing:** The `.env` file is gitignored and never lives in the repo, so the realistic way a developer gets it is from a teammate or a previous machine — not by typing secret values into a fresh file during setup. **Assume the developer already has a `.env` file.** Do **not** prompt them to fill in secret values or ask a teammate for `DATABASE_URL` / `JWT_SECRET` / `JWT_REFRESH_SECRET` unless `.env` is actually missing or malformed. "Assume present" still means **verify** — check that `.env` exists, is gitignored, contains all required keys, and that `DATABASE_URL` points at the dev DB (`free-test-servicehub`), not production. Only if a check fails should the agent surface it to the developer and ask how they want to proceed. Do not silently skip this step.
+> **🤖 AI agent note — assume present, only ask if missing:** The `.env` file is gitignored and never lives in the repo, so the realistic way a developer gets it is from a teammate or a previous machine — not by typing secret values into a fresh file during setup. **Assume the developer already has a `.env` file.** Do **not** prompt them to fill in secret values or ask a teammate for `DATABASE_URL` / `JWT_SECRET` / `JWT_REFRESH_SECRET` unless `.env` is actually missing or malformed. "Assume present" still means **verify** — check that `.env` exists, is gitignored, contains all required keys, and that `DATABASE_URL` points at the dev DB (`test-servicehub`), not production. Only if a check fails should the agent surface it to the developer and ask how they want to proceed. Do not silently skip this step.
 
 #### A. `.env` already exists (the common case)
 
@@ -455,7 +468,7 @@ grep -E '^(DATABASE_URL|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)=' .env   # mac
 Select-String -Path .env -Pattern '^(DATABASE_URL|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)='
 ```
 
-If all four keys are present and `DATABASE_URL` contains `database=free-test-servicehub` (dev) and **not** `free-production-servicehub`, this step is done — move on to Step 4. Do not ask the developer for values.
+If all four keys are present and `DATABASE_URL` contains `database=test-servicehub` (dev) and **not** `production-servicehub`, this step is done — move on to Step 4. Do not ask the developer for values.
 
 If `.env` exists but is missing a key or points at the production DB, surface the specific problem to the developer and ask how they want to fix it (e.g. get the missing value from a teammate). Do not write secret values into the file yourself unless the developer explicitly provides them.
 
@@ -473,14 +486,14 @@ Then the developer fills in the values. They should ask a team member for the `D
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | Azure SQL connection string for `free-test-servicehub` (dev DB) |
+| `DATABASE_URL` | Azure SQL connection string for `test-servicehub` (dev DB) |
 | `JWT_SECRET` | Secret for signing access tokens |
 | `JWT_REFRESH_SECRET` | Secret for signing refresh tokens |
 | `CLIENT_URL` | `http://localhost:3000` (for local dev CORS) |
 
 The `DATABASE_URL` format for Azure SQL (SQL Server via Prisma):
 ```
-sqlserver://houstonservice-test.database.windows.net:1433;database=free-test-servicehub;user=servicehub_dev;password=<ask team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30
+sqlserver://houstonservice-test.database.windows.net:1433;database=test-servicehub;user=servicehub_dev;password=<ask team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30
 ```
 
 > **Note:** The `.env` file is gitignored — never commit it.
@@ -489,7 +502,7 @@ sqlserver://houstonservice-test.database.windows.net:1433;database=free-test-ser
 
 > **🤖 AI agent note:** Before running `npx prisma db seed`, **ask the user first** whether the target database is brand-new and empty. Seeding an already-set-up database can create duplicate roles or fail on unique constraints. `npx prisma migrate deploy` is safe to run without asking — it only applies pending migrations and never drops or recreates tables.
 
-The test database (`free-test-servicehub`) is shared and already has migrations applied and seed data. **Do not run the seed command against an existing database** — it will fail or duplicate data. Follow the path below that matches your situation.
+The test database (`test-servicehub`) is shared and already has migrations applied and seed data. **Do not run the seed command against an existing database** — it will fail or duplicate data. Follow the path below that matches your situation.
 
 #### A. Existing database (most developers — DB already set up)
 
@@ -592,8 +605,8 @@ PrismaClientInitializationError: Client with IP address 'xxx.xxx.xxx.xxx' is not
 
 | Database | Purpose | User |
 |----------|---------|------|
-| `free-test-servicehub` | Local development | `servicehub_dev` |
-| `free-production-servicehub` | Live production | `servicehub_prod` |
+| `test-servicehub` | Local development | `servicehub_dev` |
+| `production-servicehub` | Live production | `servicehub_prod` |
 
 Both databases live on the Azure SQL server `houstonservice-test.database.windows.net`.
 
@@ -727,7 +740,7 @@ git commit -m "feat: describe your change"
 | Secret | Description | Status |
 |--------|-------------|--------|
 | `DATABASE_URL_PROD` | Production Azure SQL connection string | ✓ Set |
-| `DATABASE_URL_STAGING` | Staging Azure SQL (`free-test-servicehub`) | ✓ Set |
+| `DATABASE_URL_STAGING` | Staging Azure SQL (`test-servicehub`) | ✓ Set |
 | `AZURE_DEPLOY_USER` | Kudu publishing username (production slot) | ✓ Set |
 | `AZURE_DEPLOY_PWD` | Kudu publishing password (production slot) | ✓ Set |
 | `AZURE_DEPLOY_USER_STAGING` | Kudu publishing username (staging slot) | ✓ Set |
@@ -754,7 +767,7 @@ curl -s -o /tmp/pubprofile_staging.xml -X POST \
 |------|--------------|---------|
 | 1 | Created `staging` slot cloned from production | `az webapp deployment slot list` shows `staging` in `Running` state |
 | 2 | Auto-swap enabled (`staging` → `production`) | `autoSwapSlotName: production` confirmed on the slot config |
-| 3 | `DATABASE_URL` on staging set to `free-test-servicehub` (dev DB) | `database=free-test-servicehub` confirmed in staging app settings |
+| 3 | `DATABASE_URL` on staging set to `test-servicehub` (dev DB) | `database=test-servicehub` confirmed in staging app settings |
 | 4 | `DATABASE_URL` and `NODE_ENV` marked slot-sticky on both slots | Both show `slotSetting: true` on production and staging |
 
 To verify current state at any time:
@@ -941,7 +954,7 @@ Implementation plan when ready:
 
 # View Azure SQL Database / prisma studio IN PRODUCTION
 ```bash
-DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database=free-production-servicehub;user=servicehub_prod;password=zM8@nL3wP6!qS9;encrypt=true;trustServerCertificate=false;connectionTimeout=30' npx prisma studio
+DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database=production-servicehub;user=servicehub_prod;password=<ask_team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30' npx prisma studio
 ```
 
 
@@ -998,7 +1011,7 @@ DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database
 - [ ] `.env` exists at the project root (and is **not** tracked by git — `git check-ignore .env` returns the path)
 - [ ] `.env` contains `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `CLIENT_URL`
 - [ ] `CLIENT_URL` is `http://localhost:3000`
-- [ ] `DATABASE_URL` points at `free-test-servicehub` (dev DB), not the production DB
+- [ ] `DATABASE_URL` points at `test-servicehub` (dev DB), not the production DB
 - [ ] If `.env` was already present and valid, the agent verified it and did **not** prompt the developer for secret values
 - [ ] If `.env` was missing or malformed, the agent surfaced the specific problem and guided the developer to fix it (without generating or guessing secret values itself)
 
@@ -1020,4 +1033,5 @@ DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database
 
 - [ ] Every checkbox above is ticked. If any cannot be ticked, list the failure(s) and the remediation taken.
 - [ ] Summarize for the developer: which CLIs were installed, which were denied, which MCP servers were enabled, and whether the DB was seeded.
+- [ ] If any MCP servers were enabled, remind the developer to **restart Devin/Windsurf** so the new MCP config is picked up — MCP servers do not appear until the editor is restarted.
 - [ ] Only after every box is ticked, announce that local setup is complete and the developer is ready to build.
