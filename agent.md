@@ -188,6 +188,29 @@ the full search page at `/hub-admin/search`.
 
 ## Database Schema (Prisma)
 
+### Schema Change Workflow (IMPORTANT)
+
+Azure SQL does not support shadow databases, so `prisma migrate dev` (which
+auto-generates migration files) does not work. The workflow is:
+
+1. **Edit `prisma/schema.prisma`** — add/modify models
+2. **Run `npx prisma db push`** — syncs the dev DB (`test-servicehub`) directly
+3. **Create a migration file manually** — this is the critical step that's easy
+   to miss. `db push` does NOT create a migration file, but production deploy
+   uses `prisma migrate deploy` which ONLY applies migration files. Without a
+   migration file, the change will never reach production.
+   - Create `prisma/migrations/<YYYYMMDD_descriptive_name>/migration.sql`
+   - Use `IF NOT EXISTS` guards so the migration is idempotent (safe to re-run
+     on DBs where `db push` already applied the change)
+   - See existing migrations like `20260707_add_user_preferences` for the pattern
+4. **Add the migration name to the deploy workflow** — add a
+   `npx prisma migrate resolve --applied "<migration_name>"` line to both the
+   staging and production resolve steps in `.github/workflows/azure-deploy.yml`
+
+**Why this matters:** If you skip step 3, the feature will work locally but
+silently fail in production because the table/column doesn't exist. This
+happened with the `FormFolder` table — see commit `217d1cf` for the fix.
+
 ### Core (shared across all apps)
 ```prisma
 model User {
@@ -496,7 +519,7 @@ When you're ready to add App 4, 5, etc.:
 - [ ] Add the frontend route in `client/src/App.jsx` (nest under `<AppShell>`)
 - [ ] Create `server/src/routes/<appname>.js`
 - [ ] Register route in `server/src/routes/index.js`
-- [ ] Add Prisma models to `schema.prisma`, run `npx prisma db push`
+- [ ] Add Prisma models to `schema.prisma`, run `npx prisma db push`, **then create a migration file** (see Schema Change Workflow above)
 - [ ] Seed default `AppPermission` rows for existing users
 - [ ] (Optional) Add a search provider in `client/src/search/registry.js`
 

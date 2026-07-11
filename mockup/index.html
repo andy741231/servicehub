@@ -3,312 +3,962 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Form Builder Redesign — Mockups</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <title>Alex Morgan — Product Designer &amp; Front-End Developer</title>
+  <meta name="description" content="Portfolio of Alex Morgan — crafting clean digital products and interfaces." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --primary:#0D9488; --primary-hover:#0F766E; --primary-light:#F0FDFA; --primary-foreground:#FFFFFF;
-      --background:#FAFDFC; --surface:#FFFFFF; --surface-raised:#F0FDFA; --surface-tertiary:#CCFBF1;
-      --border:#E2E8F0; --border-soft:#F5FEFB; --border-strong:#CBD5E1;
-      --text-base:#1C2B2A; --text-muted:#64748B; --text-subtle:#94A3B8; --text-inverse:#FFFFFF;
-      --success:#059669; --success-light:#F0FDF4; --warning:#D97706; --warning-light:#FFFBEB;
-      --danger:#E11D48; --danger-light:#FFF1F2; --info:#0891B2; --info-light:#ECFEFF;
-      --radius-sm:6px; --radius-base:10px; --radius-card:16px; --radius-lg:20px;
-      --shadow-card:0 1px 3px rgba(13,148,136,0.08),0 4px 12px rgba(15,23,42,0.05);
+      --color-primary: #18181B;
+      --color-on-primary: #FFFFFF;
+      --color-secondary: #3F3F46;
+      --color-accent: #2563EB;
+      --color-background: #FAFAFA;
+      --color-foreground: #09090B;
+      --color-muted: #E8ECF0;
+      --color-border: #E4E4E7;
+      --color-destructive: #DC2626;
+      --color-ring: #18181B;
+
+      --font-body: 'Archivo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-heading: 'Space Grotesk', var(--font-body);
+
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-fast: 300ms var(--ease-out);
+      --transition-medium: 400ms var(--ease-out);
+      --shadow-sm: 0 1px 2px rgba(9, 9, 11, 0.04);
+      --shadow-md: 0 8px 24px rgba(9, 9, 11, 0.08);
+      --shadow-lg: 0 24px 48px rgba(9, 9, 11, 0.12);
     }
-    body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; background: var(--background); color: var(--text-base); }
-  </style>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: { DEFAULT: '#0D9488', hover: '#0F766E', light: '#F0FDFA', foreground: '#FFFFFF' },
-            background: '#FAFDFC', surface: '#FFFFFF', 'surface-raised': '#F0FDFA', 'surface-tertiary': '#CCFBF1',
-            border: { DEFAULT: '#E2E8F0', soft: '#F5FEFB', strong: '#CBD5E1' },
-            'text-base': '#1C2B2A', 'text-muted': '#64748B', 'text-subtle': '#94A3B8',
-            success: { DEFAULT: '#059669', light: '#F0FDF4' },
-            warning: { DEFAULT: '#D97706', light: '#FFFBEB' },
-            danger: { DEFAULT: '#E11D48', light: '#FFF1F2' },
-            info: { DEFAULT: '#0891B2', light: '#ECFEFF' },
-          },
-          borderRadius: { sm: '6px', base: '10px', card: '16px', lg: '20px' },
-          boxShadow: { card: '0 1px 3px rgba(13,148,136,0.08), 0 4px 12px rgba(15,23,42,0.05)' },
-        }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      font-weight: 400;
+      line-height: 1.6;
+      color: var(--color-foreground);
+      background-color: var(--color-background);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4, p, figure, blockquote, dl, dd, ul, ol {
+      margin: 0;
+    }
+
+    a {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid var(--color-ring);
+      outline-offset: 2px;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 1rem;
+      z-index: 100;
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      transition: top var(--transition-fast);
+    }
+
+    .skip-link:focus {
+      top: 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin-inline: auto;
+      padding-inline: 1rem;
+    }
+
+    .section {
+      padding-block: 4rem;
+    }
+
+    .section + .section {
+      border-top: 1px solid var(--color-border);
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: var(--color-secondary);
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(250, 250, 250, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .header .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-block: 1rem;
+    }
+
+    .logo {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--color-foreground);
+    }
+
+    .nav {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .nav a {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-secondary);
+      transition: color var(--transition-fast);
+    }
+
+    .nav a:hover {
+      color: var(--color-foreground);
+      text-decoration: none;
+    }
+
+    /* Hero */
+    .hero {
+      padding-block: 6rem 4rem;
+      min-height: 80vh;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--font-heading);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: 2.75rem;
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-title span {
+      color: var(--color-secondary);
+    }
+
+    .hero-body {
+      font-size: 1.125rem;
+      color: var(--color-secondary);
+      max-width: 40ch;
+      margin-bottom: 2rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-body);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      padding: 0.875rem 1.5rem;
+      border-radius: 0.5rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .btn-primary {
+      background-color: var(--color-primary);
+      color: var(--color-on-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      text-decoration: none;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--color-foreground);
+      border-color: var(--color-border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--color-foreground);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+
+    .btn svg {
+      width: 1.125rem;
+      height: 1.125rem;
+      flex-shrink: 0;
+    }
+
+    /* Projects */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .project-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background-color: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: 1rem;
+      overflow: hidden;
+      transition: transform var(--transition-medium), box-shadow var(--transition-medium);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .project-card:hover,
+    .project-card:focus-within {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .project-card:focus-within {
+      outline: 2px solid var(--color-ring);
+      outline-offset: 2px;
+    }
+
+    .project-thumb {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: linear-gradient(135deg, var(--color-muted) 0%, #FFFFFF 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .project-thumb svg {
+      width: 3rem;
+      height: 3rem;
+      color: var(--color-secondary);
+      opacity: 0.5;
+    }
+
+    .project-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    .project-meta {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-accent);
+    }
+
+    .project-title {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--color-foreground);
+    }
+
+    .project-card:hover .project-title,
+    .project-card:focus-within .project-title {
+      color: var(--color-accent);
+      transition: color var(--transition-fast);
+    }
+
+    .project-desc {
+      font-size: 0.9375rem;
+      color: var(--color-secondary);
+      flex: 1;
+    }
+
+    .project-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .project-link svg {
+      width: 1rem;
+      height: 1rem;
+      transition: transform var(--transition-fast);
+    }
+
+    .project-link:hover svg {
+      transform: translateX(3px);
+    }
+
+    /* About */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .about-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .about-text p {
+      color: var(--color-secondary);
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    .about-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, #FFFFFF 0%, var(--color-muted) 100%);
+      border: 1px solid var(--color-border);
+      border-radius: 1.5rem;
+      aspect-ratio: 4 / 3;
+    }
+
+    .about-visual svg {
+      width: 6rem;
+      height: 6rem;
+      color: var(--color-secondary);
+      opacity: 0.6;
+    }
+
+    .philosophy-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .philosophy-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: 0.75rem;
+      background: #FFFFFF;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .philosophy-item:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .philosophy-item svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      color: var(--color-accent);
+      flex-shrink: 0;
+      margin-top: 0.2rem;
+    }
+
+    .philosophy-item strong {
+      display: block;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .philosophy-item span {
+      font-size: 0.9375rem;
+      color: var(--color-secondary);
+    }
+
+    /* Contact */
+    .contact {
+      background-color: #FFFFFF;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .contact-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .contact-info h2 {
+      font-family: var(--font-heading);
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .contact-info p {
+      color: var(--color-secondary);
+      max-width: 40ch;
+    }
+
+    .contact-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--color-foreground);
+      transition: color var(--transition-fast);
+    }
+
+    .contact-email:hover {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    .contact-email svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.75rem;
+      height: 2.75rem;
+      border: 1px solid var(--color-border);
+      border-radius: 50%;
+      color: var(--color-secondary);
+      transition: color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .social-link:hover {
+      color: var(--color-on-primary);
+      background-color: var(--color-primary);
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+
+    .social-link svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    .footer {
+      padding-block: 2rem;
+      border-top: 1px solid var(--color-border);
+      text-align: center;
+      color: var(--color-secondary);
+      font-size: 0.875rem;
+    }
+
+    /* Reveal animations */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 { transition-delay: 80ms; }
+    .reveal-delay-2 { transition-delay: 160ms; }
+    .reveal-delay-3 { transition-delay: 240ms; }
+    .reveal-delay-4 { transition-delay: 320ms; }
+
+    /* Responsive */
+    @media (min-width: 375px) {
+      .hero-title {
+        font-size: 3rem;
       }
     }
-  </script>
+
+    @media (min-width: 768px) {
+      .container {
+        padding-inline: 1.5rem;
+      }
+
+      .section {
+        padding-block: 5rem;
+      }
+
+      .hero-title {
+        font-size: 3.5rem;
+      }
+
+      .hero {
+        padding-block: 7rem 5rem;
+      }
+
+      .projects-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .about-grid {
+        grid-template-columns: 1.2fr 1fr;
+      }
+
+      .contact-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .section-title {
+        font-size: 2.25rem;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .container {
+        padding-inline: 2rem;
+      }
+
+      .section {
+        padding-block: 6rem;
+      }
+
+      .hero-title {
+        font-size: 4rem;
+      }
+
+      .hero {
+        padding-block: 8rem 6rem;
+      }
+
+      .projects-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .about-grid {
+        grid-template-columns: 1.1fr 1fr;
+      }
+
+      .philosophy-list {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .section-title {
+        font-size: 2.5rem;
+      }
+    }
+
+    @media (min-width: 1440px) {
+      .container {
+        max-width: 1280px;
+        padding-inline: 3rem;
+      }
+
+      .hero-title {
+        font-size: 4.5rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+
+      .reveal {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  </style>
 </head>
-<body class="min-h-screen">
-  <div class="max-w-6xl mx-auto px-6 py-16">
-    <!-- Header -->
-    <header class="mb-12">
-      <div class="flex items-center gap-2 text-text-subtle text-sm mb-3">
-        <i data-lucide="layers" class="w-4 h-4"></i>
-        <span>Service Hub · Form Builder Redesign</span>
-      </div>
-      <h1 class="text-4xl font-semibold tracking-tight text-text-base mb-3">Form Builder — Layout Mockups</h1>
-      <p class="text-lg text-text-muted max-w-2xl">
-        Seven mockups exploring the builder editor: the current layout for reference, plus six
-        modern-minimal redesign directions. Each is a standalone HTML file — click through to
-        explore the interactions. Same form content, same design tokens, different layout philosophy.
-      </p>
-    </header>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
 
-    <!-- Current layout (baseline) -->
-    <section class="mb-12">
-      <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-4">Baseline — for comparison</h2>
-      <a href="builder-current.html"
-         class="group block bg-surface border border-border rounded-card shadow-card p-6 hover:border-text-subtle/40 hover:shadow-lg transition-all duration-200">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-semibold uppercase tracking-wider text-text-muted bg-surface-raised border border-border px-2.5 py-1 rounded-sm">Current</span>
-            <span class="text-xs text-text-subtle">Faithful recreation of the existing 3-pane builder</span>
-          </div>
-          <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-text-base transition-colors"></i>
-        </div>
-        <h3 class="text-lg font-semibold text-text-base mb-2">Current 3-pane layout</h3>
-        <p class="text-sm text-text-muted mb-4 leading-relaxed">
-          Left field palette (always visible, 5 categories) + center canvas (section cards with field
-          cards) + right properties panel (3 tabs, accordion sections). Functional but dense — this is
-          the "before" state the redesigns improve on.
+  <header class="header">
+    <div class="container">
+      <a href="#" class="logo" aria-label="Alex Morgan home">AM</a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#projects">Projects</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <span class="hero-eyebrow reveal">Product Designer &amp; Developer</span>
+        <h1 id="hero-title" class="hero-title reveal">Hi, I'm Alex Morgan — <span>building calm, purposeful digital products.</span></h1>
+        <p class="hero-body reveal reveal-delay-1">
+          I design and build interfaces that feel obvious in hindsight. Currently focused on design systems, accessible UI, and front-end craft.
         </p>
-        <div class="flex flex-wrap gap-1.5">
-          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">w-72 palette</span>
-          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">w-80 properties</span>
-          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Always-visible panels</span>
-          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">20 field types</span>
-        </div>
-      </a>
-    </section>
-
-    <!-- Batch 1: Redesign directions A–C -->
-    <section class="mb-12">
-      <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-4">Batch 1 — Redesign directions A–C</h2>
-      <div class="grid gap-6 md:grid-cols-3">
-        <!-- A -->
-        <a href="builder-linear.html"
-           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">A</span>
-            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
-          </div>
-          <h3 class="text-lg font-semibold text-text-base mb-2">Linear ultra-minimal</h3>
-          <p class="text-sm text-text-muted mb-4 leading-relaxed">
-            Slim icon rail that expands on hover. Contextual right panel — only appears when a field
-            is selected. Keyboard-first with ⌘K command palette.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Slim rail</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Contextual panel</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">⌘K palette</span>
-          </div>
-        </a>
-
-        <!-- B -->
-        <a href="builder-notion.html"
-           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">B</span>
-            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
-          </div>
-          <h3 class="text-lg font-semibold text-text-base mb-2">Notion document canvas</h3>
-          <p class="text-sm text-text-muted mb-4 leading-relaxed">
-            No sidebars — the form IS the document. Inline field blocks, "/" slash command to add
-            fields, properties as a floating popover on click.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">No sidebars</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Slash command</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Popover props</span>
-          </div>
-        </a>
-
-        <!-- C -->
-        <a href="builder-fillout.html"
-           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">C</span>
-            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
-          </div>
-          <h3 class="text-lg font-semibold text-text-base mb-2">Fillout card-preview</h3>
-          <p class="text-sm text-text-muted mb-4 leading-relaxed">
-            Center stage renders the form as the user will see it — real inputs, real submit button.
-            Left palette chips + right properties panel. Device toggle changes the stage.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Live stage</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Palette chips</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Device toggle</span>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <!-- Batch 2: Redesign directions D–F -->
-    <section class="mb-16">
-      <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-4">Batch 2 — Redesign directions D–F</h2>
-      <div class="grid gap-6 md:grid-cols-3">
-        <!-- D -->
-        <a href="builder-split.html"
-           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">D</span>
-            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
-          </div>
-          <h3 class="text-lg font-semibold text-text-base mb-2">Split-view dual canvas</h3>
-          <p class="text-sm text-text-muted mb-4 leading-relaxed">
-            Figma-style: builder outline on the left, live form preview on the right — both always
-            visible. No sidebars; properties as a floating popover. Draggable vertical divider.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Split panes</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Live preview</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Draggable divider</span>
-          </div>
-        </a>
-
-        <!-- E -->
-        <a href="builder-outline.html"
-           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">E</span>
-            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
-          </div>
-          <h3 class="text-lg font-semibold text-text-base mb-2">Outline + inspector</h3>
-          <p class="text-sm text-text-muted mb-4 leading-relaxed">
-            VS Code-style: collapsible structure tree on the left, canvas in the center, persistent
-            inspector on the right. Status bar with field count. Best for long, complex forms.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Outline tree</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Persistent inspector</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Status bar</span>
-          </div>
-        </a>
-
-        <!-- F -->
-        <a href="builder-focused.html"
-           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">F</span>
-            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
-          </div>
-          <h3 class="text-lg font-semibold text-text-base mb-2">Focused single-field</h3>
-          <p class="text-sm text-text-muted mb-4 leading-relaxed">
-            Typeform-style: one field at a time, large and centered. Vertical filmstrip navigator on
-            the left. Progress indicator. Calmest direction — great for conversational forms.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">One field at a time</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Filmstrip nav</span>
-            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Progress bar</span>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <!-- Comparison table -->
-    <section class="border-t border-border pt-10">
-      <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-6">How they compare</h3>
-      <div class="overflow-x-auto">
-        <div class="overflow-hidden rounded-base border border-border min-w-[800px]">
-          <table class="w-full text-sm">
-            <thead class="bg-surface-raised text-text-muted">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium">Trait</th>
-                <th class="text-left px-4 py-3 font-medium">Current</th>
-                <th class="text-left px-4 py-3 font-medium">A · Linear</th>
-                <th class="text-left px-4 py-3 font-medium">B · Notion</th>
-                <th class="text-left px-4 py-3 font-medium">C · Fillout</th>
-                <th class="text-left px-4 py-3 font-medium">D · Split</th>
-                <th class="text-left px-4 py-3 font-medium">E · Outline</th>
-                <th class="text-left px-4 py-3 font-medium">F · Focused</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border bg-surface">
-              <tr>
-                <td class="px-4 py-3 text-text-muted font-medium">Left palette</td>
-                <td class="px-4 py-3">Always visible (w-72)</td>
-                <td class="px-4 py-3">Slim rail, hover-expand</td>
-                <td class="px-4 py-3">None — slash command</td>
-                <td class="px-4 py-3">Always-visible chips</td>
-                <td class="px-4 py-3">None — "+" popover</td>
-                <td class="px-4 py-3">Outline tree (structure)</td>
-                <td class="px-4 py-3">Filmstrip (field nav)</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-3 text-text-muted font-medium">Right panel</td>
-                <td class="px-4 py-3">Always visible (w-80)</td>
-                <td class="px-4 py-3">Contextual, on select</td>
-                <td class="px-4 py-3">None — popover on click</td>
-                <td class="px-4 py-3">Always visible</td>
-                <td class="px-4 py-3">None — floating popover</td>
-                <td class="px-4 py-3">Persistent inspector</td>
-                <td class="px-4 py-3">Inline properties bar</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-3 text-text-muted font-medium">Canvas feel</td>
-                <td class="px-4 py-3">Section cards, field cards</td>
-                <td class="px-4 py-3">Builder boxes, centered</td>
-                <td class="px-4 py-3">Document, inline blocks</td>
-                <td class="px-4 py-3">Real form on a stage</td>
-                <td class="px-4 py-3">Outline list + live preview</td>
-                <td class="px-4 py-3">Field cards, breadcrumb</td>
-                <td class="px-4 py-3">One field, large & centered</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-3 text-text-muted font-medium">Add field</td>
-                <td class="px-4 py-3">Click palette category</td>
-                <td class="px-4 py-3">⌘K command palette</td>
-                <td class="px-4 py-3">"/" slash popover</td>
-                <td class="px-4 py-3">Drag/click palette</td>
-                <td class="px-4 py-3">"+" type popover</td>
-                <td class="px-4 py-3">Outline "+" button</td>
-                <td class="px-4 py-3">"Add field after" button</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-3 text-text-muted font-medium">Live preview</td>
-                <td class="px-4 py-3">Toggle (right panel)</td>
-                <td class="px-4 py-3">Toggle (right panel)</td>
-                <td class="px-4 py-3">Inline (is the canvas)</td>
-                <td class="px-4 py-3">Always (the stage)</td>
-                <td class="px-4 py-3">Always (right pane)</td>
-                <td class="px-4 py-3">Toggle</td>
-                <td class="px-4 py-3">Single field preview</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-3 text-text-muted font-medium">Best for</td>
-                <td class="px-4 py-3">— (baseline)</td>
-                <td class="px-4 py-3">Power users, keyboard</td>
-                <td class="px-4 py-3">Calm, content-first</td>
-                <td class="px-4 py-3">Visual WYSIWYG</td>
-                <td class="px-4 py-3">Edit + see simultaneously</td>
-                <td class="px-4 py-3">Long, complex forms</td>
-                <td class="px-4 py-3">Conversational forms</td>
-              </tr>
-              <tr>
-                <td class="px-4 py-3 text-text-muted font-medium">Clutter level</td>
-                <td class="px-4 py-3 text-warning">Medium-high</td>
-                <td class="px-4 py-3 text-success">Low</td>
-                <td class="px-4 py-3 text-success">Very low</td>
-                <td class="px-4 py-3 text-warning">Medium</td>
-                <td class="px-4 py-3 text-warning">Medium</td>
-                <td class="px-4 py-3 text-warning">Medium</td>
-                <td class="px-4 py-3 text-success">Very low</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="hero-actions reveal reveal-delay-2">
+          <a href="#projects" class="btn btn-primary">
+            View projects
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"></path>
+              <path d="M12 5l7 7-7 7"></path>
+            </svg>
+          </a>
+          <a href="#contact" class="btn btn-secondary">Get in touch</a>
         </div>
       </div>
     </section>
 
-    <footer class="mt-12 pt-8 border-t border-border text-sm text-text-subtle">
-      <p>Open each mockup directly in your browser — they're standalone HTML with Tailwind + lucide via CDN. No build step. All use the same form ("Customer Onboarding Form") and the same design tokens for fair comparison.</p>
-    </footer>
-  </div>
+    <section id="projects" class="section" aria-labelledby="projects-title">
+      <div class="container">
+        <p class="section-subtitle reveal">Selected work</p>
+        <h2 id="projects-title" class="section-title reveal">Projects</h2>
 
-  <script>lucide.createIcons();</script>
+        <div class="projects-grid">
+          <article class="project-card reveal">
+            <div class="project-thumb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+            </div>
+            <div class="project-body">
+              <span class="project-meta">Design System</span>
+              <h3 class="project-title">Pulse</h3>
+              <p class="project-desc">A scalable component library for a fintech platform, built with accessibility and token-based architecture in mind.</p>
+              <a href="#" class="project-link">View case study
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+              </a>
+            </div>
+          </article>
+
+          <article class="project-card reveal reveal-delay-1">
+            <div class="project-thumb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+              </svg>
+            </div>
+            <div class="project-body">
+              <span class="project-meta">Web App</span>
+              <h3 class="project-title">Nebula</h3>
+              <p class="project-desc">A data-visualization dashboard for operations teams, featuring real-time charts and keyboard-navigable controls.</p>
+              <a href="#" class="project-link">View case study
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+              </a>
+            </div>
+          </article>
+
+          <article class="project-card reveal reveal-delay-2">
+            <div class="project-thumb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <div class="project-body">
+              <span class="project-meta">E-Commerce</span>
+              <h3 class="project-title">Lumen</h3>
+              <p class="project-desc">An editorial storefront for a lighting studio, blending large imagery with a lightweight checkout experience.</p>
+              <a href="#" class="project-link">View case study
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+              </a>
+            </div>
+          </article>
+
+          <article class="project-card reveal reveal-delay-3">
+            <div class="project-thumb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+              </svg>
+            </div>
+            <div class="project-body">
+              <span class="project-meta">Product Design</span>
+              <h3 class="project-title">Clarify</h3>
+              <p class="project-desc">A support experience for a SaaS help desk, reimagining ticket triage with clarity-first interaction patterns.</p>
+              <a href="#" class="project-link">View case study
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+              </a>
+            </div>
+          </article>
+
+          <article class="project-card reveal reveal-delay-4">
+            <div class="project-thumb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </div>
+            <div class="project-body">
+              <span class="project-meta">Mobile</span>
+              <h3 class="project-title">Terra</h3>
+              <p class="project-desc">A companion app for urban gardeners, helping users track plant health and local weather conditions.</p>
+              <a href="#" class="project-link">View case study
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+              </a>
+            </div>
+          </article>
+
+          <article class="project-card reveal reveal-delay-4">
+            <div class="project-thumb" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                <path d="M2 2l7.586 7.586"></path>
+                <circle cx="11" cy="11" r="2"></circle>
+              </svg>
+            </div>
+            <div class="project-body">
+              <span class="project-meta">Brand &amp; Web</span>
+              <h3 class="project-title">Forge</h3>
+              <p class="project-desc">A brand refresh and responsive site for a boutique metal fabrication studio, emphasizing process and material.</p>
+              <a href="#" class="project-link">View case study
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+              </a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="section" aria-labelledby="about-title">
+      <div class="container">
+        <p class="section-subtitle reveal">A little about me</p>
+        <h2 id="about-title" class="section-title reveal">About &amp; Philosophy</h2>
+
+        <div class="about-grid">
+          <div class="about-text reveal reveal-delay-1">
+            <p>
+              I'm a product designer and front-end developer based in Portland. I work at the intersection of product thinking and UI engineering, with a bias toward systems that stay simple as they scale.
+            </p>
+            <p>
+              My process is rooted in research, prototyping, and close collaboration. I believe the best interfaces are the ones people don't have to think about — clear hierarchy, consistent patterns, and motion that guides rather than distracts.
+            </p>
+
+            <div class="philosophy-list">
+              <div class="philosophy-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <div>
+                  <strong>Clarity first</strong>
+                  <span>Every element should earn its place. I reduce noise until the message is unavoidable.</span>
+                </div>
+              </div>
+
+              <div class="philosophy-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <div>
+                  <strong>Systems thinking</strong>
+                  <span>I build reusable components and tokens so the product stays coherent as it grows.</span>
+                </div>
+              </div>
+
+              <div class="philosophy-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <div>
+                  <strong>Accessible by default</strong>
+                  <span>Great design works for everyone. I design with contrast, keyboard flows, and screen readers in mind.</span>
+                </div>
+              </div>
+
+              <div class="philosophy-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                </svg>
+                <div>
+                  <strong>Motion with meaning</strong>
+                  <span>Transitions are punctuation, not decoration. They guide attention and reinforce hierarchy.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="about-visual reveal reveal-delay-2" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="section contact" aria-labelledby="contact-title">
+      <div class="container">
+        <div class="contact-grid">
+          <div class="contact-info reveal">
+            <p class="section-subtitle">Let's connect</p>
+            <h2 id="contact-title" class="section-title">Contact</h2>
+            <p>Have a project, idea, or just want to talk about design systems? I'd love to hear from you.</p>
+            <a href="mailto:hello@alexmorgan.design" class="contact-email">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              hello@alexmorgan.design
+            </a>
+          </div>
+
+          <div class="contact-info reveal reveal-delay-1">
+            <p class="section-subtitle">Find me elsewhere</p>
+            <div class="social-links">
+              <a href="https://github.com" class="social-link" aria-label="GitHub">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.835 2.807 1.305 3.492.998.108-.776.42-1.305.763-1.605-2.665-.305-5.467-1.334-5.467-5.93 0-1.31.468-2.382 1.235-3.22-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.3 1.23A11.51 11.51 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.838 1.233 1.91 1.233 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.815 1.103.815 2.222 0 1.606-.015 2.898-.015 3.293 0 .32.218.694.825.576C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"></path>
+                </svg>
+              </a>
+              <a href="https://linkedin.com" class="social-link" aria-label="LinkedIn">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"></path>
+                </svg>
+              </a>
+              <a href="https://dribbble.com" class="social-link" aria-label="Dribbble">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm7.563 5.557a10.136 10.136 0 0 1 2.037 6.035 14.46 14.46 0 0 0-5.805-.242c-.244-.564-.5-1.122-.766-1.673 2.173-.884 3.865-2.39 4.534-4.12zM12 2.437c2.65 0 5.046 1.07 6.77 2.806-.53 1.5-2.03 2.823-4.007 3.615a58.55 58.55 0 0 0-3.575-5.7A9.94 9.94 0 0 1 12 2.437zm-3.57.72c.63 1.05 2.05 3.5 3.437 5.7-2.76.74-5.79.833-7.9.832l-.05-.003a9.94 9.94 0 0 1 4.513-6.529zM2.437 12c0-2.61 1.002-4.98 2.646-6.77.024.006 2.863.15 6.31-.842.38.756.74 1.526 1.08 2.304-2.6.87-4.4 2.746-4.4 2.746s-2.07 2.43-2.83 4.92c-.27-.1-.54-.2-.806-.358zm.775 2.472c.313-1.55 1.59-3.34 2.59-4.34 0 0 1.65-1.73 4.02-2.49.2.48.39.96.56 1.45-3.11 1.36-5.89 4.23-7.17 5.38zm2.1 3.98c1.64-1.3 4.08-3.83 7.17-5.21.48 1.45.84 2.93 1.08 4.42A10.04 10.04 0 0 1 5.312 18.452zm4.993 2.062c-.21-1.39-.54-2.75-.97-4.06 2.15-.46 4.83-.2 6.33.14-.69 1.95-2.42 3.4-5.36 3.92zm6.7-.58c.42-1.15.66-2.38.7-3.64 2.3.59 4.38 1.71 5.65 3.09a9.956 9.956 0 0 1-6.35.55zm7.13-2.14c-1.14-1.21-2.95-2.27-5.2-2.87.08-1.25.05-2.5-.07-3.75 2.5.2 4.96.75 6.61 1.47a9.93 9.93 0 0 1-1.34 5.15z"></path>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© <span id="year">2026</span> Alex Morgan. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, {
+          threshold: 0.1,
+          rootMargin: '0px 0px -40px 0px'
+        });
+
+        document.querySelectorAll('.reveal').forEach(function (el) {
+          observer.observe(el);
+        });
+      } else {
+        document.querySelectorAll('.reveal').forEach(function (el) {
+          el.classList.add('is-visible');
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

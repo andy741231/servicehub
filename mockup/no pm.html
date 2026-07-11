@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>No PM — Simple, Focused Productivity</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800/60 bg-slate-900/80 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between">
+        <a href="#" class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center font-bold text-slate-950">N</div>
+          <span class="text-lg font-bold tracking-tight">No PM</span>
+        </a>
+        <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+          <a href="#features" class="hover:text-white transition">Features</a>
+          <a href="#pricing" class="hover:text-white transition">Pricing</a>
+          <a href="#about" class="hover:text-white transition">About</a>
+        </nav>
+        <div class="hidden md:flex items-center gap-4">
+          <a href="#" class="text-sm font-medium text-slate-400 hover:text-white transition">Log in</a>
+          <a href="#" class="inline-flex items-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400 transition">Get started</a>
+        </div>
+        <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-300 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden border-t border-slate-800/60 px-4 py-4 space-y-3 bg-slate-900">
+      <a href="#features" class="block text-sm font-medium text-slate-400 hover:text-white">Features</a>
+      <a href="#pricing" class="block text-sm font-medium text-slate-400 hover:text-white">Pricing</a>
+      <a href="#about" class="block text-sm font-medium text-slate-400 hover:text-white">About</a>
+      <a href="#" class="block text-sm font-semibold text-emerald-400">Get started</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="relative overflow-hidden pt-24 pb-32">
+    <div class="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-slate-950 to-cyan-900/20 pointer-events-none"></div>
+    <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+    <div class="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <span class="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300 mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        Now in early access
+      </span>
+      <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6">
+        Work without the <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">noise.</span>
+      </h1>
+      <p class="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10">
+        A lightweight workspace for focused teams. No bloated project management, no endless tabs — just the work that matters.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="#" class="inline-flex items-center rounded-xl bg-emerald-500 px-6 py-3 text-base font-semibold text-slate-950 hover:bg-emerald-400 transition">Start free trial</a>
+        <a href="#" class="inline-flex items-center rounded-xl border border-slate-700 bg-slate-900/50 px-6 py-3 text-base font-semibold text-slate-200 hover:bg-slate-800 transition">View demo</a>
+      </div>
+      <p class="mt-4 text-sm text-slate-500">No credit card required. 14-day free trial.</p>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="py-24 bg-slate-900/50 border-y border-slate-800/60">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">Everything you need, nothing you don't.</h2>
+        <p class="text-slate-400">Built for teams that want to ship fast without the overhead of traditional PM tools.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 hover:border-emerald-500/40 transition">
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Task clarity</h3>
+          <p class="text-slate-400 text-sm">A single list of what's next. No confusing boards, swimlanes, or dependencies.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 hover:border-emerald-500/40 transition">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Time blocks</h3>
+          <p class="text-slate-400 text-sm">Plan your day in focused blocks. Meetings and deep work, balanced.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 hover:border-emerald-500/40 transition">
+          <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Daily momentum</h3>
+          <p class="text-slate-400 text-sm">See progress without dashboards. A simple streak keeps you moving.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="py-24">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-2xl mx-auto mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">Simple pricing</h2>
+        <p class="text-slate-400">One plan, all features. No per-seat pricing or hidden fees.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-8">
+          <h3 class="text-lg font-semibold text-slate-300">Starter</h3>
+          <p class="text-4xl font-bold mt-4">Free</p>
+          <p class="text-slate-400 text-sm mb-6">For individuals getting organized.</p>
+          <ul class="space-y-3 text-sm text-slate-300">
+            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Unlimited tasks</li>
+            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Weekly planner</li>
+            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Cloud sync</li>
+          </ul>
+          <a href="#" class="mt-8 block text-center rounded-xl border border-slate-700 px-6 py-3 font-semibold hover:bg-slate-800 transition">Get started</a>
+        </div>
+        <div class="rounded-2xl border border-emerald-500/40 bg-slate-900/80 p-8 relative overflow-hidden">
+          <div class="absolute top-0 right-0 bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
+          <h3 class="text-lg font-semibold text-emerald-400">Pro</h3>
+          <p class="text-4xl font-bold mt-4">$8<span class="text-lg font-medium text-slate-400">/mo</span></p>
+          <p class="text-slate-400 text-sm mb-6">For teams that need focus.</p>
+          <ul class="space-y-3 text-sm text-slate-300">
+            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Everything in Starter</li>
+            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Shared workspaces</li>
+            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Priority support</li>
+          </ul>
+          <a href="#" class="mt-8 block text-center rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-slate-950 hover:bg-emerald-400 transition">Start trial</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-24">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800 p-12">
+      <h2 class="text-3xl sm:text-4xl font-bold mb-4">Ready to drop the PM overhead?</h2>
+      <p class="text-slate-400 max-w-xl mx-auto mb-8">Join hundreds of teams who ship faster with less clutter.</p>
+      <a href="#" class="inline-flex items-center rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-slate-950 hover:bg-emerald-400 transition">Try No PM for free</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/60 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-[10px] font-bold text-slate-950">N</div>
+        <span class="font-semibold">No PM</span>
+      </div>
+      <p class="text-sm text-slate-500">&copy; 2026 No PM. Mockup only.</p>
+      <div class="flex gap-6 text-sm text-slate-400">
+        <a href="#" class="hover:text-white transition">Privacy</a>
+        <a href="#" class="hover:text-white transition">Terms</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    btn.addEventListener('click', () => menu.classList.toggle('hidden'));
+  </script>
+</body>
+</html>
