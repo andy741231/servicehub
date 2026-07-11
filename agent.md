@@ -203,13 +203,17 @@ auto-generates migration files) does not work. The workflow is:
    - Use `IF NOT EXISTS` guards so the migration is idempotent (safe to re-run
      on DBs where `db push` already applied the change)
    - See existing migrations like `20260707_add_user_preferences` for the pattern
-4. **Add the migration name to the deploy workflow** — add a
-   `npx prisma migrate resolve --applied "<migration_name>"` line to both the
-   staging and production resolve steps in `.github/workflows/azure-deploy.yml`
+4. **Do NOT add the migration to the `resolve` step** — the resolve step
+   (`prisma migrate resolve --applied`) marks a migration as applied WITHOUT
+   running the SQL. It's only for migrations that failed partway. New migrations
+   should be left out of resolve so that `migrate deploy` actually executes them.
+   Only add to resolve if a migration previously failed mid-application.
 
 **Why this matters:** If you skip step 3, the feature will work locally but
-silently fail in production because the table/column doesn't exist. This
-happened with the `FormFolder` table — see commit `217d1cf` for the fix.
+silently fail in production because the table/column doesn't exist. If you
+incorrectly add the migration to the resolve step (step 4), the migration gets
+marked as applied without the SQL ever running — same result. Both happened
+with the `FormFolder` table — see commits `217d1cf` and `653feb0` for the fix.
 
 ### Core (shared across all apps)
 ```prisma
