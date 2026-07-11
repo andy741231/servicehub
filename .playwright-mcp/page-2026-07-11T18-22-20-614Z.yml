@@ -1,0 +1,325 @@
+- generic [active] [ref=f8e1]:
+  - link "Skip to main content" [ref=f8e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f8e5]:
+    - link "Skip to main content" [ref=f8e6] [cursor=pointer]:
+      - /url: "#main-content"
+    - navigation "Main navigation" [ref=f8e7]:
+      - link "Service Hub" [ref=f8e9] [cursor=pointer]:
+        - /url: /hub-admin/
+      - navigation "Form Builder sections" [ref=f8e11]:
+        - link "Dashboard" [ref=f8e12] [cursor=pointer]:
+          - /url: /hub-admin/forms/dashboard
+        - link "Forms" [ref=f8e17] [cursor=pointer]:
+          - /url: /hub-admin/forms/list
+        - link "Builder" [ref=f8e22] [cursor=pointer]:
+          - /url: /hub-admin/forms/builder
+        - link "Submissions" [ref=f8e26] [cursor=pointer]:
+          - /url: /hub-admin/forms/submissions
+        - link "Analytics" [ref=f8e31] [cursor=pointer]:
+          - /url: /hub-admin/forms/analytics
+        - link "Templates" [ref=f8e35] [cursor=pointer]:
+          - /url: /hub-admin/forms/templates
+    - generic [ref=f8e40]:
+      - banner [ref=f8e41]:
+        - heading [level=1]
+        - textbox "Global search" [ref=f8e45]:
+          - /placeholder: Search pages, forms, campaigns…
+        - button "Account menu" [ref=f8e49]:
+          - generic [ref=f8e50]: SA
+          - generic [ref=f8e51]:
+            - generic [ref=f8e52]: System Admin
+            - generic [ref=f8e53]: admin@servicehub.com
+      - main [ref=f8e56]:
+        - generic [ref=f8e57]:
+          - generic [ref=f8e58]:
+            - generic [ref=f8e59]:
+              - generic [ref=f8e60]:
+                - button "All 15" [pressed] [ref=f8e578]:
+                  - text: All
+                  - generic [ref=f8e62]: "15"
+                - button "Live 4" [ref=f8e579]:
+                  - text: Live
+                  - generic [ref=f8e64]: "4"
+                - button "Drafts 11" [ref=f8e65]:
+                  - text: Drafts
+                  - generic [ref=f8e66]: "11"
+                - button "Closed 0" [ref=f8e67]:
+                  - text: Closed
+                  - generic [ref=f8e68]: "0"
+              - textbox "Search forms" [ref=f8e73]:
+                - /placeholder: Search forms...
+              - combobox "Sort forms" [ref=f8e75] [cursor=pointer]:
+                - option "Recently updated" [selected]
+                - option "Most submissions"
+                - option "Alphabetical"
+              - group "View mode" [ref=f8e76]:
+                - button "Grid view" [ref=f8e77]
+                - button "List view" [pressed] [ref=f8e83]
+              - button "Create new form" [ref=f8e85]: New form
+            - generic [ref=f8e88]:
+              - generic [ref=f8e89]:
+                - checkbox "Select all forms" [ref=f8e90] [cursor=pointer]
+                - generic [ref=f8e91]: Select all
+              - generic [ref=f8e580]:
+                - checkbox "Select Contact Form (copy)" [ref=f8e581] [cursor=pointer]
+                - generic [ref=f8e582] [cursor=pointer]:
+                  - generic [ref=f8e583]:
+                    - heading "Contact Form (copy)" [level=3] [ref=f8e584]
+                    - generic [ref=f8e585]: Live
+                  - generic [ref=f8e587]:
+                    - generic [ref=f8e588]: 0 submissions
+                    - generic [ref=f8e589]: •
+                    - generic [ref=f8e590]: 2 fields
+                    - generic [ref=f8e591]: •
+                    - generic [ref=f8e592]: Updated just now
+                - generic [ref=f8e593]:
+                  - button "View submissions" [ref=f8e594]
+                  - button "View analytics" [ref=f8e598]
+                  - button "Preview form" [ref=f8e601]
+                  - button "More actions" [ref=f8e606]
+              - generic [ref=f8e92]:
+                - checkbox "Select Untitled Form" [ref=f8e93] [cursor=pointer]
+                - generic [ref=f8e94] [cursor=pointer]:
+                  - generic [ref=f8e95]:
+                    - heading "Untitled Form" [level=3] [ref=f8e96]
+                    - generic [ref=f8e97]: Live
+                  - generic [ref=f8e99]:
+                    - generic [ref=f8e100]: 0 submissions
+                    - generic [ref=f8e101]: •
+                    - generic [ref=f8e102]: 1 field
+                    - generic [ref=f8e103]: •
+                    - generic [ref=f8e104]: Updated 5m ago
+                - generic [ref=f8e105]:
+                  - button "View submissions" [ref=f8e106]
+                  - button "View analytics" [ref=f8e110]
+                  - button "Preview form" [ref=f8e113]
+                  - button "More actions" [ref=f8e118]
+              - generic [ref=f8e123]:
+                - checkbox "Select Untitled Form 3" [ref=f8e124] [cursor=pointer]
+                - generic [ref=f8e125] [cursor=pointer]:
+                  - generic [ref=f8e126]:
+                    - heading "Untitled Form 3" [level=3] [ref=f8e127]
+                    - generic [ref=f8e128]: Live
+                  - generic [ref=f8e130]:
+                    - generic [ref=f8e131]: 0 submissions
+                    - generic [ref=f8e132]: •
+                    - generic [ref=f8e133]: 2 fields
+                    - generic [ref=f8e134]: •
+                    - generic [ref=f8e135]: Updated 8m ago
+                - generic [ref=f8e136]:
+                  - button "View submissions" [ref=f8e137]
+                  - button "View analytics" [ref=f8e141]
+                  - button "Preview form" [ref=f8e144]
+                  - button "More actions" [ref=f8e149]
+              - generic [ref=f8e154]:
+                - checkbox "Select Contact Form" [ref=f8e155] [cursor=pointer]
+                - generic [ref=f8e156] [cursor=pointer]:
+                  - generic [ref=f8e157]:
+                    - heading "Contact Form" [level=3] [ref=f8e158]
+                    - generic [ref=f8e159]: Live
+                  - generic [ref=f8e161]:
+                    - generic [ref=f8e162]: 0 submissions
+                    - generic [ref=f8e163]: •
+                    - generic [ref=f8e164]: 2 fields
+                    - generic [ref=f8e165]: •
+                    - generic [ref=f8e166]: Updated 16m ago
+                - generic [ref=f8e167]:
+                  - button "View submissions" [ref=f8e168]
+                  - button "View analytics" [ref=f8e172]
+                  - button "Preview form" [ref=f8e175]
+                  - button "More actions" [ref=f8e180]
+              - generic [ref=f8e185]:
+                - checkbox "Select Untitled Form 6" [ref=f8e186] [cursor=pointer]
+                - generic [ref=f8e187] [cursor=pointer]:
+                  - generic [ref=f8e188]:
+                    - heading "Untitled Form 6" [level=3] [ref=f8e189]
+                    - generic [ref=f8e190]: Draft
+                  - generic [ref=f8e192]:
+                    - generic [ref=f8e193]: 0 submissions
+                    - generic [ref=f8e194]: •
+                    - generic [ref=f8e195]: 0 fields
+                    - generic [ref=f8e196]: •
+                    - generic [ref=f8e197]: Updated 47m ago
+                - generic [ref=f8e198]:
+                  - button "View submissions" [ref=f8e199]
+                  - button "View analytics" [ref=f8e203]
+                  - button "Preview form" [ref=f8e206]
+                  - button "More actions" [ref=f8e211]
+              - generic [ref=f8e216]:
+                - checkbox "Select Untitled Form 6" [ref=f8e217] [cursor=pointer]
+                - generic [ref=f8e218] [cursor=pointer]:
+                  - generic [ref=f8e219]:
+                    - heading "Untitled Form 6" [level=3] [ref=f8e220]
+                    - generic [ref=f8e221]: Draft
+                  - generic [ref=f8e223]:
+                    - generic [ref=f8e224]: 0 submissions
+                    - generic [ref=f8e225]: •
+                    - generic [ref=f8e226]: 0 fields
+                    - generic [ref=f8e227]: •
+                    - generic [ref=f8e228]: Updated 47m ago
+                - generic [ref=f8e229]:
+                  - button "View submissions" [ref=f8e230]
+                  - button "View analytics" [ref=f8e234]
+                  - button "Preview form" [ref=f8e237]
+                  - button "More actions" [ref=f8e242]
+              - generic [ref=f8e247]:
+                - checkbox "Select Untitled Form 6" [ref=f8e248] [cursor=pointer]
+                - generic [ref=f8e249] [cursor=pointer]:
+                  - generic [ref=f8e250]:
+                    - heading "Untitled Form 6" [level=3] [ref=f8e251]
+                    - generic [ref=f8e252]: Draft
+                  - generic [ref=f8e254]:
+                    - generic [ref=f8e255]: 0 submissions
+                    - generic [ref=f8e256]: •
+                    - generic [ref=f8e257]: 0 fields
+                    - generic [ref=f8e258]: •
+                    - generic [ref=f8e259]: Updated 47m ago
+                - generic [ref=f8e260]:
+                  - button "View submissions" [ref=f8e261]
+                  - button "View analytics" [ref=f8e265]
+                  - button "Preview form" [ref=f8e268]
+                  - button "More actions" [ref=f8e273]
+              - generic [ref=f8e278]:
+                - checkbox "Select Untitled Form 6" [ref=f8e279] [cursor=pointer]
+                - generic [ref=f8e280] [cursor=pointer]:
+                  - generic [ref=f8e281]:
+                    - heading "Untitled Form 6" [level=3] [ref=f8e282]
+                    - generic [ref=f8e283]: Draft
+                  - generic [ref=f8e285]:
+                    - generic [ref=f8e286]: 0 submissions
+                    - generic [ref=f8e287]: •
+                    - generic [ref=f8e288]: 0 fields
+                    - generic [ref=f8e289]: •
+                    - generic [ref=f8e290]: Updated 47m ago
+                - generic [ref=f8e291]:
+                  - button "View submissions" [ref=f8e292]
+                  - button "View analytics" [ref=f8e296]
+                  - button "Preview form" [ref=f8e299]
+                  - button "More actions" [ref=f8e304]
+              - generic [ref=f8e309]:
+                - checkbox "Select Untitled Form 5" [ref=f8e310] [cursor=pointer]
+                - generic [ref=f8e311] [cursor=pointer]:
+                  - generic [ref=f8e312]:
+                    - heading "Untitled Form 5" [level=3] [ref=f8e313]
+                    - generic [ref=f8e314]: Draft
+                  - generic [ref=f8e316]:
+                    - generic [ref=f8e317]: 0 submissions
+                    - generic [ref=f8e318]: •
+                    - generic [ref=f8e319]: 0 fields
+                    - generic [ref=f8e320]: •
+                    - generic [ref=f8e321]: Updated 23h ago
+                - generic [ref=f8e322]:
+                  - button "View submissions" [ref=f8e323]
+                  - button "View analytics" [ref=f8e327]
+                  - button "Preview form" [ref=f8e330]
+                  - button "More actions" [ref=f8e335]
+              - generic [ref=f8e340]:
+                - checkbox "Select Untitled Form 5" [ref=f8e341] [cursor=pointer]
+                - generic [ref=f8e342] [cursor=pointer]:
+                  - generic [ref=f8e343]:
+                    - heading "Untitled Form 5" [level=3] [ref=f8e344]
+                    - generic [ref=f8e345]: Draft
+                  - generic [ref=f8e347]:
+                    - generic [ref=f8e348]: 0 submissions
+                    - generic [ref=f8e349]: •
+                    - generic [ref=f8e350]: 0 fields
+                    - generic [ref=f8e351]: •
+                    - generic [ref=f8e352]: Updated 23h ago
+                - generic [ref=f8e353]:
+                  - button "View submissions" [ref=f8e354]
+                  - button "View analytics" [ref=f8e358]
+                  - button "Preview form" [ref=f8e361]
+                  - button "More actions" [ref=f8e366]
+              - generic [ref=f8e371]:
+                - checkbox "Select Untitled Form 4" [ref=f8e372] [cursor=pointer]
+                - generic [ref=f8e373] [cursor=pointer]:
+                  - generic [ref=f8e374]:
+                    - heading "Untitled Form 4" [level=3] [ref=f8e375]
+                    - generic [ref=f8e376]: Draft
+                  - generic [ref=f8e378]:
+                    - generic [ref=f8e379]: 0 submissions
+                    - generic [ref=f8e380]: •
+                    - generic [ref=f8e381]: 0 fields
+                    - generic [ref=f8e382]: •
+                    - generic [ref=f8e383]: Updated 1d ago
+                - generic [ref=f8e384]:
+                  - button "View submissions" [ref=f8e385]
+                  - button "View analytics" [ref=f8e389]
+                  - button "Preview form" [ref=f8e392]
+                  - button "More actions" [ref=f8e397]
+              - generic [ref=f8e402]:
+                - checkbox "Select Untitled Form 4" [ref=f8e403] [cursor=pointer]
+                - generic [ref=f8e404] [cursor=pointer]:
+                  - generic [ref=f8e405]:
+                    - heading "Untitled Form 4" [level=3] [ref=f8e406]
+                    - generic [ref=f8e407]: Draft
+                  - generic [ref=f8e409]:
+                    - generic [ref=f8e410]: 0 submissions
+                    - generic [ref=f8e411]: •
+                    - generic [ref=f8e412]: 0 fields
+                    - generic [ref=f8e413]: •
+                    - generic [ref=f8e414]: Updated 1d ago
+                - generic [ref=f8e415]:
+                  - button "View submissions" [ref=f8e416]
+                  - button "View analytics" [ref=f8e420]
+                  - button "Preview form" [ref=f8e423]
+                  - button "More actions" [ref=f8e428]
+              - generic [ref=f8e433]:
+                - checkbox "Select Untitled Form 4" [ref=f8e434] [cursor=pointer]
+                - generic [ref=f8e435] [cursor=pointer]:
+                  - generic [ref=f8e436]:
+                    - heading "Untitled Form 4" [level=3] [ref=f8e437]
+                    - generic [ref=f8e438]: Draft
+                  - generic [ref=f8e440]:
+                    - generic [ref=f8e441]: 0 submissions
+                    - generic [ref=f8e442]: •
+                    - generic [ref=f8e443]: 0 fields
+                    - generic [ref=f8e444]: •
+                    - generic [ref=f8e445]: Updated 1d ago
+                - generic [ref=f8e446]:
+                  - button "View submissions" [ref=f8e447]
+                  - button "View analytics" [ref=f8e451]
+                  - button "Preview form" [ref=f8e454]
+                  - button "More actions" [ref=f8e459]
+              - generic [ref=f8e464]:
+                - checkbox "Select Untitled Form 4" [ref=f8e465] [cursor=pointer]
+                - generic [ref=f8e466] [cursor=pointer]:
+                  - generic [ref=f8e467]:
+                    - heading "Untitled Form 4" [level=3] [ref=f8e468]
+                    - generic [ref=f8e469]: Draft
+                  - generic [ref=f8e471]:
+                    - generic [ref=f8e472]: 0 submissions
+                    - generic [ref=f8e473]: •
+                    - generic [ref=f8e474]: 0 fields
+                    - generic [ref=f8e475]: •
+                    - generic [ref=f8e476]: Updated 1d ago
+                - generic [ref=f8e477]:
+                  - button "View submissions" [ref=f8e478]
+                  - button "View analytics" [ref=f8e482]
+                  - button "Preview form" [ref=f8e485]
+                  - button "More actions" [ref=f8e490]
+              - generic [ref=f8e495]:
+                - checkbox "Select Untitled Form 2" [ref=f8e496] [cursor=pointer]
+                - generic [ref=f8e497] [cursor=pointer]:
+                  - generic [ref=f8e498]:
+                    - heading "Untitled Form 2" [level=3] [ref=f8e499]
+                    - generic [ref=f8e500]: Draft
+                  - generic [ref=f8e502]:
+                    - generic [ref=f8e503]: 0 submissions
+                    - generic [ref=f8e504]: •
+                    - generic [ref=f8e505]: 0 fields
+                    - generic [ref=f8e506]: •
+                    - generic [ref=f8e507]: Updated 1d ago
+                - generic [ref=f8e508]:
+                  - button "View submissions" [ref=f8e509]
+                  - button "View analytics" [ref=f8e513]
+                  - button "Preview form" [ref=f8e516]
+                  - button "More actions" [ref=f8e521]
+              - button "Create new form Start from scratch or a template" [ref=f8e526]:
+                - generic [ref=f8e529]:
+                  - generic [ref=f8e530]: Create new form
+                  - generic [ref=f8e531]: Start from scratch or a template
+          - generic [ref=f8e612]:
+            - generic [ref=f8e616]: "\"Contact Form\" duplicated."
+            - button "Dismiss" [ref=f8e617]

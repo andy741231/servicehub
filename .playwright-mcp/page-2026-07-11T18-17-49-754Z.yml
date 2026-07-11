@@ -1,0 +1,12 @@
+- generic [active] [ref=f5e1]:
+  - link "Skip to main content" [ref=f5e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f5e7]:
+    - heading "Contact Form" [level=1] [ref=f5e9]
+    - generic [ref=f5e11]:
+      - heading "Section 2" [level=2] [ref=f5e21]
+      - generic [ref=f5e14]:
+        - textbox [ref=f5e24]: test@example.com
+        - generic [ref=f5e19]:
+          - button "← Back" [ref=f5e25]
+          - button [disabled] [ref=f5e27]

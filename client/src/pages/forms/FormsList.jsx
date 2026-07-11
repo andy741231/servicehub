@@ -25,7 +25,7 @@ function StatusPill({ status, variant = 'solid' }) {
   const meta = STATUS_META[status] || STATUS_META.draft;
   if (variant === 'tint') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/85 backdrop-blur ${meta.pillClass}`}>
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface/85 backdrop-blur ${meta.pillClass}`}>
         <span className="w-1.5 h-1.5 rounded-full bg-current" />
         {meta.label}
       </span>
@@ -62,7 +62,13 @@ function timeAgo(date) {
 
 export default function FormsList() {
   const navigate = useNavigate();
-  const { forms, createNewForm, deleteForm, renameForm, setCurrentForm, loadForms, isLoading, submissions, setFormStatus } = useFormStore();
+  const {
+    forms, createNewForm, deleteForm, renameForm, setCurrentForm, loadForms,
+    isLoading, submissions, setFormStatus, duplicateForm,
+    folders, loadFolders, createFolder: storeCreateFolder,
+    renameFolder: storeRenameFolder, deleteFolder: storeDeleteFolder,
+    moveFormToFolder,
+  } = useFormStore();
   const { toast, ToastMount } = useToast();
   const { confirmDialog, ConfirmDialogMount } = useConfirm();
   const { promptDialog, PromptDialogMount } = usePrompt();
@@ -72,21 +78,8 @@ export default function FormsList() {
   const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'submissions' | 'alpha'
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('forms-view-mode') || 'list');
   const [menuOpenId, setMenuOpenId] = useState(null);
-  // Folder state (localStorage-backed)
-  const [folders, setFolders] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('forms-folders') || '[]'); } catch { return []; }
-  });
-  const [formFolders, setFormFolders] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('forms-folder-map') || '{}'); } catch { return {}; }
-  });
-  const [selectedFolder, setSelectedFolder] = useState(() => {
-    try {
-      const savedFolders = JSON.parse(localStorage.getItem('forms-folders') || '[]');
-      return savedFolders.length > 0 ? savedFolders[0].id : null;
-    } catch { return null; }
-  });
+  const [selectedFolder, setSelectedFolder] = useState(null);
   const [selectedFormIds, setSelectedFormIds] = useState(new Set());
-  const [showBatchBar, setShowBatchBar] = useState(false);
   // Rename modal state
   const [renaming, setRenaming] = useState(null); // { id, title, original }
   const [renameError, setRenameError] = useState('');
@@ -98,58 +91,17 @@ export default function FormsList() {
 
   useEffect(() => {
     loadForms();
-  }, [loadForms]);
+    loadFolders();
+  }, [loadForms, loadFolders]);
 
   useEffect(() => { localStorage.setItem('forms-view-mode', viewMode); }, [viewMode]);
-  useEffect(() => { localStorage.setItem('forms-folders', JSON.stringify(folders)); }, [folders]);
-  useEffect(() => { localStorage.setItem('forms-folder-map', JSON.stringify(formFolders)); }, [formFolders]);
   useEffect(() => { setSelectedFormIds(new Set()); }, [selectedFolder]);
-  useEffect(() => {
-    if (selectedFolder === null && folders.length > 0) {
-      setSelectedFolder(folders[0].id);
-    }
-  }, [folders, selectedFolder]);
-
-  // Auto-assign forms that have no folder mapping to the first folder.
-  // Without this, forms created outside FormsList (via API, seed, another
-  // browser session, etc.) are loaded into the store but invisible in the
-  // list because the folder filter (formFolders[form.id] === selectedFolder)
-  // excludes them — even though they still trigger duplicate-name validation
-  // in the builder.
-  useEffect(() => {
-    if (folders.length === 0 || forms.length === 0) return;
-    const defaultFolderId = folders[0].id;
-    const unassigned = forms.filter((f) => !formFolders[f.id]);
-    if (unassigned.length === 0) return;
-    setFormFolders((prev) => {
-      const next = { ...prev };
-      for (const f of unassigned) {
-        next[f.id] = defaultFolderId;
-      }
-      return next;
-    });
-  }, [forms, folders, formFolders]);
 
   const handleCreateForm = async () => {
-    if (folders.length === 0) {
-      const name = await promptDialog({
-        title: 'Create a folder first:',
-        placeholder: 'Folder name',
-        confirmLabel: 'Create',
-      });
-      if (!name?.trim()) return;
-      const folderId = `folder-${Date.now()}`;
-      setFolders(prev => [...prev, { id: folderId, name: name.trim() }]);
-      setSelectedFolder(folderId);
-      const newFormId = await createNewForm();
-      setFormFolders(prev => ({ ...prev, [newFormId]: folderId }));
-      const newForm = useFormStore.getState().forms.find((f) => f.id === newFormId);
-      navigate(`/hub-admin/forms/builder/${newForm?.slug || newFormId}`);
-      return;
-    }
-    const targetFolder = selectedFolder || folders[0].id;
     const newFormId = await createNewForm();
-    setFormFolders(prev => ({ ...prev, [newFormId]: targetFolder }));
+    if (selectedFolder) {
+      await moveFormToFolder(newFormId, selectedFolder);
+    }
     const newForm = useFormStore.getState().forms.find((f) => f.id === newFormId);
     navigate(`/hub-admin/forms/builder/${newForm?.slug || newFormId}`);
   };
@@ -232,19 +184,16 @@ export default function FormsList() {
   const handleDuplicate = async (formId) => {
     const form = forms.find((f) => f.id === formId);
     if (!form) return;
-    const newFormId = await createNewForm();
-    // Best-effort: copy content into the newly created form via the store
-    const store = useFormStore.getState();
-    store.setCurrentForm(newFormId);
-    // Replace fields/rows with the source form's
-    useFormStore.setState({
-      fields: form.fields?.map((f) => ({ ...f, id: `field-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` })) || [],
-      rows: form.rows?.map((r) => ({ ...r, id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` })) || [],
-    });
-    await store.saveCurrentForm(`${form.title} (copy)`, form.description);
-    const folderId = formFolders[formId];
-    if (folderId) {
-      setFormFolders(prev => ({ ...prev, [newFormId]: folderId }));
+    try {
+      const newFormId = await duplicateForm(formId);
+      if (newFormId) {
+        if (form.folderId) {
+          await moveFormToFolder(newFormId, form.folderId);
+        }
+        toast(`"${form.title}" duplicated.`, 'success');
+      }
+    } catch (e) {
+      toast(e?.message || 'Failed to duplicate form. Please try again.', 'error');
     }
     setMenuOpenId(null);
   };
@@ -268,30 +217,38 @@ export default function FormsList() {
       confirmLabel: 'Create',
     });
     if (!name?.trim()) return;
-    const id = `folder-${Date.now()}`;
-    setFolders(prev => [...prev, { id, name: name.trim() }]);
-    toast(`Folder "${name.trim()}" created.`, 'success');
+    try {
+      const folder = await storeCreateFolder(name.trim());
+      setSelectedFolder(folder.id);
+      toast(`Folder "${name.trim()}" created.`, 'success');
+    } catch (e) {
+      toast('Failed to create folder. Please try again.', 'error');
+    }
   };
 
-  const handleRenameFolder = (folderId, newName) => {
+  const handleRenameFolder = async (folderId, newName) => {
     if (!newName?.trim()) return;
-    setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name: newName.trim() } : f));
-    toast(`Folder renamed to "${newName.trim()}".`, 'success');
+    try {
+      await storeRenameFolder(folderId, newName.trim());
+      toast(`Folder renamed to "${newName.trim()}".`, 'success');
+    } catch (e) {
+      toast('Failed to rename folder. Please try again.', 'error');
+    }
   };
 
-  const handleMoveToFolder = (formId, folderId) => {
-    setFormFolders(prev => {
-      const next = { ...prev };
-      next[formId] = folderId;
-      return next;
-    });
+  const handleMoveToFolder = async (formId, folderId) => {
+    try {
+      await moveFormToFolder(formId, folderId);
+    } catch (e) {
+      toast('Failed to move form. Please try again.', 'error');
+    }
     setMenuOpenId(null);
   };
 
   const handleDeleteFolder = async (folderId) => {
     const folder = folders.find(f => f.id === folderId);
     if (!folder) return;
-    const formsInFolder = forms.filter(f => formFolders[f.id] === folderId);
+    const formsInFolder = forms.filter(f => f.folderId === folderId);
     if (formsInFolder.length > 0) {
       const ok = await confirmDialog({
         title: `Delete folder "${folder.name}"?`,
@@ -309,26 +266,21 @@ export default function FormsList() {
       });
       if (!ok) return;
     }
-    setFolders(prev => prev.filter(f => f.id !== folderId));
-    setFormFolders(prev => {
-      const next = { ...prev };
-      Object.keys(next).forEach(fid => { if (next[fid] === folderId) delete next[fid]; });
-      return next;
-    });
-    const remaining = folders.filter(f => f.id !== folderId);
-    setSelectedFolder(remaining.length > 0 ? remaining[0].id : null);
-    toast('Folder deleted.', 'info');
+    try {
+      await storeDeleteFolder(folderId);
+      if (selectedFolder === folderId) setSelectedFolder(null);
+      toast('Folder deleted.', 'info');
+    } catch (e) {
+      toast('Failed to delete folder. Please try again.', 'error');
+    }
   };
 
-  const handleBatchMove = (folderId) => {
-    setFormFolders(prev => {
-      const next = { ...prev };
-      selectedFormIds.forEach(id => { next[id] = folderId; });
-      return next;
-    });
+  const handleBatchMove = async (folderId) => {
+    for (const id of selectedFormIds) {
+      try { await moveFormToFolder(id, folderId); } catch (e) { /* continue */ }
+    }
     toast(`${selectedFormIds.size} form${selectedFormIds.size !== 1 ? 's' : ''} moved.`, 'success');
     setSelectedFormIds(new Set());
-    setShowBatchBar(false);
   };
 
   const handleBatchDelete = () => {
@@ -340,7 +292,6 @@ export default function FormsList() {
     const ids = [...selectedFormIds];
     setBatchDeleting(false);
     setSelectedFormIds(new Set());
-    setShowBatchBar(false);
     for (const id of ids) {
       try { await deleteForm(id); } catch (e) { /* continue on individual errors */ }
     }
@@ -366,13 +317,18 @@ export default function FormsList() {
 
   const clearSelection = () => {
     setSelectedFormIds(new Set());
-    setShowBatchBar(false);
   };
 
   const [draggedFormId, setDraggedFormId] = useState(null);
   const [dragOverFolder, setDragOverFolder] = useState(null);
 
   const handleDragStart = (e, formId) => {
+    // If dragging a form that's part of the batch selection, drag all selected
+    if (selectedFormIds.has(formId) && selectedFormIds.size > 1) {
+      e.dataTransfer.setData('text/plain', JSON.stringify([...selectedFormIds]));
+    } else {
+      e.dataTransfer.setData('text/plain', JSON.stringify([formId]));
+    }
     setDraggedFormId(formId);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -387,10 +343,19 @@ export default function FormsList() {
     setDragOverFolder(null);
   };
 
-  const handleDrop = (e, folderId) => {
+  const handleDrop = async (e, folderId) => {
     e.preventDefault();
-    if (draggedFormId) {
-      handleMoveToFolder(draggedFormId, folderId);
+    let formIds = [];
+    try {
+      const raw = e.dataTransfer.getData('text/plain');
+      if (raw) formIds = JSON.parse(raw);
+    } catch { /* not our data */ }
+    // Fallback to single draggedFormId if dataTransfer parsing failed
+    if (formIds.length === 0 && draggedFormId) formIds = [draggedFormId];
+    if (formIds.length > 0) {
+      await Promise.all(formIds.map(id => moveFormToFolder(id, folderId)));
+      toast(`${formIds.length} form${formIds.length !== 1 ? 's' : ''} moved.`, 'success');
+      setSelectedFormIds(new Set());
     }
     setDraggedFormId(null);
     setDragOverFolder(null);
@@ -432,11 +397,11 @@ export default function FormsList() {
     const counts = {};
     folders.forEach(f => { counts[f.id] = 0; });
     forms.forEach(f => {
-      const fid = formFolders[f.id];
+      const fid = f.folderId;
       if (fid && counts[fid] !== undefined) counts[fid]++;
     });
     return counts;
-  }, [forms, folders, formFolders]);
+  }, [forms, folders]);
 
   const filteredForms = useMemo(() => {
     const searchLower = searchQuery.toLowerCase().trim();
@@ -445,7 +410,9 @@ export default function FormsList() {
         form.title.toLowerCase().includes(searchLower) ||
         (form.description || '').toLowerCase().includes(searchLower);
       const matchesStatus = statusFilter === 'all' || deriveStatus(form) === statusFilter;
-      const matchesFolder = selectedFolder !== null && formFolders[form.id] === selectedFolder;
+      const matchesFolder = selectedFolder === null
+        ? !form.folderId
+        : form.folderId === selectedFolder;
       return matchesSearch && matchesStatus && matchesFolder;
     });
     list = [...list].sort((a, b) => {
@@ -460,7 +427,7 @@ export default function FormsList() {
     });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [forms, searchQuery, statusFilter, sortBy, submissions, formFolders, selectedFolder]);
+  }, [forms, searchQuery, statusFilter, sortBy, submissions, selectedFolder, folders]);
 
   return (
     <div className="bg-background">
@@ -553,10 +520,11 @@ export default function FormsList() {
           <div className={`mb-4 ${viewMode === 'list' ? 'md:hidden' : ''}`}>
             <select
               value={selectedFolder || ''}
-              onChange={(e) => setSelectedFolder(e.target.value)}
+              onChange={(e) => setSelectedFolder(e.target.value || null)}
               className="w-full px-3 py-2 bg-surface border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-body min-h-[44px] cursor-pointer"
               aria-label="Select folder"
             >
+              <option value="">All Forms (root)</option>
               {folders.map(f => (
                 <option key={f.id} value={f.id}>{f.name} ({folderCounts[f.id] || 0})</option>
               ))}
@@ -571,8 +539,9 @@ export default function FormsList() {
             <p className="text-body text-muted">Loading forms...</p>
           </div>
         ) : viewMode === 'list' ? (
-          <div className="flex gap-6">
-            {/* Folder sidebar */}
+          <div className={`flex gap-6`}>
+            {/* Folder sidebar — only when folders exist */}
+            {folders.length > 0 && (
             <div className="w-52 flex-shrink-0 hidden md:block">
               <div className="sticky top-20">
                 <div className="flex items-center justify-between mb-3 px-1">
@@ -642,14 +611,24 @@ export default function FormsList() {
                 )}
               </div>
             </div>
+            )}
 
             {/* Form list */}
             <div className="flex-1 flex flex-col gap-2">
-            {/* Batch action bar */}
-            {selectedFormIds.size > 0 && (
+            {/* Batch action bar (always visible when forms exist) */}
+            {filteredForms.length > 0 && (
               <div className="flex items-center gap-3 p-3 rounded-xl bg-primary-light border border-primary/20">
-                <span className="text-sm font-semibold text-primary">{selectedFormIds.size} selected</span>
-                <div className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={selectedFormIds.size === filteredForms.length && filteredForms.length > 0}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer flex-shrink-0"
+                  aria-label="Select all forms"
+                />
+                <span className={`text-sm font-medium ${selectedFormIds.size > 0 ? 'font-semibold text-primary' : 'text-subtle'}`}>
+                  {selectedFormIds.size > 0 ? `${selectedFormIds.size} of ${filteredForms.length} selected` : 'Select all'}
+                </span>
+                <div className={`flex items-center gap-1.5 ${selectedFormIds.size > 0 ? '' : 'invisible'}`}>
                   {folders.length > 0 ? (
                     <select
                       value=""
@@ -667,32 +646,18 @@ export default function FormsList() {
                 </div>
                 <button
                   onClick={handleBatchDelete}
-                  className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 bg-danger text-primary-foreground rounded-base text-sm font-medium hover:opacity-90 transition-opacity min-h-[44px]"
+                  disabled={selectedFormIds.size === 0}
+                  className={`ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 bg-danger text-primary-foreground rounded-base text-sm font-medium hover:opacity-90 transition-opacity min-h-[44px] ${selectedFormIds.size > 0 ? '' : 'invisible'}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
                 </button>
                 <button
                   onClick={clearSelection}
-                  className="text-sm text-muted hover:text-text-base transition-colors"
+                  className={`text-sm text-muted hover:text-text-base transition-colors ${selectedFormIds.size > 0 ? '' : 'invisible'}`}
                 >
                   Clear
                 </button>
-              </div>
-            )}
-            {/* Select-all header */}
-            {filteredForms.length > 0 && (
-              <div className="flex items-center gap-3 px-3 py-1.5">
-                <input
-                  type="checkbox"
-                  checked={selectedFormIds.size === filteredForms.length && filteredForms.length > 0}
-                  onChange={toggleSelectAll}
-                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                  aria-label="Select all forms"
-                />
-                <span className="text-xs text-subtle font-medium">
-                  {selectedFormIds.size > 0 ? `${selectedFormIds.size} of ${filteredForms.length} selected` : 'Select all'}
-                </span>
               </div>
             )}
             {filteredForms.length > 0 && folders.length > 0 && (
@@ -700,30 +665,30 @@ export default function FormsList() {
                 Tip: Drag a form onto a folder to move it.
               </div>
             )}
-            {folders.length === 0 ? (
+            {filteredForms.length === 0 && forms.length === 0 ? (
               <div className="text-center py-12">
-                <FolderPlus className="h-12 w-12 text-subtle mx-auto mb-3" />
-                <p className="text-body text-muted mb-4">No folders yet. Create a folder to get started.</p>
+                <FileText className="h-12 w-12 text-subtle mx-auto mb-3" />
+                <p className="text-body text-muted mb-4">No forms yet. Create your first form to get started.</p>
                 <button
-                  onClick={handleCreateFolder}
+                  onClick={handleCreateForm}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] text-sm font-medium transition-colors"
                 >
-                  <FolderPlus className="h-4 w-4" />
-                  Create your first folder
+                  <Plus className="h-4 w-4" />
+                  Create your first form
                 </button>
               </div>
             ) : filteredForms.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-subtle mx-auto mb-3" />
                 <p className="text-body text-muted mb-4">
-                  No forms in this folder yet.
+                  {selectedFolder ? 'No forms in this folder yet.' : 'No forms here yet.'}
                 </p>
                 <button
                   onClick={handleCreateForm}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] text-sm font-medium transition-colors"
                 >
                   <Plus className="h-4 w-4" />
-                  Create form in this folder
+                  {selectedFolder ? 'Create form in this folder' : 'Create form'}
                 </button>
               </div>
             ) : (
@@ -840,16 +805,30 @@ export default function FormsList() {
             )}
             </div>
           </div>
-        ) : folders.length === 0 ? (
+        ) : filteredForms.length === 0 && forms.length === 0 ? (
           <div className="text-center py-16">
-            <FolderPlus className="h-12 w-12 text-subtle mx-auto mb-3" />
-            <p className="text-body text-muted mb-4">No folders yet. Create a folder to get started.</p>
+            <FileText className="h-12 w-12 text-subtle mx-auto mb-3" />
+            <p className="text-body text-muted mb-4">No forms yet. Create your first form to get started.</p>
             <button
-              onClick={handleCreateFolder}
+              onClick={handleCreateForm}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] text-sm font-medium transition-colors"
             >
-              <FolderPlus className="h-4 w-4" />
-              Create your first folder
+              <Plus className="h-4 w-4" />
+              Create your first form
+            </button>
+          </div>
+        ) : filteredForms.length === 0 ? (
+          <div className="text-center py-16">
+            <FileText className="h-12 w-12 text-subtle mx-auto mb-3" />
+            <p className="text-body text-muted mb-4">
+              {selectedFolder ? 'No forms in this folder yet.' : 'No forms here yet.'}
+            </p>
+            <button
+              onClick={handleCreateForm}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] text-sm font-medium transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              {selectedFolder ? 'Create form in this folder' : 'Create form'}
             </button>
           </div>
         ) : (
@@ -1126,8 +1105,10 @@ function MenuItem({ icon: Icon, label, onClick, danger }) {
   return (
     <button
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       role="menuitem"
-      className={`w-full flex items-center gap-2 px-3 py-2 text-small text-left hover:bg-surface-raised transition-colors ${danger ? 'text-danger hover:bg-danger-light' : 'text-base'}`}
+      tabIndex={0}
+      className={`w-full flex items-center gap-2 px-3 py-2 text-small text-left hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset transition-colors ${danger ? 'text-danger hover:bg-danger-light' : 'text-base'}`}
     >
       <Icon className="h-4 w-4" aria-hidden="true" />
       {label}

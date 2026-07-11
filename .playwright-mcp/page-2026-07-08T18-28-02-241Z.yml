@@ -1,0 +1,319 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e3]:
+    - generic [ref=f2e4]:
+      - generic [ref=f2e5]: SH
+      - generic [ref=f2e6]:
+        - generic [ref=f2e7]: Forms
+        - img [ref=f2e8]
+        - strong [ref=f2e10]: Builder
+      - generic [ref=f2e11]:
+        - generic [ref=f2e12]: Employee Onboarding
+        - img [ref=f2e13]
+    - generic [ref=f2e15]:
+      - button "Edit" [ref=f2e16] [cursor=pointer]
+      - button "Preview" [ref=f2e17] [cursor=pointer]
+      - button "Theme" [ref=f2e18] [cursor=pointer]
+      - button "Share" [ref=f2e19] [cursor=pointer]
+    - generic [ref=f2e20]:
+      - generic [ref=f2e21]: Saved
+      - button "Undo" [ref=f2e23] [cursor=pointer]:
+        - img [ref=f2e24]
+      - button "Redo" [ref=f2e27] [cursor=pointer]:
+        - img [ref=f2e28]
+      - button "Preview" [ref=f2e31] [cursor=pointer]:
+        - img [ref=f2e32]
+        - text: Preview
+      - button "Publish" [ref=f2e35] [cursor=pointer]:
+        - img [ref=f2e36]
+        - text: Publish
+      - generic [ref=f2e39]: AJ
+  - generic [ref=f2e40]:
+    - complementary [ref=f2e41]:
+      - generic [ref=f2e42]:
+        - heading "Fields" [level=2] [ref=f2e43]
+        - paragraph [ref=f2e44]: Drag or click to add to the canvas
+        - generic [ref=f2e45]:
+          - img [ref=f2e46]
+          - textbox "Search fields or press /" [ref=f2e49]
+      - generic [ref=f2e50]:
+        - generic [ref=f2e51]:
+          - generic [ref=f2e52]: Basic
+          - button "Short Text Single-line input" [ref=f2e54] [cursor=pointer]:
+            - img [ref=f2e56]
+            - generic [ref=f2e58]:
+              - generic [ref=f2e59]: Short Text
+              - generic [ref=f2e60]: Single-line input
+          - button "Long Text Multi-line paragraph" [ref=f2e61] [cursor=pointer]:
+            - img [ref=f2e63]
+            - generic [ref=f2e66]:
+              - generic [ref=f2e67]: Long Text
+              - generic [ref=f2e68]: Multi-line paragraph
+          - button "Number Numeric value" [ref=f2e69] [cursor=pointer]:
+            - img [ref=f2e71]
+            - generic [ref=f2e73]:
+              - generic [ref=f2e74]: Number
+              - generic [ref=f2e75]: Numeric value
+          - button "Email Email address" [ref=f2e76] [cursor=pointer]:
+            - img [ref=f2e78]
+            - generic [ref=f2e81]:
+              - generic [ref=f2e82]: Email
+              - generic [ref=f2e83]: Email address
+          - button "Phone Phone number" [ref=f2e84] [cursor=pointer]:
+            - img [ref=f2e86]
+            - generic [ref=f2e88]:
+              - generic [ref=f2e89]: Phone
+              - generic [ref=f2e90]: Phone number
+          - button "Date Date picker" [ref=f2e91] [cursor=pointer]:
+            - img [ref=f2e93]
+            - generic [ref=f2e96]:
+              - generic [ref=f2e97]: Date
+              - generic [ref=f2e98]: Date picker
+          - button "Website URL input" [ref=f2e99] [cursor=pointer]:
+            - img [ref=f2e101]
+            - generic [ref=f2e104]:
+              - generic [ref=f2e105]: Website
+              - generic [ref=f2e106]: URL input
+        - generic [ref=f2e107]:
+          - generic [ref=f2e108]: Choice
+          - button "Dropdown Single selection" [ref=f2e110] [cursor=pointer]:
+            - img [ref=f2e112]
+            - generic [ref=f2e114]:
+              - generic [ref=f2e115]: Dropdown
+              - generic [ref=f2e116]: Single selection
+          - button "Checkbox Multiple options" [ref=f2e117] [cursor=pointer]:
+            - img [ref=f2e119]
+            - generic [ref=f2e122]:
+              - generic [ref=f2e123]: Checkbox
+              - generic [ref=f2e124]: Multiple options
+          - button "Rating Star scale" [ref=f2e125] [cursor=pointer]:
+            - img [ref=f2e127]
+            - generic [ref=f2e129]:
+              - generic [ref=f2e130]: Rating
+              - generic [ref=f2e131]: Star scale
+          - button "Slider Range value" [ref=f2e132] [cursor=pointer]:
+            - img [ref=f2e134]
+            - generic [ref=f2e137]:
+              - generic [ref=f2e138]: Slider
+              - generic [ref=f2e139]: Range value
+        - generic [ref=f2e140]:
+          - generic [ref=f2e141]: Advanced
+          - button "File Upload Attachments" [ref=f2e143] [cursor=pointer]:
+            - img [ref=f2e145]
+            - generic [ref=f2e148]:
+              - generic [ref=f2e149]: File Upload
+              - generic [ref=f2e150]: Attachments
+          - button "Content Block Rich text" [ref=f2e151] [cursor=pointer]:
+            - img [ref=f2e153]
+            - generic [ref=f2e156]:
+              - generic [ref=f2e157]: Content Block
+              - generic [ref=f2e158]: Rich text
+          - button "Image Display an image" [ref=f2e159] [cursor=pointer]:
+            - img [ref=f2e161]
+            - generic [ref=f2e165]:
+              - generic [ref=f2e166]: Image
+              - generic [ref=f2e167]: Display an image
+          - button "Signature Draw signature" [ref=f2e168] [cursor=pointer]:
+            - img [ref=f2e170]
+            - generic [ref=f2e175]:
+              - generic [ref=f2e176]: Signature
+              - generic [ref=f2e177]: Draw signature
+          - button "Computed Auto-calculate" [ref=f2e178] [cursor=pointer]:
+            - img [ref=f2e180]
+            - generic [ref=f2e182]:
+              - generic [ref=f2e183]: Computed
+              - generic [ref=f2e184]: Auto-calculate
+          - button "Repeating Group Repeatable set" [ref=f2e185] [cursor=pointer]:
+            - img [ref=f2e187]
+            - generic [ref=f2e192]:
+              - generic [ref=f2e193]: Repeating Group
+              - generic [ref=f2e194]: Repeatable set
+        - generic [ref=f2e195]:
+          - generic [ref=f2e196]: Personal
+          - button "Full Name First and last" [ref=f2e198] [cursor=pointer]:
+            - img [ref=f2e200]
+            - generic [ref=f2e203]:
+              - generic [ref=f2e204]: Full Name
+              - generic [ref=f2e205]: First and last
+          - button "Address Full address" [ref=f2e206] [cursor=pointer]:
+            - img [ref=f2e208]
+            - generic [ref=f2e211]:
+              - generic [ref=f2e212]: Address
+              - generic [ref=f2e213]: Full address
+        - generic [ref=f2e214]:
+          - generic [ref=f2e215]: Layout
+          - button "Page Break Multi-page split" [ref=f2e217] [cursor=pointer]:
+            - img [ref=f2e219]
+            - generic [ref=f2e220]:
+              - generic [ref=f2e221]: Page Break
+              - generic [ref=f2e222]: Multi-page split
+    - main [ref=f2e223]:
+      - generic [ref=f2e224]:
+        - generic [ref=f2e225]:
+          - textbox [ref=f2e226]: Employee Onboarding
+          - textbox [ref=f2e227]: Collect new hire details and preferences in one place.
+        - generic [ref=f2e228]:
+          - generic [ref=f2e229]:
+            - generic [ref=f2e230]:
+              - img [ref=f2e231]
+              - text: Personal Information
+            - generic [ref=f2e236]:
+              - generic [ref=f2e237]:
+                - img [ref=f2e238]
+                - text: 2 columns
+              - generic [ref=f2e243]:
+                - button "Duplicate" [ref=f2e244] [cursor=pointer]:
+                  - img [ref=f2e245]
+                - button "Delete" [ref=f2e248] [cursor=pointer]:
+                  - img [ref=f2e249]
+          - generic [ref=f2e252]:
+            - generic [ref=f2e253]:
+              - generic [ref=f2e254]:
+                - generic [ref=f2e255]: Full Name *
+                - generic [ref=f2e256]:
+                  - button [ref=f2e257]:
+                    - img [ref=f2e258]
+                  - button [ref=f2e265] [cursor=pointer]:
+                    - img [ref=f2e266]
+                  - button [ref=f2e269] [cursor=pointer]:
+                    - img [ref=f2e270]
+              - textbox "e.g. Jane Smith" [ref=f2e273]
+            - generic [ref=f2e274]:
+              - generic [ref=f2e275]:
+                - generic [ref=f2e276]: Email Address *
+                - generic [ref=f2e277]:
+                  - button [ref=f2e278]:
+                    - img [ref=f2e279]
+                  - button [ref=f2e286] [cursor=pointer]:
+                    - img [ref=f2e287]
+                  - button [ref=f2e290] [cursor=pointer]:
+                    - img [ref=f2e291]
+              - textbox "e.g. jane@company.com" [ref=f2e294]: jane@company.com
+              - generic [ref=f2e295]: We'll never share your email.
+        - generic [ref=f2e296]:
+          - generic [ref=f2e297]:
+            - generic [ref=f2e298]:
+              - img [ref=f2e299]
+              - text: Work Details
+            - generic [ref=f2e302]:
+              - generic [ref=f2e303]:
+                - img [ref=f2e304]
+                - text: 1 column
+              - generic [ref=f2e306]:
+                - button [ref=f2e307] [cursor=pointer]:
+                  - img [ref=f2e308]
+                - button [ref=f2e311] [cursor=pointer]:
+                  - img [ref=f2e312]
+          - generic [ref=f2e315]:
+            - generic [ref=f2e316]:
+              - generic [ref=f2e317]:
+                - generic [ref=f2e318]: Department
+                - generic [ref=f2e319]:
+                  - button [ref=f2e320]:
+                    - img [ref=f2e321]
+                  - button [ref=f2e328] [cursor=pointer]:
+                    - img [ref=f2e329]
+                  - button [ref=f2e332] [cursor=pointer]:
+                    - img [ref=f2e333]
+              - combobox [ref=f2e336]:
+                - option "Select a department" [selected]
+                - option "Engineering"
+                - option "Design"
+                - option "Marketing"
+            - generic [ref=f2e337]:
+              - generic [ref=f2e338]:
+                - generic [ref=f2e339]: Start Date
+                - generic [ref=f2e340]:
+                  - button [ref=f2e341]:
+                    - img [ref=f2e342]
+                  - button [ref=f2e349] [cursor=pointer]:
+                    - img [ref=f2e350]
+                  - button [ref=f2e353] [cursor=pointer]:
+                    - img [ref=f2e354]
+              - textbox [ref=f2e357]
+        - generic [ref=f2e358]:
+          - generic [ref=f2e359]:
+            - generic [ref=f2e360]:
+              - img [ref=f2e361]
+              - text: Additional
+            - generic [ref=f2e363]:
+              - generic [ref=f2e364]:
+                - img [ref=f2e365]
+                - text: 2 columns
+              - generic [ref=f2e370]:
+                - button [ref=f2e371] [cursor=pointer]:
+                  - img [ref=f2e372]
+                - button [ref=f2e375] [cursor=pointer]:
+                  - img [ref=f2e376]
+          - generic [ref=f2e379]:
+            - generic [ref=f2e380]:
+              - generic [ref=f2e381]:
+                - generic [ref=f2e382]: Phone
+                - generic [ref=f2e383]:
+                  - button [ref=f2e384]:
+                    - img [ref=f2e385]
+                  - button [ref=f2e392] [cursor=pointer]:
+                    - img [ref=f2e393]
+                  - button [ref=f2e396] [cursor=pointer]:
+                    - img [ref=f2e397]
+              - textbox "(555) 000-0000" [ref=f2e400]
+            - generic [ref=f2e401]:
+              - generic [ref=f2e402]:
+                - generic [ref=f2e403]: Notes
+                - generic [ref=f2e404]:
+                  - button [ref=f2e405]:
+                    - img [ref=f2e406]
+                  - button [ref=f2e413] [cursor=pointer]:
+                    - img [ref=f2e414]
+                  - button [ref=f2e417] [cursor=pointer]:
+                    - img [ref=f2e418]
+              - textbox "Anything else we should know?" [ref=f2e421]
+        - button "Add section" [ref=f2e422] [cursor=pointer]:
+          - img [ref=f2e423]
+          - text: Add section
+    - complementary [ref=f2e424]:
+      - generic [ref=f2e425]:
+        - generic [ref=f2e426]:
+          - heading "Properties" [level=2] [ref=f2e427]
+          - generic [ref=f2e428]: Basic
+        - paragraph [ref=f2e429]: Email Address
+      - generic [ref=f2e430]:
+        - generic [ref=f2e431]:
+          - img [ref=f2e432]
+          - text: General
+        - generic [ref=f2e435]:
+          - img [ref=f2e436]
+          - text: Advanced
+        - generic [ref=f2e437]:
+          - img [ref=f2e438]
+          - text: Logic
+      - generic [ref=f2e443]:
+        - generic [ref=f2e444]:
+          - generic [ref=f2e445]: Field Label
+          - textbox [ref=f2e446]: Email Address
+        - generic [ref=f2e447]:
+          - generic [ref=f2e448]: Placeholder
+          - textbox [ref=f2e449]: e.g. jane@company.com
+        - generic [ref=f2e450]:
+          - generic [ref=f2e451]: Help Text
+          - textbox [ref=f2e452]: We'll never share your email.
+          - generic [ref=f2e453]: Shown below the field to guide respondents.
+        - generic [ref=f2e456]: Required
+        - generic [ref=f2e458]:
+          - heading "Validation" [level=3] [ref=f2e459]
+          - generic [ref=f2e460]:
+            - generic [ref=f2e461]: Format
+            - combobox [ref=f2e462]:
+              - option "Email address" [selected]
+              - option "Any text"
+              - option "Custom regex"
+          - generic [ref=f2e463]:
+            - generic [ref=f2e464]: Error Message
+            - textbox [ref=f2e465]: Please enter a valid email address.
+        - generic [ref=f2e466]:
+          - heading "Options" [level=3] [ref=f2e467]
+          - generic [ref=f2e468]:
+            - img [ref=f2e469]
+            - generic [ref=f2e471]:
+              - text: Advanced options like prefilled values, autocomplete, and field key are available under the
+              - strong [ref=f2e472]: Advanced
+              - text: tab.

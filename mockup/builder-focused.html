@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Service Hub — Form Builder · Direction F (Focused)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: { DEFAULT: 'var(--primary)', hover: 'var(--primary-hover)', light: 'var(--primary-light)', foreground: 'var(--primary-foreground)' },
+          background: 'var(--background)',
+          surface: { DEFAULT: 'var(--surface)', raised: 'var(--surface-raised)', tertiary: 'var(--surface-tertiary)' },
+          border: { DEFAULT: 'var(--border)', soft: 'var(--border-soft)', strong: 'var(--border-strong)' },
+          'text': { base: 'var(--text-base)', muted: 'var(--text-muted)', subtle: 'var(--text-subtle)', inverse: 'var(--text-inverse)' },
+          success: { DEFAULT: 'var(--success)', light: 'var(--success-light)' },
+          warning: { DEFAULT: 'var(--warning)', light: 'var(--warning-light)' },
+          danger: { DEFAULT: 'var(--danger)', light: 'var(--danger-light)' },
+          info: { DEFAULT: 'var(--info)', light: 'var(--info-light)' },
+        },
+        borderRadius: { sm: 'var(--radius-sm)', base: 'var(--radius-base)', card: 'var(--radius-card)', lg: 'var(--radius-lg)' },
+        boxShadow: { card: 'var(--shadow-card)' },
+      }
+    }
+  }
+</script>
+<style>
+  :root {
+    --primary:#0D9488; --primary-hover:#0F766E; --primary-light:#F0FDFA; --primary-foreground:#FFFFFF;
+    --background:#FAFDFC; --surface:#FFFFFF; --surface-raised:#F0FDFA; --surface-tertiary:#CCFBF1;
+    --border:#E2E8F0; --border-soft:#F5FEFB; --border-strong:#CBD5E1;
+    --text-base:#1C2B2A; --text-muted:#64748B; --text-subtle:#94A3B8; --text-inverse:#FFFFFF;
+    --success:#059669; --success-light:#F0FDF4; --warning:#D97706; --warning-light:#FFFBEB;
+    --danger:#E11D48; --danger-light:#FFF1F2; --info:#0891B2; --info-light:#ECFEFF;
+    --radius-sm:6px; --radius-base:10px; --radius-card:16px; --radius-lg:20px;
+    --shadow-card:0 1px 3px rgba(13,148,136,0.08),0 4px 12px rgba(15,23,42,0.05);
+  }
+  html, body { height: 100%; }
+  body { background: var(--background); color: var(--text-base); font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; }
+
+  /* Switch */
+  .switch { position: relative; width: 34px; height: 20px; background: var(--border-strong); border-radius: 9999px; transition: background .15s ease; cursor: pointer; flex-shrink: 0; }
+  .switch.on { background: var(--primary); }
+  .switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 9999px; transition: transform .15s ease; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+  .switch.on .switch-knob { transform: translateX(14px); }
+
+  /* Field card hover */
+  .field-card { transition: all .15s ease; }
+  .field-card:hover { background: var(--surface-raised); }
+
+  /* Type selector dropdown */
+  .type-dropdown { transition: all .15s ease; }
+  .type-dropdown:hover { border-color: var(--border-strong); background: var(--surface-raised); }
+  .type-menu { transition: opacity .15s ease, transform .15s ease; }
+
+  /* Contenteditable label */
+  [contenteditable] { outline: none; }
+  [contenteditable]:focus { box-shadow: 0 0 0 3px rgba(13,148,136,0.12); border-radius: 8px; }
+
+  /* Preview input focus ring (visual only) */
+  .preview-input { transition: all .15s ease; }
+
+  /* Scrollbar polish */
+  .scroll-soft::-webkit-scrollbar { width: 8px; }
+  .scroll-soft::-webkit-scrollbar-thumb { background: var(--border); border-radius: 9999px; }
+  .scroll-soft::-webkit-scrollbar-track { background: transparent; }
+
+  /* Progress bar */
+  .progress-fill { transition: width .3s ease; }
+
+  /* lucide icon sizing default */
+  [data-lucide] { width: 16px; height: 16px; }
+</style>
+</head>
+<body class="h-screen flex flex-col">
+
+  <!-- TOP BAR -->
+  <header class="h-14 bg-surface border-b border-border flex items-center justify-between px-4 flex-shrink-0">
+    <!-- Left: back + title + save status -->
+    <div class="flex items-center gap-3">
+      <button class="p-1.5 rounded-base text-text-muted hover:text-text-base hover:bg-surface-raised transition-all duration-150" title="Back">
+        <i data-lucide="arrow-left"></i>
+      </button>
+      <div class="h-5 w-px bg-border"></div>
+      <div class="flex items-center gap-2">
+        <i data-lucide="file-text" class="text-primary"></i>
+        <h1 class="text-sm font-semibold text-text-base">Customer Onboarding Form</h1>
+      </div>
+      <span class="text-xs text-text-subtle ml-1">Saved 2m ago</span>
+    </div>
+
+    <!-- Right: view all + share + save -->
+    <div class="flex items-center gap-2">
+      <button id="viewAllBtn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-base text-text-muted hover:text-text-base hover:bg-surface-raised transition-all duration-150 text-xs font-medium" title="View all fields">
+        <i data-lucide="layout-grid"></i>
+        <span>View all</span>
+      </button>
+      <button class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-base text-text-muted hover:text-text-base hover:bg-surface-raised transition-all duration-150 text-xs font-medium">
+        <i data-lucide="share-2"></i>
+        <span>Share</span>
+      </button>
+      <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-base bg-primary text-primary-foreground hover:bg-primary-hover transition-all duration-150 text-xs font-semibold shadow-card">
+        <i data-lucide="check"></i>
+        <span>Save</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div class="flex flex-1 h-[calc(100vh-3.5rem)]">
+
+    <!-- FILMSTRIP -->
+    <aside id="filmstrip" class="w-56 bg-surface border-r border-border overflow-y-auto scroll-soft py-4 flex-shrink-0">
+      <div class="px-4 mb-2">
+        <h2 class="text-[10px] font-semibold tracking-wider text-text-subtle uppercase">Fields</h2>
+      </div>
+
+      <!-- Section: CONTACT INFORMATION -->
+      <div class="px-4 pt-2 pb-1.5">
+        <span class="text-[10px] font-semibold tracking-wider text-text-subtle uppercase">Contact Information</span>
+      </div>
+
+      <!-- Card 1 (SELECTED) -->
+      <button data-field="1" class="field-card w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-base text-left is-selected" style="background: var(--primary-light); border-left: 2px solid var(--primary); margin-left: 4px; margin-right:4px; width: calc(100% - 8px);">
+        <span class="text-[11px] font-semibold text-primary w-4 text-center">1</span>
+        <i data-lucide="user" class="text-primary"></i>
+        <span class="text-xs font-medium text-text-base truncate flex-1">Full Name</span>
+      </button>
+
+      <!-- Card 2 -->
+      <button data-field="2" class="field-card w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-base text-left" style="margin-left:4px; margin-right:4px; width: calc(100% - 8px);">
+        <span class="text-[11px] font-semibold text-text-subtle w-4 text-center">2</span>
+        <i data-lucide="mail" class="text-text-muted"></i>
+        <span class="text-xs font-medium text-text-muted truncate flex-1">Email</span>
+      </button>
+
+      <!-- Card 3 -->
+      <button data-field="3" class="field-card w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-base text-left" style="margin-left:4px; margin-right:4px; width: calc(100% - 8px);">
+        <span class="text-[11px] font-semibold text-text-subtle w-4 text-center">3</span>
+        <i data-lucide="phone" class="text-text-muted"></i>
+        <span class="text-xs font-medium text-text-muted truncate flex-1">Phone</span>
+      </button>
+
+      <!-- Card 4 -->
+      <button data-field="4" class="field-card w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-base text-left" style="margin-left:4px; margin-right:4px; width: calc(100% - 8px);">
+        <span class="text-[11px] font-semibold text-text-subtle w-4 text-center">4</span>
+        <i data-lucide="building" class="text-text-muted"></i>
+        <span class="text-xs font-medium text-text-muted truncate flex-1">Company</span>
+      </button>
+
+      <!-- Section: PROJECT DETAILS -->
+      <div class="px-4 pt-4 pb-1.5">
+        <span class="text-[10px] font-semibold tracking-wider text-text-subtle uppercase">Project Details</span>
+      </div>
+
+      <!-- Card 5 -->
+      <button data-field="5" class="field-card w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-base text-left" style="margin-left:4px; margin-right:4px; width: calc(100% - 8px);">
+        <span class="text-[11px] font-semibold text-text-subtle w-4 text-center">5</span>
+        <i data-lucide="list" class="text-text-muted"></i>
+        <span class="text-xs font-medium text-text-muted truncate flex-1">Project Type</span>
+      </button>
+
+      <!-- Card 6 -->
+      <button data-field="6" class="field-card w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-base text-left" style="margin-left:4px; margin-right:4px; width: calc(100% - 8px);">
+        <span class="text-[11px] font-semibold text-text-subtle w-4 text-center">6</span>
+        <i data-lucide="sliders-horizontal" class="text-text-muted"></i>
+        <span class="text-xs font-medium text-text-muted truncate flex-1">Budget</span>
+      </button>
+
+      <!-- Card 7 -->
+      <button data-field="7" class="field-card w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-base text-left" style="margin-left:4px; margin-right:4px; width: calc(100% - 8px);">
+        <span class="text-[11px] font-semibold text-text-subtle w-4 text-center">7</span>
+        <i data-lucide="message-square" class="text-text-muted"></i>
+        <span class="text-xs font-medium text-text-muted truncate flex-1">Tell us about...</span>
+      </button>
+
+      <!-- Add field card -->
+      <button class="w-full flex items-center justify-center gap-1.5 px-3 py-2 mx-1 mt-3 rounded-base text-text-subtle hover:text-primary hover:bg-surface-raised transition-all duration-150 border border-dashed border-border-strong text-xs font-medium" style="margin-left:4px; margin-right:4px; width: calc(100% - 8px);">
+        <i data-lucide="plus"></i>
+        <span>Add field</span>
+      </button>
+    </aside>
+
+    <!-- STAGE -->
+    <main class="flex-1 bg-background overflow-y-auto scroll-soft flex flex-col items-center">
+      <div class="max-w-xl w-full px-8 py-10">
+
+        <!-- PROGRESS -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-text-muted">Field <span id="fieldNum" class="text-text-base font-semibold">1</span> of 7</span>
+            <span class="text-xs text-text-subtle">Customer Onboarding</span>
+          </div>
+          <div class="h-1 bg-border rounded-full overflow-hidden">
+            <div id="progressFill" class="progress-fill h-full bg-primary rounded-full" style="width: 14%;"></div>
+          </div>
+        </div>
+
+        <!-- TYPE SELECTOR -->
+        <div class="mb-8 flex justify-center">
+          <div class="relative">
+            <button id="typeSelector" class="type-dropdown flex items-center gap-2 px-3.5 py-2 rounded-full border border-border bg-surface text-text-base text-sm font-medium shadow-card">
+              <i data-lucide="user" class="text-primary"></i>
+              <span id="typeLabel">Full Name</span>
+              <i data-lucide="chevron-down" class="text-text-muted"></i>
+            </button>
+            <!-- Type menu (hidden by default) -->
+            <div id="typeMenu" class="type-menu absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 bg-surface border border-border rounded-card shadow-card p-1.5 z-20 opacity-0 pointer-events-none" style="transform: translate(-50%, -4px);">
+              <div class="text-[10px] font-semibold tracking-wider text-text-subtle uppercase px-2.5 py-1.5">Field Type</div>
+              <button class="type-option w-full flex items-center gap-2.5 px-2.5 py-2 rounded-base text-left text-sm text-text-base hover:bg-surface-raised transition-all duration-150" data-type="Full Name" data-icon="user">
+                <i data-lucide="user" class="text-text-muted"></i><span>Full Name</span>
+                <i data-lucide="check" class="text-primary ml-auto"></i>
+              </button>
+              <button class="type-option w-full flex items-center gap-2.5 px-2.5 py-2 rounded-base text-left text-sm text-text-muted hover:bg-surface-raised transition-all duration-150" data-type="Email" data-icon="mail">
+                <i data-lucide="mail" class="text-text-muted"></i><span>Email</span>
+              </button>
+              <button class="type-option w-full flex items-center gap-2.5 px-2.5 py-2 rounded-base text-left text-sm text-text-muted hover:bg-surface-raised transition-all duration-150" data-type="Phone" data-icon="phone">
+                <i data-lucide="phone" class="text-text-muted"></i><span>Phone</span>
+              </button>
+              <button class="type-option w-full flex items-center gap-2.5 px-2.5 py-2 rounded-base text-left text-sm text-text-muted hover:bg-surface-raised transition-all duration-150" data-type="Company" data-icon="building">
+                <i data-lucide="building" class="text-text-muted"></i><span>Company</span>
+              </button>
+              <button class="type-option w-full flex items-center gap-2.5 px-2.5 py-2 rounded-base text-left text-sm text-text-muted hover:bg-surface-raised transition-all duration-150" data-type="Dropdown" data-icon="list">
+                <i data-lucide="list" class="text-text-muted"></i><span>Dropdown</span>
+              </button>
+              <button class="type-option w-full flex items-center gap-2.5 px-2.5 py-2 rounded-base text-left text-sm text-text-muted hover:bg-surface-raised transition-all duration-150" data-type="Slider" data-icon="sliders-horizontal">
+                <i data-lucide="sliders-horizontal" class="text-text-muted"></i><span>Slider</span>
+              </button>
+              <button class="type-option w-full flex items-center gap-2.5 px-2.5 py-2 rounded-base text-left text-sm text-text-muted hover:bg-surface-raised transition-all duration-150" data-type="Long Text" data-icon="message-square">
+                <i data-lucide="message-square" class="text-text-muted"></i><span>Long Text</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LABEL (large editable) -->
+        <div class="mb-6 text-center">
+          <div contenteditable="true" spellcheck="false" class="inline-block text-2xl font-semibold text-text-base px-2 py-1 rounded-base border border-transparent hover:border-border transition-all duration-150" style="max-width: 100%;">What's your full name?</div>
+          <p class="text-sm text-text-subtle mt-2">Type your question above. The preview below shows what respondents will see.</p>
+        </div>
+
+        <!-- LIVE PREVIEW -->
+        <div class="mb-8">
+          <div class="text-[10px] font-semibold tracking-wider text-text-subtle uppercase mb-2">Preview</div>
+          <input type="text" disabled placeholder="Jane Doe" class="preview-input w-full px-4 py-3.5 rounded-base border border-border bg-surface text-text-base text-base placeholder:text-text-subtle focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" style="box-shadow: var(--shadow-card);" />
+        </div>
+
+        <!-- PROPERTIES BAR -->
+        <div class="mb-10 bg-surface border border-border rounded-card p-4 shadow-card">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold text-text-base">Properties</span>
+            <button id="propsToggle" class="text-text-subtle hover:text-text-muted transition-all duration-150" title="Toggle properties">
+              <i data-lucide="chevron-up"></i>
+            </button>
+          </div>
+          <div id="propsBody" class="flex flex-wrap items-center gap-4">
+            <!-- Required switch -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium text-text-base">Required</span>
+              <div id="reqSwitch" class="switch on" role="switch" aria-checked="true">
+                <div class="switch-knob"></div>
+              </div>
+            </div>
+            <div class="h-5 w-px bg-border"></div>
+            <!-- Placeholder -->
+            <div class="flex flex-col gap-1">
+              <label class="text-[10px] font-semibold tracking-wider text-text-subtle uppercase">Placeholder</label>
+              <input type="text" value="Jane Doe" class="px-2.5 py-1.5 rounded-base border border-border bg-surface text-text-base text-xs w-36 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-150" />
+            </div>
+            <!-- Help text -->
+            <div class="flex flex-col gap-1">
+              <label class="text-[10px] font-semibold tracking-wider text-text-subtle uppercase">Help text</label>
+              <input type="text" value="As it appears on your ID" class="px-2.5 py-1.5 rounded-base border border-border bg-surface text-text-base text-xs w-44 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all duration-150" />
+            </div>
+            <div class="flex-1"></div>
+            <!-- More settings -->
+            <button class="flex items-center gap-1 text-xs font-medium text-text-muted hover:text-primary transition-all duration-150 self-end pb-1">
+              <span>More settings</span>
+              <i data-lucide="arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- NAVIGATION -->
+        <div class="flex items-center justify-between gap-3 pt-2 border-t border-border">
+          <button id="prevBtn" class="flex items-center gap-1.5 px-3.5 py-2 rounded-base text-text-subtle text-sm font-medium cursor-not-allowed opacity-50" disabled>
+            <i data-lucide="arrow-left"></i>
+            <span>Previous</span>
+          </button>
+          <button class="flex items-center gap-1.5 px-3.5 py-2 rounded-base text-text-muted hover:text-primary hover:bg-surface-raised transition-all duration-150 text-sm font-medium border border-dashed border-border-strong">
+            <i data-lucide="plus"></i>
+            <span>Add field after</span>
+          </button>
+          <button id="nextBtn" class="flex items-center gap-1.5 px-3.5 py-2 rounded-base text-primary border border-primary hover:bg-primary-light transition-all duration-150 text-sm font-semibold">
+            <span>Next field</span>
+            <i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Floating label -->
+  <div class="fixed bottom-3 left-3 text-xs text-text-subtle pointer-events-none select-none">
+    Direction F — Focused single-field
+  </div>
+
+<script>
+  // Field data for navigation
+  const FIELDS = [
+    { id: 1, label: 'Full Name', icon: 'user', question: "What's your full name?", placeholder: 'Jane Doe', help: 'As it appears on your ID' },
+    { id: 2, label: 'Email', icon: 'mail', question: "What's your email address?", placeholder: 'jane@example.com', help: 'We'll send updates here' },
+    { id: 3, label: 'Phone', icon: 'phone', question: "What's your phone number?", placeholder: '+1 (555) 123-4567', help: 'Optional — for urgent updates' },
+    { id: 4, label: 'Company', icon: 'building', question: "What company are you with?", placeholder: 'Acme Inc.', help: 'Leave blank if self-employed' },
+    { id: 5, label: 'Project Type', icon: 'list', question: "What type of project is this?", placeholder: 'Select a project type...', help: 'Choose the closest match' },
+    { id: 6, label: 'Budget', icon: 'sliders-horizontal', question: "What's your budget range?", placeholder: '$1,000 — $5,000', help: 'Approximate range' },
+    { id: 7, label: 'Tell us about...', icon: 'message-square', question: "Tell us about your project goals.", placeholder: 'Share any details that help us understand...', help: 'The more detail, the better' },
+  ];
+  let currentField = 1;
+  const totalFields = FIELDS.length;
+
+  function lucideRefresh() { if (window.lucide) lucide.createIcons(); }
+
+  function updateStage() {
+    const f = FIELDS.find(x => x.id === currentField);
+    if (!f) return;
+    // progress
+    document.getElementById('fieldNum').textContent = currentField;
+    const pct = Math.round((currentField / totalFields) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    // type selector
+    document.getElementById('typeLabel').textContent = f.label;
+    const typeIcon = document.querySelector('#typeSelector [data-lucide]');
+    if (typeIcon) typeIcon.setAttribute('data-lucide', f.icon);
+    // label
+    const labelEl = document.querySelector('[contenteditable]');
+    if (labelEl) labelEl.textContent = f.question;
+    // preview
+    const preview = document.querySelector('.preview-input');
+    if (preview) preview.placeholder = f.placeholder;
+    // help text
+    const helpInput = document.querySelector('#propsBody input[type="text"]:last-of-type');
+    // (best-effort) update help text value
+    const helpField = document.querySelectorAll('#propsBody input[type="text"]')[1];
+    if (helpField) helpField.value = f.help;
+    const placeholderField = document.querySelectorAll('#propsBody input[type="text"]')[0];
+    if (placeholderField) placeholderField.value = f.placeholder;
+    // nav buttons
+    const prev = document.getElementById('prevBtn');
+    if (currentField === 1) { prev.classList.add('opacity-50','cursor-not-allowed','text-text-subtle'); prev.setAttribute('disabled',''); }
+    else { prev.classList.remove('opacity-50','cursor-not-allowed','text-text-subtle'); prev.removeAttribute('disabled'); }
+    const next = document.getElementById('nextBtn');
+    if (currentField === totalFields) { next.classList.add('opacity-50','cursor-not-allowed'); next.setAttribute('disabled',''); }
+    else { next.classList.remove('opacity-50','cursor-not-allowed'); next.removeAttribute('disabled'); }
+    // filmstrip selection
+    document.querySelectorAll('.field-card').forEach(card => {
+      const fid = parseInt(card.getAttribute('data-field'));
+      if (fid === currentField) {
+        card.style.background = 'var(--primary-light)';
+        card.style.borderLeft = '2px solid var(--primary)';
+        card.querySelector('span:first-child').style.color = 'var(--primary)';
+        card.querySelector('span:first-child').classList.remove('text-text-subtle');
+        card.querySelector('span:first-child').classList.add('text-primary');
+        const ic = card.querySelector('[data-lucide]');
+        if (ic) { ic.classList.remove('text-text-muted'); ic.classList.add('text-primary'); }
+        const lbl = card.querySelector('span.truncate');
+        if (lbl) { lbl.classList.remove('text-text-muted'); lbl.classList.add('text-text-base'); }
+      } else {
+        card.style.background = 'transparent';
+        card.style.borderLeft = 'none';
+        const num = card.querySelector('span:first-child');
+        num.classList.remove('text-primary');
+        num.classList.add('text-text-subtle');
+        num.style.color = '';
+        const ic = card.querySelector('[data-lucide]');
+        if (ic) { ic.classList.remove('text-primary'); ic.classList.add('text-text-muted'); }
+        const lbl = card.querySelector('span.truncate');
+        if (lbl) { lbl.classList.remove('text-text-base'); lbl.classList.add('text-text-muted'); }
+      }
+    });
+    lucideRefresh();
+  }
+
+  // Filmstrip click
+  document.querySelectorAll('.field-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const fid = parseInt(card.getAttribute('data-field'));
+      if (!isNaN(fid)) { currentField = fid; updateStage(); }
+    });
+  });
+
+  // Prev / Next
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    if (currentField > 1) { currentField--; updateStage(); }
+  });
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (currentField < totalFields) { currentField++; updateStage(); }
+  });
+
+  // Required switch
+  const reqSwitch = document.getElementById('reqSwitch');
+  reqSwitch.addEventListener('click', () => {
+    reqSwitch.classList.toggle('on');
+    reqSwitch.setAttribute('aria-checked', reqSwitch.classList.contains('on'));
+  });
+
+  // Properties toggle
+  const propsToggle = document.getElementById('propsToggle');
+  const propsBody = document.getElementById('propsBody');
+  let propsOpen = true;
+  propsToggle.addEventListener('click', () => {
+    propsOpen = !propsOpen;
+    propsBody.style.display = propsOpen ? 'flex' : 'none';
+    const ic = propsToggle.querySelector('[data-lucide]');
+    if (ic) ic.setAttribute('data-lucide', propsOpen ? 'chevron-up' : 'chevron-down');
+    lucideRefresh();
+  });
+
+  // Type selector dropdown
+  const typeSelector = document.getElementById('typeSelector');
+  const typeMenu = document.getElementById('typeMenu');
+  let menuOpen = false;
+  function closeMenu() {
+    menuOpen = false;
+    typeMenu.style.opacity = '0';
+    typeMenu.style.pointerEvents = 'none';
+    typeMenu.style.transform = 'translate(-50%, -4px)';
+  }
+  function openMenu() {
+    menuOpen = true;
+    typeMenu.style.opacity = '1';
+    typeMenu.style.pointerEvents = 'auto';
+    typeMenu.style.transform = 'translate(-50%, 0)';
+  }
+  typeSelector.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menuOpen ? closeMenu() : openMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if (menuOpen && !typeMenu.contains(e.target) && !typeSelector.contains(e.target)) closeMenu();
+  });
+  document.querySelectorAll('.type-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const t = opt.getAttribute('data-type');
+      const ic = opt.getAttribute('data-icon');
+      document.getElementById('typeLabel').textContent = t;
+      const selIc = document.querySelector('#typeSelector [data-lucide]');
+      if (selIc) selIc.setAttribute('data-lucide', ic);
+      // update checkmarks
+      document.querySelectorAll('.type-option').forEach(o => {
+        const lbl = o.querySelector('span');
+        const chk = o.querySelector('[data-lucide="check"]');
+        if (o === opt) {
+          if (!chk) {
+            const c = document.createElement('i');
+            c.setAttribute('data-lucide','check');
+            c.classList.add('text-primary','ml-auto');
+            o.appendChild(c);
+          }
+          if (lbl) { lbl.classList.remove('text-text-muted'); lbl.classList.add('text-text-base'); }
+        } else {
+          if (chk) chk.remove();
+          if (lbl) { lbl.classList.add('text-text-muted'); lbl.classList.remove('text-text-base'); }
+        }
+      });
+      lucideRefresh();
+      closeMenu();
+    });
+  });
+
+  // View all toggle (visual only — flashes filmstrip)
+  const viewAllBtn = document.getElementById('viewAllBtn');
+  const filmstrip = document.getElementById('filmstrip');
+  viewAllBtn.addEventListener('click', () => {
+    filmstrip.style.boxShadow = '0 0 0 2px var(--primary)';
+    setTimeout(() => { filmstrip.style.boxShadow = ''; }, 600);
+  });
+
+  // Init
+  lucideRefresh();
+  updateStage();
+</script>
+</body>
+</html>

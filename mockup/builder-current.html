@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Service Hub — Form Builder (Current Layout · Baseline)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: { DEFAULT: '#0D9488', hover: '#0F766E', light: '#F0FDFA', foreground: '#FFFFFF' },
+          background: '#FAFDFC',
+          surface: { DEFAULT: '#FFFFFF', raised: '#F0FDFA', tertiary: '#CCFBF1' },
+          border: { DEFAULT: '#E2E8F0', soft: '#F5FEFB', strong: '#CBD5E1' },
+          'text-base': '#1C2B2A',
+          'text-muted': '#64748B',
+          'text-subtle': '#94A3B8',
+          'text-inverse': '#FFFFFF',
+          success: { DEFAULT: '#059669', light: '#F0FDF4' },
+          warning: { DEFAULT: '#D97706', light: '#FFFBEB' },
+          danger: { DEFAULT: '#E11D48', light: '#FFF1F2' },
+          info: { DEFAULT: '#0891B2', light: '#ECFEFF' },
+        },
+        borderRadius: {
+          sm: '6px',
+          base: '10px',
+          card: '16px',
+          lg: '20px',
+        },
+        boxShadow: {
+          card: '0 1px 3px rgba(13,148,136,0.08), 0 4px 12px rgba(15,23,42,0.05)',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root{
+    --primary:#0D9488; --primary-hover:#0F766E; --primary-light:#F0FDFA; --primary-foreground:#FFFFFF;
+    --background:#FAFDFC; --surface:#FFFFFF; --surface-raised:#F0FDFA; --surface-tertiary:#CCFBF1;
+    --border:#E2E8F0; --border-soft:#F5FEFB; --border-strong:#CBD5E1;
+    --text-base:#1C2B2A; --text-muted:#64748B; --text-subtle:#94A3B8; --text-inverse:#FFFFFF;
+    --success:#059669; --success-light:#F0FDF4; --warning:#D97706; --warning-light:#FFFBEB;
+    --danger:#E11D48; --danger-light:#FFF1F2; --info:#0891B2; --info-light:#ECFEFF;
+    --radius-sm:6px; --radius-base:10px; --radius-card:16px; --radius-lg:20px;
+    --shadow-card:0 1px 3px rgba(13,148,136,0.08),0 4px 12px rgba(15,23,42,0.05);
+  }
+  html,body{height:100%;}
+  body{
+    background:var(--background);
+    color:var(--text-base);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .scroll-thin::-webkit-scrollbar{width:8px;height:8px;}
+  .scroll-thin::-webkit-scrollbar-thumb{background:#E2E8F0;border-radius:8px;}
+  .scroll-thin::-webkit-scrollbar-thumb:hover{background:#CBD5E1;}
+  .scroll-thin::-webkit-scrollbar-track{background:transparent;}
+
+  /* Canvas dotted grid background — matches the real builder */
+  .canvas-grid{
+    background-image:radial-gradient(circle, #E2E8F0 1px, transparent 1px);
+    background-size:20px 20px;
+  }
+
+  /* Elevation utilities mirroring the real builder */
+  .elevation-1{box-shadow:0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06);}
+  .elevation-2{box-shadow:0 2px 4px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.08);}
+  .elevation-3{box-shadow:0 8px 24px rgba(15,23,42,0.12), 0 4px 12px rgba(15,23,42,0.08);}
+
+  /* Category accent chips — matches CATEGORY_ACCENT in FieldPalette.jsx */
+  .accent-Basic{background:var(--info-light);color:var(--info);}
+  .accent-Choice{background:var(--primary-light);color:var(--primary);}
+  .accent-Advanced{background:var(--warning-light);color:var(--warning);}
+  .accent-Personal{background:var(--success-light);color:var(--success);}
+  .accent-Layout{background:var(--surface-raised);color:var(--text-muted);}
+
+  /* Badge status */
+  .badge{display:inline-flex;align-items:center;font-size:0.6875rem;font-weight:600;padding:0.125rem 0.5rem;border-radius:9999px;line-height:1;}
+  .badge-success{background:var(--success-light);color:var(--success);}
+  .badge-warning{background:var(--warning-light);color:var(--warning);}
+  .badge-neutral{background:var(--surface-raised);color:var(--text-muted);border:1px solid var(--border);}
+
+  /* Selected field ring — matches the real builder's selection state */
+  .field-selected{
+    border-color:var(--primary) !important;
+    box-shadow:0 0 0 2px rgba(13,148,136,0.2);
+    background:rgba(240,253,250,0.2);
+  }
+  .field-selected .accent-bar{display:block;}
+
+  /* Lucide icon sizing default */
+  [data-lucide]{width:1em;height:1em;stroke-width:2;}
+
+  /* Spinner */
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  .spin{animation:spin 0.8s linear infinite;}
+
+  /* Pulse dot */
+  @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+  .pulse-dot{animation:pulse-dot 1.5s ease-in-out infinite;}
+</style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TOP BAR (h-14) — matches FormsBuilder.jsx header                     -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<header class="h-14 bg-surface border-b border-border flex items-center px-3 gap-3 flex-shrink-0">
+  <!-- Left cluster: back · undo/redo · form breadcrumb + status -->
+  <div class="flex items-center gap-1.5 flex-shrink-0">
+    <button class="p-2 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base transition-all min-w-[44px] min-h-[44px] flex items-center justify-center" title="Back to dashboard" aria-label="Back to dashboard">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+    </button>
+    <div class="h-6 w-px bg-border mx-0.5"></div>
+    <button class="p-2 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base transition-all min-w-[44px] min-h-[44px] flex items-center justify-center" title="Undo (Ctrl+Z)" aria-label="Undo">
+      <i data-lucide="undo-2" class="w-4 h-4"></i>
+    </button>
+    <button class="p-2 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base transition-all min-w-[44px] min-h-[44px] flex items-center justify-center opacity-30 cursor-not-allowed" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
+      <i data-lucide="redo-2" class="w-4 h-4"></i>
+    </button>
+    <div class="h-6 w-px bg-border mx-0.5"></div>
+    <!-- Form breadcrumb + status badge -->
+    <div class="flex items-center gap-2 min-w-0 max-w-[280px]">
+      <span class="text-sm font-semibold text-text-base truncate" title="Customer Onboarding Form">Customer Onboarding Form</span>
+      <span class="badge badge-neutral flex-shrink-0">Draft</span>
+    </div>
+  </div>
+
+  <!-- Center cluster: autosave status -->
+  <div class="flex-1 flex items-center justify-center min-w-0" aria-live="polite">
+    <span class="flex items-center gap-1.5 text-sm text-warning bg-warning-light px-2.5 py-1 rounded-full">
+      <i data-lucide="loader-2" class="w-3.5 h-3.5 spin"></i>
+      Saving…
+    </span>
+  </div>
+
+  <!-- Right cluster: device preview · preview toggle · save · more -->
+  <div class="flex items-center gap-1.5 flex-shrink-0">
+    <!-- Device preview icons -->
+    <div class="flex items-center gap-0.5 bg-surface-raised border border-border rounded-base p-0.5">
+      <button class="p-1.5 text-text-subtle hover:text-text-muted rounded-sm transition-all min-w-[36px] min-h-[36px] flex items-center justify-center" title="Mobile preview" aria-label="Mobile preview">
+        <i data-lucide="smartphone" class="w-4 h-4"></i>
+      </button>
+      <button class="p-1.5 text-text-subtle hover:text-text-muted rounded-sm transition-all min-w-[36px] min-h-[36px] flex items-center justify-center" title="Tablet preview" aria-label="Tablet preview">
+        <i data-lucide="tablet" class="w-4 h-4"></i>
+      </button>
+      <button class="p-1.5 text-primary bg-primary-light rounded-sm transition-all min-w-[36px] min-h-[36px] flex items-center justify-center" title="Desktop preview" aria-label="Desktop preview">
+        <i data-lucide="monitor" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <div class="h-6 w-px bg-border mx-0.5"></div>
+    <button class="p-2 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base transition-all min-w-[44px] min-h-[44px] flex items-center justify-center" title="Preview form" aria-label="Preview form">
+      <i data-lucide="eye" class="w-4 h-4"></i>
+    </button>
+    <!-- More overflow menu -->
+    <button class="flex items-center gap-1 px-2 py-2 border rounded-base bg-surface-raised border-border hover:bg-surface transition-all min-h-[44px]" title="More actions" aria-label="More actions">
+      <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+      <i data-lucide="chevron-down" class="w-3 h-3 text-text-subtle"></i>
+    </button>
+    <div class="h-6 w-px bg-border mx-0.5"></div>
+    <!-- Save button -->
+    <button class="flex items-center gap-2 px-3.5 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover font-medium transition-all min-h-[44px] shadow-sm" title="Save form (Ctrl+S)" aria-label="Save form">
+      <i data-lucide="save" class="w-4 h-4"></i>
+      <span class="text-sm">Save</span>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- BODY — 3-pane layout: left palette · center canvas · right props     -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="flex flex-1 overflow-hidden" style="height:calc(100vh - 3.5rem);">
+
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <!-- LEFT PANEL (w-72) — Field Palette                                    -->
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <aside class="w-72 bg-surface border-r border-border flex flex-col flex-shrink-0 overflow-hidden">
+    <!-- Panel header -->
+    <div class="p-3 border-b border-border">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-text-base uppercase tracking-wide">Add Field</h2>
+        <div class="flex items-center gap-1">
+          <button class="flex items-center gap-1 px-1.5 py-0.5 text-xs text-text-muted hover:text-text-base border border-border rounded hover:bg-surface-raised transition-colors" title="Command palette (/)" aria-label="Open command palette">
+            <span>/</span>
+          </button>
+          <button class="flex items-center justify-center w-6 h-6 rounded text-text-muted hover:text-text-base hover:bg-surface-raised transition-colors" title="Collapse panel" aria-label="Collapse field palette">
+            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+      <button class="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-border rounded-base text-sm text-text-muted hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Browse all fields
+      </button>
+    </div>
+
+    <!-- Search bar -->
+    <div class="p-2 border-b border-border">
+      <div class="relative">
+        <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-subtle"></i>
+        <input type="text" placeholder="Search fields or press /" class="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-sm placeholder:text-text-muted" aria-label="Search field types" />
+      </div>
+    </div>
+
+    <!-- Field categories (scrollable) -->
+    <div class="flex-1 overflow-y-auto p-2 scroll-thin">
+
+      <!-- BASIC category -->
+      <div class="mb-3">
+        <h3 class="px-1 mb-1.5 text-xs font-semibold text-text-subtle uppercase tracking-wide">Basic</h3>
+        <div class="space-y-1">
+          <!-- Short Text -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Basic">
+              <i data-lucide="type" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Short Text</div>
+              <div class="text-xs text-text-muted truncate">Single-line text input</div>
+            </div>
+          </button>
+          <!-- Long Text -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Basic">
+              <i data-lucide="message-square" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Long Text</div>
+              <div class="text-xs text-text-muted truncate">Multi-line text area</div>
+            </div>
+          </button>
+          <!-- Number -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Basic">
+              <i data-lucide="hash" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Number</div>
+              <div class="text-xs text-text-muted truncate">Numeric input</div>
+            </div>
+          </button>
+          <!-- Email -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Basic">
+              <i data-lucide="mail" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Email</div>
+              <div class="text-xs text-text-muted truncate">Email address input</div>
+            </div>
+          </button>
+          <!-- Phone -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Basic">
+              <i data-lucide="phone" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Phone</div>
+              <div class="text-xs text-text-muted truncate">Phone number input</div>
+            </div>
+          </button>
+          <!-- Date -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Basic">
+              <i data-lucide="calendar" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Date</div>
+              <div class="text-xs text-text-muted truncate">Date picker</div>
+            </div>
+          </button>
+          <!-- Website -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Basic">
+              <i data-lucide="link" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Website</div>
+              <div class="text-xs text-text-muted truncate">URL / website input</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- CHOICE category -->
+      <div class="mb-3">
+        <h3 class="px-1 mb-1.5 text-xs font-semibold text-text-subtle uppercase tracking-wide">Choice</h3>
+        <div class="space-y-1">
+          <!-- Dropdown -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Choice">
+              <i data-lucide="list" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Dropdown</div>
+              <div class="text-xs text-text-muted truncate">Single selection dropdown</div>
+            </div>
+          </button>
+          <!-- Checkbox -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Choice">
+              <i data-lucide="check-square" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Checkbox</div>
+              <div class="text-xs text-text-muted truncate">Multiple checkboxes</div>
+            </div>
+          </button>
+          <!-- Rating -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Choice">
+              <i data-lucide="star" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Rating</div>
+              <div class="text-xs text-text-muted truncate">Star rating scale</div>
+            </div>
+          </button>
+          <!-- Slider -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Choice">
+              <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Slider</div>
+              <div class="text-xs text-text-muted truncate">Range slider</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ADVANCED category -->
+      <div class="mb-3">
+        <h3 class="px-1 mb-1.5 text-xs font-semibold text-text-subtle uppercase tracking-wide">Advanced</h3>
+        <div class="space-y-1">
+          <!-- File Upload -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Advanced">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">File Upload</div>
+              <div class="text-xs text-text-muted truncate">File attachment</div>
+            </div>
+          </button>
+          <!-- Content Block -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Advanced">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Content Block</div>
+              <div class="text-xs text-text-muted truncate">Rich text content with markdown support</div>
+            </div>
+          </button>
+          <!-- Image -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Advanced">
+              <i data-lucide="image" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Image</div>
+              <div class="text-xs text-text-muted truncate">Display an image</div>
+            </div>
+          </button>
+          <!-- Signature -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Advanced">
+              <i data-lucide="pen-tool" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Signature</div>
+              <div class="text-xs text-text-muted truncate">Draw a signature</div>
+            </div>
+          </button>
+          <!-- Computed Field -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Advanced">
+              <i data-lucide="calculator" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Computed Field</div>
+              <div class="text-xs text-text-muted truncate">Auto-calculate from other fields</div>
+            </div>
+          </button>
+          <!-- Repeating Group -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Advanced">
+              <i data-lucide="repeat" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Repeating Group</div>
+              <div class="text-xs text-text-muted truncate">Let users add multiple sets of fields</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- PERSONAL category -->
+      <div class="mb-3">
+        <h3 class="px-1 mb-1.5 text-xs font-semibold text-text-subtle uppercase tracking-wide">Personal</h3>
+        <div class="space-y-1">
+          <!-- Full Name -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Personal">
+              <i data-lucide="user" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Full Name</div>
+              <div class="text-xs text-text-muted truncate">First and last name</div>
+            </div>
+          </button>
+          <!-- Address -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Personal">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Address</div>
+              <div class="text-xs text-text-muted truncate">Street, city, state, zip</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- LAYOUT category -->
+      <div class="mb-3">
+        <h3 class="px-1 mb-1.5 text-xs font-semibold text-text-subtle uppercase tracking-wide">Layout</h3>
+        <div class="space-y-1">
+          <!-- Page Break -->
+          <button class="w-full flex items-center gap-2.5 p-2 rounded-base hover:bg-surface-raised transition-colors text-left group">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 accent-Layout">
+              <i data-lucide="separator-horizontal" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-base leading-tight">Page Break</div>
+              <div class="text-xs text-text-muted truncate">Split form into multiple pages</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer tip -->
+    <div class="p-3 border-t border-border text-xs text-text-subtle">
+      <p>Tip: press <kbd class="px-1 py-0.5 bg-surface-raised border border-border rounded text-sm">/</kbd> to add a field fast.</p>
+    </div>
+  </aside>
+
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <!-- CENTER PANEL (flex-1) — Form Canvas                                  -->
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <main class="flex-1 flex flex-col overflow-hidden min-w-0">
+    <div id="form-canvas" class="flex-1 overflow-y-auto bg-background canvas-grid scroll-thin">
+      <div class="mx-auto px-6 py-6 max-w-6xl">
+
+        <!-- Form header card -->
+        <div class="mb-6 rounded-xl border border-border bg-surface px-6 py-5 shadow-card">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wide text-text-subtle">Form details</span>
+            <span class="h-px flex-1 bg-border"></span>
+          </div>
+          <input type="text" value="Customer Onboarding Form" class="w-full text-2xl font-bold bg-transparent border-none focus:outline-none text-text-base px-0" aria-label="Form title" />
+          <textarea placeholder="Add a description to help respondents understand this form…" class="w-full mt-1.5 text-sm bg-transparent border-none focus:outline-none text-text-muted placeholder:text-text-subtle resize-none px-0" rows="2" aria-label="Form description">Collect essential information from new customers to kick off their onboarding journey.</textarea>
+        </div>
+
+        <!-- ═══ SECTION 1: Contact Information (2 columns) ═══ -->
+        <div class="space-y-2">
+          <div class="relative rounded-xl border border-border elevation-1 overflow-hidden transition-all">
+            <!-- Left accent strip -->
+            <span class="absolute left-0 top-0 bottom-0 w-1 bg-primary/20"></span>
+
+            <!-- Section header -->
+            <div class="group/section flex items-center justify-between pl-5 pr-3 h-12 border-b border-border/60 bg-surface-raised/50 cursor-pointer select-none">
+              <!-- Drag handle -->
+              <div class="flex-shrink-0 p-1 mr-1 cursor-grab text-text-subtle hover:text-text-muted rounded">
+                <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+              </div>
+              <!-- Collapse toggle -->
+              <button class="flex-shrink-0 p-1 mr-2 text-text-subtle hover:text-text-base rounded transition-transform" title="Collapse section" aria-label="Collapse section">
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </button>
+              <!-- Section name + field count -->
+              <div class="flex-1 min-w-0 flex items-center gap-2">
+                <span class="text-sm font-semibold text-text-base truncate">Contact Information</span>
+                <span class="flex-shrink-0 text-xs text-text-muted bg-surface-raised/70 px-1.5 py-0.5 rounded-full">4 fields</span>
+              </div>
+              <!-- Column count selector -->
+              <div class="flex items-center gap-0.5 mr-2 bg-surface border border-border rounded-base p-0.5">
+                <button class="p-1 text-text-subtle hover:text-text-muted rounded-sm" title="1 column">
+                  <i data-lucide="panel-top" class="w-3.5 h-3.5"></i>
+                </button>
+                <button class="p-1 text-primary bg-primary-light rounded-sm" title="2 columns">
+                  <i data-lucide="columns" class="w-3.5 h-3.5"></i>
+                </button>
+                <button class="p-1 text-text-subtle hover:text-text-muted rounded-sm" title="3 columns">
+                  <i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button class="p-1 text-text-subtle hover:text-text-muted rounded-sm" title="4 columns">
+                  <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <!-- Kebab menu -->
+              <button class="flex items-center justify-center w-8 h-8 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base transition-all" title="Section options" aria-label="Section options">
+                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+              </button>
+              <!-- Duplicate -->
+              <button class="flex items-center justify-center w-8 h-8 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base transition-all" title="Duplicate section" aria-label="Duplicate section">
+                <i data-lucide="copy-plus" class="w-4 h-4"></i>
+              </button>
+              <!-- Delete -->
+              <button class="flex items-center justify-center w-8 h-8 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base transition-all" title="Remove section" aria-label="Remove section">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Section body — 2 column grid -->
+            <div class="p-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                <!-- Field: Full Name (SELECTED) -->
+                <div class="group relative border rounded-lg transition-all cursor-pointer bg-surface field-selected p-5">
+                  <span class="accent-bar absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" style="display:block;"></span>
+                  <div class="flex items-start gap-3">
+                    <!-- Drag handle -->
+                    <div class="flex-shrink-0 p-1.5 -ml-1 cursor-grab text-text-subtle hover:text-text-muted rounded-lg hover:bg-surface-raised transition-colors">
+                      <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <input type="text" value="Full Name" class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-base font-medium" />
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full accent-Personal flex-shrink-0">Full Name</span>
+                        <span class="text-danger text-sm flex-shrink-0">*</span>
+                      </div>
+                      <!-- Disabled input preview -->
+                      <div class="flex gap-2">
+                        <input type="text" placeholder="First name" disabled class="flex-1 px-3 py-2 bg-background border border-border rounded-base text-sm placeholder:text-text-muted min-h-[44px] opacity-70 cursor-default" />
+                        <input type="text" placeholder="Last name" disabled class="flex-1 px-3 py-2 bg-background border border-border rounded-base text-sm placeholder:text-text-muted min-h-[44px] opacity-70 cursor-default" />
+                      </div>
+                    </div>
+                    <!-- Action buttons — always visible -->
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm transition-all" title="Duplicate field" aria-label="Duplicate Full Name field">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm transition-all" title="Delete field" aria-label="Delete Full Name field">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base border border-border shadow-sm transition-all" title="Field settings" aria-label="Full Name field settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Field: Email -->
+                <div class="group relative border border-border rounded-lg transition-all cursor-pointer bg-surface elevation-1 hover:border-border-strong hover:elevation-2 p-5">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 p-1.5 -ml-1 cursor-grab text-text-subtle hover:text-text-muted rounded-lg hover:bg-surface-raised transition-colors">
+                      <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <input type="text" value="Email" class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-base font-medium" />
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full accent-Basic flex-shrink-0">Email</span>
+                        <span class="text-danger text-sm flex-shrink-0">*</span>
+                      </div>
+                      <input type="email" placeholder="Email address" disabled class="w-full px-3 py-2 bg-background border border-border rounded-base text-sm placeholder:text-text-muted min-h-[44px] opacity-70 cursor-default" />
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm transition-all" title="Duplicate field">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm transition-all" title="Delete field">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base border border-border shadow-sm transition-all" title="Field settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Field: Phone -->
+                <div class="group relative border border-border rounded-lg transition-all cursor-pointer bg-surface elevation-1 hover:border-border-strong hover:elevation-2 p-5">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 p-1.5 -ml-1 cursor-grab text-text-subtle hover:text-text-muted rounded-lg hover:bg-surface-raised transition-colors">
+                      <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <input type="text" value="Phone" class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-base font-medium" />
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full accent-Basic flex-shrink-0">Phone</span>
+                      </div>
+                      <input type="tel" placeholder="Phone number" disabled class="w-full px-3 py-2 bg-background border border-border rounded-base text-sm placeholder:text-text-muted min-h-[44px] opacity-70 cursor-default" />
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm transition-all" title="Duplicate field">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm transition-all" title="Delete field">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base border border-border shadow-sm transition-all" title="Field settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Field: Company -->
+                <div class="group relative border border-border rounded-lg transition-all cursor-pointer bg-surface elevation-1 hover:border-border-strong hover:elevation-2 p-5">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 p-1.5 -ml-1 cursor-grab text-text-subtle hover:text-text-muted rounded-lg hover:bg-surface-raised transition-colors">
+                      <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <input type="text" value="Company" class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-base font-medium" />
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full accent-Basic flex-shrink-0">Short Text</span>
+                      </div>
+                      <input type="text" placeholder="Company name" disabled class="w-full px-3 py-2 bg-background border border-border rounded-base text-sm placeholder:text-text-muted min-h-[44px] opacity-70 cursor-default" />
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm transition-all" title="Duplicate field">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm transition-all" title="Delete field">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base border border-border shadow-sm transition-all" title="Field settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+              <!-- Insert new field button -->
+              <button class="mt-3 w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-border rounded-lg text-text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span class="text-sm font-medium">Insert new field</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Inline add section divider -->
+          <div class="relative h-6 group flex items-center justify-center">
+            <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-border"></div>
+            <button class="relative z-10 flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-surface border border-border rounded-full text-text-subtle hover:text-primary hover:border-primary hover:bg-primary-light transition-all">
+              <i data-lucide="plus" class="w-3 h-3"></i>
+              Add section
+            </button>
+          </div>
+
+          <!-- ═══ SECTION 2: Project Details (1 column) ═══ -->
+          <div class="relative rounded-xl border border-border elevation-1 overflow-hidden transition-all">
+            <span class="absolute left-0 top-0 bottom-0 w-1 bg-primary/20"></span>
+
+            <!-- Section header -->
+            <div class="group/section flex items-center justify-between pl-5 pr-3 h-12 border-b border-border/60 bg-surface-raised/50 cursor-pointer select-none">
+              <div class="flex-shrink-0 p-1 mr-1 cursor-grab text-text-subtle hover:text-text-muted rounded">
+                <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+              </div>
+              <button class="flex-shrink-0 p-1 mr-2 text-text-subtle hover:text-text-base rounded transition-transform" title="Collapse section" aria-label="Collapse section">
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </button>
+              <div class="flex-1 min-w-0 flex items-center gap-2">
+                <span class="text-sm font-semibold text-text-base truncate">Project Details</span>
+                <span class="flex-shrink-0 text-xs text-text-muted bg-surface-raised/70 px-1.5 py-0.5 rounded-full">3 fields</span>
+              </div>
+              <!-- Column count selector -->
+              <div class="flex items-center gap-0.5 mr-2 bg-surface border border-border rounded-base p-0.5">
+                <button class="p-1 text-primary bg-primary-light rounded-sm" title="1 column">
+                  <i data-lucide="panel-top" class="w-3.5 h-3.5"></i>
+                </button>
+                <button class="p-1 text-text-subtle hover:text-text-muted rounded-sm" title="2 columns">
+                  <i data-lucide="columns" class="w-3.5 h-3.5"></i>
+                </button>
+                <button class="p-1 text-text-subtle hover:text-text-muted rounded-sm" title="3 columns">
+                  <i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button class="p-1 text-text-subtle hover:text-text-muted rounded-sm" title="4 columns">
+                  <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <button class="flex items-center justify-center w-8 h-8 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base transition-all" title="Section options">
+                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+              </button>
+              <button class="flex items-center justify-center w-8 h-8 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base transition-all" title="Duplicate section">
+                <i data-lucide="copy-plus" class="w-4 h-4"></i>
+              </button>
+              <button class="flex items-center justify-center w-8 h-8 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base transition-all" title="Remove section">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Section body — 1 column -->
+            <div class="p-4">
+              <div class="grid grid-cols-1 gap-3">
+
+                <!-- Field: Project Type (Dropdown) -->
+                <div class="group relative border border-border rounded-lg transition-all cursor-pointer bg-surface elevation-1 hover:border-border-strong hover:elevation-2 p-5">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 p-1.5 -ml-1 cursor-grab text-text-subtle hover:text-text-muted rounded-lg hover:bg-surface-raised transition-colors">
+                      <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <input type="text" value="Project Type" class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-base font-medium" />
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full accent-Choice flex-shrink-0">Dropdown</span>
+                        <span class="text-danger text-sm flex-shrink-0">*</span>
+                      </div>
+                      <select disabled class="w-full px-3 py-2 bg-background border border-border rounded-base text-sm min-h-[44px] opacity-70 cursor-default">
+                        <option value="">Select an option</option>
+                        <option>Web Development</option>
+                        <option>Mobile App</option>
+                        <option>Design System</option>
+                        <option>Consulting</option>
+                      </select>
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm transition-all" title="Duplicate field">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm transition-all" title="Delete field">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base border border-border shadow-sm transition-all" title="Field settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Field: Budget (Slider) -->
+                <div class="group relative border border-border rounded-lg transition-all cursor-pointer bg-surface elevation-1 hover:border-border-strong hover:elevation-2 p-5">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 p-1.5 -ml-1 cursor-grab text-text-subtle hover:text-text-muted rounded-lg hover:bg-surface-raised transition-colors">
+                      <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <input type="text" value="Budget" class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-base font-medium" />
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full accent-Choice flex-shrink-0">Slider</span>
+                      </div>
+                      <div class="px-3 py-3 bg-background border border-border rounded-base min-h-[44px]">
+                        <div class="flex items-center justify-between mb-2">
+                          <span class="text-xs text-text-muted">$5,000</span>
+                          <span class="text-sm font-semibold text-primary">$25,000</span>
+                          <span class="text-xs text-text-muted">$100,000</span>
+                        </div>
+                        <div class="relative h-2 bg-surface-raised rounded-full">
+                          <div class="absolute left-0 top-0 h-2 bg-primary rounded-full" style="width:25%;"></div>
+                          <div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-surface border-2 border-primary rounded-full shadow-sm" style="left:25%;transform:translate(-50%,-50%);"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm transition-all" title="Duplicate field">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm transition-all" title="Delete field">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base border border-border shadow-sm transition-all" title="Field settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Field: Tell us about your project (Long Text) -->
+                <div class="group relative border border-border rounded-lg transition-all cursor-pointer bg-surface elevation-1 hover:border-border-strong hover:elevation-2 p-5">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 p-1.5 -ml-1 cursor-grab text-text-subtle hover:text-text-muted rounded-lg hover:bg-surface-raised transition-colors">
+                      <i data-lucide="grip-vertical" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <input type="text" value="Tell us about your project" class="flex-1 min-w-[120px] bg-transparent border-none focus:outline-none text-base font-medium" />
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full accent-Basic flex-shrink-0">Long Text</span>
+                      </div>
+                      <textarea placeholder="Long text" disabled rows="3" class="w-full px-3 py-2 bg-background border border-border rounded-base text-sm placeholder:text-text-muted resize-none opacity-70 cursor-default">Describe your project goals, timeline, and any specific requirements…</textarea>
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-text-muted hover:bg-surface-raised rounded-base border border-border shadow-sm transition-all" title="Duplicate field">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-danger hover:bg-danger-light rounded-base border border-border shadow-sm transition-all" title="Delete field">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                      <button class="flex items-center justify-center p-2 bg-surface/90 text-text-subtle hover:text-primary hover:bg-primary-light rounded-base border border-border shadow-sm transition-all" title="Field settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+              <button class="mt-3 w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-border rounded-lg text-text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span class="text-sm font-medium">Insert new field</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty section placeholder (dashed border) -->
+          <div class="relative rounded-xl border-2 border-dashed border-border bg-surface/50 overflow-hidden transition-all">
+            <div class="p-4">
+              <div class="rounded-lg border-2 border-dashed border-border bg-background/50 px-4 py-6 text-center">
+                <div class="mx-auto w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center mb-2.5">
+                  <i data-lucide="plus" class="w-5 h-5 text-text-subtle"></i>
+                </div>
+                <p class="text-sm text-text-muted mb-3">Drop fields here or click + to add</p>
+                <button class="inline-flex items-center gap-2 px-3.5 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover text-sm font-medium transition-all">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  Insert field
+                </button>
+                <div class="mt-3 flex items-center justify-center gap-1.5 flex-wrap">
+                  <button class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-surface hover:border-primary hover:text-primary transition-colors accent-Basic">Text</button>
+                  <button class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-surface hover:border-primary hover:text-primary transition-colors accent-Basic">Email</button>
+                  <button class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-surface hover:border-primary hover:text-primary transition-colors accent-Basic">Long Text</button>
+                  <button class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-surface hover:border-primary hover:text-primary transition-colors accent-Choice">Dropdown</button>
+                  <button class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-surface hover:border-primary hover:text-primary transition-colors accent-Basic">Phone</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <!-- RIGHT PANEL (w-80) — Properties Panel                               -->
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <aside class="w-80 bg-surface border-l border-border flex flex-col flex-shrink-0 overflow-hidden">
+    <!-- Selected field header -->
+    <div class="px-4 py-3 border-b border-border bg-surface-raised/30">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center accent-Personal flex-shrink-0">
+          <i data-lucide="user" class="w-4 h-4"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-text-base truncate">Full Name</div>
+          <div class="text-xs text-text-muted">Personal · Full Name field</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab bar: General · Advanced · Logic -->
+    <div class="flex border-b border-border bg-surface" role="tablist" aria-label="Field property tabs">
+      <button class="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 border-primary text-primary transition-colors flex-1 justify-center" role="tab" aria-selected="true" data-tab="general">
+        <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+        General
+      </button>
+      <button class="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 border-transparent text-text-muted hover:text-text-base hover:border-border transition-colors flex-1 justify-center" role="tab" aria-selected="false" data-tab="advanced">
+        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+        Advanced
+      </button>
+      <button class="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 border-transparent text-text-muted hover:text-text-base hover:border-border transition-colors flex-1 justify-center" role="tab" aria-selected="false" data-tab="logic">
+        <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
+        Logic
+      </button>
+    </div>
+
+    <!-- Sticky sub-nav pills -->
+    <div class="sticky top-0 z-10 flex items-center gap-1 px-3 py-1.5 bg-surface border-b border-border overflow-x-auto" role="navigation" aria-label="Section navigation">
+      <button class="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium bg-primary-light text-primary transition-colors" aria-current="true" data-subnav="display">Display</button>
+      <button class="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium text-text-muted hover:text-text-base hover:bg-surface-raised transition-colors" data-subnav="validation">Validation</button>
+      <button class="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium text-text-muted hover:text-text-base hover:bg-surface-raised transition-colors" data-subnav="options">Options</button>
+      <button class="flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium text-text-muted hover:text-text-base hover:bg-surface-raised transition-colors" data-subnav="default">Default Value</button>
+    </div>
+
+    <!-- Properties content (scrollable) -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-2 scroll-thin" role="tabpanel">
+
+      <!-- ═══ DISPLAY accordion (OPEN) ═══ -->
+      <section class="border-b border-border/60 pb-1" id="sec-display">
+        <button class="w-full flex items-center gap-2 py-2 px-1 text-sm font-medium text-text-base hover:bg-surface-raised/50 rounded-base transition-colors" aria-expanded="true" aria-controls="sec-display-content" data-accordion="display">
+          <i data-lucide="tag" class="w-4 h-4 text-text-muted flex-shrink-0"></i>
+          <span class="flex-1 text-left">Display</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-text-subtle flex-shrink-0 transition-transform duration-200 rotate-180" data-chevron="display"></i>
+        </button>
+        <div id="sec-display-content" class="pb-3 pt-1 space-y-4" data-content="display">
+          <!-- Field Label -->
+          <div>
+            <label class="block text-sm font-medium text-text-base mb-1.5">Field Label</label>
+            <input type="text" value="Full Name" class="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-sm min-h-[44px]" />
+          </div>
+          <!-- Placeholder Text -->
+          <div>
+            <label class="block text-sm font-medium text-text-base mb-1.5">Placeholder Text</label>
+            <input type="text" placeholder="Enter placeholder text" class="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-sm placeholder:text-text-muted min-h-[44px]" />
+          </div>
+          <!-- Help Text -->
+          <div>
+            <label class="block text-sm font-medium text-text-base mb-1.5">Help Text</label>
+            <textarea placeholder="Add help text for users" rows="2" class="w-full px-3 py-2 bg-background border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary text-sm placeholder:text-text-muted resize-none">Please enter your full legal name as it appears on your ID.</textarea>
+          </div>
+          <!-- Required checkbox -->
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="prop-required" checked class="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-1" />
+            <label for="prop-required" class="text-sm text-text-base cursor-pointer">Required field</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ VALIDATION accordion (COLLAPSED) ═══ -->
+      <section class="border-b border-border/60 pb-1" id="sec-validation">
+        <button class="w-full flex items-center gap-2 py-2 px-1 text-sm font-medium text-text-base hover:bg-surface-raised/50 rounded-base transition-colors" aria-expanded="false" aria-controls="sec-validation-content" data-accordion="validation">
+          <i data-lucide="shield-check" class="w-4 h-4 text-text-muted flex-shrink-0"></i>
+          <span class="flex-1 text-left">Validation</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-text-subtle flex-shrink-0 transition-transform duration-200" data-chevron="validation"></i>
+        </button>
+        <div id="sec-validation-content" class="hidden" data-content="validation"></div>
+      </section>
+
+      <!-- ═══ OPTIONS accordion (COLLAPSED) ═══ -->
+      <section class="border-b border-border/60 pb-1" id="sec-options">
+        <button class="w-full flex items-center gap-2 py-2 px-1 text-sm font-medium text-text-base hover:bg-surface-raised/50 rounded-base transition-colors" aria-expanded="false" aria-controls="sec-options-content" data-accordion="options">
+          <i data-lucide="settings" class="w-4 h-4 text-text-muted flex-shrink-0"></i>
+          <span class="flex-1 text-left">Options</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-text-subtle flex-shrink-0 transition-transform duration-200" data-chevron="options"></i>
+        </button>
+        <div id="sec-options-content" class="hidden" data-content="options"></div>
+      </section>
+
+      <!-- ═══ DEFAULT VALUE accordion (COLLAPSED) ═══ -->
+      <section class="border-b border-border/60 pb-1" id="sec-default">
+        <button class="w-full flex items-center gap-2 py-2 px-1 text-sm font-medium text-text-base hover:bg-surface-raised/50 rounded-base transition-colors" aria-expanded="false" aria-controls="sec-default-content" data-accordion="default">
+          <i data-lucide="edit-3" class="w-4 h-4 text-text-muted flex-shrink-0"></i>
+          <span class="flex-1 text-left">Default Value</span>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-text-subtle flex-shrink-0 transition-transform duration-200" data-chevron="default"></i>
+        </button>
+        <div id="sec-default-content" class="hidden" data-content="default"></div>
+      </section>
+
+    </div>
+  </aside>
+
+</div>
+
+<!-- Floating comparison label -->
+<div class="fixed bottom-3 left-3 z-50 pointer-events-none">
+  <span class="text-text-subtle text-xs">Current layout — for comparison</span>
+</div>
+
+<script>
+  // Initialize lucide icons
+  lucide.createIcons();
+
+  // ─── Tab switching (General / Advanced / Logic) ───────────────────────
+  document.querySelectorAll('[role="tab"]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      // Deactivate all tabs
+      document.querySelectorAll('[role="tab"]').forEach((t) => {
+        t.classList.remove('border-primary', 'text-primary');
+        t.classList.add('border-transparent', 'text-text-muted');
+        t.setAttribute('aria-selected', 'false');
+      });
+      // Activate clicked tab
+      tab.classList.add('border-primary', 'text-primary');
+      tab.classList.remove('border-transparent', 'text-text-muted');
+      tab.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // ─── Sub-nav pill switching ───────────────────────────────────────────
+  document.querySelectorAll('[data-subnav]').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('[data-subnav]').forEach((p) => {
+        p.classList.remove('bg-primary-light', 'text-primary');
+        p.classList.add('text-text-muted');
+        p.removeAttribute('aria-current');
+      });
+      pill.classList.add('bg-primary-light', 'text-primary');
+      pill.classList.remove('text-text-muted');
+      pill.setAttribute('aria-current', 'true');
+
+      // Open the corresponding accordion
+      const target = pill.getAttribute('data-subnav');
+      const accordionBtn = document.querySelector(`[data-accordion="${target}"]`);
+      if (accordionBtn && accordionBtn.getAttribute('aria-expanded') === 'false') {
+        accordionBtn.click();
+      }
+    });
+  });
+
+  // ─── Accordion expand/collapse ─────────────────────────────────────────
+  document.querySelectorAll('[data-accordion]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-accordion');
+      const content = document.querySelector(`[data-content="${id}"]`);
+      const chevron = document.querySelector(`[data-chevron="${id}"]`);
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+
+      if (isExpanded) {
+        // Collapse
+        content.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        // Expand
+        content.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+
+  // ─── Field selection (click to select) ────────────────────────────────
+  document.querySelectorAll('.group.relative.border').forEach((card) => {
+    if (card.querySelector('input[type="text"]') || card.querySelector('input[type="email"]') || card.querySelector('select') || card.querySelector('textarea')) {
+      card.addEventListener('click', (e) => {
+        // Don't toggle if clicking a button or input inside
+        if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+        // Remove selected from all
+        document.querySelectorAll('.field-selected').forEach((c) => {
+          c.classList.remove('field-selected');
+          c.classList.add('border-border', 'elevation-1');
+          c.classList.remove('border-primary');
+        });
+        // Add selected to clicked
+        card.classList.add('field-selected');
+        card.classList.remove('border-border', 'elevation-1');
+      });
+    }
+  });
+
+  // ─── Section collapse toggle ──────────────────────────────────────────
+  document.querySelectorAll('.group\\/section').forEach((header) => {
+    const chevronBtn = header.querySelector('[title="Collapse section"]');
+    if (chevronBtn) {
+      chevronBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const section = header.parentElement;
+        const body = section.querySelector('.p-4');
+        if (body) {
+          body.classList.toggle('hidden');
+          const icon = chevronBtn.querySelector('[data-lucide]');
+          if (body.classList.contains('hidden')) {
+            chevronBtn.innerHTML = '<i data-lucide="chevron-right" class="w-4 h-4"></i>';
+          } else {
+            chevronBtn.innerHTML = '<i data-lucide="chevron-down" class="w-4 h-4"></i>';
+          }
+          lucide.createIcons();
+        }
+      });
+    }
+  });
+
+  // Re-render icons after any dynamic HTML changes
+  lucide.createIcons();
+</script>
+
+</body>
+</html>

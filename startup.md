@@ -48,7 +48,7 @@ cd servicehub
 
 ### Step 1.5: Install CLI tools
 
-This step covers the CLIs the team uses day-to-day. All of the CLIs below — **GitHub CLI**, **Azure CLI**, **Claude Code**, **ChatGPT/Codex**, and **Google Antigravity** — are **required** parts of the standard Service Hub dev environment.
+This step covers the CLIs the team uses day-to-day. All of the CLIs below — **GitHub CLI**, **Azure CLI**, **ChatGPT/Codex**, and **Google Antigravity** — are **required** parts of the standard Service Hub dev environment.
 
 > **🤖 AI agent note — REQUIRED, do not skip:** This step is **required**, not optional. Before installing any CLI, you **MUST** present the full list of CLIs to the user and ask which ones they want installed. The user may deny any or all of them — denial is allowed and should be respected — but you must ask before proceeding, and you must not skip the ask. Use the `ask_user_question` tool (or an equivalent prompt) with the CLIs as selectable choices (multi-select, so the user can pick any subset or none). Do **not** install any CLI unprompted, and do **not** proceed past this step until the user has answered. Install only the CLIs the user explicitly approves; record any denials and continue to the next step.
 
@@ -99,25 +99,6 @@ az --version
 az login
 ```
 
-#### Claude Code CLI (required — ask user before installing)
-
-Anthropic's terminal-based AI coding agent. Requires a Claude Pro, Max, Teams, Enterprise, or Console (API) account.
-
-- **All platforms (npm):**
-  ```bash
-  npm install -g @anthropic-ai/claude-code
-  ```
-- **macOS (Homebrew):** `brew install --cask claude-code`
-
-**Verify:**
-```bash
-claude --version
-```
-
-First run prompts for Anthropic login (OAuth or API key) — follow the on-screen instructions.
-
-Docs: https://code.claude.com/docs/en/quickstart
-
 #### ChatGPT / Codex CLI (required — ask user before installing)
 
 OpenAI's official terminal coding agent is the **Codex CLI** (the modern successor to the older `chatgpt` npm package). Requires an OpenAI account with API access or a ChatGPT Plus/Pro/Team subscription.
@@ -167,8 +148,8 @@ First run prompts for Google account login — follow the on-screen instructions
 
 Update later with `agy update`. Docs: https://antigravity.google/docs/home
 
-> **Windows + PowerShell note:** The npm-installed CLIs (`claude`, `codex`)
-> generate `.ps1` shims that PowerShell blocks under the default execution
+> **Windows + PowerShell note:** The npm-installed CLI (`codex`)
+> generates `.ps1` shims that PowerShell blocks under the default execution
 > policy, producing `running scripts is disabled on this system`. Either run
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or simply use
 > **Command Prompt / Git Bash** — both run the `.cmd` shims without issue.
@@ -209,6 +190,10 @@ Remove-Item -Recurse -Force .devin\skills\ui-ux-pro-max; Move-Item .windsurf\ski
 
 > **Windows note:** If `uipro` fails with a PowerShell execution-policy error, invoke the `.cmd` shim directly:
 > `& "$env:APPDATA\npm\uipro.cmd" init --ai windsurf --force`
+
+#### Install Python 3
+
+**This affects how the agent can use the UI/UX Pro Max skill.** With Python installed, the agent can run the skill's `search.py` and `design_system.py` scripts to generate tailored design-system recommendations. Without Python, the agent can only read the static `SKILL.md` guidance and cannot run the search scripts.
 
 > **Python (optional — ask user before installing):** The skill ships Python scripts (`scripts/search.py`, `scripts/design_system.py`) that power the searchable design database. Python is **not required** for the skill to function, but it unlocks the core feature.
 >
@@ -978,7 +963,6 @@ DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database
 - [ ] For each CLI the user approved, the verify command succeeds:
   - GitHub CLI: `gh --version` (and `gh auth status` is authenticated)
   - Azure CLI: `az --version` (and `az account show` returns a subscription)
-  - Claude Code: `claude --version`
   - Codex CLI: `codex --version`
   - Google Antigravity: `agy --version`
 - [ ] Any CLI the user denied is recorded as denied and skipped — not re-prompted

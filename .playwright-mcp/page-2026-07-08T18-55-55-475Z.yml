@@ -1,0 +1,296 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic "ServiceHub" [ref=e5]: SH
+      - generic [ref=e6]:
+        - img [ref=e7]
+        - generic [ref=e9]: Forms
+        - img [ref=e10]
+        - strong [ref=e12]: Form Builder
+      - button "Summer Camp Registration" [ref=e13] [cursor=pointer]:
+        - generic [ref=e14]: Summer Camp Registration
+        - img [ref=e15]
+      - generic [ref=e17]: Saved
+    - generic [ref=e19]:
+      - generic "View mode" [ref=e20]:
+        - button "Builder" [ref=e21] [cursor=pointer]
+        - button "Preview" [ref=e22] [cursor=pointer]
+      - button "Toggle theme" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+      - button "Undo" [ref=e26] [cursor=pointer]:
+        - img [ref=e27]
+      - button "Share" [ref=e30] [cursor=pointer]:
+        - img [ref=e31]
+        - text: Share
+      - button "Publish" [ref=e34] [cursor=pointer]:
+        - img [ref=e35]
+        - text: Publish
+  - generic [ref=e37]:
+    - complementary "Field library" [ref=e38]:
+      - generic [ref=e39]:
+        - paragraph [ref=e40]: Build faster
+        - heading "Field Library" [level=2] [ref=e41]
+        - paragraph [ref=e42]:
+          - text: Click any field to add it to the canvas. Press
+          - generic [ref=e43]: /
+          - text: for quick add.
+        - generic [ref=e44]:
+          - img [ref=e45]
+          - textbox "Search field library" [ref=e48]:
+            - /placeholder: Search fields...
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]: Basic
+          - button "Short Text Single-line text input ::" [ref=e53] [cursor=pointer]:
+            - img [ref=e55]
+            - generic [ref=e57]:
+              - strong [ref=e58]: Short Text
+              - generic [ref=e59]: Single-line text input
+            - generic [ref=e60]: "::"
+          - button "Long Text Multi-line text area ::" [ref=e61] [cursor=pointer]:
+            - img [ref=e63]
+            - generic [ref=e66]:
+              - strong [ref=e67]: Long Text
+              - generic [ref=e68]: Multi-line text area
+            - generic [ref=e69]: "::"
+          - button "Number Numeric input ::" [ref=e70] [cursor=pointer]:
+            - img [ref=e72]
+            - generic [ref=e74]:
+              - strong [ref=e75]: Number
+              - generic [ref=e76]: Numeric input
+            - generic [ref=e77]: "::"
+          - button "Email Email address input ::" [ref=e78] [cursor=pointer]:
+            - img [ref=e80]
+            - generic [ref=e83]:
+              - strong [ref=e84]: Email
+              - generic [ref=e85]: Email address input
+            - generic [ref=e86]: "::"
+          - button "Phone Phone number input ::" [ref=e87] [cursor=pointer]:
+            - img [ref=e89]
+            - generic [ref=e91]:
+              - strong [ref=e92]: Phone
+              - generic [ref=e93]: Phone number input
+            - generic [ref=e94]: "::"
+          - button "Date Date picker ::" [ref=e95] [cursor=pointer]:
+            - img [ref=e97]
+            - generic [ref=e100]:
+              - strong [ref=e101]: Date
+              - generic [ref=e102]: Date picker
+            - generic [ref=e103]: "::"
+          - button "Website URL / website input ::" [ref=e104] [cursor=pointer]:
+            - img [ref=e106]
+            - generic [ref=e109]:
+              - strong [ref=e110]: Website
+              - generic [ref=e111]: URL / website input
+            - generic [ref=e112]: "::"
+        - generic [ref=e113]:
+          - generic [ref=e114]: Choice
+          - button "Dropdown Single selection dropdown ::" [ref=e116] [cursor=pointer]:
+            - img [ref=e118]
+            - generic [ref=e120]:
+              - strong [ref=e121]: Dropdown
+              - generic [ref=e122]: Single selection dropdown
+            - generic [ref=e123]: "::"
+          - button "Checkbox Multiple checkboxes ::" [ref=e124] [cursor=pointer]:
+            - img [ref=e126]
+            - generic [ref=e129]:
+              - strong [ref=e130]: Checkbox
+              - generic [ref=e131]: Multiple checkboxes
+            - generic [ref=e132]: "::"
+          - button "Rating Star rating scale ::" [ref=e133] [cursor=pointer]:
+            - img [ref=e135]
+            - generic [ref=e137]:
+              - strong [ref=e138]: Rating
+              - generic [ref=e139]: Star rating scale
+            - generic [ref=e140]: "::"
+          - button "Slider Range slider ::" [ref=e141] [cursor=pointer]:
+            - img [ref=e143]
+            - generic [ref=e145]:
+              - strong [ref=e146]: Slider
+              - generic [ref=e147]: Range slider
+            - generic [ref=e148]: "::"
+        - generic [ref=e149]:
+          - generic [ref=e150]: Advanced
+          - button "File Upload File attachment ::" [ref=e152] [cursor=pointer]:
+            - img [ref=e154]
+            - generic [ref=e157]:
+              - strong [ref=e158]: File Upload
+              - generic [ref=e159]: File attachment
+            - generic [ref=e160]: "::"
+          - button "Content Block Rich text content ::" [ref=e161] [cursor=pointer]:
+            - img [ref=e163]
+            - generic [ref=e166]:
+              - strong [ref=e167]: Content Block
+              - generic [ref=e168]: Rich text content
+            - generic [ref=e169]: "::"
+          - button "Image Display an image ::" [ref=e170] [cursor=pointer]:
+            - img [ref=e172]
+            - generic [ref=e176]:
+              - strong [ref=e177]: Image
+              - generic [ref=e178]: Display an image
+            - generic [ref=e179]: "::"
+          - button "Signature Draw a signature ::" [ref=e180] [cursor=pointer]:
+            - img [ref=e182]
+            - generic [ref=e187]:
+              - strong [ref=e188]: Signature
+              - generic [ref=e189]: Draw a signature
+            - generic [ref=e190]: "::"
+          - button "Computed Field Auto-calculate from other fields ::" [ref=e191] [cursor=pointer]:
+            - img [ref=e193]
+            - generic [ref=e195]:
+              - strong [ref=e196]: Computed Field
+              - generic [ref=e197]: Auto-calculate from other fields
+            - generic [ref=e198]: "::"
+          - button "Repeating Group Let users add multiple sets ::" [ref=e199] [cursor=pointer]:
+            - img [ref=e201]
+            - generic [ref=e203]:
+              - strong [ref=e204]: Repeating Group
+              - generic [ref=e205]: Let users add multiple sets
+            - generic [ref=e206]: "::"
+        - generic [ref=e207]:
+          - generic [ref=e208]: Personal
+          - button "Full Name First and last name ::" [ref=e210] [cursor=pointer]:
+            - img [ref=e212]
+            - generic [ref=e215]:
+              - strong [ref=e216]: Full Name
+              - generic [ref=e217]: First and last name
+            - generic [ref=e218]: "::"
+          - button "Address Street, city, state, zip ::" [ref=e219] [cursor=pointer]:
+            - img [ref=e221]
+            - generic [ref=e224]:
+              - strong [ref=e225]: Address
+              - generic [ref=e226]: Street, city, state, zip
+            - generic [ref=e227]: "::"
+        - generic [ref=e228]:
+          - generic [ref=e229]: Layout
+          - button "Page Break Split form into pages ::" [ref=e231] [cursor=pointer]:
+            - img [ref=e233]
+            - generic [ref=e235]:
+              - strong [ref=e236]: Page Break
+              - generic [ref=e237]: Split form into pages
+            - generic [ref=e238]: "::"
+    - main "Form canvas" [ref=e239]:
+      - generic [ref=e241]:
+        - generic [ref=e242]:
+          - heading "Summer Camp Registration" [level=1] [ref=e243]
+          - paragraph [ref=e244]: Collect student details, emergency contacts, and medical info.
+        - generic [ref=e245]:
+          - generic [ref=e246] [cursor=pointer]:
+            - generic [ref=e247]:
+              - heading "Student Information" [level=3] [ref=e248]
+              - paragraph [ref=e249]: Basic details about the camper
+            - generic [ref=e250]:
+              - button "1 column" [ref=e251]:
+                - img [ref=e252]
+              - button "2 columns" [ref=e254]:
+                - img [ref=e255]
+              - button "3 columns" [ref=e258]:
+                - img [ref=e259]
+          - generic [ref=e263]:
+            - generic [ref=e264] [cursor=pointer]:
+              - generic [ref=e266]:
+                - generic [ref=e267]: Full Name *
+                - generic [ref=e268]:
+                  - generic [ref=e269]: Full Name
+                  - generic [ref=e270]: "* Required"
+              - textbox "First name" [active] [ref=e271]
+              - textbox "Last name" [ref=e272]
+            - generic [ref=e273] [cursor=pointer]:
+              - generic [ref=e283]:
+                - generic [ref=e284]: Date of Birth *
+                - generic [ref=e285]:
+                  - generic [ref=e286]: Date
+                  - generic [ref=e287]: "* Required"
+              - textbox [ref=e288]
+            - button "Add field to section" [ref=e289] [cursor=pointer]:
+              - img [ref=e290]
+              - text: Add field to section
+        - generic [ref=e292]:
+          - generic [ref=e293] [cursor=pointer]:
+            - generic [ref=e294]:
+              - heading "Contact Information" [level=3] [ref=e295]
+              - paragraph [ref=e296]: How to reach you
+            - generic [ref=e297]:
+              - button "1 column" [ref=e298]:
+                - img [ref=e299]
+              - button "2 columns" [ref=e301]:
+                - img [ref=e302]
+              - button "3 columns" [ref=e305]:
+                - img [ref=e306]
+          - generic [ref=e310]:
+            - generic [ref=e311] [cursor=pointer]:
+              - generic [ref=e313]:
+                - generic [ref=e314]: Email Address *
+                - generic [ref=e315]:
+                  - generic [ref=e316]: Email
+                  - generic [ref=e317]: "* Required"
+              - textbox "Email Address" [ref=e318]
+            - generic [ref=e319] [cursor=pointer]:
+              - generic [ref=e321]:
+                - generic [ref=e322]: Phone Number *
+                - generic [ref=e323]:
+                  - generic [ref=e324]: Phone
+                  - generic [ref=e325]: "* Required"
+              - textbox "Phone Number" [ref=e326]
+            - button "Add field to section" [ref=e327] [cursor=pointer]:
+              - img [ref=e328]
+              - text: Add field to section
+        - generic [ref=e330]:
+          - generic [ref=e331] [cursor=pointer]:
+            - generic [ref=e332]:
+              - heading "Program Preferences" [level=3] [ref=e333]
+              - paragraph [ref=e334]: Choose the camp session
+            - generic [ref=e335]:
+              - button "1 column" [ref=e336]:
+                - img [ref=e337]
+              - button "2 columns" [ref=e339]:
+                - img [ref=e340]
+              - button "3 columns" [ref=e343]:
+                - img [ref=e344]
+          - generic [ref=e348]:
+            - generic [ref=e349] [cursor=pointer]:
+              - generic [ref=e351]:
+                - generic [ref=e352]: Camp Session *
+                - generic [ref=e353]:
+                  - generic [ref=e354]: Dropdown
+                  - generic [ref=e355]: "* Required"
+              - generic [ref=e356]:
+                - generic [ref=e357]: Camp Session
+                - img [ref=e358]
+            - generic [ref=e360] [cursor=pointer]:
+              - generic [ref=e362]:
+                - generic [ref=e363]: Add-on Activities
+                - generic [ref=e365]: Checkbox
+              - generic [ref=e366]:
+                - generic [ref=e367]: Swimming
+                - generic [ref=e369]: Arts & Crafts
+                - generic [ref=e371]: Hiking
+                - generic [ref=e373]: STEM Lab
+              - paragraph [ref=e375]: Select any additional activities.
+            - generic [ref=e376] [cursor=pointer]:
+              - generic [ref=e378]:
+                - generic [ref=e379]: Dietary Restrictions / Allergies
+                - generic [ref=e381]: Long Text
+              - textbox [ref=e382]: List any allergies or dietary needs...
+            - button "Add field to section" [ref=e383] [cursor=pointer]:
+              - img [ref=e384]
+              - text: Add field to section
+    - complementary "Properties" [ref=e386]:
+      - generic [ref=e387]:
+        - button "Design" [ref=e388] [cursor=pointer]
+        - button "Logic" [ref=e389] [cursor=pointer]
+        - button "Settings" [ref=e390] [cursor=pointer]
+      - generic [ref=e391]:
+        - generic [ref=e392]:
+          - heading "No field selected" [level=3] [ref=e393]
+          - paragraph [ref=e394]: Click a field on the canvas to edit its properties, validation, and conditional logic.
+        - generic [ref=e395]:
+          - heading "Form Theme" [level=3] [ref=e396]
+          - paragraph [ref=e397]: Click a swatch to preview the color direction.
+          - generic [ref=e398]:
+            - button "Teal theme" [ref=e399] [cursor=pointer]: Teal
+            - button "Forest theme" [ref=e400] [cursor=pointer]: Forest
+            - button "Sunset theme" [ref=e401] [cursor=pointer]: Sunset
+            - button "Midnight theme" [ref=e402] [cursor=pointer]: Midnight
+            - button "Violet theme" [ref=e403] [cursor=pointer]: Violet
+            - button "Slate theme" [ref=e404] [cursor=pointer]: Slate

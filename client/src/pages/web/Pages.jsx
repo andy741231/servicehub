@@ -145,16 +145,16 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
       onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
     >
-      <div ref={containerRef} className="bg-surface rounded-2xl shadow-2xl w-[440px] animate-[fadeInScale_0.15s_ease-out]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
+      <div ref={containerRef} className="bg-surface rounded-2xl shadow-2xl w-[calc(100vw-2rem)] max-w-lg animate-[fadeInScale_0.15s_ease-out]" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
           <h3 id="item-modal-title" className="font-semibold text-text-base">
             {isEdit ? 'Edit Item' : parentId ? 'Add Sub-menu Item' : 'Add Navigation Item'}
           </h3>
           <button onClick={onClose} className="p-3 min-w-[44px] min-h-[44px] hover:bg-surface-raised rounded" aria-label="Close"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           {/* Type toggle — only on add, or if editing existing */}
           {!isEdit && (
             <div className="flex gap-2">
@@ -275,7 +275,7 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
           )}
         </div>
 
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border">
+        <div className="flex justify-end gap-3 px-4 sm:px-6 py-4 border-t border-border">
           <button onClick={onClose} className="btn-secondary">Cancel</button>
           <button
             onClick={handleSubmit}
@@ -297,117 +297,122 @@ function ItemModal({ onClose, onSave, initial = null, parentId = null, allPages 
 function NavRow({ page, depth = 0, dragHandleProps, onEdit, onDelete, onAddChild, onTogglePublished, onToggleReserved, isLink }) {
   return (
     <div
-      className={`flex items-center gap-2 group rounded-card px-3 py-2.5 hover:bg-surface-raised/80 transition-colors border border-transparent hover:border-border-soft ${depth > 0 ? 'ml-7' : ''}`}
+      className={`flex flex-col sm:flex-row sm:items-center gap-2 group rounded-card px-3 py-2.5 hover:bg-surface-raised/80 transition-colors border border-transparent hover:border-border-soft ${depth > 0 ? 'ml-4 sm:ml-7' : ''}`}
     >
-      {/* Drag handle — only this element triggers drag */}
-      <div
-        {...dragHandleProps}
-        className="cursor-grab flex-shrink-0"
-        onClick={e => e.stopPropagation()}
-      >
-        <GripVertical className="w-4 h-4 text-surface-tertiary group-hover:text-subtle transition-colors" />
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Drag handle — only this element triggers drag */}
+        <div
+          {...dragHandleProps}
+          className="cursor-grab flex-shrink-0 p-1 -ml-1 rounded-base sm:ml-0"
+          onClick={e => e.stopPropagation()}
+        >
+          <GripVertical className="w-5 h-5 sm:w-4 sm:h-4 text-surface-tertiary group-hover:text-subtle transition-colors" />
+        </div>
+
+        {/* Icon */}
+        <div className={`w-9 h-9 sm:w-8 sm:h-8 rounded-base flex items-center justify-center flex-shrink-0 shadow-sm ${isLink ? 'bg-info-light ring-1 ring-info-light' : 'bg-primary-light ring-1 ring-primary-light'}`}>
+          {isLink
+            ? <LinkIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-info" />
+            : <Globe    className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-primary" />}
+        </div>
+
+        {/* Label + path */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-text-base">{page.navLabel || page.title}</span>
+            {!isLink && (
+              <>
+                {/* Published toggle badge */}
+                <button
+                  onClick={() => onTogglePublished(page)}
+                  title={page.isPublished ? 'Click to unpublish (set to Draft)' : 'Click to publish'}
+                  className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
+                    page.isPublished
+                      ? 'bg-success-light text-success hover:bg-success/20 hover:ring-success'
+                      : 'bg-surface-raised text-muted hover:bg-surface-tertiary hover:ring-border-strong'
+                  }`}
+                >
+                  {page.isPublished ? 'Published' : 'Draft'}
+                </button>
+                {/* Reserved toggle badge */}
+                <button
+                  onClick={() => onToggleReserved(page)}
+                  title={page.isReserved ? 'Click to remove Reserved flag (moves to Pages group)' : 'Click to mark as Reserved (moves to Reserved group)'}
+                  className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
+                    page.isReserved
+                      ? 'bg-warning-light text-warning hover:bg-warning/20 hover:ring-warning'
+                      : 'bg-surface-raised text-subtle border border-dashed border-border-strong hover:bg-warning-light hover:text-warning hover:border-warning hover:ring-warning'
+                  }`}
+                >
+                  {page.isReserved ? 'Reserved' : 'Set reserved'}
+                </button>
+                {page.hideFromNav && (
+                  <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-surface-raised text-muted">Hidden</span>
+                )}
+              </>
+            )}
+          </div>
+          <span className="text-xs text-subtle font-mono leading-tight break-all">
+            {isLink ? (page.href || 'external link') : `/${page.slug}`}
+          </span>
+        </div>
       </div>
 
-      {/* Icon */}
-      <div className={`w-8 h-8 rounded-base flex items-center justify-center flex-shrink-0 shadow-sm ${isLink ? 'bg-info-light ring-1 ring-info-light' : 'bg-primary-light ring-1 ring-primary-light'}`}>
-        {isLink
-          ? <LinkIcon className="w-3.5 h-3.5 text-info" />
-          : <Globe    className="w-3.5 h-3.5 text-primary" />}
-      </div>
-
-      {/* Label + path */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-text-base">{page.navLabel || page.title}</span>
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 shrink-0 ml-12 sm:ml-0">
+        {/* Primary CTA buttons */}
+        <div className="flex items-center gap-1.5">
           {!isLink && (
             <>
-              {/* Published toggle badge */}
-              <button
-                onClick={() => onTogglePublished(page)}
-                title={page.isPublished ? 'Click to unpublish (set to Draft)' : 'Click to publish'}
-                className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
-                  page.isPublished
-                    ? 'bg-success-light text-success hover:bg-success/20 hover:ring-success'
-                    : 'bg-surface-raised text-muted hover:bg-surface-tertiary hover:ring-border-strong'
-                }`}
+              <Link
+                to={`/hub-admin/web/editor/${page.slug}`}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-base hover:bg-primary-hover active:scale-95 transition-all shadow-sm min-h-[36px]"
+                title="Open in page editor"
               >
-                {page.isPublished ? 'Published' : 'Draft'}
-              </button>
-              {/* Reserved toggle badge */}
-              <button
-                onClick={() => onToggleReserved(page)}
-                title={page.isReserved ? 'Click to remove Reserved flag (moves to Pages group)' : 'Click to mark as Reserved (moves to Reserved group)'}
-                className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer hover:ring-2 hover:ring-offset-1 ${
-                  page.isReserved
-                    ? 'bg-warning-light text-warning hover:bg-warning/20 hover:ring-warning'
-                    : 'bg-surface-raised text-subtle border border-dashed border-border-strong hover:bg-warning-light hover:text-warning hover:border-warning hover:ring-warning'
-                }`}
+                <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline">Edit</span>
+              </Link>
+              <a
+                href={page.slug === 'home' ? '/' : `/${page.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-semibold text-muted bg-surface border border-border rounded-base hover:bg-surface-raised hover:border-border-strong active:scale-95 transition-all shadow-sm min-h-[36px]"
+                title="View live page"
               >
-                {page.isReserved ? 'Reserved' : 'Set reserved'}
-              </button>
-              {page.hideFromNav && (
-                <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-surface-raised text-muted">Hidden</span>
-              )}
+                <ExternalLink className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline">View</span>
+              </a>
             </>
           )}
         </div>
-        <span className="text-xs text-subtle font-mono leading-tight">
-          {isLink ? (page.href || 'external link') : `/${page.slug}`}
-        </span>
-      </div>
 
-      {/* Primary CTA buttons — always visible */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {!isLink && (
-          <>
-            <Link
-              to={`/hub-admin/web/editor/${page.slug}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-base hover:bg-primary-hover active:scale-95 transition-all shadow-sm"
-              title="Open in page editor"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
-            </Link>
-            <a
-              href={page.slug === 'home' ? '/' : `/${page.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-muted bg-surface border border-border rounded-base hover:bg-surface-raised hover:border-border-strong active:scale-95 transition-all shadow-sm"
-              title="View live page"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              View
-            </a>
-          </>
-        )}
-
-        {/* Secondary icon actions — on hover */}
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+        {/* Secondary icon actions — always visible on mobile, hover on desktop */}
+        <div className="flex items-center gap-0.5 ml-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           {depth === 0 && (
             <button
               onClick={() => onAddChild(page.id)}
-              className="p-1.5 hover:bg-primary-light text-primary hover:text-primary rounded-base transition-colors"
+              className="p-2 sm:p-1.5 hover:bg-primary-light text-primary hover:text-primary rounded-base transition-colors min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
               aria-label="Add sub-menu item"
               title="Add sub-menu item"
             >
-              <FolderPlus className="w-4 h-4" />
+              <FolderPlus className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
           )}
           <button
             onClick={() => onEdit(page)}
-            className="p-1.5 hover:bg-surface-raised text-subtle hover:text-text-base rounded-base transition-colors"
+            className="p-2 sm:p-1.5 hover:bg-surface-raised text-subtle hover:text-text-base rounded-base transition-colors min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
             aria-label="Page settings"
             title="Page settings"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
           <button
             onClick={() => onDelete(page.id)}
-            className="p-1.5 hover:bg-danger-light text-subtle hover:text-danger rounded-base transition-colors"
+            className="p-2 sm:p-1.5 hover:bg-danger-light text-subtle hover:text-danger rounded-base transition-colors min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
             aria-label="Delete"
             title="Delete"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>
@@ -646,7 +651,7 @@ export default function Pages() {
                                       <div
                                         ref={cp.innerRef}
                                         {...cp.droppableProps}
-                                        className={`mt-0.5 border-l-2 border-border-soft ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-primary-light bg-primary-light/30' : ''}`}
+                                        className={`mt-0.5 border-l-2 border-border-soft ml-4 sm:ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-primary-light bg-primary-light/30' : ''}`}
                                       >
                                         {kids.map((child, ci) => (
                                           <Draggable key={child.id} draggableId={child.id} index={ci}>
@@ -730,7 +735,7 @@ export default function Pages() {
                                       <div
                                         ref={cp.innerRef}
                                         {...cp.droppableProps}
-                                        className={`mt-0.5 border-l-2 border-warning-light ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-warning bg-warning-light/60' : ''}`}
+                                        className={`mt-0.5 border-l-2 border-warning-light ml-4 sm:ml-[30px] rounded-b-xl transition-colors ${cs.isDraggingOver ? 'border-warning bg-warning-light/60' : ''}`}
                                       >
                                         {kids.map((child, ci) => (
                                           <Draggable key={child.id} draggableId={child.id} index={ci}>
@@ -781,7 +786,7 @@ export default function Pages() {
 
       {/* Footer hint */}
       {!loading && topLevel.length > 0 && (
-        <div className="mt-4 flex items-center gap-4 text-xs text-subtle px-1">
+        <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-subtle px-1">
           <span className="flex items-center gap-1.5">
             <GripVertical className="w-3.5 h-3.5" /> Drag rows to reorder
           </span>

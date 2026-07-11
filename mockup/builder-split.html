@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Form Builder — Direction D · Split-view dual canvas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root{
+    --primary:#0D9488; --primary-hover:#0F766E; --primary-light:#F0FDFA; --primary-foreground:#FFFFFF;
+    --background:#FAFDFC; --surface:#FFFFFF; --surface-raised:#F0FDFA; --surface-tertiary:#CCFBF1;
+    --border:#E2E8F0; --border-soft:#F5FEFB; --border-strong:#CBD5E1;
+    --text-base:#1C2B2A; --text-muted:#64748B; --text-subtle:#94A3B8; --text-inverse:#FFFFFF;
+    --success:#059669; --success-light:#F0FDF4; --warning:#D97706; --warning-light:#FFFBEB;
+    --danger:#E11D48; --danger-light:#FFF1F2; --info:#0891B2; --info-light:#ECFEFF;
+    --radius-sm:6px; --radius-base:10px; --radius-card:16px; --radius-lg:20px;
+    --shadow-card:0 1px 3px rgba(13,148,136,0.08),0 4px 12px rgba(15,23,42,0.05);
+  }
+  html,body{background:var(--background);color:var(--text-base);font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+  .bg-surface{background-color:var(--surface);}
+  .bg-surface-raised{background-color:var(--surface-raised);}
+  .bg-surface-tertiary{background-color:var(--surface-tertiary);}
+  .bg-background{background-color:var(--background);}
+  .bg-primary{background-color:var(--primary);}
+  .bg-primary-hover{background-color:var(--primary-hover);}
+  .bg-primary-light{background-color:var(--primary-light);}
+  .text-primary{color:var(--primary);}
+  .text-primary-hover{color:var(--primary-hover);}
+  .text-base{color:var(--text-base);}
+  .text-muted{color:var(--text-muted);}
+  .text-subtle{color:var(--text-subtle);}
+  .text-inverse{color:var(--text-inverse);}
+  .border-base{border-color:var(--border);}
+  .border-soft{border-color:var(--border-soft);}
+  .border-strong{border-color:var(--border-strong);}
+  .border-primary{border-color:var(--primary);}
+  .ring-primary{box-shadow:0 0 0 2px var(--primary);}
+  .ring-primary-soft{box-shadow:0 0 0 2px var(--primary),0 0 0 4px var(--primary-light);}
+  .shadow-card{box-shadow:var(--shadow-card);}
+  .radius-sm{border-radius:var(--radius-sm);}
+  .radius-base{border-radius:var(--radius-base);}
+  .radius-card{border-radius:var(--radius-card);}
+  .radius-lg{border-radius:var(--radius-lg);}
+  .field-row{transition:all .15s ease;}
+  .field-row:hover .drag-handle{opacity:1;}
+  .drag-handle{opacity:0;transition:opacity .15s ease;}
+  .device-btn{transition:all .15s ease;}
+  .preview-card{transition:width .25s cubic-bezier(.4,0,.2,1);}
+  .popover{transition:opacity .15s ease,transform .15s ease;}
+  .add-option{transition:background .12s ease,color .12s ease;}
+  .add-option:hover{background:var(--primary-light);color:var(--primary-hover);}
+  .add-option.active{background:var(--primary-light);color:var(--primary-hover);}
+  /* subtle scrollbar */
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;border:2px solid transparent;background-clip:content-box;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--border-strong);background-clip:content-box;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  /* slider styling */
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--surface-tertiary);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--primary);cursor:pointer;border:3px solid var(--surface);box-shadow:0 1px 3px rgba(13,148,136,.4);}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--primary);cursor:pointer;border:3px solid var(--surface);}
+  /* toggle */
+  .toggle{position:relative;width:36px;height:20px;background:var(--border-strong);border-radius:999px;transition:background .15s ease;cursor:pointer;flex-shrink:0;}
+  .toggle.on{background:var(--primary);}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .toggle.on::after{transform:translateX(16px);}
+  [data-lucide]{display:inline-block;vertical-align:middle;}
+</style>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: { DEFAULT: '#0D9488', hover: '#0F766E', light: '#F0FDFA', foreground: '#FFFFFF' },
+          surface: { DEFAULT: '#FFFFFF', raised: '#F0FDFA', tertiary: '#CCFBF1' },
+          bg: '#FAFDFC',
+          border: { DEFAULT: '#E2E8F0', soft: '#F5FEFB', strong: '#CBD5E1' },
+          text: { base: '#1C2B2A', muted: '#64748B', subtle: '#94A3B8', inverse: '#FFFFFF' },
+          success: { DEFAULT: '#059669', light: '#F0FDF4' },
+          warning: { DEFAULT: '#D97706', light: '#FFFBEB' },
+          danger: { DEFAULT: '#E11D48', light: '#FFF1F2' },
+          info: { DEFAULT: '#0891B2', light: '#ECFEFF' },
+        },
+        borderRadius: { sm: '6px', base: '10px', card: '16px', lg: '20px' },
+        boxShadow: { card: '0 1px 3px rgba(13,148,136,0.08),0 4px 12px rgba(15,23,42,0.05)' },
+      }
+    }
+  }
+</script>
+</head>
+<body class="bg-bg text-text-base min-h-screen">
+
+<div class="flex flex-col h-screen">
+
+  <!-- TOP BAR -->
+  <header class="h-14 bg-surface border-b border-base flex items-center justify-between px-4 flex-shrink-0 z-30">
+    <!-- left -->
+    <div class="flex items-center gap-3 min-w-0">
+      <button class="w-9 h-9 rounded-base hover:bg-surface-raised flex items-center justify-center text-muted hover:text-text-base transition-colors" title="Back">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+      </button>
+      <div class="h-6 w-px bg-border"></div>
+      <div class="flex items-center gap-2 min-w-0">
+        <i data-lucide="file-text" class="w-4 h-4 text-primary flex-shrink-0"></i>
+        <input id="formTitle" value="Customer Onboarding Form"
+          class="font-semibold text-[15px] text-text-base bg-transparent border-0 outline-none focus:bg-surface-raised rounded-base px-2 py-1 -mx-2 transition-colors min-w-0 w-[260px] hover:bg-surface-raised"
+          aria-label="Form title" />
+      </div>
+      <div class="flex items-center gap-1.5 ml-2 px-2 py-1 rounded-full bg-success-light">
+        <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+        <span class="text-xs text-success font-medium">Saved 2m ago</span>
+      </div>
+    </div>
+
+    <!-- right -->
+    <div class="flex items-center gap-2">
+      <!-- device toggle -->
+      <div class="flex items-center bg-surface-raised rounded-base p-1 gap-0.5" role="group" aria-label="Preview device">
+        <button data-device="phone" class="device-btn w-8 h-8 rounded-sm flex items-center justify-center text-muted hover:text-text-base" title="Phone">
+          <i data-lucide="smartphone" class="w-4 h-4"></i>
+        </button>
+        <button data-device="tablet" class="device-btn w-8 h-8 rounded-sm flex items-center justify-center text-muted hover:text-text-base" title="Tablet">
+          <i data-lucide="tablet" class="w-4 h-4"></i>
+        </button>
+        <button data-device="desktop" class="device-btn w-8 h-8 rounded-sm flex items-center justify-center bg-primary text-primary-foreground" title="Desktop">
+          <i data-lucide="monitor" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="h-6 w-px bg-border mx-1"></div>
+      <button class="h-9 px-3 rounded-base border border-base bg-surface text-text-base hover:bg-surface-raised flex items-center gap-1.5 text-sm font-medium transition-colors">
+        <i data-lucide="share-2" class="w-4 h-4"></i>
+        Share
+      </button>
+      <button class="h-9 px-4 rounded-base bg-primary hover:bg-primary-hover text-primary-foreground flex items-center gap-1.5 text-sm font-semibold transition-colors shadow-sm">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        Save
+      </button>
+    </div>
+  </header>
+
+  <!-- BODY: split -->
+  <div class="flex flex-1 min-h-0 relative" style="height:calc(100vh - 3.5rem);">
+
+    <!-- LEFT: BUILDER PANE -->
+    <section id="builderPane" class="flex-1 min-w-0 bg-surface border-r border-base overflow-y-auto">
+      <div class="max-w-xl mx-auto px-6 py-6">
+
+        <!-- pane header -->
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-sm font-semibold text-text-base flex items-center gap-2">
+              <i data-lucide="list-tree" class="w-4 h-4 text-primary"></i>
+              Structure
+            </h2>
+            <p class="text-xs text-subtle mt-0.5">Edit fields on the left — preview updates live on the right.</p>
+          </div>
+          <span class="text-xs text-muted bg-surface-raised px-2 py-1 rounded-base">7 fields · 2 sections</span>
+        </div>
+
+        <!-- SECTION 1 -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3 sticky top-0 bg-surface py-1 -mx-1 px-1 z-10">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Contact Information</span>
+            </div>
+            <span class="text-[11px] text-subtle bg-surface-raised px-2 py-0.5 rounded-full flex items-center gap-1">
+              <i data-lucide="columns-2" class="w-3 h-3"></i> 2 cols
+            </span>
+          </div>
+
+          <div class="space-y-1.5">
+            <!-- Full Name (selected) -->
+            <div class="field-row relative group rounded-base ring-primary-soft bg-primary-light/40 border border-primary/40" data-field="fullName">
+              <div class="flex items-center gap-2 px-2.5 py-2.5">
+                <button class="drag-handle w-5 h-5 flex items-center justify-center text-subtle hover:text-muted cursor-grab" title="Drag to reorder">
+                  <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                </button>
+                <span class="w-7 h-7 rounded-base bg-primary-light flex items-center justify-center text-primary flex-shrink-0">
+                  <i data-lucide="user" class="w-4 h-4"></i>
+                </span>
+                <span class="text-sm font-medium text-text-base flex-1 truncate">Full Name</span>
+                <span class="text-[11px] text-muted bg-surface px-2 py-0.5 rounded-full border border-base">Short Text</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-primary" title="Required"></span>
+                <button class="w-6 h-6 rounded-sm hover:bg-surface text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div class="field-row relative group rounded-base border border-base bg-surface hover:border-strong hover:bg-surface-raised/50 cursor-pointer" data-field="email">
+              <div class="flex items-center gap-2 px-2.5 py-2.5">
+                <button class="drag-handle w-5 h-5 flex items-center justify-center text-subtle hover:text-muted cursor-grab">
+                  <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                </button>
+                <span class="w-7 h-7 rounded-base bg-surface-raised flex items-center justify-center text-muted flex-shrink-0">
+                  <i data-lucide="at-sign" class="w-4 h-4"></i>
+                </span>
+                <span class="text-sm font-medium text-text-base flex-1 truncate">Email</span>
+                <span class="text-[11px] text-muted bg-surface px-2 py-0.5 rounded-full border border-base">Email</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-primary" title="Required"></span>
+                <button class="w-6 h-6 rounded-sm hover:bg-surface-tertiary text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Phone -->
+            <div class="field-row relative group rounded-base border border-base bg-surface hover:border-strong hover:bg-surface-raised/50 cursor-pointer" data-field="phone">
+              <div class="flex items-center gap-2 px-2.5 py-2.5">
+                <button class="drag-handle w-5 h-5 flex items-center justify-center text-subtle hover:text-muted cursor-grab">
+                  <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                </button>
+                <span class="w-7 h-7 rounded-base bg-surface-raised flex items-center justify-center text-muted flex-shrink-0">
+                  <i data-lucide="phone" class="w-4 h-4"></i>
+                </span>
+                <span class="text-sm font-medium text-text-base flex-1 truncate">Phone</span>
+                <span class="text-[11px] text-muted bg-surface px-2 py-0.5 rounded-full border border-base">Phone</span>
+                <button class="w-6 h-6 rounded-sm hover:bg-surface-tertiary text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Company -->
+            <div class="field-row relative group rounded-base border border-base bg-surface hover:border-strong hover:bg-surface-raised/50 cursor-pointer" data-field="company">
+              <div class="flex items-center gap-2 px-2.5 py-2.5">
+                <button class="drag-handle w-5 h-5 flex items-center justify-center text-subtle hover:text-muted cursor-grab">
+                  <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                </button>
+                <span class="w-7 h-7 rounded-base bg-surface-raised flex items-center justify-center text-muted flex-shrink-0">
+                  <i data-lucide="building-2" class="w-4 h-4"></i>
+                </span>
+                <span class="text-sm font-medium text-text-base flex-1 truncate">Company</span>
+                <span class="text-[11px] text-muted bg-surface px-2 py-0.5 rounded-full border border-base">Short Text</span>
+                <button class="w-6 h-6 rounded-sm hover:bg-surface-tertiary text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2 -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-muted">Project Details</span>
+            <span class="text-[11px] text-subtle bg-surface-raised px-2 py-0.5 rounded-full flex items-center gap-1">
+              <i data-lucide="square" class="w-3 h-3"></i> 1 col
+            </span>
+          </div>
+
+          <div class="space-y-1.5">
+            <!-- Project Type -->
+            <div class="field-row relative group rounded-base border border-base bg-surface hover:border-strong hover:bg-surface-raised/50 cursor-pointer" data-field="projectType">
+              <div class="flex items-center gap-2 px-2.5 py-2.5">
+                <button class="drag-handle w-5 h-5 flex items-center justify-center text-subtle hover:text-muted cursor-grab">
+                  <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                </button>
+                <span class="w-7 h-7 rounded-base bg-surface-raised flex items-center justify-center text-muted flex-shrink-0">
+                  <i data-lucide="chevron-down-square" class="w-4 h-4"></i>
+                </span>
+                <span class="text-sm font-medium text-text-base flex-1 truncate">Project Type</span>
+                <span class="text-[11px] text-muted bg-surface px-2 py-0.5 rounded-full border border-base">Dropdown</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-primary" title="Required"></span>
+                <button class="w-6 h-6 rounded-sm hover:bg-surface-tertiary text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Budget -->
+            <div class="field-row relative group rounded-base border border-base bg-surface hover:border-strong hover:bg-surface-raised/50 cursor-pointer" data-field="budget">
+              <div class="flex items-center gap-2 px-2.5 py-2.5">
+                <button class="drag-handle w-5 h-5 flex items-center justify-center text-subtle hover:text-muted cursor-grab">
+                  <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                </button>
+                <span class="w-7 h-7 rounded-base bg-surface-raised flex items-center justify-center text-muted flex-shrink-0">
+                  <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                </span>
+                <span class="text-sm font-medium text-text-base flex-1 truncate">Budget</span>
+                <span class="text-[11px] text-muted bg-surface px-2 py-0.5 rounded-full border border-base">Slider</span>
+                <button class="w-6 h-6 rounded-sm hover:bg-surface-tertiary text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tell us about your project -->
+            <div class="field-row relative group rounded-base border border-base bg-surface hover:border-strong hover:bg-surface-raised/50 cursor-pointer" data-field="about">
+              <div class="flex items-center gap-2 px-2.5 py-2.5">
+                <button class="drag-handle w-5 h-5 flex items-center justify-center text-subtle hover:text-muted cursor-grab">
+                  <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                </button>
+                <span class="w-7 h-7 rounded-base bg-surface-raised flex items-center justify-center text-muted flex-shrink-0">
+                  <i data-lucide="align-left" class="w-4 h-4"></i>
+                </span>
+                <span class="text-sm font-medium text-text-base flex-1 truncate">Tell us about your project</span>
+                <span class="text-[11px] text-muted bg-surface px-2 py-0.5 rounded-full border border-base">Long Text</span>
+                <button class="w-6 h-6 rounded-sm hover:bg-surface-tertiary text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add field button + popover -->
+        <div class="relative mt-2" id="addContainer">
+          <button id="addBtn" class="w-full h-11 rounded-base border-2 border-dashed border-strong text-muted hover:border-primary hover:text-primary hover:bg-primary-light/50 flex items-center justify-center gap-2 text-sm font-medium transition-all">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Add field
+          </button>
+
+          <!-- field-type popover (OPEN) -->
+          <div id="addPopover" class="popover absolute left-0 right-0 bottom-full mb-2 bg-surface rounded-card shadow-card border border-base p-1.5 z-40" style="min-width:240px;">
+            <div class="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-subtle">Add a field</div>
+            <div class="grid grid-cols-1 gap-0.5">
+              <button class="add-option active flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="type" class="w-4 h-4"></i>
+                <span class="flex-1">Short Text</span>
+                <span class="text-[10px] text-subtle">T</span>
+              </button>
+              <button class="add-option flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="align-left" class="w-4 h-4"></i>
+                <span class="flex-1">Long Text</span>
+                <span class="text-[10px] text-subtle">¶</span>
+              </button>
+              <button class="add-option flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="hash" class="w-4 h-4"></i>
+                <span class="flex-1">Number</span>
+                <span class="text-[10px] text-subtle">#</span>
+              </button>
+              <button class="add-option flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="at-sign" class="w-4 h-4"></i>
+                <span class="flex-1">Email</span>
+                <span class="text-[10px] text-subtle">@</span>
+              </button>
+              <button class="add-option flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+                <span class="flex-1">Phone</span>
+                <span class="text-[10px] text-subtle">☎</span>
+              </button>
+              <button class="add-option flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+                <span class="flex-1">Date</span>
+                <span class="text-[10px] text-subtle">📅</span>
+              </button>
+              <button class="add-option flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="chevron-down-square" class="w-4 h-4"></i>
+                <span class="flex-1">Dropdown</span>
+                <span class="text-[10px] text-subtle">▾</span>
+              </button>
+              <button class="add-option flex items-center gap-2.5 px-2.5 py-2 rounded-base text-sm text-text-base text-left">
+                <i data-lucide="check-square" class="w-4 h-4"></i>
+                <span class="flex-1">Checkbox</span>
+                <span class="text-[10px] text-subtle">☑</span>
+              </button>
+            </div>
+            <div class="px-2 py-1.5 mt-1 border-t border-base flex items-center gap-1.5 text-[11px] text-subtle">
+              <i data-lucide="search" class="w-3 h-3"></i>
+              <span>Type to search field types…</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-8"></div>
+      </div>
+    </section>
+
+    <!-- DIVIDER -->
+    <div class="relative w-px bg-border flex-shrink-0 group cursor-col-resize" id="divider" title="Drag to resize">
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-10 bg-border-strong rounded-full group-hover:bg-primary transition-colors"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-0.5 items-center justify-center w-3 h-10">
+        <span class="w-1 h-1 rounded-full bg-text-subtle group-hover:bg-primary transition-colors"></span>
+        <span class="w-1 h-1 rounded-full bg-text-subtle group-hover:bg-primary transition-colors"></span>
+        <span class="w-1 h-1 rounded-full bg-text-subtle group-hover:bg-primary transition-colors"></span>
+        <span class="w-1 h-1 rounded-full bg-text-subtle group-hover:bg-primary transition-colors"></span>
+      </div>
+    </div>
+
+    <!-- RIGHT: PREVIEW PANE -->
+    <section id="previewPane" class="flex-1 min-w-0 bg-background overflow-y-auto">
+      <div class="min-h-full flex flex-col items-center py-8 px-4">
+
+        <!-- device hint -->
+        <div class="mb-4 flex items-center gap-2 text-xs text-subtle">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          <span>Live preview · <span id="deviceLabel" class="font-medium text-muted">Desktop</span></span>
+        </div>
+
+        <!-- preview card -->
+        <div id="previewCard" class="preview-card w-full bg-surface rounded-card shadow-card border border-base p-8" style="max-width:100%;">
+          <!-- form heading -->
+          <div class="mb-7">
+            <h1 class="text-2xl font-bold text-text-base tracking-tight">Customer Onboarding</h1>
+            <p class="text-sm text-muted mt-1">Tell us about your project.</p>
+          </div>
+
+          <!-- SECTION: contact info -->
+          <div class="mb-7">
+            <h2 class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-4 pb-2 border-b border-base">Contact Information</h2>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Full Name (highlighted) -->
+              <div class="ring-primary-soft rounded-base p-2 -m-2 bg-primary-light/30 border border-primary/30">
+                <label class="block text-xs font-medium text-text-base mb-1.5">Full Name <span class="text-danger">*</span></label>
+                <input type="text" placeholder="Jane Doe"
+                  class="w-full h-10 px-3 rounded-base border border-base bg-surface text-sm text-text-base placeholder:text-subtle outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all" />
+              </div>
+              <!-- Email -->
+              <div>
+                <label class="block text-xs font-medium text-text-base mb-1.5">Email <span class="text-danger">*</span></label>
+                <input type="email" placeholder="jane@company.com"
+                  class="w-full h-10 px-3 rounded-base border border-base bg-surface text-sm text-text-base placeholder:text-subtle outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all" />
+              </div>
+              <!-- Phone -->
+              <div>
+                <label class="block text-xs font-medium text-text-base mb-1.5">Phone</label>
+                <input type="tel" placeholder="+1 (555) 000-0000"
+                  class="w-full h-10 px-3 rounded-base border border-base bg-surface text-sm text-text-base placeholder:text-subtle outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all" />
+              </div>
+              <!-- Company -->
+              <div>
+                <label class="block text-xs font-medium text-text-base mb-1.5">Company</label>
+                <input type="text" placeholder="Acme Inc."
+                  class="w-full h-10 px-3 rounded-base border border-base bg-surface text-sm text-text-base placeholder:text-subtle outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all" />
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: project details -->
+          <div class="mb-7">
+            <h2 class="text-[11px] font-semibold uppercase tracking-wider text-muted mb-4 pb-2 border-b border-base">Project Details</h2>
+            <div class="space-y-4">
+              <!-- Project Type dropdown -->
+              <div>
+                <label class="block text-xs font-medium text-text-base mb-1.5">Project Type <span class="text-danger">*</span></label>
+                <div class="relative">
+                  <select class="w-full h-10 pl-3 pr-9 rounded-base border border-base bg-surface text-sm text-text-base appearance-none outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all cursor-pointer">
+                    <option>Web Development</option>
+                    <option>Mobile App</option>
+                    <option>Design System</option>
+                    <option>Consulting</option>
+                  </select>
+                  <i data-lucide="chevron-down" class="w-4 h-4 text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                </div>
+              </div>
+              <!-- Budget slider -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="block text-xs font-medium text-text-base">Budget</label>
+                  <span class="text-xs font-semibold text-primary bg-primary-light px-2 py-0.5 rounded-full">$2,500</span>
+                </div>
+                <input type="range" min="500" max="50000" step="100" value="2500" class="w-full" />
+                <div class="flex justify-between text-[10px] text-subtle mt-1">
+                  <span>$500</span><span>$50k</span>
+                </div>
+              </div>
+              <!-- About textarea -->
+              <div>
+                <label class="block text-xs font-medium text-text-base mb-1.5">Tell us about your project</label>
+                <textarea rows="4" placeholder="Share your goals, timeline, and any details that would help us understand your needs…"
+                  class="w-full px-3 py-2.5 rounded-base border border-base bg-surface text-sm text-text-base placeholder:text-subtle outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all resize-none"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button class="w-full h-11 rounded-base bg-primary hover:bg-primary-hover text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm">
+            Submit Application
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+
+          <p class="text-center text-[11px] text-subtle mt-3">We'll get back to you within 2 business days.</p>
+        </div>
+
+        <div class="h-8"></div>
+      </div>
+    </section>
+
+    <!-- PROPERTIES POPOVER (floating, anchored to Full Name in builder) -->
+    <div id="propsPopover" class="popover absolute bg-surface rounded-card shadow-card border border-base z-50" style="width:280px;">
+      <!-- header -->
+      <div class="flex items-center justify-between px-3 py-2.5 border-b border-base">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-base bg-primary-light flex items-center justify-center text-primary">
+            <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          </span>
+          <span class="text-sm font-semibold text-text-base">Field settings</span>
+        </div>
+        <button id="closeProps" class="w-6 h-6 rounded-sm hover:bg-surface-raised text-subtle hover:text-text-base flex items-center justify-center transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <!-- body -->
+      <div class="p-3 space-y-3">
+        <!-- Label -->
+        <div>
+          <label class="block text-[11px] font-medium text-muted mb-1">Label</label>
+          <input type="text" value="Full Name"
+            class="w-full h-9 px-2.5 rounded-base border border-base bg-surface text-sm text-text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all" />
+        </div>
+        <!-- Required toggle -->
+        <div class="flex items-center justify-between py-1">
+          <div class="flex items-center gap-2">
+            <i data-lucide="asterisk" class="w-3.5 h-3.5 text-primary"></i>
+            <span class="text-sm text-text-base">Required</span>
+          </div>
+          <div class="toggle on" id="reqToggle" role="switch" aria-checked="true" tabindex="0"></div>
+        </div>
+        <!-- Placeholder -->
+        <div>
+          <label class="block text-[11px] font-medium text-muted mb-1">Placeholder</label>
+          <input type="text" value="Jane Doe"
+            class="w-full h-9 px-2.5 rounded-base border border-base bg-surface text-sm text-text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary-light transition-all" />
+        </div>
+        <!-- More link -->
+        <div class="pt-1 border-t border-base">
+          <a href="#" class="flex items-center justify-between text-sm text-primary hover:text-primary-hover font-medium px-1 py-1.5 rounded-base transition-colors">
+            <span>More options</span>
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </a>
+        </div>
+      </div>
+      <!-- anchor arrow pointing left (toward builder pane) -->
+      <div class="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 bg-surface border-l border-b border-base rotate-45"></div>
+    </div>
+
+  </div>
+
+  <!-- floating label -->
+  <div class="fixed bottom-3 left-3 text-xs text-subtle pointer-events-none select-none z-50">
+    Direction D — Split-view dual canvas
+  </div>
+</div>
+
+<script>
+  // init icons
+  function refreshIcons(){ if (window.lucide) lucide.createIcons(); }
+  refreshIcons();
+
+  // ---- Field selection (builder pane) ----
+  const builderPane = document.getElementById('builderPane');
+  const fieldRows = builderPane.querySelectorAll('.field-row');
+  let selectedField = 'fullName';
+
+  function setSelected(id){
+    selectedField = id;
+    fieldRows.forEach(r=>{
+      const isSel = r.dataset.field === id;
+      if (isSel){
+        r.classList.remove('border-base','bg-surface','hover:border-strong','hover:bg-surface-raised/50');
+        r.classList.add('ring-primary-soft','bg-primary-light/40','border','border-primary/40');
+        // icon container highlight
+        const iconBox = r.querySelector('span.w-7');
+        if (iconBox){ iconBox.classList.remove('bg-surface-raised','text-muted'); iconBox.classList.add('bg-primary-light','text-primary'); }
+      } else {
+        r.classList.remove('ring-primary-soft','bg-primary-light/40','border-primary/40');
+        r.classList.add('border-base','bg-surface','hover:border-strong','hover:bg-surface-raised/50');
+        const iconBox = r.querySelector('span.w-7');
+        if (iconBox){ iconBox.classList.remove('bg-primary-light','text-primary'); iconBox.classList.add('bg-surface-raised','text-muted'); }
+      }
+    });
+    // highlight preview field
+    document.querySelectorAll('#previewCard [data-pfield]').forEach(()=>{});
+    highlightPreview(id);
+    positionPropsPopover();
+  }
+
+  function highlightPreview(id){
+    // map builder field -> preview input wrapper
+    const map = {
+      fullName: 0, email: 1, phone: 2, company: 3,
+      projectType: 'p-projectType', budget: 'p-budget', about: 'p-about'
+    };
+    const contactInputs = document.querySelectorAll('#previewCard .grid-cols-2 > div');
+    // clear all highlight
+    document.querySelectorAll('#previewCard .preview-hl').forEach(el=>{
+      el.classList.remove('preview-hl','ring-primary-soft','bg-primary-light/30','border-primary/30','border');
+      el.classList.add('border-base');
+    });
+    // re-apply base borders to contact inputs
+    contactInputs.forEach(d=> d.classList.add('border','border-base'));
+    // highlight target
+    let target = null;
+    if (['fullName','email','phone','company'].includes(id)){
+      const idx = map[id];
+      target = contactInputs[idx];
+    } else if (id === 'projectType'){
+      target = document.querySelector('[data-pfield="projectType"]');
+    } else if (id === 'budget'){
+      target = document.querySelector('[data-pfield="budget"]');
+    } else if (id === 'about'){
+      target = document.querySelector('[data-pfield="about"]');
+    }
+    if (target){
+      target.classList.add('preview-hl','ring-primary-soft','bg-primary-light/30','border-primary/30');
+      target.classList.remove('border-base');
+    }
+  }
+
+  // tag preview fields for easy targeting
+  (function tagPreview(){
+    const blocks = document.querySelectorAll('#previewCard .grid-cols-2 > div');
+    // contact inputs already in order; add data-pfield for project details
+    const pd = document.querySelectorAll('#previewCard .space-y-4 > div');
+    if (pd[0]) pd[0].setAttribute('data-pfield','projectType');
+    if (pd[1]) pd[1].setAttribute('data-pfield','budget');
+    if (pd[2]) pd[2].setAttribute('data-pfield','about');
+  })();
+
+  fieldRows.forEach(r=>{
+    r.addEventListener('click', (e)=>{
+      if (e.target.closest('.drag-handle') || e.target.closest('button[title="Drag to reorder"]')) return;
+      setSelected(r.dataset.field);
+    });
+  });
+
+  // initial highlight
+  highlightPreview('fullName');
+
+  // ---- Properties popover positioning (anchored to selected field row) ----
+  const propsPopover = document.getElementById('propsPopover');
+  function positionPropsPopover(){
+    const sel = builderPane.querySelector('.field-row[data-field="'+selectedField+'"]');
+    if (!sel){ return; }
+    const body = document.querySelector('.flex.flex-1.min-h-0.relative');
+    const bodyRect = body.getBoundingClientRect();
+    const rowRect = sel.getBoundingClientRect();
+    // place to the right of the builder pane, near the row, but clamp inside body
+    let left = rowRect.right - bodyRect.left + 12;
+    const popW = 280;
+    // if it would overflow into preview too far, anchor on left edge of builder instead
+    const builderRight = builderPane.getBoundingClientRect().right;
+    // place popover just inside the divider area, anchored to the row
+    const center = (builderPane.getBoundingClientRect().right + document.getElementById('previewPane').getBoundingClientRect().left)/2;
+    left = center - popW/2;
+    // clamp
+    left = Math.max(8, Math.min(bodyRect.width - popW - 8, left));
+    let top = rowRect.top - bodyRect.top + rowRect.height/2 - 160;
+    top = Math.max(8, Math.min(bodyRect.height - 340, top));
+    propsPopover.style.left = left + 'px';
+    propsPopover.style.top = top + 'px';
+    propsPopover.style.opacity = '1';
+  }
+  positionPropsPopover();
+  window.addEventListener('resize', positionPropsPopover);
+
+  document.getElementById('closeProps').addEventListener('click', ()=>{
+    propsPopover.style.opacity = '0';
+    propsPopover.style.pointerEvents = 'none';
+  });
+
+  // ---- Device toggle (preview width) ----
+  const deviceBtns = document.querySelectorAll('.device-btn');
+  const previewCard = document.getElementById('previewCard');
+  const deviceLabel = document.getElementById('deviceLabel');
+  const widths = { phone: '360px', tablet: '480px', desktop: '100%' };
+  const labels = { phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop' };
+  deviceBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const dev = btn.dataset.device;
+      deviceBtns.forEach(b=>{
+        b.classList.remove('bg-primary','text-primary-foreground');
+        b.classList.add('text-muted','hover:text-text-base');
+      });
+      btn.classList.remove('text-muted','hover:text-text-base');
+      btn.classList.add('bg-primary','text-primary-foreground');
+      previewCard.style.maxWidth = widths[dev];
+      previewCard.style.width = widths[dev];
+      deviceLabel.textContent = labels[dev];
+    });
+  });
+
+  // ---- Required toggle in popover ----
+  const reqToggle = document.getElementById('reqToggle');
+  reqToggle.addEventListener('click', ()=> reqToggle.classList.toggle('on'));
+
+  // ---- Add field popover toggle ----
+  const addBtn = document.getElementById('addBtn');
+  const addPopover = document.getElementById('addPopover');
+  let popoverOpen = true;
+  function setAddPopover(open){
+    popoverOpen = open;
+    addPopover.style.opacity = open ? '1' : '0';
+    addPopover.style.pointerEvents = open ? 'auto' : 'none';
+    addPopover.style.transform = open ? 'translateY(0)' : 'translateY(4px)';
+  }
+  setAddPopover(true);
+  addBtn.addEventListener('click', ()=> setAddPopover(!popoverOpen));
+  // close when clicking an option
+  addPopover.querySelectorAll('.add-option').forEach(opt=>{
+    opt.addEventListener('click', ()=> setAddPopover(false));
+  });
+
+  // ---- Divider drag (visual only, resizes builder/preview flex) ----
+  const divider = document.getElementById('divider');
+  const body = document.querySelector('.flex.flex-1.min-h-0.relative');
+  let dragging = false;
+  divider.addEventListener('mousedown', (e)=>{
+    dragging = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if (!dragging) return;
+    const rect = body.getBoundingClientRect();
+    const pct = ((e.clientX - rect.left) / rect.width) * 100;
+    const clamped = Math.max(25, Math.min(75, pct));
+    builderPane.style.flex = `0 0 ${clamped}%`;
+    document.getElementById('previewPane').style.flex = `1 1 ${100-clamped}%`;
+    positionPropsPopover();
+  });
+  window.addEventListener('mouseup', ()=>{
+    if (dragging){
+      dragging = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+
+  // re-render icons after any DOM updates
+  refreshIcons();
+</script>
+</body>
+</html>

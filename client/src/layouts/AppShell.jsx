@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Globe, ClipboardList, Mail, Users, BookOpen, LayoutDashboard, X,
-  ChevronRight, ChevronDown, ArrowLeft, Gauge, Files, PanelTop, Palette, Images, FileStack,
+  ChevronRight, ChevronDown, Gauge, Files, PanelTop, Palette, Images, FileStack,
   Wrench, Inbox, BarChart3, Copy, UserPlus, FileText,
 } from 'lucide-react';
 import { APP_IDS } from 'shared';
@@ -94,41 +94,15 @@ function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdmi
     setStack([{ id: app.id, label: app.label }]);
   }, []);
 
-  const goBack = useCallback(() => {
-    setDirection('back');
-    setStack([]);
-  }, []);
-
-  // The currently visible level's items + title.
+  // The currently visible level's items.
   const currentFrame = stack[stack.length - 1] ?? null;
   const currentApp = currentFrame ? APPS.find((a) => a.id === currentFrame.id) : null;
   const currentItems = currentApp ? currentApp.children : null;
-  const title = currentFrame ? currentFrame.label : 'Applications';
   // Animation key — changes whenever the visible level changes, re-triggering CSS.
   const animKey = currentFrame ? `app-${currentFrame.id}` : 'root';
 
   return (
     <>
-      {/* Drill-down context bar: Back button + current level title */}
-      <div className="px-3 pt-3 pb-2 border-b border-border-soft shrink-0 min-h-[52px] flex flex-col justify-center">
-        {currentFrame ? (
-          <button
-            type="button"
-            onClick={goBack}
-            className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-base transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base px-1 py-0.5 -ml-1 w-fit"
-            aria-label={`Back to ${title === currentFrame.label ? 'Applications' : 'previous level'}`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
-          </button>
-        ) : (
-          <div className="px-1 text-xs font-medium text-subtle uppercase tracking-wider">Applications</div>
-        )}
-        {currentFrame && (
-          <div className="px-1 mt-1 text-sm font-semibold text-text-base truncate">{title}</div>
-        )}
-      </div>
-
       {/* Drill-down list — key + animation class re-trigger on level change */}
       <div className="flex-1 overflow-y-auto py-2">
         <nav
@@ -183,7 +157,6 @@ function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdmi
               {hasSuperAdminRole && (
                 <>
                   <div className="pt-3 mt-3 border-t border-border mx-1" />
-                  <div className="px-3 pb-1 pt-2 text-xs font-medium text-subtle uppercase tracking-wider">Administration</div>
                   <NavLink
                     to="/hub-admin/admin/users"
                     onClick={closeSidebar}
@@ -266,7 +239,6 @@ function AccordionSidebar({ accessibleApps, location, closeSidebar, hasSuperAdmi
         {hasSuperAdminRole && (
           <>
             <div className="pt-3 mt-3 border-t border-border mx-1" />
-            <div className="px-3 pb-1 pt-2 text-xs font-medium text-subtle uppercase tracking-wider">Administration</div>
             <NavLink
               to="/hub-admin/admin/users"
               onClick={closeSidebar}
@@ -318,7 +290,7 @@ function AppShell() {
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-[55] lg:hidden"
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -328,7 +300,7 @@ function AppShell() {
       <aside
         role="navigation"
         aria-label="Main navigation"
-        className={`fixed lg:sticky top-0 left-0 h-screen w-[240px] bg-surface border-r border-border flex flex-col z-50 transition-transform duration-200 ease-out lg:translate-x-0 lg:z-auto ${
+        className={`fixed lg:sticky top-0 left-0 h-screen w-[240px] bg-surface border-r border-border flex flex-col z-[60] transition-transform duration-200 ease-out lg:translate-x-0 lg:z-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

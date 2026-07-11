@@ -1,0 +1,97 @@
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e35]:
+    - link "Skip to main content" [ref=e36] [cursor=pointer]:
+      - /url: "#main-content"
+    - navigation "Main navigation" [ref=e37]:
+      - link "Service Hub" [ref=e39] [cursor=pointer]:
+        - /url: /hub-admin/
+      - navigation "Applications" [ref=e41]:
+        - button "Website" [ref=e42]
+        - button "Form Builder" [ref=e49]
+        - button "Email Sender" [ref=e56]
+        - button "Directory" [ref=e63]
+        - button "Portal" [ref=e69]
+        - link "Users & Roles" [ref=e79] [cursor=pointer]:
+          - /url: /hub-admin/admin/users
+    - generic [ref=e86]:
+      - banner [ref=e87]:
+        - heading [level=1]
+        - textbox "Global search" [ref=e91]:
+          - /placeholder: Search pages, forms, campaigns…
+        - button "Account menu" [ref=e95]:
+          - generic [ref=e96]: SA
+          - generic [ref=e97]:
+            - generic [ref=e98]: System Admin
+            - generic [ref=e99]: admin@servicehub.com
+      - main [ref=e102]:
+        - generic [ref=e104]:
+          - generic [ref=e105]:
+            - heading "Welcome back, System Admin" [level=1] [ref=e106]
+            - generic [ref=e107]:
+              - generic [ref=e108]: Super Admin
+              - generic [ref=e109]: admin@servicehub.com
+          - heading "Your Apps" [level=2] [ref=e110]
+          - generic [ref=e111]:
+            - button "Website Build and manage your public web pages" [ref=e112] [cursor=pointer]:
+              - generic [ref=e120]: Website
+              - generic [ref=e121]: Build and manage your public web pages
+            - button "Form Builder Create forms and collect submissions" [ref=e122] [cursor=pointer]:
+              - generic [ref=e130]: Form Builder
+              - generic [ref=e131]: Create forms and collect submissions
+            - button "Email Sender Send campaigns to your mailing lists" [ref=e132] [cursor=pointer]:
+              - generic [ref=e140]: Email Sender
+              - generic [ref=e141]: Send campaigns to your mailing lists
+            - button "Directory Browse and manage directory entries" [ref=e142] [cursor=pointer]:
+              - generic [ref=e149]: Directory
+              - generic [ref=e150]: Browse and manage directory entries
+            - button "Portal Your customizable dashboard" [ref=e151] [cursor=pointer]:
+              - generic [ref=e161]: Portal
+              - generic [ref=e162]: Your customizable dashboard
+          - heading "Quick Stats" [level=2] [ref=e163]
+          - generic [ref=e164]:
+            - generic [ref=e165]:
+              - generic [ref=e166]: Total Pages
+              - generic [ref=e171]: "4"
+            - generic [ref=e172]:
+              - generic [ref=e173]: Total Forms
+              - generic [ref=e178]: "13"
+            - generic [ref=e179]:
+              - generic [ref=e180]: Total Campaigns
+              - generic [ref=e185]: "0"
+            - generic [ref=e186]:
+              - generic [ref=e187]: Mailing Lists
+              - generic [ref=e194]: "0"
+          - heading "Recent Activity" [level=2] [ref=e195]
+          - generic [ref=e196]:
+            - generic [ref=e197]:
+              - generic [ref=e201]:
+                - generic [ref=e202]: Untitled Form 6
+                - generic [ref=e203]: Form
+              - generic [ref=e204]: 7/11/2026
+            - generic [ref=e208]:
+              - generic [ref=e212]:
+                - generic [ref=e213]: Untitled Form 6
+                - generic [ref=e214]: Form
+              - generic [ref=e215]: 7/11/2026
+            - generic [ref=e219]:
+              - generic [ref=e223]:
+                - generic [ref=e224]: Untitled Form 6
+                - generic [ref=e225]: Form
+              - generic [ref=e226]: 7/11/2026
+            - generic [ref=e230]:
+              - generic [ref=e234]:
+                - generic [ref=e235]: Home
+                - generic [ref=e236]: Page
+              - generic [ref=e237]: 7/10/2026
+            - generic [ref=e241]:
+              - generic [ref=e245]:
+                - generic [ref=e246]: Login
+                - generic [ref=e247]: Page
+              - generic [ref=e248]: 7/6/2026
+            - generic [ref=e252]:
+              - generic [ref=e256]:
+                - generic [ref=e257]: Forms
+                - generic [ref=e258]: Page
+              - generic [ref=e259]: 7/6/2026

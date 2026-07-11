@@ -11,6 +11,10 @@ import {
   upload,
   listVersions,
   restoreVersion,
+  listFolders,
+  createFolder,
+  updateFolder,
+  deleteFolder,
 } from '../controllers/forms.js';
 import { verifyToken } from '../middleware/auth.js';
 
@@ -20,6 +24,12 @@ const router = Router();
 router.get('/public/:id', getForm);
 router.post('/public/:id/submissions', createSubmission);
 router.post('/upload', upload.single('file'), uploadFile);
+
+// Folder routes (auth required) — must be before /:id to avoid conflict
+router.get('/folders', verifyToken, listFolders);
+router.post('/folders', verifyToken, createFolder);
+router.put('/folders/:id', verifyToken, updateFolder);
+router.delete('/folders/:id', verifyToken, deleteFolder);
 
 // Admin routes (auth required)
 router.get('/', verifyToken, listForms);

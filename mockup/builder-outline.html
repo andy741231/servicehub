@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Service Hub — Form Builder (Direction E — Outline + Inspector)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: { DEFAULT: '#0D9488', hover: '#0F766E', light: '#F0FDFA', foreground: '#FFFFFF' },
+          background: '#FAFDFC',
+          surface: { DEFAULT: '#FFFFFF', raised: '#F0FDFA', tertiary: '#CCFBF1' },
+          border: { DEFAULT: '#E2E8F0', soft: '#F5FEFB', strong: '#CBD5E1' },
+          'text': { base: '#1C2B2A', muted: '#64748B', subtle: '#94A3B8', inverse: '#FFFFFF' },
+          success: { DEFAULT: '#059669', light: '#F0FDF4' },
+          warning: { DEFAULT: '#D97706', light: '#FFFBEB' },
+          danger: { DEFAULT: '#E11D48', light: '#FFF1F2' },
+          info: { DEFAULT: '#0891B2', light: '#ECFEFF' },
+        },
+        borderRadius: { sm: '6px', base: '10px', card: '16px', lg: '20px' },
+        boxShadow: { card: '0 1px 3px rgba(13,148,136,0.08), 0 4px 12px rgba(15,23,42,0.05)' },
+      },
+    },
+  };
+</script>
+<style>
+  :root {
+    --primary:#0D9488; --primary-hover:#0F766E; --primary-light:#F0FDFA; --primary-foreground:#FFFFFF;
+    --background:#FAFDFC; --surface:#FFFFFF; --surface-raised:#F0FDFA; --surface-tertiary:#CCFBF1;
+    --border:#E2E8F0; --border-soft:#F5FEFB; --border-strong:#CBD5E1;
+    --text-base:#1C2B2A; --text-muted:#64748B; --text-subtle:#94A3B8; --text-inverse:#FFFFFF;
+    --success:#059669; --success-light:#F0FDF4; --warning:#D97706; --warning-light:#FFFBEB;
+    --danger:#E11D48; --danger-light:#FFF1F2; --info:#0891B2; --info-light:#ECFEFF;
+    --radius-sm:6px; --radius-base:10px; --radius-card:16px; --radius-lg:20px;
+    --shadow-card:0 1px 3px rgba(13,148,136,0.08),0 4px 12px rgba(15,23,42,0.05);
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--background);
+    color: var(--text-base);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .transition-base { transition: all 150ms ease; }
+  /* Outline tree node */
+  .outline-node { transition: all 150ms ease; }
+  .outline-node:hover { background: var(--surface-raised); }
+  .outline-node.selected {
+    background: var(--primary-light);
+    border-left: 2px solid var(--primary);
+  }
+  .outline-field { transition: all 150ms ease; }
+  .outline-field:hover { background: var(--surface-raised); }
+  .outline-field.selected {
+    background: var(--primary-light);
+    color: var(--primary-hover);
+    font-weight: 600;
+  }
+  .outline-field.selected .field-icon { color: var(--primary); }
+  /* Field card hover */
+  .field-card { transition: all 150ms ease; }
+  .field-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-card); }
+  .field-card .hover-actions { opacity: 0; transition: opacity 150ms ease; }
+  .field-card:hover .hover-actions { opacity: 1; }
+  .field-card .drag-handle { opacity: 0; transition: opacity 150ms ease; cursor: grab; }
+  .field-card:hover .drag-handle { opacity: 1; }
+  /* Inspector accordion */
+  .accordion-body { max-height: 0; overflow: hidden; transition: max-height 200ms ease; }
+  .accordion.open .accordion-body { max-height: 500px; }
+  .accordion.open .accordion-chevron { transform: rotate(90deg); }
+  .accordion-chevron { transition: transform 150ms ease; }
+  /* Tabs */
+  .tab-btn { transition: all 150ms ease; }
+  .tab-btn.active { background: var(--primary); color: var(--primary-foreground); }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  /* Breadcrumb */
+  .breadcrumb-item { transition: color 150ms ease; }
+  .breadcrumb-item:hover { color: var(--primary); }
+  /* Icon sizing helper */
+  [data-lucide] { width: 16px; height: 16px; stroke-width: 2; }
+  .icon-xs [data-lucide] { width: 14px; height: 14px; }
+  .icon-sm [data-lucide] { width: 16px; height: 16px; }
+  .icon-md [data-lucide] { width: 18px; height: 18px; }
+  .icon-lg [data-lucide] { width: 20px; height: 20px; }
+</style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col">
+
+<!-- ============ TOP BAR (h-14) ============ -->
+<header class="h-14 bg-surface border-b border-border flex items-center justify-between px-4 flex-none">
+  <!-- Left: back arrow + title + save status -->
+  <div class="flex items-center gap-3">
+    <button class="p-1.5 rounded-md hover:bg-surface-raised text-text-muted transition-base" title="Back">
+      <i data-lucide="arrow-left" class="icon-md"></i>
+    </button>
+    <div class="flex items-center gap-2">
+      <i data-lucide="file-text" class="icon-md text-primary"></i>
+      <div class="flex flex-col leading-tight">
+        <h1 class="text-sm font-semibold text-text-base">Customer Onboarding Form</h1>
+        <div class="flex items-center gap-1.5 text-xs text-text-muted">
+          <span class="w-1.5 h-1.5 rounded-full bg-success inline-block"></span>
+          <span>Saved 2m ago</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Right: Share, Save, More -->
+  <div class="flex items-center gap-2">
+    <button class="flex items-center gap-1.5 px-3 h-8 rounded-md border border-border text-sm text-text-base hover:bg-surface-raised transition-base">
+      <i data-lucide="share-2" class="icon-sm"></i>
+      <span>Share</span>
+    </button>
+    <button class="flex items-center gap-1.5 px-3 h-8 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary-hover transition-base">
+      <i data-lucide="save" class="icon-sm"></i>
+      <span>Save</span>
+    </button>
+    <button class="p-1.5 rounded-md hover:bg-surface-raised text-text-muted transition-base" title="More">
+      <i data-lucide="more-horizontal" class="icon-md"></i>
+    </button>
+  </div>
+</header>
+
+<!-- ============ BODY (flex row) ============ -->
+<div class="flex flex-1 min-h-0" style="height: calc(100vh - 3.5rem - 2rem);">
+
+  <!-- ===== LEFT: OUTLINE TREE (w-64) ===== -->
+  <aside class="w-64 bg-surface border-r border-border flex flex-col flex-none">
+    <!-- Outline toolbar -->
+    <div class="flex items-center justify-between px-3 h-10 border-b border-border flex-none">
+      <div class="flex items-center gap-1.5">
+        <i data-lucide="list-tree" class="icon-sm text-text-muted"></i>
+        <span class="text-xs font-semibold text-text-base uppercase tracking-wide">Outline</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button class="p-1 rounded hover:bg-surface-raised text-text-muted transition-base" title="Search / Filter">
+          <i data-lucide="search" class="icon-sm"></i>
+        </button>
+        <button class="p-1 rounded hover:bg-surface-raised text-text-muted transition-base" title="Add section">
+          <i data-lucide="plus" class="icon-sm"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tree -->
+    <div class="flex-1 overflow-y-auto py-2 text-sm">
+      <!-- Section 1: Contact Information (expanded) -->
+      <div class="px-2">
+        <div class="outline-node flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer" data-section="section-1">
+          <i data-lucide="chevron-down" class="icon-xs chevron text-text-subtle"></i>
+          <i data-lucide="folder-open" class="icon-sm text-primary field-icon"></i>
+          <span class="text-text-base font-medium">Contact Information</span>
+        </div>
+        <div class="children pl-4 mt-0.5 space-y-0.5">
+          <div class="outline-field selected flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer" data-field="field-fullname">
+            <i data-lucide="user" class="icon-sm field-icon"></i>
+            <span class="text-sm">Full Name</span>
+          </div>
+          <div class="outline-field flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer" data-field="field-email">
+            <i data-lucide="mail" class="icon-sm text-text-muted field-icon"></i>
+            <span class="text-sm text-text-muted">Email</span>
+          </div>
+          <div class="outline-field flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer" data-field="field-phone">
+            <i data-lucide="phone" class="icon-sm text-text-muted field-icon"></i>
+            <span class="text-sm text-text-muted">Phone</span>
+          </div>
+          <div class="outline-field flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer" data-field="field-company">
+            <i data-lucide="building" class="icon-sm text-text-muted field-icon"></i>
+            <span class="text-sm text-text-muted">Company</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Project Details (expanded) -->
+      <div class="px-2 mt-1">
+        <div class="outline-node flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer" data-section="section-2">
+          <i data-lucide="chevron-down" class="icon-xs chevron text-text-subtle"></i>
+          <i data-lucide="folder-open" class="icon-sm text-primary field-icon"></i>
+          <span class="text-text-base font-medium">Project Details</span>
+        </div>
+        <div class="children pl-4 mt-0.5 space-y-0.5">
+          <div class="outline-field flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer" data-field="field-projecttype">
+            <i data-lucide="list" class="icon-sm text-text-muted field-icon"></i>
+            <span class="text-sm text-text-muted">Project Type</span>
+          </div>
+          <div class="outline-field flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer" data-field="field-budget">
+            <i data-lucide="sliders-horizontal" class="icon-sm text-text-muted field-icon"></i>
+            <span class="text-sm text-text-muted">Budget</span>
+          </div>
+          <div class="outline-field flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer" data-field="field-tellus">
+            <i data-lucide="message-square" class="icon-sm text-text-muted field-icon"></i>
+            <span class="text-sm text-text-muted">Tell us about your project</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add section button (dashed) -->
+      <div class="px-2 mt-3">
+        <button class="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-md border border-dashed border-border-strong text-text-muted hover:bg-surface-raised hover:text-primary transition-base text-xs">
+          <i data-lucide="plus" class="icon-sm"></i>
+          <span>Add section</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== CENTER: CANVAS (flex-1) ===== -->
+  <main class="flex-1 bg-background overflow-y-auto">
+    <!-- Breadcrumb (sticky) -->
+    <div class="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border-soft px-8 py-2.5 flex items-center gap-1.5 text-xs">
+      <i data-lucide="file-text" class="icon-sm text-text-subtle"></i>
+      <span class="breadcrumb-item text-text-muted cursor-pointer">Customer Onboarding Form</span>
+      <i data-lucide="chevron-right" class="icon-xs text-text-subtle"></i>
+      <span class="breadcrumb-item text-text-muted cursor-pointer" data-section-link="section-1">Contact Information</span>
+      <i data-lucide="chevron-right" class="icon-xs text-text-subtle"></i>
+      <span class="text-primary font-medium" id="breadcrumb-field">Full Name</span>
+    </div>
+
+    <!-- Canvas content -->
+    <div class="max-w-2xl mx-auto px-8 py-8 space-y-8">
+
+      <!-- Section 1: Contact Information -->
+      <section id="section-1" class="bg-surface rounded-card border border-border shadow-card overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-border-soft">
+          <div class="flex items-center gap-2">
+            <i data-lucide="folder-open" class="icon-sm text-primary"></i>
+            <h2 class="text-sm font-semibold text-text-base">Contact Information</h2>
+            <span class="text-xs text-text-subtle">4 fields</span>
+          </div>
+          <button class="p-1 rounded hover:bg-surface-raised text-text-muted transition-base">
+            <i data-lucide="more-horizontal" class="icon-sm"></i>
+          </button>
+        </div>
+        <div class="p-5 grid grid-cols-2 gap-4">
+          <!-- Full Name (selected) -->
+          <div class="field-card relative bg-surface border-2 border-primary rounded-base p-3.5 ring-2 ring-primary ring-offset-2 ring-offset-surface" data-field="field-fullname">
+            <div class="drag-handle absolute -left-1 top-1/2 -translate-y-1/2 text-text-subtle">
+              <i data-lucide="grip-vertical" class="icon-sm"></i>
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="user" class="icon-sm text-primary"></i>
+                <span class="text-xs font-medium text-text-base">Full Name</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-primary-light text-primary font-medium">Personal</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1">
+                <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Duplicate">
+                  <i data-lucide="copy" class="icon-xs"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-danger-light text-danger transition-base" title="Delete">
+                  <i data-lucide="trash-2" class="icon-xs"></i>
+                </button>
+              </div>
+            </div>
+            <input type="text" disabled placeholder="Jane Doe" class="w-full px-2.5 py-1.5 text-sm bg-background border border-border rounded-sm text-text-muted cursor-not-allowed" />
+          </div>
+          <!-- Email -->
+          <div class="field-card relative bg-surface border border-border rounded-base p-3.5" data-field="field-email">
+            <div class="drag-handle absolute -left-1 top-1/2 -translate-y-1/2 text-text-subtle">
+              <i data-lucide="grip-vertical" class="icon-sm"></i>
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="mail" class="icon-sm text-text-muted"></i>
+                <span class="text-xs font-medium text-text-base">Email</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1">
+                <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Duplicate">
+                  <i data-lucide="copy" class="icon-xs"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-danger-light text-danger transition-base" title="Delete">
+                  <i data-lucide="trash-2" class="icon-xs"></i>
+                </button>
+              </div>
+            </div>
+            <input type="email" disabled placeholder="jane@example.com" class="w-full px-2.5 py-1.5 text-sm bg-background border border-border rounded-sm text-text-muted cursor-not-allowed" />
+          </div>
+          <!-- Phone -->
+          <div class="field-card relative bg-surface border border-border rounded-base p-3.5" data-field="field-phone">
+            <div class="drag-handle absolute -left-1 top-1/2 -translate-y-1/2 text-text-subtle">
+              <i data-lucide="grip-vertical" class="icon-sm"></i>
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="phone" class="icon-sm text-text-muted"></i>
+                <span class="text-xs font-medium text-text-base">Phone</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1">
+                <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Duplicate">
+                  <i data-lucide="copy" class="icon-xs"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-danger-light text-danger transition-base" title="Delete">
+                  <i data-lucide="trash-2" class="icon-xs"></i>
+                </button>
+              </div>
+            </div>
+            <input type="tel" disabled placeholder="+1 (555) 000-0000" class="w-full px-2.5 py-1.5 text-sm bg-background border border-border rounded-sm text-text-muted cursor-not-allowed" />
+          </div>
+          <!-- Company -->
+          <div class="field-card relative bg-surface border border-border rounded-base p-3.5" data-field="field-company">
+            <div class="drag-handle absolute -left-1 top-1/2 -translate-y-1/2 text-text-subtle">
+              <i data-lucide="grip-vertical" class="icon-sm"></i>
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="building" class="icon-sm text-text-muted"></i>
+                <span class="text-xs font-medium text-text-base">Company</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1">
+                <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Duplicate">
+                  <i data-lucide="copy" class="icon-xs"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-danger-light text-danger transition-base" title="Delete">
+                  <i data-lucide="trash-2" class="icon-xs"></i>
+                </button>
+              </div>
+            </div>
+            <input type="text" disabled placeholder="Acme Inc." class="w-full px-2.5 py-1.5 text-sm bg-background border border-border rounded-sm text-text-muted cursor-not-allowed" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Project Details -->
+      <section id="section-2" class="bg-surface rounded-card border border-border shadow-card overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-border-soft">
+          <div class="flex items-center gap-2">
+            <i data-lucide="folder-open" class="icon-sm text-primary"></i>
+            <h2 class="text-sm font-semibold text-text-base">Project Details</h2>
+            <span class="text-xs text-text-subtle">3 fields</span>
+          </div>
+          <button class="p-1 rounded hover:bg-surface-raised text-text-muted transition-base">
+            <i data-lucide="more-horizontal" class="icon-sm"></i>
+          </button>
+        </div>
+        <div class="p-5 space-y-4">
+          <!-- Project Type -->
+          <div class="field-card relative bg-surface border border-border rounded-base p-3.5" data-field="field-projecttype">
+            <div class="drag-handle absolute -left-1 top-1/2 -translate-y-1/2 text-text-subtle">
+              <i data-lucide="grip-vertical" class="icon-sm"></i>
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="list" class="icon-sm text-text-muted"></i>
+                <span class="text-xs font-medium text-text-base">Project Type</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1">
+                <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Duplicate">
+                  <i data-lucide="copy" class="icon-xs"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-danger-light text-danger transition-base" title="Delete">
+                  <i data-lucide="trash-2" class="icon-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="w-full px-2.5 py-1.5 text-sm bg-background border border-border rounded-sm text-text-muted flex items-center justify-between cursor-not-allowed">
+              <span>Select…</span>
+              <i data-lucide="chevron-down" class="icon-xs text-text-subtle"></i>
+            </div>
+          </div>
+          <!-- Budget -->
+          <div class="field-card relative bg-surface border border-border rounded-base p-3.5" data-field="field-budget">
+            <div class="drag-handle absolute -left-1 top-1/2 -translate-y-1/2 text-text-subtle">
+              <i data-lucide="grip-vertical" class="icon-sm"></i>
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="sliders-horizontal" class="icon-sm text-text-muted"></i>
+                <span class="text-xs font-medium text-text-base">Budget</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1">
+                <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Duplicate">
+                  <i data-lucide="copy" class="icon-xs"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-danger-light text-danger transition-base" title="Delete">
+                  <i data-lucide="trash-2" class="icon-xs"></i>
+                </button>
+              </div>
+            </div>
+            <div class="w-full px-2.5 py-1.5 text-sm bg-background border border-border rounded-sm text-text-muted flex items-center gap-2 cursor-not-allowed">
+              <div class="flex-1 h-1.5 bg-border rounded-full">
+                <div class="h-1.5 bg-primary rounded-full" style="width: 40%"></div>
+              </div>
+              <span class="text-xs text-text-subtle">$40k</span>
+            </div>
+          </div>
+          <!-- Tell us about your project -->
+          <div class="field-card relative bg-surface border border-border rounded-base p-3.5" data-field="field-tellus">
+            <div class="drag-handle absolute -left-1 top-1/2 -translate-y-1/2 text-text-subtle">
+              <i data-lucide="grip-vertical" class="icon-sm"></i>
+            </div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="message-square" class="icon-sm text-text-muted"></i>
+                <span class="text-xs font-medium text-text-base">Tell us about your project</span>
+              </div>
+              <div class="hover-actions flex items-center gap-1">
+                <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Duplicate">
+                  <i data-lucide="copy" class="icon-xs"></i>
+                </button>
+                <button class="p-1 rounded hover:bg-danger-light text-danger transition-base" title="Delete">
+                  <i data-lucide="trash-2" class="icon-xs"></i>
+                </button>
+              </div>
+            </div>
+            <textarea disabled rows="3" placeholder="Share your goals, timeline, and any details…" class="w-full px-2.5 py-1.5 text-sm bg-background border border-border rounded-sm text-text-muted cursor-not-allowed resize-none"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Add section (dashed) -->
+      <button class="w-full flex items-center justify-center gap-2 py-4 rounded-card border border-dashed border-border-strong text-text-muted hover:bg-surface-raised hover:text-primary transition-base text-sm">
+        <i data-lucide="plus" class="icon-sm"></i>
+        <span>Add section</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ===== RIGHT: INSPECTOR (w-80) ===== -->
+  <aside class="w-80 bg-surface border-l border-border flex flex-col flex-none">
+    <!-- Header -->
+    <div class="px-4 py-3.5 border-b border-border flex-none">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-sm font-semibold text-text-base">Full Name</h3>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary-light text-primary font-medium uppercase tracking-wide">Personal</span>
+      </div>
+      <p class="text-xs text-text-muted">Short text field</p>
+    </div>
+
+    <!-- Tabs (pill style) -->
+    <div class="px-3 py-3 border-b border-border-soft flex-none">
+      <div class="flex items-center gap-1 bg-surface-raised rounded-base p-1">
+        <button class="tab-btn active flex-1 px-3 py-1.5 rounded-sm text-xs font-medium" data-tab="general">General</button>
+        <button class="tab-btn flex-1 px-3 py-1.5 rounded-sm text-xs font-medium text-text-muted hover:text-text-base" data-tab="advanced">Advanced</button>
+        <button class="tab-btn flex-1 px-3 py-1.5 rounded-sm text-xs font-medium text-text-muted hover:text-text-base" data-tab="logic">Logic</button>
+      </div>
+    </div>
+
+    <!-- Tab content -->
+    <div class="flex-1 overflow-y-auto">
+      <!-- General tab -->
+      <div class="tab-panel" data-tab-panel="general">
+        <div class="p-4 space-y-3">
+
+          <!-- Display (open) -->
+          <div class="accordion open border border-border rounded-base overflow-hidden">
+            <button class="accordion-header w-full flex items-center justify-between px-3 py-2.5 bg-surface-raised hover:bg-surface-tertiary transition-base">
+              <span class="flex items-center gap-2 text-xs font-semibold text-text-base">
+                <i data-lucide="eye" class="icon-sm text-text-muted"></i>
+                Display
+              </span>
+              <i data-lucide="chevron-right" class="icon-xs accordion-chevron text-text-subtle"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="px-3 py-3 space-y-3">
+                <div>
+                  <label class="block text-[11px] font-medium text-text-muted mb-1">Label</label>
+                  <input type="text" value="Full Name" class="w-full px-2.5 py-1.5 text-sm bg-surface border border-border rounded-sm focus:border-primary focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-medium text-text-muted mb-1">Placeholder</label>
+                  <input type="text" value="Jane Doe" class="w-full px-2.5 py-1.5 text-sm bg-surface border border-border rounded-sm focus:border-primary focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-medium text-text-muted mb-1">Help text</label>
+                  <input type="text" placeholder="Enter your full legal name" class="w-full px-2.5 py-1.5 text-sm bg-surface border border-border rounded-sm focus:border-primary focus:outline-none placeholder:text-text-subtle" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Validation (closed) -->
+          <div class="accordion border border-border rounded-base overflow-hidden">
+            <button class="accordion-header w-full flex items-center justify-between px-3 py-2.5 bg-surface-raised hover:bg-surface-tertiary transition-base">
+              <span class="flex items-center gap-2 text-xs font-semibold text-text-base">
+                <i data-lucide="shield-check" class="icon-sm text-text-muted"></i>
+                Validation
+              </span>
+              <i data-lucide="chevron-right" class="icon-xs accordion-chevron text-text-subtle"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="px-3 py-3 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-text-base">Required</span>
+                  <button class="relative w-9 h-5 rounded-full bg-border transition-base" onclick="this.classList.toggle('bg-primary'); this.classList.toggle('bg-border'); this.querySelector('span').classList.toggle('translate-x-4')">
+                    <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-surface shadow transition-transform translate-x-0"></span>
+                  </button>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-medium text-text-muted mb-1">Min length</label>
+                  <input type="number" placeholder="2" class="w-full px-2.5 py-1.5 text-sm bg-surface border border-border rounded-sm focus:border-primary focus:outline-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Default Value (closed) -->
+          <div class="accordion border border-border rounded-base overflow-hidden">
+            <button class="accordion-header w-full flex items-center justify-between px-3 py-2.5 bg-surface-raised hover:bg-surface-tertiary transition-base">
+              <span class="flex items-center gap-2 text-xs font-semibold text-text-base">
+                <i data-lucide="text-cursor-input" class="icon-sm text-text-muted"></i>
+                Default Value
+              </span>
+              <i data-lucide="chevron-right" class="icon-xs accordion-chevron text-text-subtle"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="px-3 py-3">
+                <input type="text" placeholder="Prefill this field…" class="w-full px-2.5 py-1.5 text-sm bg-surface border border-border rounded-sm focus:border-primary focus:outline-none placeholder:text-text-subtle" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Delete field -->
+        <div class="px-4 pb-4">
+          <button class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-base border border-dashed border-danger/40 text-danger text-xs font-medium hover:bg-danger-light transition-base">
+            <i data-lucide="trash-2" class="icon-sm"></i>
+            Delete field
+          </button>
+        </div>
+      </div>
+
+      <!-- Advanced tab (hidden) -->
+      <div class="tab-panel hidden" data-tab-panel="advanced">
+        <div class="p-4 space-y-3">
+          <div class="text-xs text-text-muted py-8 text-center">Advanced properties appear here.</div>
+        </div>
+      </div>
+
+      <!-- Logic tab (hidden) -->
+      <div class="tab-panel hidden" data-tab-panel="logic">
+        <div class="p-4 space-y-3">
+          <div class="text-xs text-text-muted py-8 text-center">Conditional logic rules appear here.</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ============ STATUS BAR (h-8) ============ -->
+<footer class="h-8 bg-surface-raised border-t border-border flex items-center justify-between px-4 text-xs text-text-muted flex-none">
+  <!-- Left -->
+  <div class="flex items-center gap-4">
+    <div class="flex items-center gap-1.5">
+      <span class="w-1.5 h-1.5 rounded-full bg-success inline-block"></span>
+      <span>Saved 2m ago</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <i data-lucide="layers" class="icon-xs"></i>
+      <span>7 fields, 2 sections</span>
+    </div>
+    <span class="text-text-subtle">Direction E — Outline + inspector</span>
+  </div>
+  <!-- Right -->
+  <div class="flex items-center gap-3">
+    <div class="flex items-center gap-1">
+      <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Desktop">
+        <i data-lucide="monitor" class="icon-xs"></i>
+      </button>
+      <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Tablet">
+        <i data-lucide="tablet" class="icon-xs"></i>
+      </button>
+      <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Mobile">
+        <i data-lucide="smartphone" class="icon-xs"></i>
+      </button>
+    </div>
+    <div class="w-px h-4 bg-border"></div>
+    <div class="flex items-center gap-1">
+      <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Undo">
+        <i data-lucide="undo-2" class="icon-xs"></i>
+      </button>
+      <button class="p-1 rounded hover:bg-surface-tertiary text-text-muted transition-base" title="Redo">
+        <i data-lucide="redo-2" class="icon-xs"></i>
+      </button>
+    </div>
+    <div class="w-px h-4 bg-border"></div>
+    <div class="flex items-center gap-1.5">
+      <i data-lucide="braces" class="icon-xs text-primary"></i>
+      <span>Form Schema</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Map field id -> display name for breadcrumb
+  const fieldNames = {
+    'field-fullname': 'Full Name',
+    'field-email': 'Email',
+    'field-phone': 'Phone',
+    'field-company': 'Company',
+    'field-projecttype': 'Project Type',
+    'field-budget': 'Budget',
+    'field-tellus': 'Tell us about your project',
+  };
+  // Map field id -> section id (for breadcrumb middle)
+  const fieldSection = {
+    'field-fullname': 'section-1',
+    'field-email': 'section-1',
+    'field-phone': 'section-1',
+    'field-company': 'section-1',
+    'field-projecttype': 'section-2',
+    'field-budget': 'section-2',
+    'field-tellus': 'section-2',
+  };
+  const sectionNames = { 'section-1': 'Contact Information', 'section-2': 'Project Details' };
+
+  function selectField(fieldId) {
+    // Update outline tree selection
+    document.querySelectorAll('.outline-field').forEach(n => {
+      n.classList.remove('selected');
+      const icon = n.querySelector('.field-icon');
+      if (icon) { icon.classList.remove('text-primary'); icon.classList.add('text-text-muted'); }
+      const span = n.querySelector('span');
+      if (span) { span.classList.remove('text-text-muted'); span.classList.add('text-text-base'); }
+    });
+    const node = document.querySelector(`.outline-field[data-field="${fieldId}"]`);
+    if (node) {
+      node.classList.add('selected');
+      const icon = node.querySelector('.field-icon');
+      if (icon) { icon.classList.remove('text-text-muted'); icon.classList.add('text-primary'); }
+      const span = node.querySelector('span');
+      if (span) { span.classList.add('text-text-muted'); span.classList.remove('text-text-base'); }
+    }
+
+    // Update canvas selection (ring)
+    document.querySelectorAll('.field-card').forEach(c => {
+      c.classList.remove('border-2', 'border-primary', 'ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-surface');
+      c.classList.add('border');
+    });
+    const card = document.querySelector(`.field-card[data-field="${fieldId}"]`);
+    if (card) {
+      card.classList.remove('border');
+      card.classList.add('border-2', 'border-primary', 'ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-surface');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Update breadcrumb
+    const secId = fieldSection[fieldId];
+    const breadcrumb = document.getElementById('breadcrumb-field');
+    if (breadcrumb) breadcrumb.textContent = fieldNames[fieldId] || '';
+    const secLink = document.querySelector('.breadcrumb-item[data-section-link]');
+    if (secLink) secLink.textContent = sectionNames[secId] || '';
+
+    // Update inspector header
+    const inspTitle = document.querySelector('aside.w-80 h3');
+    if (inspTitle) inspTitle.textContent = fieldNames[fieldId] || '';
+  }
+
+  // Outline field click
+  document.querySelectorAll('.outline-field').forEach(n => {
+    n.addEventListener('click', () => selectField(n.dataset.field));
+  });
+
+  // Canvas field card click
+  document.querySelectorAll('.field-card').forEach(c => {
+    c.addEventListener('click', (e) => {
+      // Ignore clicks on action buttons
+      if (e.target.closest('.hover-actions') || e.target.closest('.drag-handle')) return;
+      selectField(c.dataset.field);
+    });
+  });
+
+  // Section expand/collapse in outline tree
+  document.querySelectorAll('.outline-node').forEach(node => {
+    node.addEventListener('click', () => {
+      const children = node.nextElementSibling;
+      const chevron = node.querySelector('.chevron');
+      const folderIcon = node.querySelector('[data-lucide]');
+      if (children) {
+        const isHidden = children.style.display === 'none';
+        children.style.display = isHidden ? '' : 'none';
+        if (chevron) {
+          chevron.setAttribute('data-lucide', isHidden ? 'chevron-down' : 'chevron-right');
+        }
+        if (folderIcon) {
+          folderIcon.setAttribute('data-lucide', isHidden ? 'folder-open' : 'folder');
+        }
+        lucide.createIcons();
+      }
+    });
+  });
+
+  // Breadcrumb section link -> scroll to section
+  document.querySelectorAll('.breadcrumb-item[data-section-link]').forEach(el => {
+    el.addEventListener('click', () => {
+      const secId = el.dataset.sectionLink;
+      const target = document.getElementById(secId);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Outline section node click -> scroll to section in canvas
+  document.querySelectorAll('.outline-node').forEach(node => {
+    node.addEventListener('click', () => {
+      const secId = node.dataset.section;
+      const target = document.getElementById(secId);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active', 'bg-primary', 'text-primary-foreground');
+        b.classList.add('text-text-muted');
+      });
+      btn.classList.add('active', 'bg-primary', 'text-primary-foreground');
+      btn.classList.remove('text-text-muted');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      const panel = document.querySelector(`.tab-panel[data-tab-panel="${tab}"]`);
+      if (panel) panel.classList.remove('hidden');
+    });
+  });
+
+  // Accordion toggle
+  document.querySelectorAll('.accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const acc = header.closest('.accordion');
+      acc.classList.toggle('open');
+    });
+  });
+
+  // Init icons
+  lucide.createIcons();
+</script>
+</body>
+</html>

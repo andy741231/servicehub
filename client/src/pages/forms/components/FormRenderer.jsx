@@ -692,7 +692,7 @@ const FIELD_COMPONENTS = {
 // Shown when the form's access schedule says "closed right now".
 // Displays the admin's closed message plus, when computable, the next
 // open time and a live countdown that refreshes every second.
-function ClosedScreen({ form, schedule, theme }) {
+function ClosedScreen({ form, schedule, theme, closedMessage }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
@@ -713,7 +713,7 @@ function ClosedScreen({ form, schedule, theme }) {
           {form.title}
         </h1>
         <p className="text-muted leading-relaxed">
-          {schedule?.closedMessage || 'This form is currently closed. Please check back later.'}
+          {closedMessage || schedule?.closedMessage || 'This form is currently closed. Please check back later.'}
         </p>
         {opening && (
           <div className="mt-5 pt-5 border-t border-border-soft">
@@ -748,14 +748,19 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   useEffect(() => {
     const initialData = {};
     (form.fields || []).forEach(field => {
-      if (field.type === 'computed') {
-        initialData[field.id] = '';
-      } else if (field.type === 'repeatingGroup') {
+      if (field.type === 'repeatingGroup') {
         initialData[field.id] = [];
       } else if (field.type === 'checkbox') {
         initialData[field.id] = [];
       } else {
         initialData[field.id] = '';
+      }
+    });
+    // Pre-compute computed fields so they don't flash '' then '0' on first render
+    (form.fields || []).forEach(field => {
+      if (field.type === 'computed' && field.formula) {
+        const { value } = evaluateFormula(field.formula, form.fields, initialData);
+        initialData[field.id] = formatComputedValue(value, field.displayFormat);
       }
     });
     setFormData(initialData);
@@ -1006,6 +1011,11 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
   };
 
   const pageProgress = pages.length > 0 ? (currentPage + 1) / pages.length : 1;
+
+  // Show "form closed" screen when the form is not published (only enforced publicly, not in preview)
+  if (!preview && form?.status && form.status !== 'published') {
+    return <ClosedScreen form={form} schedule={null} theme={theme} closedMessage="This form is not currently published." />;
+  }
 
   // Show "form closed" screen when schedule is active and current time is outside all open windows
   if (!scheduleStatus.open) {

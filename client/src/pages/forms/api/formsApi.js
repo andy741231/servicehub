@@ -51,3 +51,9 @@ export const fetchVersions = (formId) =>
 
 export const restoreVersion = (formId, versionId) =>
   api.post(`/forms/${formId}/versions/${versionId}/restore`).then((res) => res.data.form);
+
+// Folders
+export const fetchFolders = () => api.get('/forms/folders').then((res) => res.data.folders);
+export const createFolderApi = (name) => api.post('/forms/folders', { name }).then((res) => res.data.folder);
+export const updateFolderApi = (id, name) => api.put(`/forms/folders/${id}`, { name }).then((res) => res.data.folder);
+export const deleteFolderApi = (id) => api.delete(`/forms/folders/${id}`).then((res) => res.data);

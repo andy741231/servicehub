@@ -1,0 +1,2 @@
+- link "Skip to main content" [ref=f5e2] [cursor=pointer]:
+  - /url: "#main-content"

@@ -268,6 +268,41 @@
 }
 
 /* ============================================================
+   THEME TOGGLE TRANSITION
+   Smooth, gentle color transition when switching between light
+   and dark mode so the change doesn't flash harshly.
+   - `themeStore.js` adds a temporary `.theme-transitioning` class
+     to <html> during the toggle (fallback path), which animates
+     color/background/border changes on every element for ~400ms.
+     The class is removed afterwards so normal hover/state
+     transitions are unaffected.
+   - Browsers with the View Transitions API get a native crossfade
+     instead (see `::view-transition-*` below).
+   ============================================================ */
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color 1.2s ease,
+              border-color 1.2s ease,
+              color 1.2s ease,
+              fill 1.2s ease,
+              stroke 1.2s ease,
+              box-shadow 1.2s ease,
+              outline-color 1.2s ease !important;
+}
+
+/* View Transitions API — gentle whole-page crossfade (gentler than the
+   default 250ms). Only applied when the user hasn't requested reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 1.2s;
+    animation-timing-function: ease;
+  }
+}
+
+/* ============================================================
    UTILITY CLASSES FOR THEME TOKENS
    Use these in components instead of raw Tailwind values.
    ============================================================ */

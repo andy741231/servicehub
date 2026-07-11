@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, Eye, Download, ArrowLeft, Share2, Check, Plus, X, Undo2, Redo2, History, Smartphone, Tablet, Monitor, Loader2, Search, PanelsTopLeft, MoreHorizontal, ChevronDown, Pencil, ChevronLeft, ChevronRight, PanelLeft, PanelRight, Type, List, Calculator, User, SeparatorHorizontal, Code, Copy, AlertTriangle } from 'lucide-react';
+import { Save, Eye, Download, ArrowLeft, Share2, Check, Plus, X, Undo2, Redo2, History, Smartphone, Tablet, Monitor, Loader2, Search, PanelsTopLeft, MoreHorizontal, ChevronDown, Power, ChevronRight, Code, Copy, AlertTriangle, Menu, FileText, Layers } from 'lucide-react';
 import FormCanvas from './components/FormCanvas';
 import FormRenderer from './components/FormRenderer';
-import FieldPalette from './components/FieldPalette';
+import OutlineTree from './components/OutlineTree';
 import { FIELD_TYPES, accentFor, CATEGORY_ACCENT, CATEGORY_ORDER } from './components/FieldPalette';
 import PropertiesPanel from './components/PropertiesPanel';
 import VersionHistoryPanel from './components/VersionHistoryPanel';
@@ -11,21 +11,11 @@ import useFormStore from './store/formStore';
 import { isDuplicateName } from './utils/slug';
 import { useToast } from '../../components/Toast';
 
-// Representative icon per field category — used by the collapsed left rail
-const CATEGORY_ICON = {
-  Basic: Type,
-  Choice: List,
-  Advanced: Calculator,
-  Personal: User,
-  Layout: SeparatorHorizontal,
-};
-
 export default function FormsBuilder() {
   const navigate = useNavigate();
   const { formSlug } = useParams();
   const [selectedField, setSelectedField] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [formTitle, setFormTitle] = useState('Untitled Form');
   const [formDescription, setFormDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -36,10 +26,6 @@ export default function FormsBuilder() {
   // When set, the field modal adds the new field as a child of this repeating group
   const [targetGroupId, setTargetGroupId] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
-  // Inline rename via the header breadcrumb title
-  const [headerEditing, setHeaderEditing] = useState(false);
-  const [headerTitle, setHeaderTitle] = useState('');
-  const headerInputRef = useRef(null);
   const [historyOpenCount, setHistoryOpenCount] = useState(0);
   // Right-pane mode: 'design' shows properties, 'preview' shows live split preview
   const [rightMode, setRightMode] = useState('design');
@@ -65,9 +51,6 @@ export default function FormsBuilder() {
   });
   // ARIA live announcement text (for structural changes: add/remove/reorder)
   const [ariaAnnouncement, setAriaAnnouncement] = useState('');
-  // Collapsible sidebars — give the canvas more room when the user is focused on editing
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
   // Responsive drawer mode: on narrow screens the sidebars overlay instead of pushing the canvas.
   // `leftDrawerOpen` / `rightDrawerOpen` are only meaningful below the lg breakpoint.
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
@@ -87,33 +70,6 @@ export default function FormsBuilder() {
   }, []);
   const isNarrow = viewportWidth < 768;   // md breakpoint — drawers
   const isCompact = viewportWidth < 1024; // lg breakpoint — auto-collapse right
-  // Effective collapse states account for responsive behaviour.
-  // Left panel: only user-controlled collapse on wide screens; drawers on narrow.
-  const leftCollapsed = !isNarrow && isLeftCollapsed;
-  // Right panel: auto-collapses on compact screens, but `rightDrawerOpen` can
-  // temporarily pop it out as an overlay drawer (so rail icons still work).
-  const rightIsDrawer = isNarrow || (isCompact && rightDrawerOpen);
-  const rightCollapsed = !rightIsDrawer && !isNarrow && (isRightCollapsed || isCompact);
-
-  // Open the right panel from the collapsed rail — expands inline on wide screens,
-  // or opens as an overlay drawer on compact screens.
-  const openRightPanel = (mode) => {
-    setShowHistory(false);
-    setRightMode(mode);
-    if (isCompact && !isNarrow) {
-      setRightDrawerOpen(true);
-    } else {
-      setIsRightCollapsed(false);
-    }
-  };
-  const openRightHistory = () => {
-    setShowHistory(true);
-    if (isCompact && !isNarrow) {
-      setRightDrawerOpen(true);
-    } else {
-      setIsRightCollapsed(false);
-    }
-  };
 
   // Filtered field list for the command palette (computed once, used in render + keyboard nav)
   const paletteResults = useMemo(() => {
@@ -187,7 +143,7 @@ export default function FormsBuilder() {
     redo,
     _history,
     _future,
-    renameForm,
+    setFormStatus,
   } = useFormStore();
   const { toast, ToastMount } = useToast();
 
@@ -225,6 +181,7 @@ export default function FormsBuilder() {
   }, [showFieldModal, showCommandPalette, undo, redo]);
 
   const currentForm = forms.find((f) => f.id === currentFormId);
+  const formStatus = currentForm?.status || (fields.length === 0 ? 'draft' : 'published');
   const findFormBySlug = (slug) => forms.find((f) => f.slug === slug || f.id === slug);
 
   // Live validation: detect duplicate form names as the user types.
@@ -234,6 +191,11 @@ export default function FormsBuilder() {
     () => formTitle.trim().length > 0 && isDuplicateName(formTitle, forms, currentFormId),
     [formTitle, forms, currentFormId]
   );
+
+  const selectedFieldObj = fields.find((f) => f.id === selectedField);
+  const selectedSectionObj = rows.find((r) => r.id === selectedSection);
+  const breadcrumbSection = selectedSectionObj?.label || (selectedFieldObj ? rows.find((r) => r.id === selectedFieldObj.rowId)?.label : null);
+  const breadcrumbField = selectedFieldObj?.label || null;
 
   useEffect(() => {
     loadForms();
@@ -456,6 +418,13 @@ export default function FormsBuilder() {
   // Keep the ref in sync so the global Ctrl+S listener can invoke the latest closure
   handleSaveRef.current = handleSave;
 
+  const handlePublish = () => {
+    if (!currentFormId) return;
+    const next = formStatus === 'published' ? 'draft' : 'published';
+    setFormStatus(currentFormId, next);
+    toast(next === 'published' ? 'Form published.' : 'Form unpublished.', 'success');
+  };
+
   const handleExport = () => {
     const formSchema = JSON.stringify({
       title: formTitle,
@@ -489,63 +458,6 @@ export default function FormsBuilder() {
     }
   };
 
-  // Inline rename from the header breadcrumb title.
-  const startHeaderRename = () => {
-    setHeaderTitle(formTitle);
-    setHeaderEditing(true);
-    setTimeout(() => headerInputRef.current?.select(), 30);
-  };
-  const commitHeaderRename = async () => {
-    const trimmed = (headerTitle || '').trim();
-    setHeaderEditing(false);
-    if (!trimmed || trimmed === formTitle || !currentFormId) return;
-    if (isDuplicateName(trimmed, forms, currentFormId)) {
-      toast('A form with this name already exists.', 'error');
-      return;
-    }
-    setFormTitle(trimmed);
-    try {
-      await renameForm(currentFormId, trimmed);
-      toast(`Renamed to "${trimmed}".`, 'success');
-    } catch (e) {
-      if (e?.response?.status === 409) {
-        toast('A form with this name already exists.', 'error');
-        setFormTitle(formTitle);
-      } else {
-        toast('Failed to rename. Please try again.', 'error');
-        setFormTitle(formTitle);
-      }
-    }
-  };
-
-  if (showPreview) {
-    const currentForm = forms.find((f) => f.id === currentFormId);
-    if (!currentForm) return null;
-
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="fixed top-4 left-4 z-50">
-          <button
-            onClick={() => setShowPreview(false)}
-            className="flex items-center gap-2 px-4 py-2 bg-surface-raised border border-border rounded-base text-body hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors duration-150 shadow-lg"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Editor
-          </button>
-        </div>
-        <FormRenderer
-          form={{
-            ...currentForm,
-            title: formTitle,
-            description: formDescription,
-            fields,
-          }}
-          preview
-        />
-      </div>
-    );
-  }
-
   if (isLoading && !currentFormId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -558,7 +470,7 @@ export default function FormsBuilder() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background">
       {/* Skip-to-content link for keyboard users */}
       <a
         href="#form-canvas"
@@ -568,274 +480,136 @@ export default function FormsBuilder() {
       </a>
       {/* ARIA live region for structural change announcements */}
       <div aria-live="polite" className="sr-only">{ariaAnnouncement}</div>
-      {/* Left Sidebar — Field Palette (collapsible rail / overlay drawer on narrow screens) */}
+      <div className="flex flex-1 overflow-hidden">
+      {/* Backdrop for mobile drawer */}
       {isNarrow && leftDrawerOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-30"
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
           onClick={() => setLeftDrawerOpen(false)}
           aria-hidden="true"
         />
       )}
+      {/* Left Sidebar — Outline tree */}
       <aside
-        className={`${isNarrow ? `fixed left-0 top-0 bottom-0 z-40 shadow-modal w-60 ${leftDrawerOpen ? '' : '-translate-x-full'}` : `flex-shrink-0 border-r border-border ${leftCollapsed ? 'w-12' : 'w-60'}`} bg-surface flex flex-col sidebar-transition`}
-        aria-label="Field palette"
+        className={`${
+          isNarrow
+            ? `fixed left-0 top-0 bottom-0 z-50 w-64 bg-surface border-r border-border flex flex-col transition-transform duration-200 ${leftDrawerOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : 'w-64 flex-shrink-0 border-r border-border bg-surface flex flex-col'
+        }`}
+        aria-label="Form outline"
       >
-        {leftCollapsed ? (
-          // ── Collapsed icon rail ──
-          <>
-            <div className="p-2 border-b border-border flex flex-col items-center gap-1">
-              <button
-                onClick={() => { setTargetRowId(null); setShowFieldModal(true); }}
-                className="flex items-center justify-center w-8 h-8 rounded-base text-muted hover:text-primary hover:bg-primary-light/40 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                title="Browse all fields"
-                aria-label="Browse all fields"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setShowCommandPalette(true)}
-                className="flex items-center justify-center w-8 h-8 rounded-base text-muted hover:text-base hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary text-xs font-mono"
-                title="Command palette (/)"
-                aria-label="Open command palette"
-              >
-                /
-              </button>
-              <button
-                onClick={() => setIsLeftCollapsed(false)}
-                className="flex items-center justify-center w-8 h-8 rounded-base text-muted hover:text-base hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                title="Expand panel"
-                aria-label="Expand field palette"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 flex flex-col items-center gap-1 p-2 overflow-y-auto">
-              {CATEGORY_ORDER.map((category) => {
-                const Icon = CATEGORY_ICON[category];
-                const accent = accentFor(category);
-                if (!Icon) return null;
-                return (
-                  <button
-                    key={category}
-                    onClick={() => setIsLeftCollapsed(false)}
-                    className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${accent.chip}`}
-                    title={`${category} fields — expand to browse`}
-                    aria-label={`${category} fields`}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          // ── Expanded panel ──
-          <>
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-small font-semibold text-base uppercase tracking-wide">Add Field</h2>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setShowCommandPalette(true)}
-                    className="flex items-center gap-1 px-1.5 py-0.5 text-xs text-muted hover:text-base border border-border rounded hover:bg-surface-raised transition-colors"
-                    title="Command palette (/)"
-                    aria-label="Open command palette"
-                  >
-                    <span>/</span>
-                  </button>
-                  {isNarrow ? (
-                    <button
-                      onClick={() => setLeftDrawerOpen(false)}
-                      className="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-base hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title="Close panel"
-                      aria-label="Close field palette"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setIsLeftCollapsed(true)}
-                      className="flex items-center justify-center w-6 h-6 rounded text-muted hover:text-base hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title="Collapse panel"
-                      aria-label="Collapse field palette"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => { setTargetRowId(null); setShowFieldModal(true); }}
-                className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-border rounded-base text-small text-muted hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
-              >
-                <Plus className="h-4 w-4" />
-                Browse all fields
-              </button>
-            </div>
-            <FieldPalette onAddField={handleAddField} />
-            <div className="p-3 border-t border-border text-xs text-subtle">
-              <p>Tip: press <kbd className="px-1 py-0.5 bg-surface-raised border border-border rounded text-small">/</kbd> to add a field fast.</p>
-            </div>
-          </>
+        {/* Mobile close button at top of drawer */}
+        {isNarrow && (
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <span className="text-small font-semibold">Outline</span>
+            <button
+              onClick={() => setLeftDrawerOpen(false)}
+              className="p-2 text-muted hover:text-base hover:bg-surface-raised rounded min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Close outline panel"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         )}
+        <OutlineTree
+          fields={fields}
+          rows={rows}
+          selectedField={selectedField}
+          selectedSection={selectedSection}
+          onSelectField={(id) => { handleSelectField(id); if (isNarrow) setLeftDrawerOpen(false); }}
+          onSelectSection={(id) => { handleSelectSection(id); if (isNarrow) setLeftDrawerOpen(false); }}
+          onAddSection={() => addRow('1')}
+          onAddField={(rowId) => { setTargetRowId(rowId); setShowFieldModal(true); }}
+        />
       </aside>
 
       {/* Main Canvas Area */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top Toolbar */}
-        <header className="h-14 bg-surface border-b border-border flex items-center px-3 gap-3">
-          {/* Left cluster: back · undo/redo · form breadcrumb + status */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+        <header className="h-14 bg-surface border-b border-border flex items-center justify-between px-4">
+          {/* Left cluster: back · file icon · 2-line title + save status */}
+          <div className="flex items-center gap-3">
             {isNarrow && (
               <button
-                onClick={() => setLeftDrawerOpen((v) => !v)}
-                className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
-                title="Toggle field palette"
-                aria-label="Toggle field palette"
+                onClick={() => setLeftDrawerOpen(true)}
+                className="p-2 text-subtle hover:text-base hover:bg-surface-raised rounded-base min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+                title="Open outline"
+                aria-label="Open outline panel"
               >
-                <PanelLeft className="h-4 w-4" />
+                <Menu className="h-5 w-5" />
               </button>
             )}
-            <button
-              onClick={handleBackToDashboard}
-              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
-              title="Back to dashboard"
-              aria-label="Back to dashboard"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <div className="h-6 w-px bg-border mx-0.5" aria-hidden="true" />
-            <button
-              onClick={undo}
-              disabled={!_history.length}
-              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
-              title="Undo (Ctrl+Z)"
-              aria-label="Undo"
-            >
-              <Undo2 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={redo}
-              disabled={!_future.length}
-              className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100"
-              title="Redo (Ctrl+Y)"
-              aria-label="Redo"
-            >
-              <Redo2 className="h-4 w-4" />
-            </button>
-            <div className="h-6 w-px bg-border mx-0.5" aria-hidden="true" />
-            {/* Form breadcrumb + status badge */}
-            <div className="flex items-center gap-2 min-w-0 max-w-[280px]">
-              {headerEditing ? (
-                <input
-                  ref={headerInputRef}
-                  type="text"
-                  value={headerTitle}
-                  onChange={(e) => setHeaderTitle(e.target.value)}
-                  onBlur={commitHeaderRename}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitHeaderRename(); }
-                    if (e.key === 'Escape') { setHeaderEditing(false); }
-                  }}
-                  className="text-small font-semibold text-base bg-surface border border-border rounded px-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-primary min-w-0 max-w-[200px]"
-                  aria-label="Rename form"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={startHeaderRename}
-                  className="group inline-flex items-center gap-1 min-w-0 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 px-0.5"
-                  title="Click to rename"
-                  aria-label="Rename form"
-                >
-                  <span className="text-small font-semibold text-base truncate" title={formTitle}>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleBackToDashboard}
+                className="p-1.5 rounded-md hover:bg-surface-raised text-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                title="Back to dashboard"
+                aria-label="Back to dashboard"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <div className="flex flex-col leading-tight">
+                  <h1 className="text-sm font-semibold text-base truncate max-w-[200px]" title={formTitle}>
                     {formTitle || 'Untitled Form'}
-                  </span>
-                  <Pencil className="h-3 w-3 text-subtle opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" aria-hidden="true" />
-                </button>
-              )}
-              <span className={`badge flex-shrink-0 ${fields.length === 0 ? 'badge-neutral' : 'badge-success'}`}>
-                {fields.length === 0 ? 'Draft' : 'Published'}
-              </span>
+                  </h1>
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    {saveStatus === 'saving' ? (
+                      <><Loader2 className="h-3 w-3 animate-spin" /> <span>Saving…</span></>
+                    ) : saveStatus === 'error' ? (
+                      <><span className="w-1.5 h-1.5 rounded-full bg-danger" /> <span>Save error</span></>
+                    ) : (
+                      <><span className="w-1.5 h-1.5 rounded-full bg-success" /> <span>{saveStatus === 'saved' ? 'Saved' : 'Saved'}</span></>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Center cluster: autosave status */}
-          <div className="flex-1 flex items-center justify-center min-w-0" aria-live="polite">
-            {saveStatus === 'saving' && (
-              <span className="flex items-center gap-1.5 text-small text-muted bg-surface-raised/60 px-2.5 py-1 rounded-full">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
-              </span>
-            )}
-            {saveStatus === 'saved' && (
-              <span className="flex items-center gap-1.5 text-small text-success bg-success-light px-2.5 py-1 rounded-full animate-in fade-in zoom-in-110 duration-200">
-                <Check className="h-3.5 w-3.5" /> Saved
-              </span>
-            )}
-            {saveStatus === 'unsaved' && (
-              <span className="flex items-center gap-1.5 text-small text-muted bg-surface-raised/60 px-2.5 py-1 rounded-full">
-                <span className="h-2 w-2 rounded-full bg-warning animate-pulse" /> Unsaved changes
-              </span>
-            )}
-            {saveStatus === 'error' && (
-              <span className="flex items-center gap-1.5 text-small text-danger bg-danger-light px-2.5 py-1 rounded-full" title={saveError || 'Save failed'}>
-                <X className="h-3.5 w-3.5" /> Save error
-              </span>
-            )}
-          </div>
-
-          {/* Right cluster: preview · share · more (export/history) · save */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Right cluster: share · more (export/history/publish) · save */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             {isNarrow && (
               <button
-                onClick={() => setRightDrawerOpen((v) => !v)}
-                className="p-2 text-subtle hover:text-muted hover:bg-surface-raised rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-w-[44px] min-h-[44px] transition-all duration-150 active:scale-95"
-                title="Toggle properties panel"
-                aria-label="Toggle properties panel"
+                onClick={() => setRightDrawerOpen(true)}
+                className="p-2 text-subtle hover:text-base hover:bg-surface-raised rounded-base min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+                title="Open properties"
+                aria-label="Open properties panel"
               >
-                <PanelRight className="h-4 w-4" />
+                <PanelsTopLeft className="h-5 w-5" />
               </button>
             )}
             <button
-              onClick={() => setShowPreview(true)}
-              className="flex items-center gap-1.5 px-2.5 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-all duration-150 active:scale-95"
-              title="Preview form"
-              aria-label="Preview form"
-            >
-              <Eye className="h-4 w-4" aria-hidden="true" />
-              <span className="text-body">Preview</span>
-            </button>
-            <button
               onClick={handleShareForm}
-              className="flex items-center gap-1.5 px-2.5 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-all duration-150 active:scale-95"
+              className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-border text-sm text-base hover:bg-surface-raised transition-colors"
               title="Share form"
               aria-label="Share form"
             >
               {copiedToClipboard ? (
                 <>
                   <Check className="h-4 w-4 text-success" aria-hidden="true" />
-                  <span className="text-body text-success">Copied</span>
+                  <span className="hidden sm:inline">Copied</span>
                 </>
               ) : (
                 <>
                   <Share2 className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-body">Share</span>
+                  <span className="hidden sm:inline">Share</span>
                 </>
               )}
             </button>
 
-            {/* More overflow menu: Export · History */}
+            {/* More overflow menu: Export · History · Publish */}
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu((v) => !v)}
-                className={`flex items-center gap-1 px-2 py-2 border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-all duration-150 active:scale-95 ${showMoreMenu ? 'bg-surface border-border-strong shadow-sm' : 'bg-surface-raised border-border hover:bg-surface'}`}
+                className={`flex items-center px-1.5 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] transition-colors ${showMoreMenu ? 'bg-surface-raised' : 'hover:bg-surface-raised text-muted'}`}
                 title="More actions"
                 aria-label="More actions"
                 aria-haspopup="menu"
                 aria-expanded={showMoreMenu}
               >
                 <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                <ChevronDown className="h-3 w-3 text-subtle" aria-hidden="true" />
               </button>
               {showMoreMenu && (
                 <>
@@ -858,37 +632,68 @@ export default function FormsBuilder() {
                       <History className="h-4 w-4 text-subtle" aria-hidden="true" />
                       Version history
                     </button>
+                    <button
+                      onClick={() => { handlePublish(); setShowMoreMenu(false); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-body hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset ${showHistory ? 'text-primary' : 'text-base'}`}
+                      role="menuitem"
+                    >
+                      <Power className="h-4 w-4 text-subtle" aria-hidden="true" />
+                      {formStatus === 'published' ? 'Unpublish' : 'Publish'}
+                    </button>
                   </div>
                 </>
               )}
             </div>
 
-            <div className="h-6 w-px bg-border mx-0.5" aria-hidden="true" />
             <button
               onClick={handleSave}
               disabled={isSaving || isDuplicateTitle}
-              className="flex items-center gap-2 px-3.5 py-2 bg-primary text-primary-foreground rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
+              className="flex items-center gap-1.5 px-3 h-8 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={isDuplicateTitle ? 'Fix the duplicate form name before saving' : 'Save form (Ctrl+S)'}
               aria-label="Save form"
               aria-disabled={isDuplicateTitle}
             >
               <Save className="h-4 w-4" aria-hidden="true" />
-              <span className="text-body">{isSaving ? 'Saving…' : 'Save'}</span>
+              <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Save'}</span>
             </button>
           </div>
         </header>
+
+        {/* Breadcrumb */}
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border-soft px-8 py-2.5 flex items-center gap-1.5 text-xs">
+          <FileText className="h-3.5 w-3.5 text-subtle" />
+          <button onClick={() => { setSelectedField(null); setSelectedSection(null); }} className="hover:text-primary transition-colors truncate max-w-[120px] sm:max-w-[200px]" title={formTitle}>
+            {formTitle || 'Untitled Form'}
+          </button>
+          {breadcrumbSection && (
+            <>
+              <ChevronRight className="h-3 w-3 flex-shrink-0 text-subtle" />
+              <button onClick={() => { setSelectedField(null); }} className="hover:text-primary transition-colors truncate max-w-[100px] sm:max-w-[150px]" title={breadcrumbSection}>
+                {breadcrumbSection}
+              </button>
+            </>
+          )}
+          {selectedField && breadcrumbField && (
+            <>
+              <ChevronRight className="h-3 w-3 flex-shrink-0 text-subtle" />
+              <span className="text-primary font-medium truncate max-w-[100px] sm:max-w-[150px]" title={breadcrumbField}>
+                {breadcrumbField}
+              </span>
+            </>
+          )}
+        </div>
 
         {/* Canvas */}
         <div
           id="form-canvas"
           tabIndex={-1}
-          className="flex-1 overflow-y-auto bg-background canvas-grid focus:outline-none"
+          className="flex-1 overflow-y-auto bg-background focus:outline-none"
           onClick={(e) => {
             if (e.target === e.currentTarget) { setSelectedField(null); setSelectedSection(null); }
           }}
         >
           <div
-            className={`mx-auto px-6 py-6 md:px-10 md:py-10 ${rows.some((r) => r.columns !== '1') ? 'max-w-6xl' : 'max-w-3xl'}`}
+            className={`mx-auto px-8 py-8 ${rows.some((r) => r.columns !== '1') ? 'max-w-5xl' : 'max-w-2xl'}`}
             onClick={(e) => {
               if (e.target === e.currentTarget) { setSelectedField(null); setSelectedSection(null); }
             }}
@@ -966,56 +771,52 @@ export default function FormsBuilder() {
         </div>
       </main>
 
-      {/* Right Sidebar - Version History, Properties, or Live Preview (collapsible rail / overlay drawer on narrow screens) */}
-      {rightIsDrawer && rightDrawerOpen && (
+      {/* Backdrop for mobile drawer */}
+      {isNarrow && rightDrawerOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-30"
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
           onClick={() => setRightDrawerOpen(false)}
           aria-hidden="true"
         />
       )}
+      {/* Right Sidebar - Version History, Properties, or Live Preview */}
       <aside
-        className={`${rightIsDrawer ? `fixed right-0 top-0 bottom-0 z-40 shadow-modal w-80 ${rightDrawerOpen ? '' : 'translate-x-full'}` : `${rightCollapsed ? 'w-12' : 'w-80'} flex-shrink-0 border-l border-border`} bg-surface flex flex-col sidebar-transition`}
+        className={`${
+          isNarrow
+            ? `fixed right-0 top-0 bottom-0 z-50 w-80 bg-surface border-l border-border flex flex-col transition-transform duration-200 ${rightDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`
+            : 'w-80 flex-shrink-0 border-l border-border bg-surface flex flex-col'
+        }`}
         aria-label={showHistory ? 'Version history' : rightMode === 'preview' ? 'Live preview' : 'Properties panel'}
       >
-        {rightCollapsed && !rightIsDrawer ? (
-          // ── Collapsed icon rail ──
-          <div className="flex flex-col items-center gap-1 p-2">
+        {/* Mobile close button at top of drawer — history mode */}
+        {isNarrow && showHistory && (
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <span className="text-small font-semibold">Version History</span>
             <button
-              onClick={() => openRightPanel('design')}
-              className={`flex items-center justify-center w-8 h-8 rounded-base transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${!showHistory && rightMode === 'design' ? 'bg-primary-light text-primary' : 'text-muted hover:text-base hover:bg-surface-raised'}`}
-              title="Design (properties)"
-              aria-label="Open design panel"
+              onClick={() => { setShowHistory(false); setRightDrawerOpen(false); }}
+              className="p-2 text-muted hover:text-base hover:bg-surface-raised rounded min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Close history"
             >
-              <PanelsTopLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => openRightPanel('preview')}
-              className={`flex items-center justify-center w-8 h-8 rounded-base transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${!showHistory && rightMode === 'preview' ? 'bg-primary-light text-primary' : 'text-muted hover:text-base hover:bg-surface-raised'}`}
-              title="Live preview"
-              aria-label="Open live preview"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
-            <button
-              onClick={openRightHistory}
-              className={`flex items-center justify-center w-8 h-8 rounded-base transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${showHistory ? 'bg-primary-light text-primary' : 'text-muted hover:text-base hover:bg-surface-raised'}`}
-              title="Version history"
-              aria-label="Open version history"
-            >
-              <History className="h-4 w-4" />
-            </button>
-            <div className="h-px w-6 bg-border my-1" aria-hidden="true" />
-            <button
-              onClick={() => setIsRightCollapsed(false)}
-              className="flex items-center justify-center w-8 h-8 rounded-base text-muted hover:text-base hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-              title="Expand panel"
-              aria-label="Expand panel"
-            >
-              <ChevronLeft className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </button>
           </div>
-        ) : showHistory ? (
+        )}
+        {/* Mobile close button at top of drawer — design/preview/code mode */}
+        {isNarrow && !showHistory && (
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <span className="text-small font-semibold">
+              {rightMode === 'design' ? 'Properties' : rightMode === 'preview' ? 'Preview' : 'Code'}
+            </span>
+            <button
+              onClick={() => setRightDrawerOpen(false)}
+              className="p-2 text-muted hover:text-base hover:bg-surface-raised rounded min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Close panel"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        {showHistory ? (
           <VersionHistoryPanel
             key={`history-${historyOpenCount}`}
             formId={currentFormId}
@@ -1026,154 +827,135 @@ export default function FormsBuilder() {
               setShowHistory(false);
             }}
           />
-        ) : (
-          <>
-            {/* Segmented control: Design | Preview | Code + collapse/close */}
-            <div className="flex items-center gap-1 p-2 border-b border-border bg-surface-raised">
-              <div className="flex-1 flex items-center gap-0.5 p-0.5 bg-surface rounded-base border border-border">
-                {[
-                  { id: 'design', label: 'Design', icon: PanelsTopLeft },
-                  { id: 'preview', label: 'Preview', icon: Eye },
-                  { id: 'code', label: 'Code', icon: Code },
-                ].map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => setRightMode(id)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-base text-small font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary ${rightMode === id ? 'bg-surface text-base shadow-sm' : 'text-muted hover:text-base'}`}
-                    aria-pressed={rightMode === id}
-                  >
-                    <Icon className="h-3.5 w-3.5" /> {label}
-                  </button>
-                ))}
-              </div>
-              {rightIsDrawer ? (
-                <button
-                  onClick={() => setRightDrawerOpen(false)}
-                  className="flex items-center justify-center w-7 h-7 rounded-base text-muted hover:text-base hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                  title="Close panel"
-                  aria-label="Close panel"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+        ) : rightMode === 'preview' ? (
+          <div className="flex-1 overflow-y-auto bg-background p-3">
+            <div
+              className="mx-auto transition-all duration-200 bg-surface rounded-lg shadow-card overflow-hidden border border-border"
+              style={{ maxWidth: deviceWidth === 'mobile' ? 375 : deviceWidth === 'tablet' ? 768 : '100%' }}
+            >
+              {currentForm ? (
+                <FormRenderer
+                  form={{
+                    ...currentForm,
+                    title: formTitle,
+                    description: formDescription,
+                    fields,
+                  }}
+                  preview
+                />
               ) : (
-                <button
-                  onClick={() => setIsRightCollapsed(true)}
-                  className="flex items-center justify-center w-7 h-7 rounded-base text-muted hover:text-base hover:bg-surface transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                  title="Collapse panel"
-                  aria-label="Collapse panel"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                <div className="p-8 text-center text-muted text-body">Loading preview…</div>
               )}
             </div>
-
-            {rightMode === 'design' ? (
-              <>
-                <div className="px-4 py-3 border-b border-border">
-                  {(selectedField || selectedSection) ? (
-                    <button
-                      onClick={() => { setSelectedField(null); setSelectedSection(null); }}
-                      className="flex items-center gap-1 text-small text-muted hover:text-base mb-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded"
-                      aria-label="Back to form properties"
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                      Form properties
-                    </button>
-                  ) : null}
-                  <h2 className="text-lg font-bold text-base truncate">
-                    {selectedField
-                      ? (fields.find((f) => f.id === selectedField)?.label || 'Field Properties')
-                      : selectedSection
-                      ? (rows.find((r) => r.id === selectedSection)?.label || 'Section Properties')
-                      : 'Form Properties'}
-                  </h2>
-                  <p className="text-small text-muted mt-0.5">
-                    {selectedField ? 'Edit the selected field' : selectedSection ? 'Edit the selected section' : 'Form-wide settings & theme'}
-                  </p>
-                </div>
-                <PropertiesPanel
-                  selectedField={selectedField}
-                  selectedSection={selectedSection}
-                  onUpdateField={() => {}}
-                />
-              </>
-            ) : rightMode === 'preview' ? (
-              <>
-                {/* Sticky preview header with device-width label */}
-                <div className="flex items-center justify-between gap-2 p-2 border-b border-border bg-surface">
-                  <span className="text-xs text-muted px-1">
-                    {deviceWidth === 'mobile' ? 'Mobile · 375px' : deviceWidth === 'tablet' ? 'Tablet · 768px' : 'Desktop · 100%'}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {[
-                      { id: 'mobile', icon: Smartphone, label: 'Mobile' },
-                      { id: 'tablet', icon: Tablet, label: 'Tablet' },
-                      { id: 'desktop', icon: Monitor, label: 'Desktop' },
-                    ].map(({ id, icon: Icon, label }) => (
-                      <button
-                        key={id}
-                        onClick={() => setDeviceWidth(id)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-small transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${deviceWidth === id ? 'bg-primary-light text-primary' : 'text-muted hover:text-base hover:bg-surface-raised'}`}
-                        title={label}
-                        aria-pressed={deviceWidth === id}
-                        aria-label={`${label} preview`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">{label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto bg-background p-3">
-                  {/* Device frame — thin bezel mimic */}
-                  <div
-                    className="mx-auto transition-all duration-200 bg-white rounded-lg shadow-card overflow-hidden border border-border"
-                    style={{ maxWidth: deviceWidth === 'mobile' ? 375 : deviceWidth === 'tablet' ? 768 : '100%' }}
-                  >
-                    {currentForm ? (
-                      <FormRenderer
-                        form={{
-                          ...currentForm,
-                          title: formTitle,
-                          description: formDescription,
-                          fields,
-                        }}
-                        preview
-                      />
-                    ) : (
-                      <div className="p-8 text-center text-muted text-body">Loading preview…</div>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              /* ── Code mode: exported JSON schema ── */
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-surface">
-                  <span className="text-xs text-muted">Form schema (JSON)</span>
-                  <button
-                    onClick={() => {
-                      const schema = JSON.stringify({ title: formTitle, description: formDescription, fields, rows }, null, 2);
-                      navigator.clipboard?.writeText(schema);
-                      toast('Schema copied to clipboard');
-                    }}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-small text-muted hover:text-base hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                    title="Copy schema to clipboard"
-                    aria-label="Copy schema to clipboard"
-                  >
-                    <Copy className="h-3.5 w-3.5" /> Copy
-                  </button>
-                </div>
-                <div className="flex-1 overflow-auto bg-surface-raised/50 p-3">
-                  <pre className="text-code text-base whitespace-pre-wrap break-words font-mono">
-                    {JSON.stringify({ title: formTitle, description: formDescription, fields, rows }, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            )}
-          </>
+          </div>
+        ) : rightMode === 'code' ? (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-surface">
+              <span className="text-xs text-muted">Form schema (JSON)</span>
+              <button
+                onClick={() => {
+                  const schema = JSON.stringify({ title: formTitle, description: formDescription, fields, rows }, null, 2);
+                  navigator.clipboard?.writeText(schema);
+                  toast('Schema copied to clipboard');
+                }}
+                className="flex items-center gap-1 px-2 py-1 rounded text-small text-muted hover:text-base hover:bg-surface-raised transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Copy schema to clipboard"
+                aria-label="Copy schema to clipboard"
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto bg-surface-raised/50 p-3">
+              <pre className="text-code text-base whitespace-pre-wrap break-words font-mono">
+                {JSON.stringify({ title: formTitle, description: formDescription, fields, rows }, null, 2)}
+              </pre>
+            </div>
+          </div>
+        ) : (
+          /* Design mode — PropertiesPanel handles its own header */
+          <PropertiesPanel
+            selectedField={selectedField}
+            selectedSection={selectedSection}
+            onUpdateField={() => {}}
+          />
         )}
       </aside>
+      </div>
+
+      <footer className="h-8 bg-surface-raised border-t border-border flex items-center justify-between px-4 text-xs text-muted flex-shrink-0">
+        {/* Left: save status + counts */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            {saveStatus === 'saving' ? <Loader2 className="h-3 w-3 animate-spin" /> :
+             saveStatus === 'error' ? <X className="h-3 w-3 text-danger" /> :
+             <span className="w-1.5 h-1.5 rounded-full bg-success" />}
+            <span>{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Save error' : 'Saved'}</span>
+          </div>
+          <div className="flex items-center gap-1.5 hidden sm:flex">
+            <Layers className="h-3 w-3" />
+            <span>{fields.length} fields, {rows.length} sections</span>
+          </div>
+        </div>
+        {/* Right: mode toggle + device preview + undo/redo + schema label */}
+        <div className="flex items-center gap-3">
+          {/* Mode toggle: Design | Preview | Code */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => { setRightMode('design'); setShowHistory(false); }}
+              className={`px-2 py-0.5 rounded text-xs transition-colors ${rightMode === 'design' && !showHistory ? 'bg-primary-light text-primary font-medium' : 'text-muted hover:text-base hover:bg-surface'}`}
+              title="Design mode"
+              aria-pressed={rightMode === 'design' && !showHistory}
+            >
+              Design
+            </button>
+            <button
+              onClick={() => { setRightMode('preview'); setShowHistory(false); }}
+              className={`px-2 py-0.5 rounded text-xs transition-colors ${rightMode === 'preview' && !showHistory ? 'bg-primary-light text-primary font-medium' : 'text-muted hover:text-base hover:bg-surface'}`}
+              title="Preview mode"
+              aria-pressed={rightMode === 'preview' && !showHistory}
+            >
+              Preview
+            </button>
+            <button
+              onClick={() => { setRightMode('code'); setShowHistory(false); }}
+              className={`px-2 py-0.5 rounded text-xs transition-colors ${rightMode === 'code' && !showHistory ? 'bg-primary-light text-primary font-medium' : 'text-muted hover:text-base hover:bg-surface'}`}
+              title="Code mode"
+              aria-pressed={rightMode === 'code' && !showHistory}
+            >
+              Code
+            </button>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          {/* Device preview */}
+          <div className="flex items-center gap-1">
+            <button onClick={() => setDeviceWidth('desktop')} className={`p-1 rounded transition-colors ${deviceWidth === 'desktop' ? 'text-primary bg-primary-light' : 'text-muted hover:text-base hover:bg-surface'}`} title="Desktop preview" aria-label="Desktop preview" aria-pressed={deviceWidth === 'desktop'}>
+              <Monitor className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => setDeviceWidth('tablet')} className={`p-1 rounded transition-colors ${deviceWidth === 'tablet' ? 'text-primary bg-primary-light' : 'text-muted hover:text-base hover:bg-surface'}`} title="Tablet preview" aria-label="Tablet preview" aria-pressed={deviceWidth === 'tablet'}>
+              <Tablet className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => setDeviceWidth('mobile')} className={`p-1 rounded transition-colors ${deviceWidth === 'mobile' ? 'text-primary bg-primary-light' : 'text-muted hover:text-base hover:bg-surface'}`} title="Mobile preview" aria-label="Mobile preview" aria-pressed={deviceWidth === 'mobile'}>
+              <Smartphone className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          {/* Undo/redo */}
+          <div className="flex items-center gap-1">
+            <button onClick={undo} disabled={!_history.length} className="p-1 rounded hover:bg-surface text-muted hover:text-base transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Undo (Ctrl+Z)" aria-label="Undo">
+              <Undo2 className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={redo} disabled={!_future.length} className="p-1 rounded hover:bg-surface text-muted hover:text-base transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Redo (Ctrl+Y)" aria-label="Redo">
+              <Redo2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          {/* Schema label */}
+          <div className="flex items-center gap-1.5 hidden sm:flex">
+            <Code className="h-3 w-3 text-primary" />
+            <span>Form Schema</span>
+          </div>
+        </div>
+      </footer>
 
       {/* Insert new field modal */}
       {showFieldModal && (

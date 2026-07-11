@@ -42,6 +42,39 @@ const applyTheme = (theme, path) => {
   root.style.colorScheme = effective;
 };
 
+// Duration (ms) of the gentle color transition when the user toggles the
+// theme. Kept short enough to feel responsive but long enough to avoid the
+// harsh flash that hurts the eyes when switching between light and dark.
+const THEME_TRANSITION_MS = 1200;
+
+// Wrap a theme change in a smooth transition so the switch doesn't flash.
+//   1. View Transitions API (Chrome/Edge 111+, Safari 18+) — smooth crossfade.
+//   2. Fallback: a temporary `.theme-transitioning` class on <html> that
+//      animates background-color/border-color/color/etc. on every element for
+//      the duration. The class is removed afterwards so normal hover/state
+//      transitions are unaffected.
+// Skipped entirely when the user prefers reduced motion.
+const withThemeTransition = (apply) => {
+  if (typeof document === 'undefined') { apply(); return; }
+
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    apply();
+    return;
+  }
+
+  // Preferred path — native crossfade of the whole page.
+  if (typeof document.startViewTransition === 'function') {
+    document.startViewTransition(apply);
+    return;
+  }
+
+  // Fallback — temporarily enable color transitions on all elements.
+  const root = document.documentElement;
+  root.classList.add('theme-transitioning');
+  apply();
+  window.setTimeout(() => root.classList.remove('theme-transitioning'), THEME_TRANSITION_MS);
+};
+
 const initialTheme = resolveInitialTheme();
 
 const useThemeStore = create((set, get) => ({
@@ -50,7 +83,9 @@ const useThemeStore = create((set, get) => ({
   isExplicit: loadStoredTheme() !== null,
 
   setTheme: (theme) => {
-    applyTheme(theme);
+    // Wrap only the DOM class change in the gentle transition — state and
+    // persistence update immediately so the toggle feels responsive.
+    withThemeTransition(() => applyTheme(theme));
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch (e) {

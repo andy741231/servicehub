@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Form Builder Redesign — Mockups</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --primary:#0D9488; --primary-hover:#0F766E; --primary-light:#F0FDFA; --primary-foreground:#FFFFFF;
+      --background:#FAFDFC; --surface:#FFFFFF; --surface-raised:#F0FDFA; --surface-tertiary:#CCFBF1;
+      --border:#E2E8F0; --border-soft:#F5FEFB; --border-strong:#CBD5E1;
+      --text-base:#1C2B2A; --text-muted:#64748B; --text-subtle:#94A3B8; --text-inverse:#FFFFFF;
+      --success:#059669; --success-light:#F0FDF4; --warning:#D97706; --warning-light:#FFFBEB;
+      --danger:#E11D48; --danger-light:#FFF1F2; --info:#0891B2; --info-light:#ECFEFF;
+      --radius-sm:6px; --radius-base:10px; --radius-card:16px; --radius-lg:20px;
+      --shadow-card:0 1px 3px rgba(13,148,136,0.08),0 4px 12px rgba(15,23,42,0.05);
+    }
+    body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; background: var(--background); color: var(--text-base); }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#0D9488', hover: '#0F766E', light: '#F0FDFA', foreground: '#FFFFFF' },
+            background: '#FAFDFC', surface: '#FFFFFF', 'surface-raised': '#F0FDFA', 'surface-tertiary': '#CCFBF1',
+            border: { DEFAULT: '#E2E8F0', soft: '#F5FEFB', strong: '#CBD5E1' },
+            'text-base': '#1C2B2A', 'text-muted': '#64748B', 'text-subtle': '#94A3B8',
+            success: { DEFAULT: '#059669', light: '#F0FDF4' },
+            warning: { DEFAULT: '#D97706', light: '#FFFBEB' },
+            danger: { DEFAULT: '#E11D48', light: '#FFF1F2' },
+            info: { DEFAULT: '#0891B2', light: '#ECFEFF' },
+          },
+          borderRadius: { sm: '6px', base: '10px', card: '16px', lg: '20px' },
+          boxShadow: { card: '0 1px 3px rgba(13,148,136,0.08), 0 4px 12px rgba(15,23,42,0.05)' },
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen">
+  <div class="max-w-6xl mx-auto px-6 py-16">
+    <!-- Header -->
+    <header class="mb-12">
+      <div class="flex items-center gap-2 text-text-subtle text-sm mb-3">
+        <i data-lucide="layers" class="w-4 h-4"></i>
+        <span>Service Hub · Form Builder Redesign</span>
+      </div>
+      <h1 class="text-4xl font-semibold tracking-tight text-text-base mb-3">Form Builder — Layout Mockups</h1>
+      <p class="text-lg text-text-muted max-w-2xl">
+        Seven mockups exploring the builder editor: the current layout for reference, plus six
+        modern-minimal redesign directions. Each is a standalone HTML file — click through to
+        explore the interactions. Same form content, same design tokens, different layout philosophy.
+      </p>
+    </header>
+
+    <!-- Current layout (baseline) -->
+    <section class="mb-12">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-4">Baseline — for comparison</h2>
+      <a href="builder-current.html"
+         class="group block bg-surface border border-border rounded-card shadow-card p-6 hover:border-text-subtle/40 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold uppercase tracking-wider text-text-muted bg-surface-raised border border-border px-2.5 py-1 rounded-sm">Current</span>
+            <span class="text-xs text-text-subtle">Faithful recreation of the existing 3-pane builder</span>
+          </div>
+          <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-text-base transition-colors"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-text-base mb-2">Current 3-pane layout</h3>
+        <p class="text-sm text-text-muted mb-4 leading-relaxed">
+          Left field palette (always visible, 5 categories) + center canvas (section cards with field
+          cards) + right properties panel (3 tabs, accordion sections). Functional but dense — this is
+          the "before" state the redesigns improve on.
+        </p>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">w-72 palette</span>
+          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">w-80 properties</span>
+          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Always-visible panels</span>
+          <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">20 field types</span>
+        </div>
+      </a>
+    </section>
+
+    <!-- Batch 1: Redesign directions A–C -->
+    <section class="mb-12">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-4">Batch 1 — Redesign directions A–C</h2>
+      <div class="grid gap-6 md:grid-cols-3">
+        <!-- A -->
+        <a href="builder-linear.html"
+           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">A</span>
+            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-text-base mb-2">Linear ultra-minimal</h3>
+          <p class="text-sm text-text-muted mb-4 leading-relaxed">
+            Slim icon rail that expands on hover. Contextual right panel — only appears when a field
+            is selected. Keyboard-first with ⌘K command palette.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Slim rail</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Contextual panel</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">⌘K palette</span>
+          </div>
+        </a>
+
+        <!-- B -->
+        <a href="builder-notion.html"
+           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">B</span>
+            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-text-base mb-2">Notion document canvas</h3>
+          <p class="text-sm text-text-muted mb-4 leading-relaxed">
+            No sidebars — the form IS the document. Inline field blocks, "/" slash command to add
+            fields, properties as a floating popover on click.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">No sidebars</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Slash command</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Popover props</span>
+          </div>
+        </a>
+
+        <!-- C -->
+        <a href="builder-fillout.html"
+           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">C</span>
+            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-text-base mb-2">Fillout card-preview</h3>
+          <p class="text-sm text-text-muted mb-4 leading-relaxed">
+            Center stage renders the form as the user will see it — real inputs, real submit button.
+            Left palette chips + right properties panel. Device toggle changes the stage.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Live stage</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Palette chips</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Device toggle</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Batch 2: Redesign directions D–F -->
+    <section class="mb-16">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-4">Batch 2 — Redesign directions D–F</h2>
+      <div class="grid gap-6 md:grid-cols-3">
+        <!-- D -->
+        <a href="builder-split.html"
+           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">D</span>
+            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-text-base mb-2">Split-view dual canvas</h3>
+          <p class="text-sm text-text-muted mb-4 leading-relaxed">
+            Figma-style: builder outline on the left, live form preview on the right — both always
+            visible. No sidebars; properties as a floating popover. Draggable vertical divider.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Split panes</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Live preview</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Draggable divider</span>
+          </div>
+        </a>
+
+        <!-- E -->
+        <a href="builder-outline.html"
+           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">E</span>
+            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-text-base mb-2">Outline + inspector</h3>
+          <p class="text-sm text-text-muted mb-4 leading-relaxed">
+            VS Code-style: collapsible structure tree on the left, canvas in the center, persistent
+            inspector on the right. Status bar with field count. Best for long, complex forms.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Outline tree</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Persistent inspector</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Status bar</span>
+          </div>
+        </a>
+
+        <!-- F -->
+        <a href="builder-focused.html"
+           class="group bg-surface border border-border rounded-card shadow-card p-6 hover:border-primary/40 hover:shadow-lg transition-all duration-200">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-semibold uppercase tracking-wider text-primary bg-primary-light px-2.5 py-1 rounded-sm">F</span>
+            <i data-lucide="arrow-up-right" class="w-5 h-5 text-text-subtle group-hover:text-primary transition-colors"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-text-base mb-2">Focused single-field</h3>
+          <p class="text-sm text-text-muted mb-4 leading-relaxed">
+            Typeform-style: one field at a time, large and centered. Vertical filmstrip navigator on
+            the left. Progress indicator. Calmest direction — great for conversational forms.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">One field at a time</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Filmstrip nav</span>
+            <span class="text-xs text-text-muted bg-surface-raised px-2 py-0.5 rounded-sm">Progress bar</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Comparison table -->
+    <section class="border-t border-border pt-10">
+      <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-6">How they compare</h3>
+      <div class="overflow-x-auto">
+        <div class="overflow-hidden rounded-base border border-border min-w-[800px]">
+          <table class="w-full text-sm">
+            <thead class="bg-surface-raised text-text-muted">
+              <tr>
+                <th class="text-left px-4 py-3 font-medium">Trait</th>
+                <th class="text-left px-4 py-3 font-medium">Current</th>
+                <th class="text-left px-4 py-3 font-medium">A · Linear</th>
+                <th class="text-left px-4 py-3 font-medium">B · Notion</th>
+                <th class="text-left px-4 py-3 font-medium">C · Fillout</th>
+                <th class="text-left px-4 py-3 font-medium">D · Split</th>
+                <th class="text-left px-4 py-3 font-medium">E · Outline</th>
+                <th class="text-left px-4 py-3 font-medium">F · Focused</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border bg-surface">
+              <tr>
+                <td class="px-4 py-3 text-text-muted font-medium">Left palette</td>
+                <td class="px-4 py-3">Always visible (w-72)</td>
+                <td class="px-4 py-3">Slim rail, hover-expand</td>
+                <td class="px-4 py-3">None — slash command</td>
+                <td class="px-4 py-3">Always-visible chips</td>
+                <td class="px-4 py-3">None — "+" popover</td>
+                <td class="px-4 py-3">Outline tree (structure)</td>
+                <td class="px-4 py-3">Filmstrip (field nav)</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-text-muted font-medium">Right panel</td>
+                <td class="px-4 py-3">Always visible (w-80)</td>
+                <td class="px-4 py-3">Contextual, on select</td>
+                <td class="px-4 py-3">None — popover on click</td>
+                <td class="px-4 py-3">Always visible</td>
+                <td class="px-4 py-3">None — floating popover</td>
+                <td class="px-4 py-3">Persistent inspector</td>
+                <td class="px-4 py-3">Inline properties bar</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-text-muted font-medium">Canvas feel</td>
+                <td class="px-4 py-3">Section cards, field cards</td>
+                <td class="px-4 py-3">Builder boxes, centered</td>
+                <td class="px-4 py-3">Document, inline blocks</td>
+                <td class="px-4 py-3">Real form on a stage</td>
+                <td class="px-4 py-3">Outline list + live preview</td>
+                <td class="px-4 py-3">Field cards, breadcrumb</td>
+                <td class="px-4 py-3">One field, large & centered</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-text-muted font-medium">Add field</td>
+                <td class="px-4 py-3">Click palette category</td>
+                <td class="px-4 py-3">⌘K command palette</td>
+                <td class="px-4 py-3">"/" slash popover</td>
+                <td class="px-4 py-3">Drag/click palette</td>
+                <td class="px-4 py-3">"+" type popover</td>
+                <td class="px-4 py-3">Outline "+" button</td>
+                <td class="px-4 py-3">"Add field after" button</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-text-muted font-medium">Live preview</td>
+                <td class="px-4 py-3">Toggle (right panel)</td>
+                <td class="px-4 py-3">Toggle (right panel)</td>
+                <td class="px-4 py-3">Inline (is the canvas)</td>
+                <td class="px-4 py-3">Always (the stage)</td>
+                <td class="px-4 py-3">Always (right pane)</td>
+                <td class="px-4 py-3">Toggle</td>
+                <td class="px-4 py-3">Single field preview</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-text-muted font-medium">Best for</td>
+                <td class="px-4 py-3">— (baseline)</td>
+                <td class="px-4 py-3">Power users, keyboard</td>
+                <td class="px-4 py-3">Calm, content-first</td>
+                <td class="px-4 py-3">Visual WYSIWYG</td>
+                <td class="px-4 py-3">Edit + see simultaneously</td>
+                <td class="px-4 py-3">Long, complex forms</td>
+                <td class="px-4 py-3">Conversational forms</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-text-muted font-medium">Clutter level</td>
+                <td class="px-4 py-3 text-warning">Medium-high</td>
+                <td class="px-4 py-3 text-success">Low</td>
+                <td class="px-4 py-3 text-success">Very low</td>
+                <td class="px-4 py-3 text-warning">Medium</td>
+                <td class="px-4 py-3 text-warning">Medium</td>
+                <td class="px-4 py-3 text-warning">Medium</td>
+                <td class="px-4 py-3 text-success">Very low</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-12 pt-8 border-t border-border text-sm text-text-subtle">
+      <p>Open each mockup directly in your browser — they're standalone HTML with Tailwind + lucide via CDN. No build step. All use the same form ("Customer Onboarding Form") and the same design tokens for fair comparison.</p>
+    </footer>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

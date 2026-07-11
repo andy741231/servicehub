@@ -9,6 +9,10 @@ import {
   fetchSubmissions,
   fetchVersions as fetchVersionsApi,
   restoreVersion as restoreVersionApi,
+  fetchFolders,
+  createFolderApi,
+  updateFolderApi,
+  deleteFolderApi,
 } from '../api/formsApi';
 import { generateSlug, isDuplicateName } from '../utils/slug';
 
@@ -106,6 +110,7 @@ const normalizeForm = (backendForm) => {
     title: backendForm.title || schema.title || 'Untitled Form',
     slug: schema.slug || generateSlug(backendForm.title || schema.title || 'Untitled Form'),
     description: schema.description || '',
+    status: schema.status,
     rows,
     fields,
     theme,
@@ -133,6 +138,7 @@ const normalizeForm = (backendForm) => {
       }
       return s;
     })(),
+    folderId: schema.folderId || null,
     createdAt: backendForm.createdAt,
     updatedAt: backendForm.updatedAt,
   };
@@ -177,6 +183,9 @@ const useFormStore = create((set, get) => ({
   // All saved forms and submissions
   forms: [],
   submissions: [],
+
+  // Folders (backend-backed, shared across browsers)
+  folders: [],
 
   // Loading and error states
   isLoading: false,
@@ -544,6 +553,45 @@ const useFormStore = create((set, get) => ({
     }
   },
 
+  // Duplicate a form — creates a new form with copied fields/rows and a "(copy)" suffix.
+  // Uses proper store actions so undo/redo history is maintained.
+  duplicateForm: async (formId) => {
+    const state = get();
+    const sourceForm = state.forms.find((f) => f.id === formId);
+    if (!sourceForm) return null;
+
+    // Create a new empty form via the standard action
+    const newFormId = await get().createNewForm();
+
+    // Copy fields and rows with fresh IDs
+    const now = Date.now();
+    const copiedRows = (sourceForm.rows || []).map((r, i) => ({
+      ...r,
+      id: `row-${now}-${i}`,
+    }));
+    const rowIdMap = {};
+    (sourceForm.rows || []).forEach((r, i) => {
+      rowIdMap[r.id] = `row-${now}-${i}`;
+    });
+    const copiedFields = (sourceForm.fields || []).map((f, i) => ({
+      ...f,
+      id: `field-${now}-${i}`,
+      rowId: f.rowId ? rowIdMap[f.rowId] || f.rowId : f.rowId,
+    }));
+
+    // Set the copied content as the current form state
+    get().setCurrentForm(newFormId);
+    set({
+      fields: copiedFields,
+      rows: copiedRows,
+    });
+
+    // Save with "(copy)" suffix
+    const copyTitle = `${sourceForm.title} (copy)`;
+    await get().saveCurrentForm(copyTitle, sourceForm.description);
+    return newFormId;
+  },
+
   deleteForm: async (formId) => {
     const state = get();
     const formToRemove = state.forms.find((f) => f.id === formId);
@@ -749,6 +797,79 @@ const useFormStore = create((set, get) => ({
       return form;
     } catch (e) {
       console.warn('Failed to restore form version:', e);
+      throw e;
+    }
+  },
+
+  // --- Folders (backend-backed) ---
+  loadFolders: async () => {
+    try {
+      const folders = await fetchFolders();
+      set({ folders });
+    } catch (e) {
+      console.warn('Failed to load folders from API:', e);
+    }
+  },
+
+  createFolder: async (name) => {
+    try {
+      const folder = await createFolderApi(name);
+      set((state) => ({ folders: [...state.folders, folder] }));
+      return folder;
+    } catch (e) {
+      console.warn('Failed to create folder on API:', e);
+      throw e;
+    }
+  },
+
+  renameFolder: async (id, name) => {
+    try {
+      const folder = await updateFolderApi(id, name);
+      set((state) => ({
+        folders: state.folders.map((f) => (f.id === id ? folder : f)),
+      }));
+      return folder;
+    } catch (e) {
+      console.warn('Failed to rename folder on API:', e);
+      throw e;
+    }
+  },
+
+  deleteFolder: async (id) => {
+    try {
+      await deleteFolderApi(id);
+      // Unset folderId from all forms in the deleted folder (local state)
+      set((state) => ({
+        folders: state.folders.filter((f) => f.id !== id),
+        forms: state.forms.map((f) =>
+          f.folderId === id ? { ...f, folderId: null } : f
+        ),
+      }));
+    } catch (e) {
+      console.warn('Failed to delete folder on API:', e);
+      throw e;
+    }
+  },
+
+  // Move a form to a folder — updates the form's folderId in schema and persists
+  moveFormToFolder: async (formId, folderId) => {
+    const state = get();
+    const form = state.forms.find((f) => f.id === formId);
+    if (!form) return;
+
+    const updatedForm = { ...form, folderId: folderId || null };
+    set((s) => ({
+      forms: s.forms.map((f) => (f.id === formId ? updatedForm : f)),
+    }));
+
+    try {
+      await updateFormApi(updatedForm.id, denormalizeForm(updatedForm));
+    } catch (e) {
+      console.warn('Failed to save folder assignment on API:', e);
+      // Revert on failure
+      set((s) => ({
+        forms: s.forms.map((f) => (f.id === formId ? form : f)),
+      }));
       throw e;
     }
   },

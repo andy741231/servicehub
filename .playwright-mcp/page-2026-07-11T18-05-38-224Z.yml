@@ -1,0 +1,192 @@
+- generic [ref=f1e1]:
+  - link "Skip to main content" [ref=f1e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f1e5]:
+    - link "Skip to main content" [ref=f1e6] [cursor=pointer]:
+      - /url: "#main-content"
+    - navigation "Main navigation" [ref=f1e7]:
+      - link "Service Hub" [ref=f1e9] [cursor=pointer]:
+        - /url: /hub-admin/
+      - navigation "Form Builder sections" [ref=f1e11]:
+        - link "Dashboard" [ref=f1e12] [cursor=pointer]:
+          - /url: /hub-admin/forms/dashboard
+        - link "Forms" [ref=f1e17] [cursor=pointer]:
+          - /url: /hub-admin/forms/list
+        - link "Builder" [ref=f1e22] [cursor=pointer]:
+          - /url: /hub-admin/forms/builder
+        - link "Submissions" [ref=f1e26] [cursor=pointer]:
+          - /url: /hub-admin/forms/submissions
+        - link "Analytics" [ref=f1e31] [cursor=pointer]:
+          - /url: /hub-admin/forms/analytics
+        - link "Templates" [ref=f1e35] [cursor=pointer]:
+          - /url: /hub-admin/forms/templates
+    - generic [ref=f1e40]:
+      - banner [ref=f1e41]:
+        - heading [level=1]
+        - textbox "Global search" [ref=f1e45]:
+          - /placeholder: Search pages, forms, campaigns…
+        - button "Account menu" [ref=f1e49]:
+          - generic [ref=f1e50]: SA
+          - generic [ref=f1e51]:
+            - generic [ref=f1e52]: System Admin
+            - generic [ref=f1e53]: admin@servicehub.com
+      - main [ref=f1e56]:
+        - generic [ref=f1e57]:
+          - link "Skip to canvas" [ref=f1e58] [cursor=pointer]:
+            - /url: "#form-canvas"
+          - generic [ref=f1e59]: Field "Email" added
+          - generic [ref=f1e60]:
+            - complementary "Form outline" [ref=f1e61]:
+              - generic [ref=f1e62]:
+                - generic [ref=f1e63]:
+                  - generic [ref=f1e64]: Outline
+                  - generic [ref=f1e69]:
+                    - button "Search fields in outline" [expanded] [ref=f1e70]
+                    - button "Add new section" [ref=f1e74]
+                - textbox "Filter fields in outline" [ref=f1e1185]:
+                  - /placeholder: Filter fields…
+                  - text: full
+                - button "Add new section" [ref=f1e88]:
+                  - generic [ref=f1e90]: Add section
+            - main [ref=f1e91]:
+              - generic [ref=f1e92]:
+                - generic [ref=f1e94]:
+                  - button "Back to dashboard" [ref=f1e95]
+                  - generic [ref=f1e102]:
+                    - heading "Contact Form" [level=1] [ref=f1e1776]
+                    - generic [ref=f1e104]: Saved
+                - generic [ref=f1e107]:
+                  - button "Share form" [ref=f1e108]:
+                    - generic [ref=f1e115]: Share
+                  - generic [ref=f1e116]:
+                    - button "More actions" [expanded] [active] [ref=f1e117]
+                    - menu [ref=f1e1792]:
+                      - menuitem "Export schema" [ref=f1e1793]
+                      - menuitem "Version history" [ref=f1e1797]
+                      - menuitem "Unpublish" [ref=f1e1802]
+                  - button "Save form" [ref=f1e122]:
+                    - generic [ref=f1e127]: Save
+              - button "Contact Form" [ref=f1e1777]
+              - generic [ref=f1e134]:
+                - generic [ref=f1e135]:
+                  - generic [ref=f1e136]: Form details
+                  - generic [ref=f1e139]: Form title
+                  - textbox "Form title" [ref=f1e140]:
+                    - /placeholder: Untitled Form
+                    - text: Contact Form
+                  - generic [ref=f1e141]: Form description
+                  - textbox "Form description" [ref=f1e142]:
+                    - /placeholder: Add a description to help respondents understand this form…
+                - generic [ref=f1e143]:
+                  - 'button "Section 1: Untitled" [ref=f1e146] [cursor=pointer]':
+                    - generic [ref=f1e147]:
+                      - button "Drag to reorder section" [ref=f1e148]
+                      - button "Expand section" [ref=f1e1660]
+                      - generic [ref=f1e161]: Section 1
+                      - generic [ref=f1e162]: 1 field
+                    - generic [ref=f1e163]:
+                      - button "Duplicate section" [ref=f1e164]
+                      - button "Remove section" [ref=f1e1597]
+                  - generic [ref=f1e1689]:
+                    - button "Add section below" [ref=f1e1807]: Add section
+                    - generic [ref=f1e1694]:
+                      - 'button "Section 2: Untitled" [expanded] [ref=f1e1695] [cursor=pointer]':
+                        - generic [ref=f1e1696]:
+                          - button "Drag to reorder section" [ref=f1e1697]
+                          - button "Collapse section" [ref=f1e1705]
+                          - generic [ref=f1e1710]: Section 2
+                          - generic [ref=f1e1711]: 1 field
+                        - generic [ref=f1e1712]:
+                          - button "Duplicate section" [ref=f1e1713]
+                          - button "Remove section" [ref=f1e1717]
+                      - generic [ref=f1e1721]:
+                        - 'generic "Field: email. Press Enter to edit, Delete to remove, Ctrl+D to duplicate." [ref=f1e1724] [cursor=pointer]':
+                          - generic [ref=f1e1725]:
+                            - button "Drag to reorder field" [ref=f1e1726]
+                            - generic [ref=f1e1734]:
+                              - generic [ref=f1e1735]:
+                                - generic [ref=f1e1736]: Field label for email
+                                - textbox "Field label for email" [ref=f1e1737]:
+                                  - /placeholder: Field label
+                                - generic [ref=f1e1738]: Email
+                              - textbox "Email input" [ref=f1e1739]:
+                                - /placeholder: Email address
+                            - generic [ref=f1e1740]:
+                              - button "Duplicate field" [ref=f1e1741]
+                              - button "Delete field" [ref=f1e1745]
+                        - button "Insert new field after existing fields in this section" [ref=f1e1749]:
+                          - generic [ref=f1e1751]: Insert new field
+                  - generic [ref=f1e1601]:
+                    - button "Add section below" [ref=f1e1811]: Add section
+                    - generic [ref=f1e1606]:
+                      - 'button "Section 3: Untitled" [expanded] [ref=f1e1756] [cursor=pointer]':
+                        - generic [ref=f1e1608]:
+                          - button "Drag to reorder section" [ref=f1e1609]
+                          - button "Collapse section" [ref=f1e1617]
+                          - generic [ref=f1e1622]: Section 3
+                          - generic [ref=f1e1623]: 0 fields
+                        - generic [ref=f1e1624]:
+                          - button "Duplicate section" [ref=f1e1625]
+                          - button "Remove section" [ref=f1e1629]
+                      - generic [ref=f1e1634]:
+                        - paragraph [ref=f1e1637]: This section is empty
+                        - button "Insert new field into this section" [ref=f1e1638]: Insert field
+                        - generic [ref=f1e1640]:
+                          - button "Add a Text field to this section" [ref=f1e1641]: Text
+                          - button "Add a Email field to this section" [ref=f1e1642]: Email
+                          - button "Add a Long Text field to this section" [ref=f1e1643]: Long Text
+                          - button "Add a Dropdown field to this section" [ref=f1e1644]: Dropdown
+                          - button "Add a Phone field to this section" [ref=f1e1645]: Phone
+                  - button "Add section below" [ref=f1e1815]: Add section
+                  - button "Add new section" [ref=f1e185]:
+                    - generic [ref=f1e188]: Add section
+            - complementary "Properties panel" [ref=f1e1417]:
+              - tabpanel "Form settings" [ref=f1e1418]:
+                - tablist "Form property tabs" [ref=f1e1420]:
+                  - tab "Appearance" [ref=f1e1421]
+                  - tab "Settings" [ref=f1e1422]
+                  - tab "Schedule" [selected] [ref=f1e1423]
+                - generic [ref=f1e1581]:
+                  - generic [ref=f1e1586]:
+                    - paragraph [ref=f1e1587]: Always open to the public
+                    - paragraph [ref=f1e1588]: Anyone with the link can fill out this form at any time.
+                  - generic [ref=f1e1589]:
+                    - generic [ref=f1e1590]:
+                      - paragraph [ref=f1e1591]: Enable access schedule
+                      - paragraph [ref=f1e1592]: Restrict when this form is publicly accessible.
+                    - button "Enable schedule" [ref=f1e1593]
+                  - generic:
+                    - paragraph: All enabled constraints must be satisfied at the same time. Weekly slots within a constraint are OR'd — the form opens if any slot matches.
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: Date window
+                          - paragraph: Only open between two specific dates
+                        - button "Enable date window"
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: Weekly hours
+                          - paragraph: Only open on certain days & times each week
+                        - button "Enable weekly hours"
+                    - generic:
+                      - generic: Message when closed
+                      - textbox "This form is currently closed. Please check back later."
+                      - paragraph: Shown to visitors when the form is outside the allowed window.
+          - generic [ref=f1e258]:
+            - generic [ref=f1e259]:
+              - generic [ref=f1e260]: Saved
+              - generic [ref=f1e263]: 2 fields, 3 sections
+            - generic [ref=f1e269]:
+              - generic [ref=f1e270]:
+                - button "Design" [pressed] [ref=f1e271]
+                - button "Preview" [ref=f1e272]
+                - button "Code" [ref=f1e273]
+              - generic [ref=f1e275]:
+                - button "Desktop preview" [pressed] [ref=f1e276]
+                - button "Tablet preview" [ref=f1e279]
+                - button "Mobile preview" [ref=f1e282]
+              - generic [ref=f1e286]:
+                - button "Undo" [ref=f1e287]
+                - button "Redo" [disabled] [ref=f1e291]
+              - generic [ref=f1e296]: Form Schema

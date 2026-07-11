@@ -1,5 +1,5 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Trash2, Copy, GitBranch, SeparatorHorizontal, Plus, LayoutTemplate, Columns, Grid3x3, Rows3, LayoutGrid, X, CopyPlus, ChevronDown, ChevronRight, Settings2, Star, Calculator, Repeat } from 'lucide-react';
+import { GripVertical, Trash2, Copy, GitBranch, SeparatorHorizontal, Plus, LayoutTemplate, Columns, Grid3x3, Rows3, LayoutGrid, X, CopyPlus, ChevronDown, ChevronRight, Settings2, Star, Calculator, Repeat, FolderOpen } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -412,20 +412,16 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
   return (
     <div
       tabIndex={0}
-      className={`group relative border rounded-lg transition-all duration-200 cursor-pointer bg-surface animate-in fade-in slide-in-from-bottom-2 duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+      className={`group relative field-card bg-surface border rounded-base transition-all duration-200 cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
         isSelected
-          ? 'border-primary elevation-2 ring-2 ring-primary/20 bg-primary-light/20'
-          : 'border-border elevation-1 hover:border-border-strong hover:elevation-2 hover:-translate-y-px'
-      } ${field.type === 'content' ? 'overflow-hidden' : 'p-5'}`}
+          ? 'border-2 border-primary ring-2 ring-primary ring-offset-2 ring-offset-surface'
+          : 'border border-border'
+      } ${field.type === 'content' ? 'overflow-hidden' : 'p-3.5'}`}
       onClick={() => onSelectField(field.id)}
       onMouseDown={() => onSelectField(field.id)}
       onKeyDown={handleKeyDown}
       aria-label={`Field: ${field.label || field.type}. Press Enter to edit, Delete to remove, Ctrl+D to duplicate.`}
     >
-      {/* Selection accent bar (3px, full height) */}
-      {isSelected && (
-        <span className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg bg-primary" aria-hidden="true" />
-      )}
       {field.type === 'content' ? (
         /* ── Content block: full-width WYSIWYG, controls float above ── */
         <div className="relative">
@@ -502,9 +498,8 @@ const FieldCard = ({ field, selectedField, onSelectField, onDuplicateField, onDe
               {(() => {
                 const meta = FIELD_META[field.type];
                 if (!meta) return null;
-                const accent = accentFor(meta.category);
                 return (
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${accent.chip} flex-shrink-0`}>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-light text-primary font-medium flex-shrink-0">
                     {meta.label}
                   </span>
                 );
@@ -794,63 +789,59 @@ export default function FormCanvas({
             {/* Inline add-row between sections */}
             {rowIndex > 0 && <InlineAddRow afterRowId={rows[rowIndex - 1].id} />}
 
-            {/* Section card — elevation-1 at rest, elevation-2 when selected/dragging */}
+            {/* Section card — rounded-card with shadow, ring when selected/dragging */}
             <div
-              className={`relative rounded-xl border overflow-hidden transition-all duration-200 animate-in fade-in slide-in-from-bottom-1 duration-200 ${
+              id={`section-${row.id}`}
+              className={`relative rounded-card border border-border shadow-card overflow-hidden transition-all duration-200 animate-in fade-in slide-in-from-bottom-1 duration-200 ${
                 draggableSnapshot.isDragging
-                  ? 'border-primary elevation-3 ring-2 ring-primary/30'
+                  ? 'border-primary ring-2 ring-primary/30'
                   : isSelectedSection
-                  ? 'border-primary elevation-2'
-                  : 'border-border elevation-1 hover:elevation-2'
+                  ? 'border-primary ring-2 ring-primary/20'
+                  : ''
               }`}
               style={sectionBg ? { backgroundColor: sectionBg } : {}}
             >
-              {/* Left accent strip — bg-primary/20 at rest, bg-primary when selected */}
-              <span
-                className={`absolute left-0 top-0 bottom-0 w-1 ${isSelectedSection ? 'bg-primary' : 'bg-primary/20'} transition-colors duration-200`}
-                aria-hidden="true"
-              />
-
-              {/* Section header — click to select section (48px height) */}
+              {/* Section header — click to select section */}
               <div
-                className={`group/section flex items-center justify-between pl-5 pr-3 h-12 border-b border-border/60 cursor-pointer select-none transition-colors ${
-                  isSelectedSection ? 'bg-primary-light/60' : 'bg-surface-raised/50 hover:bg-surface-raised'
+                className={`group/section flex items-center justify-between px-5 py-3.5 border-b border-border-soft cursor-pointer select-none transition-colors ${
+                  isSelectedSection ? 'bg-primary-light/40' : 'bg-surface hover:bg-surface-raised/50'
                 }`}
                 onClick={() => onSelectSection(isSelectedSection ? null : row.id)}
                 role="button"
                 aria-expanded={!isCollapsed}
                 aria-label={`Section ${rowIndex + 1}: ${row.label || 'Untitled'}`}
               >
-                {/* Drag handle */}
-                <div
-                  {...draggableProvided.dragHandleProps}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-shrink-0 p-1 mr-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted rounded"
-                  title="Drag to reorder"
-                  aria-label="Drag to reorder section"
-                >
-                  <GripVertical className="h-4 w-4" />
-                </div>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {/* Drag handle */}
+                  <div
+                    {...draggableProvided.dragHandleProps}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-subtle hover:text-muted rounded"
+                    title="Drag to reorder"
+                    aria-label="Drag to reorder section"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </div>
 
-                {/* Collapse toggle */}
-                <button
-                  onClick={(e) => toggleCollapse(row.id, e)}
-                  className="flex-shrink-0 p-1 mr-2 text-subtle hover:text-base rounded focus:outline-none focus:ring-2 focus:ring-primary transition-transform duration-200"
-                  title={isCollapsed ? 'Expand section' : 'Collapse section'}
-                  aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
-                >
-                  {isCollapsed
-                    ? <ChevronRight className="h-4 w-4" />
-                    : <ChevronDown className="h-4 w-4" />
-                  }
-                </button>
+                  {/* Collapse toggle */}
+                  <button
+                    onClick={(e) => toggleCollapse(row.id, e)}
+                    className="flex-shrink-0 p-1 text-subtle hover:text-base rounded focus:outline-none focus:ring-2 focus:ring-primary transition-transform duration-200"
+                    title={isCollapsed ? 'Expand section' : 'Collapse section'}
+                    aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+                  >
+                    {isCollapsed
+                      ? <ChevronRight className="h-4 w-4" />
+                      : <ChevronDown className="h-4 w-4" />
+                    }
+                  </button>
 
-                {/* Section name + field count chip */}
-                <div className="flex-1 min-w-0 flex items-center gap-2">
-                  <span className="text-small font-semibold text-base truncate">
+                  {/* Folder icon + section name + field count text */}
+                  <FolderOpen className="flex-shrink-0 h-4 w-4 text-primary" aria-hidden="true" />
+                  <span className="text-sm font-semibold text-base truncate">
                     {row.label || `Section ${rowIndex + 1}`}
                   </span>
-                  <span className="flex-shrink-0 text-xs text-muted bg-surface-raised/70 px-1.5 py-0.5 rounded-full">
+                  <span className="flex-shrink-0 text-xs text-subtle">
                     {rowFields.length} field{rowFields.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -886,9 +877,9 @@ export default function FormCanvas({
 
               {/* Section body (collapsible) */}
               {!isCollapsed && (
-                <div className="p-4">
+                <div className="p-5">
                   {rowFields.length === 0 ? (
-                    <div className="rounded-lg border-2 border-dashed border-border bg-background/50 px-4 py-6 text-center transition-all duration-200">
+                    <div className="rounded-base border border-dashed border-border-strong bg-background/50 px-4 py-6 text-center transition-all duration-200">
                       <div className="mx-auto w-10 h-10 rounded-xl bg-surface-raised flex items-center justify-center mb-2.5">
                         <Plus className="h-5 w-5 text-subtle" aria-hidden="true" />
                       </div>
@@ -928,12 +919,13 @@ export default function FormCanvas({
                             <div
                               {...provided.droppableProps}
                               ref={provided.innerRef}
-                              className={`grid ${gridClass} gap-3`}
+                              className={`grid ${gridClass} gap-4`}
                             >
                               {rowFields.map((field, index) => (
                                 <Draggable key={field.id} draggableId={field.id} index={index}>
                                   {(provided, snapshot) => (
                                     <div
+                                      id={`field-${field.id}`}
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       className={`${snapshot.isDragging ? 'shadow-lg ring-2 ring-primary/30 scale-[1.02]' : ''} rounded-base transition-all duration-150`}
@@ -980,7 +972,7 @@ export default function FormCanvas({
                       </DragDropContext>
                       <button
                         onClick={() => onInsertField(row.id)}
-                        className="mt-3 w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-border rounded-lg text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                        className="mt-4 w-full flex items-center justify-center gap-2 py-2 border border-dashed border-border-strong rounded-base text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
                         aria-label="Insert new field after existing fields in this section"
                       >
                         <Plus className="h-4 w-4" aria-hidden="true" />
@@ -1003,7 +995,7 @@ export default function FormCanvas({
 
       <button
         onClick={() => onAddRow()}
-        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-border rounded-lg text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[48px]"
+        className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border-strong rounded-card text-subtle hover:border-primary hover:text-primary hover:bg-primary-light/30 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[48px]"
         aria-label="Add new section"
       >
         <Rows3 className="h-4 w-4" aria-hidden="true" />

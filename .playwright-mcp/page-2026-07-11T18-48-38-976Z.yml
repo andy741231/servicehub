@@ -1,0 +1,85 @@
+- generic [active] [ref=f4e1]:
+  - link "Skip to main content" [ref=f4e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f4e5]:
+    - link "Skip to main content" [ref=f4e6] [cursor=pointer]:
+      - /url: "#main-content"
+    - navigation "Main navigation" [ref=f4e7]:
+      - link "Service Hub" [ref=f4e9] [cursor=pointer]:
+        - /url: /hub-admin/
+      - navigation "Form Builder sections" [ref=f4e11]:
+        - link "Dashboard" [ref=f4e12] [cursor=pointer]:
+          - /url: /hub-admin/forms/dashboard
+        - link "Forms" [ref=f4e17] [cursor=pointer]:
+          - /url: /hub-admin/forms/list
+        - link "Builder" [ref=f4e22] [cursor=pointer]:
+          - /url: /hub-admin/forms/builder
+        - link "Submissions" [ref=f4e26] [cursor=pointer]:
+          - /url: /hub-admin/forms/submissions
+        - link "Analytics" [ref=f4e31] [cursor=pointer]:
+          - /url: /hub-admin/forms/analytics
+        - link "Templates" [ref=f4e35] [cursor=pointer]:
+          - /url: /hub-admin/forms/templates
+    - generic [ref=f4e40]:
+      - banner [ref=f4e41]:
+        - heading [level=1]
+        - textbox "Global search" [ref=f4e45]:
+          - /placeholder: Search pages, forms, campaigns…
+        - button "Account menu" [ref=f4e49]:
+          - generic [ref=f4e50]: SA
+          - generic [ref=f4e51]:
+            - generic [ref=f4e52]: System Admin
+            - generic [ref=f4e53]: admin@servicehub.com
+      - main [ref=f4e56]:
+        - generic [ref=f4e57]:
+          - generic [ref=f4e58]:
+            - generic [ref=f4e59]:
+              - generic [ref=f4e60]:
+                - button "All 2" [pressed] [ref=f4e61]:
+                  - text: All
+                  - generic [ref=f4e62]: "2"
+                - button "Live 1" [ref=f4e63]:
+                  - text: Live
+                  - generic [ref=f4e64]: "1"
+                - button "Drafts 1" [ref=f4e65]:
+                  - text: Drafts
+                  - generic [ref=f4e66]: "1"
+                - button "Closed 0" [ref=f4e67]:
+                  - text: Closed
+                  - generic [ref=f4e68]: "0"
+              - textbox "Search forms" [ref=f4e73]:
+                - /placeholder: Search forms...
+              - combobox "Sort forms" [ref=f4e75] [cursor=pointer]:
+                - option "Recently updated" [selected]
+                - option "Most submissions"
+                - option "Alphabetical"
+              - group "View mode" [ref=f4e76]:
+                - button "Grid view" [ref=f4e77]
+                - button "List view" [pressed] [ref=f4e83]
+              - button "Create new form" [ref=f4e85]: New form
+            - generic [ref=f4e87]:
+              - generic [ref=f4e89]:
+                - generic [ref=f4e90]:
+                  - generic [ref=f4e91]: Folders
+                  - button "New folder" [ref=f4e92]
+                - generic [ref=f4e95]:
+                  - generic [ref=f4e96]:
+                    - button "Test Folder 0" [ref=f4e327]:
+                      - generic [ref=f4e100]: Test Folder
+                      - generic [ref=f4e101]: "0"
+                    - generic [ref=f4e102]:
+                      - button "Rename folder Test Folder" [ref=f4e103]
+                      - button "Delete folder Test Folder" [ref=f4e107]
+                  - generic [ref=f4e216]:
+                    - button "Second Folder 2" [ref=f4e328]:
+                      - generic [ref=f4e220]: Second Folder
+                      - generic [ref=f4e221]: "2"
+                    - generic [ref=f4e222]:
+                      - button "Rename folder Second Folder" [ref=f4e223]
+                      - button "Delete folder Second Folder" [ref=f4e227]
+              - generic [ref=f4e329]:
+                - paragraph [ref=f4e333]: No forms in this folder yet.
+                - button "Create form in this folder" [ref=f4e334]
+          - generic [ref=f4e337]:
+            - generic [ref=f4e341]: 2 forms moved.
+            - button "Dismiss" [ref=f4e342]

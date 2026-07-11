@@ -381,3 +381,87 @@ export const createSubmission = async (req, res) => {
     res.status(500).json({ error: 'Failed to create submission' });
   }
 };
+
+// ---------------------------------------------------------------------------
+// Form Folders
+// ---------------------------------------------------------------------------
+
+export const listFolders = async (_req, res) => {
+  try {
+    const folders = await prisma.formFolder.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json({ folders });
+  } catch (error) {
+    console.error('Error listing folders:', error);
+    res.status(500).json({ error: 'Failed to list folders' });
+  }
+};
+
+export const createFolder = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Folder name is required' });
+    }
+    const folder = await prisma.formFolder.create({
+      data: { name: name.trim() },
+    });
+    res.status(201).json({ folder });
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    res.status(500).json({ error: 'Failed to create folder' });
+  }
+};
+
+export const updateFolder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Folder name is required' });
+    }
+    const existing = await prisma.formFolder.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+    const folder = await prisma.formFolder.update({
+      where: { id },
+      data: { name: name.trim() },
+    });
+    res.json({ folder });
+  } catch (error) {
+    console.error('Error updating folder:', error);
+    res.status(500).json({ error: 'Failed to update folder' });
+  }
+};
+
+export const deleteFolder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.formFolder.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+
+    // Unset folderId from all forms that were in this folder.
+    // The folderId is stored inside each form's schema JSON.
+    const forms = await prisma.form.findMany({ where: { deletedAt: null } });
+    for (const form of forms) {
+      const schema = parseJsonField(form.schema) || {};
+      if (schema.folderId === id) {
+        const { folderId, ...rest } = schema;
+        await prisma.form.update({
+          where: { id: form.id },
+          data: { schema: stringifyJsonField(rest) },
+        });
+      }
+    }
+
+    await prisma.formFolder.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting folder:', error);
+    res.status(500).json({ error: 'Failed to delete folder' });
+  }
+};

@@ -167,7 +167,7 @@ export default function TopBar({ onMenuClick }) {
   const { user } = useAuthStore();
 
   return (
-    <header className="bg-surface border-b border-border flex items-center gap-3 px-3 sm:px-6 h-14 shrink-0 z-30">
+    <header className="bg-surface border-b border-border flex items-center gap-3 px-3 sm:px-6 h-14 shrink-0 z-50">
       {/* Left: hamburger (mobile) + sub-app title */}
       {onMenuClick && (
         <button

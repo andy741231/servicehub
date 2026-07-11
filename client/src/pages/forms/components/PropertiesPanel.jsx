@@ -10,6 +10,12 @@ import { uploadFile } from '../api/formsApi';
 import { getFormulaPreview } from '../utils/formula';
 import ColorPicker from '../../../components/ColorPicker';
 import { useToast } from '../../../components/Toast';
+import { FIELD_TYPES } from './FieldPalette';
+
+const FIELD_META = FIELD_TYPES.reduce((acc, { type, label, category }) => {
+  acc[type] = { label, category };
+  return acc;
+}, {});
 
 const TABS = [
   { id: 'general', label: 'General', icon: Tag },
@@ -70,21 +76,23 @@ const LAYOUT_OPTIONS = [
 function AccordionSection({ id, title, icon: Icon, defaultOpen = false, children, badge, registerRef }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section id={id} ref={(el) => registerRef?.(id, el)} className="scroll-mt-20 border-b border-border/60 pb-1">
+    <section id={id} ref={(el) => registerRef?.(id, el)} className="scroll-mt-20 border border-border rounded-base overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 py-2 px-1 text-body font-medium text-base hover:bg-surface-raised/50 rounded-base transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-surface-raised hover:bg-surface-tertiary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
         aria-expanded={open}
         aria-controls={`${id}-content`}
       >
-        {Icon && <Icon className="h-4 w-4 text-muted flex-shrink-0" aria-hidden="true" />}
-        <span className="flex-1 text-left">{title}</span>
-        {badge && <span className="text-xs text-muted bg-surface-raised px-1.5 py-0.5 rounded-full flex-shrink-0">{badge}</span>}
+        <span className="flex items-center gap-2 text-xs font-semibold text-base">
+          {Icon && <Icon className="h-4 w-4 text-muted flex-shrink-0" aria-hidden="true" />}
+          {title}
+          {badge && <span className="text-xs text-muted font-normal">{badge}</span>}
+        </span>
         <ChevronDown className={`h-4 w-4 text-subtle flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {open && (
-        <div id={`${id}-content`} className="pb-3 pt-1 space-y-4">
+        <div id={`${id}-content`} className="px-3 py-3 space-y-3 bg-surface">
           {children}
         </div>
       )}
@@ -187,26 +195,27 @@ function ContentBlockPropertiesPanel({ field, updateField }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden" aria-label="Content block properties">
       {/* Tab bar */}
-      <div className="flex border-b border-border bg-surface" role="tablist">
-        {CONTENT_BLOCK_TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={activeTab === id}
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
-              activeTab === id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted hover:text-base hover:border-border'
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            {label}
-            {id === 'logic' && field.conditionalLogic?.conditions?.length > 0 && (
-              <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-            )}
-          </button>
-        ))}
+      <div className="px-3 py-3 border-b border-border-soft flex-none">
+        <div className="flex items-center gap-1 bg-surface-raised rounded-base p-1" role="tablist">
+          {CONTENT_BLOCK_TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={activeTab === id}
+              onClick={() => setActiveTab(id)}
+              className={`flex-1 px-3 py-1.5 rounded-sm text-xs font-medium transition-all ${
+                activeTab === id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted hover:text-base'
+              }`}
+            >
+              {label}
+              {id === 'logic' && field.conditionalLogic?.conditions?.length > 0 && (
+                <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary-foreground flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -463,26 +472,27 @@ function ImageBlockPropertiesPanel({ field, updateField }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" aria-label="Image block properties">
-      <div className="flex border-b border-border bg-surface" role="tablist">
-        {CONTENT_BLOCK_TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={activeTab === id}
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
-              activeTab === id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted hover:text-base hover:border-border'
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            {label}
-            {id === 'logic' && field.conditionalLogic?.conditions?.length > 0 && (
-              <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-            )}
-          </button>
-        ))}
+      <div className="px-3 py-3 border-b border-border-soft flex-none">
+        <div className="flex items-center gap-1 bg-surface-raised rounded-base p-1" role="tablist">
+          {CONTENT_BLOCK_TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={activeTab === id}
+              onClick={() => setActiveTab(id)}
+              className={`flex-1 px-3 py-1.5 rounded-sm text-xs font-medium transition-all ${
+                activeTab === id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted hover:text-base'
+              }`}
+            >
+              {label}
+              {id === 'logic' && field.conditionalLogic?.conditions?.length > 0 && (
+                <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary-foreground flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -873,26 +883,27 @@ function SectionPropertiesPanel({ selectedSection }) {
   const handleUpdate = (updates) => updateRow(row.id, updates);
 
   const tabBar = (
-    <div className="flex border-b border-border bg-surface" role="tablist">
-      {SECTION_TABS.map(({ id, label, icon: Icon }) => (
-        <button
-          key={id}
-          role="tab"
-          aria-selected={activeTab === id}
-          onClick={() => setActiveTab(id)}
-          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
-            activeTab === id
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted hover:text-base hover:border-border'
-          }`}
-        >
-          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-          {label}
-          {id === 'logic' && row.conditionalLogic?.conditions?.length > 0 && (
-            <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-          )}
-        </button>
-      ))}
+    <div className="px-3 py-3 border-b border-border-soft flex-none">
+      <div className="flex items-center gap-1 bg-surface-raised rounded-base p-1" role="tablist">
+        {SECTION_TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            onClick={() => setActiveTab(id)}
+            className={`flex-1 px-3 py-1.5 rounded-sm text-xs font-medium transition-all ${
+              activeTab === id
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted hover:text-base'
+            }`}
+          >
+            {label}
+            {id === 'logic' && row.conditionalLogic?.conditions?.length > 0 && (
+              <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary-foreground flex-shrink-0" />
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
@@ -1096,7 +1107,6 @@ function SectionPropertiesPanel({ selectedSection }) {
         )}
 
       </div>
-      {ToastMount}
     </div>
   );
 }
@@ -1108,7 +1118,7 @@ const FORM_TABS = [
 ];
 
 export default function PropertiesPanel({ selectedField, selectedSection, onUpdateField }) {
-  const { fields, updateField, currentFormId, forms, updateFormTheme } = useFormStore();
+  const { fields, updateField, removeField, currentFormId, forms, updateFormTheme } = useFormStore();
   const field = fields.find((f) => f.id === selectedField);
   const currentForm = forms.find((f) => f.id === currentFormId);
   const theme = currentForm?.theme || { ...DEFAULT_THEME };
@@ -1164,26 +1174,27 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
     return (
       <div className="flex-1 flex flex-col overflow-hidden" role="tabpanel" aria-label="Form settings">
         {/* Form-level tab bar */}
-        <div className="flex border-b border-border bg-surface" role="tablist" aria-label="Form property tabs">
-          {FORM_TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={formTab === id}
-              onClick={() => setFormTab(id)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
-                formTab === id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted hover:text-base hover:border-border'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              {label}
-              {id === 'schedule' && hasSchedule && (
-                <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" aria-label="Schedule active" />
-              )}
-            </button>
-          ))}
+        <div className="px-3 py-3 border-b border-border-soft flex-none">
+          <div className="flex items-center gap-1 bg-surface-raised rounded-base p-1" role="tablist" aria-label="Form property tabs">
+            {FORM_TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={formTab === id}
+                onClick={() => setFormTab(id)}
+                className={`flex-1 px-3 py-1.5 rounded-sm text-xs font-medium transition-all ${
+                  formTab === id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted hover:text-base'
+                }`}
+              >
+                {label}
+                {id === 'schedule' && hasSchedule && (
+                  <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary-foreground flex-shrink-0" aria-label="Schedule active" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Schedule tab */}
@@ -1464,33 +1475,54 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
   // Build the sub-nav items for the active tab (only sections that exist for this field type)
   const activeNavItems = activeTab === 'general' ? generalNavItems : activeTab === 'advanced' ? advancedNavItems : [];
 
+  // Field header (field name + category badge + description)
+  const fieldHeader = (
+    <div className="px-4 py-3.5 border-b border-border flex-none">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-semibold text-text-base">{field.label || field.type}</h3>
+        {(() => {
+          const meta = FIELD_META[field.type];
+          if (!meta) return null;
+          return (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-light text-primary font-medium uppercase tracking-wide">
+              {meta.category}
+            </span>
+          );
+        })()}
+      </div>
+      <p className="text-xs text-muted">{FIELD_META[field.type]?.label || field.type} field</p>
+    </div>
+  );
+
   // Tab bar
   const tabBar = (
-    <div className="flex border-b border-border bg-surface" role="tablist" aria-label="Field property tabs">
-      {TABS.map(({ id, label, icon: Icon }) => (
-        <button
-          key={id}
-          role="tab"
-          aria-selected={activeTab === id}
-          onClick={() => setActiveTab(id)}
-          className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary flex-1 justify-center ${
-            activeTab === id
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted hover:text-base hover:border-border'
-          }`}
-        >
-          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-          {label}
-          {id === 'logic' && hasConditionalLogic(field) && (
-            <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" aria-label="Logic active" />
-          )}
-        </button>
-      ))}
+    <div className="px-3 py-3 border-b border-border-soft flex-none">
+      <div className="flex items-center gap-1 bg-surface-raised rounded-base p-1" role="tablist" aria-label="Field property tabs">
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            onClick={() => setActiveTab(id)}
+            className={`flex-1 px-3 py-1.5 rounded-sm text-xs font-medium transition-all ${
+              activeTab === id
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted hover:text-base'
+            }`}
+          >
+            {label}
+            {id === 'logic' && hasConditionalLogic(field) && (
+              <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-primary-foreground flex-shrink-0" aria-label="Logic active" />
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" aria-label="Field properties">
+      {fieldHeader}
       {tabBar}
       {activeNavItems.length > 1 && (
         <SubNav items={activeNavItems} scrollContainerRef={scrollContainerRef} sectionRefs={sectionRefs} observeKey={observedFieldKey} />
@@ -1975,6 +2007,17 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
       </section>
       )}
 
+      </div>
+
+      {/* Delete field */}
+      <div className="px-4 pb-4">
+        <button
+          onClick={() => removeField(field.id)}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-base border border-dashed border-danger/40 text-danger text-xs font-medium hover:bg-danger-light transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete field
+        </button>
       </div>
     </div>
   );

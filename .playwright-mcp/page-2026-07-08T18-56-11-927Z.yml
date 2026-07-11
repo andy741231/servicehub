@@ -1,0 +1,296 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - generic [ref=f4e4]:
+      - generic "ServiceHub" [ref=f4e5]: SH
+      - generic [ref=f4e6]:
+        - img [ref=f4e7]
+        - generic [ref=f4e9]: Forms
+        - img [ref=f4e10]
+        - strong [ref=f4e12]: Form Builder
+      - button "Summer Camp Registration" [ref=f4e13] [cursor=pointer]:
+        - generic [ref=f4e14]: Summer Camp Registration
+        - img [ref=f4e15]
+      - generic [ref=f4e17]: Saved
+    - generic [ref=f4e19]:
+      - generic "View mode" [ref=f4e20]:
+        - button "Builder" [ref=f4e21] [cursor=pointer]
+        - button "Preview" [ref=f4e22] [cursor=pointer]
+      - button "Toggle theme" [ref=f4e23] [cursor=pointer]:
+        - img [ref=f4e24]
+      - button "Undo" [ref=f4e26] [cursor=pointer]:
+        - img [ref=f4e27]
+      - button "Share" [ref=f4e30] [cursor=pointer]:
+        - img [ref=f4e31]
+        - text: Share
+      - button "Publish" [ref=f4e34] [cursor=pointer]:
+        - img [ref=f4e35]
+        - text: Publish
+  - generic [ref=f4e37]:
+    - complementary "Field library" [ref=f4e38]:
+      - generic [ref=f4e39]:
+        - paragraph [ref=f4e40]: Build faster
+        - heading "Field Library" [level=2] [ref=f4e41]
+        - paragraph [ref=f4e42]:
+          - text: Click any field to add it to the canvas. Press
+          - generic [ref=f4e43]: /
+          - text: for quick add.
+        - generic [ref=f4e44]:
+          - img [ref=f4e45]
+          - textbox "Search field library" [ref=f4e48]:
+            - /placeholder: Search fields...
+      - generic [ref=f4e49]:
+        - generic [ref=f4e50]:
+          - generic [ref=f4e51]: Basic
+          - button "Short Text Single-line text input ::" [ref=f4e53] [cursor=pointer]:
+            - img [ref=f4e55]
+            - generic [ref=f4e57]:
+              - strong [ref=f4e58]: Short Text
+              - generic [ref=f4e59]: Single-line text input
+            - generic [ref=f4e60]: "::"
+          - button "Long Text Multi-line text area ::" [ref=f4e61] [cursor=pointer]:
+            - img [ref=f4e63]
+            - generic [ref=f4e66]:
+              - strong [ref=f4e67]: Long Text
+              - generic [ref=f4e68]: Multi-line text area
+            - generic [ref=f4e69]: "::"
+          - button "Number Numeric input ::" [ref=f4e70] [cursor=pointer]:
+            - img [ref=f4e72]
+            - generic [ref=f4e74]:
+              - strong [ref=f4e75]: Number
+              - generic [ref=f4e76]: Numeric input
+            - generic [ref=f4e77]: "::"
+          - button "Email Email address input ::" [ref=f4e78] [cursor=pointer]:
+            - img [ref=f4e80]
+            - generic [ref=f4e83]:
+              - strong [ref=f4e84]: Email
+              - generic [ref=f4e85]: Email address input
+            - generic [ref=f4e86]: "::"
+          - button "Phone Phone number input ::" [ref=f4e87] [cursor=pointer]:
+            - img [ref=f4e89]
+            - generic [ref=f4e91]:
+              - strong [ref=f4e92]: Phone
+              - generic [ref=f4e93]: Phone number input
+            - generic [ref=f4e94]: "::"
+          - button "Date Date picker ::" [ref=f4e95] [cursor=pointer]:
+            - img [ref=f4e97]
+            - generic [ref=f4e100]:
+              - strong [ref=f4e101]: Date
+              - generic [ref=f4e102]: Date picker
+            - generic [ref=f4e103]: "::"
+          - button "Website URL / website input ::" [ref=f4e104] [cursor=pointer]:
+            - img [ref=f4e106]
+            - generic [ref=f4e109]:
+              - strong [ref=f4e110]: Website
+              - generic [ref=f4e111]: URL / website input
+            - generic [ref=f4e112]: "::"
+        - generic [ref=f4e113]:
+          - generic [ref=f4e114]: Choice
+          - button "Dropdown Single selection dropdown ::" [ref=f4e116] [cursor=pointer]:
+            - img [ref=f4e118]
+            - generic [ref=f4e120]:
+              - strong [ref=f4e121]: Dropdown
+              - generic [ref=f4e122]: Single selection dropdown
+            - generic [ref=f4e123]: "::"
+          - button "Checkbox Multiple checkboxes ::" [ref=f4e124] [cursor=pointer]:
+            - img [ref=f4e126]
+            - generic [ref=f4e129]:
+              - strong [ref=f4e130]: Checkbox
+              - generic [ref=f4e131]: Multiple checkboxes
+            - generic [ref=f4e132]: "::"
+          - button "Rating Star rating scale ::" [ref=f4e133] [cursor=pointer]:
+            - img [ref=f4e135]
+            - generic [ref=f4e137]:
+              - strong [ref=f4e138]: Rating
+              - generic [ref=f4e139]: Star rating scale
+            - generic [ref=f4e140]: "::"
+          - button "Slider Range slider ::" [ref=f4e141] [cursor=pointer]:
+            - img [ref=f4e143]
+            - generic [ref=f4e145]:
+              - strong [ref=f4e146]: Slider
+              - generic [ref=f4e147]: Range slider
+            - generic [ref=f4e148]: "::"
+        - generic [ref=f4e149]:
+          - generic [ref=f4e150]: Advanced
+          - button "File Upload File attachment ::" [ref=f4e152] [cursor=pointer]:
+            - img [ref=f4e154]
+            - generic [ref=f4e157]:
+              - strong [ref=f4e158]: File Upload
+              - generic [ref=f4e159]: File attachment
+            - generic [ref=f4e160]: "::"
+          - button "Content Block Rich text content ::" [ref=f4e161] [cursor=pointer]:
+            - img [ref=f4e163]
+            - generic [ref=f4e166]:
+              - strong [ref=f4e167]: Content Block
+              - generic [ref=f4e168]: Rich text content
+            - generic [ref=f4e169]: "::"
+          - button "Image Display an image ::" [ref=f4e170] [cursor=pointer]:
+            - img [ref=f4e172]
+            - generic [ref=f4e176]:
+              - strong [ref=f4e177]: Image
+              - generic [ref=f4e178]: Display an image
+            - generic [ref=f4e179]: "::"
+          - button "Signature Draw a signature ::" [ref=f4e180] [cursor=pointer]:
+            - img [ref=f4e182]
+            - generic [ref=f4e187]:
+              - strong [ref=f4e188]: Signature
+              - generic [ref=f4e189]: Draw a signature
+            - generic [ref=f4e190]: "::"
+          - button "Computed Field Auto-calculate from other fields ::" [ref=f4e191] [cursor=pointer]:
+            - img [ref=f4e193]
+            - generic [ref=f4e195]:
+              - strong [ref=f4e196]: Computed Field
+              - generic [ref=f4e197]: Auto-calculate from other fields
+            - generic [ref=f4e198]: "::"
+          - button "Repeating Group Let users add multiple sets ::" [ref=f4e199] [cursor=pointer]:
+            - img [ref=f4e201]
+            - generic [ref=f4e203]:
+              - strong [ref=f4e204]: Repeating Group
+              - generic [ref=f4e205]: Let users add multiple sets
+            - generic [ref=f4e206]: "::"
+        - generic [ref=f4e207]:
+          - generic [ref=f4e208]: Personal
+          - button "Full Name First and last name ::" [ref=f4e210] [cursor=pointer]:
+            - img [ref=f4e212]
+            - generic [ref=f4e215]:
+              - strong [ref=f4e216]: Full Name
+              - generic [ref=f4e217]: First and last name
+            - generic [ref=f4e218]: "::"
+          - button "Address Street, city, state, zip ::" [ref=f4e219] [cursor=pointer]:
+            - img [ref=f4e221]
+            - generic [ref=f4e224]:
+              - strong [ref=f4e225]: Address
+              - generic [ref=f4e226]: Street, city, state, zip
+            - generic [ref=f4e227]: "::"
+        - generic [ref=f4e228]:
+          - generic [ref=f4e229]: Layout
+          - button "Page Break Split form into pages ::" [ref=f4e231] [cursor=pointer]:
+            - img [ref=f4e233]
+            - generic [ref=f4e235]:
+              - strong [ref=f4e236]: Page Break
+              - generic [ref=f4e237]: Split form into pages
+            - generic [ref=f4e238]: "::"
+    - main "Form canvas" [ref=f4e239]:
+      - generic [ref=f4e241]:
+        - generic [ref=f4e242]:
+          - heading "Summer Camp Registration" [level=1] [ref=f4e243]
+          - paragraph [ref=f4e244]: Collect student details, emergency contacts, and medical info.
+        - generic [ref=f4e245]:
+          - generic [ref=f4e246] [cursor=pointer]:
+            - generic [ref=f4e247]:
+              - heading "Student Information" [level=3] [ref=f4e248]
+              - paragraph [ref=f4e249]: Basic details about the camper
+            - generic [ref=f4e250]:
+              - button "1 column" [ref=f4e251]:
+                - img [ref=f4e252]
+              - button "2 columns" [ref=f4e254]:
+                - img [ref=f4e255]
+              - button "3 columns" [ref=f4e258]:
+                - img [ref=f4e259]
+          - generic [ref=f4e263]:
+            - generic [ref=f4e264] [cursor=pointer]:
+              - generic [ref=f4e266]:
+                - generic [ref=f4e267]: Full Name *
+                - generic [ref=f4e268]:
+                  - generic [ref=f4e269]: Full Name
+                  - generic [ref=f4e270]: "* Required"
+              - textbox "First name" [ref=f4e271]
+              - textbox "Last name" [ref=f4e272]
+            - generic [ref=f4e273] [cursor=pointer]:
+              - generic [ref=f4e275]:
+                - generic [ref=f4e276]: Date of Birth *
+                - generic [ref=f4e277]:
+                  - generic [ref=f4e278]: Date
+                  - generic [ref=f4e279]: "* Required"
+              - textbox [ref=f4e280]
+            - button "Add field to section" [ref=f4e281] [cursor=pointer]:
+              - img [ref=f4e282]
+              - text: Add field to section
+        - generic [ref=f4e284]:
+          - generic [ref=f4e285] [cursor=pointer]:
+            - generic [ref=f4e286]:
+              - heading "Contact Information" [level=3] [ref=f4e287]
+              - paragraph [ref=f4e288]: How to reach you
+            - generic [ref=f4e289]:
+              - button "1 column" [ref=f4e290]:
+                - img [ref=f4e291]
+              - button "2 columns" [ref=f4e293]:
+                - img [ref=f4e294]
+              - button "3 columns" [ref=f4e297]:
+                - img [ref=f4e298]
+          - generic [ref=f4e302]:
+            - generic [ref=f4e303] [cursor=pointer]:
+              - generic [ref=f4e305]:
+                - generic [ref=f4e306]: Email Address *
+                - generic [ref=f4e307]:
+                  - generic [ref=f4e308]: Email
+                  - generic [ref=f4e309]: "* Required"
+              - textbox "Email Address" [ref=f4e310]
+            - generic [ref=f4e311] [cursor=pointer]:
+              - generic [ref=f4e313]:
+                - generic [ref=f4e314]: Phone Number *
+                - generic [ref=f4e315]:
+                  - generic [ref=f4e316]: Phone
+                  - generic [ref=f4e317]: "* Required"
+              - textbox "Phone Number" [ref=f4e318]
+            - button "Add field to section" [ref=f4e319] [cursor=pointer]:
+              - img [ref=f4e320]
+              - text: Add field to section
+        - generic [ref=f4e322]:
+          - generic [ref=f4e323] [cursor=pointer]:
+            - generic [ref=f4e324]:
+              - heading "Program Preferences" [level=3] [ref=f4e325]
+              - paragraph [ref=f4e326]: Choose the camp session
+            - generic [ref=f4e327]:
+              - button "1 column" [ref=f4e328]:
+                - img [ref=f4e329]
+              - button "2 columns" [ref=f4e331]:
+                - img [ref=f4e332]
+              - button "3 columns" [ref=f4e335]:
+                - img [ref=f4e336]
+          - generic [ref=f4e340]:
+            - generic [ref=f4e341] [cursor=pointer]:
+              - generic [ref=f4e343]:
+                - generic [ref=f4e344]: Camp Session *
+                - generic [ref=f4e345]:
+                  - generic [ref=f4e346]: Dropdown
+                  - generic [ref=f4e347]: "* Required"
+              - generic [ref=f4e348]:
+                - generic [ref=f4e349]: Camp Session
+                - img [ref=f4e350]
+            - generic [ref=f4e352] [cursor=pointer]:
+              - generic [ref=f4e354]:
+                - generic [ref=f4e355]: Add-on Activities
+                - generic [ref=f4e357]: Checkbox
+              - generic [ref=f4e358]:
+                - generic [ref=f4e359]: Swimming
+                - generic [ref=f4e361]: Arts & Crafts
+                - generic [ref=f4e363]: Hiking
+                - generic [ref=f4e365]: STEM Lab
+              - paragraph [ref=f4e367]: Select any additional activities.
+            - generic [ref=f4e368] [cursor=pointer]:
+              - generic [ref=f4e370]:
+                - generic [ref=f4e371]: Dietary Restrictions / Allergies
+                - generic [ref=f4e373]: Long Text
+              - textbox [ref=f4e374]: List any allergies or dietary needs...
+            - button "Add field to section" [ref=f4e375] [cursor=pointer]:
+              - img [ref=f4e376]
+              - text: Add field to section
+    - complementary "Properties" [ref=f4e378]:
+      - generic [ref=f4e379]:
+        - button "Design" [ref=f4e380] [cursor=pointer]
+        - button "Logic" [ref=f4e381] [cursor=pointer]
+        - button "Settings" [ref=f4e382] [cursor=pointer]
+      - generic [ref=f4e383]:
+        - generic [ref=f4e384]:
+          - heading "No field selected" [level=3] [ref=f4e385]
+          - paragraph [ref=f4e386]: Click a field on the canvas to edit its properties, validation, and conditional logic.
+        - generic [ref=f4e387]:
+          - heading "Form Theme" [level=3] [ref=f4e388]
+          - paragraph [ref=f4e389]: Click a swatch to preview the color direction.
+          - generic [ref=f4e390]:
+            - button "Teal theme" [ref=f4e391] [cursor=pointer]: Teal
+            - button "Forest theme" [ref=f4e392] [cursor=pointer]: Forest
+            - button "Sunset theme" [ref=f4e393] [cursor=pointer]: Sunset
+            - button "Midnight theme" [ref=f4e394] [cursor=pointer]: Midnight
+            - button "Violet theme" [ref=f4e395] [cursor=pointer]: Violet
+            - button "Slate theme" [ref=f4e396] [cursor=pointer]: Slate

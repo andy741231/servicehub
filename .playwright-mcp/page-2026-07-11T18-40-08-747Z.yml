@@ -1,0 +1,160 @@
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e5]:
+    - link "Skip to main content" [ref=e6] [cursor=pointer]:
+      - /url: "#main-content"
+    - navigation "Main navigation" [ref=e7]:
+      - link "Service Hub" [ref=e9] [cursor=pointer]:
+        - /url: /hub-admin/
+      - navigation "Form Builder sections" [ref=e11]:
+        - link "Dashboard" [ref=e12] [cursor=pointer]:
+          - /url: /hub-admin/forms/dashboard
+        - link "Forms" [ref=e17] [cursor=pointer]:
+          - /url: /hub-admin/forms/list
+        - link "Builder" [ref=e22] [cursor=pointer]:
+          - /url: /hub-admin/forms/builder
+        - link "Submissions" [ref=e26] [cursor=pointer]:
+          - /url: /hub-admin/forms/submissions
+        - link "Analytics" [ref=e31] [cursor=pointer]:
+          - /url: /hub-admin/forms/analytics
+        - link "Templates" [ref=e35] [cursor=pointer]:
+          - /url: /hub-admin/forms/templates
+    - generic [ref=e40]:
+      - banner [ref=e41]:
+        - heading [level=1]
+        - textbox "Global search" [ref=e45]:
+          - /placeholder: Search pages, forms, campaigns…
+        - button "Account menu" [ref=e49]:
+          - generic [ref=e50]: SA
+          - generic [ref=e51]:
+            - generic [ref=e52]: System Admin
+            - generic [ref=e53]: admin@servicehub.com
+      - main [ref=e56]:
+        - generic [ref=e119]:
+          - link "Skip to canvas" [ref=e120] [cursor=pointer]:
+            - /url: "#form-canvas"
+          - generic [ref=e122]:
+            - complementary "Form outline" [ref=e123]:
+              - generic [ref=e124]:
+                - generic [ref=e125]:
+                  - generic [ref=e126]: Outline
+                  - generic [ref=e131]:
+                    - button "Search fields in outline" [ref=e132]
+                    - button "Add new section" [ref=e136]
+                - generic [ref=e139]:
+                  - 'treeitem "Section: Section 1" [expanded] [ref=e140] [cursor=pointer]':
+                    - button "Collapse section" [ref=e141]
+                    - generic [ref=e146]: Section 1
+                  - paragraph [ref=e148]: No fields
+                - button "Add new section" [ref=e150]:
+                  - generic [ref=e152]: Add section
+            - main [ref=e153]:
+              - generic [ref=e154]:
+                - generic [ref=e156]:
+                  - button "Back to dashboard" [ref=e157]
+                  - generic [ref=e164]:
+                    - heading "Untitled Form" [level=1] [ref=e165]
+                    - generic [ref=e166]: Saved
+                - generic [ref=e169]:
+                  - button "Share form" [ref=e170]:
+                    - generic [ref=e177]: Share
+                  - button "More actions" [ref=e179]
+                  - button "Save form" [ref=e184]:
+                    - generic [ref=e189]: Save
+              - button "Untitled Form" [ref=e194]
+              - generic [ref=e196]:
+                - generic [ref=e197]:
+                  - generic [ref=e198]: Form details
+                  - generic [ref=e201]: Form title
+                  - textbox "Form title" [ref=e202]:
+                    - /placeholder: Untitled Form
+                    - text: Untitled Form
+                  - generic [ref=e203]: Form description
+                  - textbox "Form description" [ref=e204]:
+                    - /placeholder: Add a description to help respondents understand this form…
+                - generic [ref=e205]:
+                  - generic [ref=e207]:
+                    - 'button "Section 1: Untitled" [expanded] [ref=e208] [cursor=pointer]':
+                      - generic [ref=e209]:
+                        - button "Drag to reorder section" [ref=e210]
+                        - button "Collapse section" [ref=e218]
+                        - generic [ref=e223]: Section 1
+                        - generic [ref=e224]: 0 fields
+                      - button "Duplicate section" [ref=e226]
+                    - generic [ref=e231]:
+                      - paragraph [ref=e234]: This section is empty
+                      - button "Insert new field into this section" [ref=e235]: Insert field
+                      - generic [ref=e237]:
+                        - button "Add a Text field to this section" [ref=e238]: Text
+                        - button "Add a Email field to this section" [ref=e239]: Email
+                        - button "Add a Long Text field to this section" [ref=e240]: Long Text
+                        - button "Add a Dropdown field to this section" [ref=e241]: Dropdown
+                        - button "Add a Phone field to this section" [ref=e242]: Phone
+                  - button "Add section below" [ref=e245]: Add section
+                  - button "Add new section" [ref=e247]:
+                    - generic [ref=e250]: Add section
+            - complementary "Properties panel" [ref=e251]:
+              - tabpanel "Form settings" [ref=e252]:
+                - tablist "Form property tabs" [ref=e254]:
+                  - tab "Appearance" [selected] [ref=e255]
+                  - tab "Settings" [ref=e256]
+                  - tab "Schedule" [ref=e257]
+                - generic [ref=e258]:
+                  - generic [ref=e259]:
+                    - heading "Theme Presets" [level=3] [ref=e260]
+                    - generic [ref=e267]:
+                      - button "Apply Default theme" [ref=e268]: Default
+                      - button "Apply Midnight theme" [ref=e270]: Midnight
+                      - button "Apply Forest theme" [ref=e272]: Forest
+                      - button "Apply Sunset theme" [ref=e274]: Sunset
+                      - button "Apply Slate theme" [ref=e276]: Slate
+                      - button "Apply Violet theme" [ref=e278]: Violet
+                  - generic [ref=e280]:
+                    - heading "Theme & Appearance" [level=3] [ref=e281]
+                    - generic [ref=e288]:
+                      - generic [ref=e289]:
+                        - generic [ref=e290]: Primary Color
+                        - generic [ref=e291]:
+                          - button "Pick Primary Color color" [ref=e293] [cursor=pointer]
+                          - generic [ref=e295]: "#2563eb"
+                      - generic [ref=e296]:
+                        - generic [ref=e297]: Button Color
+                        - generic [ref=e298]:
+                          - button "Pick Button Color color" [ref=e300] [cursor=pointer]
+                          - generic [ref=e302]: "#2563eb"
+                      - generic [ref=e303]:
+                        - generic [ref=e304]: Background Color
+                        - generic [ref=e305]:
+                          - button "Pick Background Color color" [ref=e307] [cursor=pointer]
+                          - generic [ref=e309]: "#f9fafb"
+                      - generic [ref=e310]:
+                        - generic [ref=e311]: Text Color
+                        - generic [ref=e312]:
+                          - button "Pick Text Color color" [ref=e314] [cursor=pointer]
+                          - generic [ref=e316]: "#111827"
+                      - generic [ref=e317]:
+                        - generic [ref=e318]: Font Family
+                        - combobox "Font Family" [ref=e319]:
+                          - option "Sans-serif" [selected]
+                          - option "Serif"
+                          - option "Monospace"
+                          - option "Cursive"
+                          - option "System UI"
+          - generic [ref=e320]:
+            - generic [ref=e321]:
+              - generic [ref=e322]: Saved
+              - generic [ref=e325]: 0 fields, 1 sections
+            - generic [ref=e331]:
+              - generic [ref=e332]:
+                - button "Design" [pressed] [ref=e333]
+                - button "Preview" [ref=e334]
+                - button "Code" [ref=e335]
+              - generic [ref=e337]:
+                - button "Desktop preview" [pressed] [ref=e338]
+                - button "Tablet preview" [ref=e341]
+                - button "Mobile preview" [ref=e344]
+              - generic [ref=e348]:
+                - button "Undo" [disabled] [ref=e349]
+                - button "Redo" [disabled] [ref=e353]
+              - generic [ref=e358]: Form Schema

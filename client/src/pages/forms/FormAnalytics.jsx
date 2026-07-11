@@ -35,7 +35,7 @@ function SimpleLineChart({ data, color }) {
           y1={padding.top + chartHeight - ratio * chartHeight}
           x2={padding.left + chartWidth}
           y2={padding.top + chartHeight - ratio * chartHeight}
-          stroke="#e5e7eb"
+          stroke="hsl(var(--border))"
           strokeDasharray="4"
         />
       ))}
@@ -44,7 +44,7 @@ function SimpleLineChart({ data, color }) {
       {/* Points */}
       {points.map((p, i) => (
         <g key={i}>
-          <circle cx={p.x} cy={p.y} r={5} fill={color} stroke="white" strokeWidth={2} />
+          <circle cx={p.x} cy={p.y} r={5} fill={color} stroke="hsl(var(--background))" strokeWidth={2} />
           <text
             x={p.x}
             y={height - 10}

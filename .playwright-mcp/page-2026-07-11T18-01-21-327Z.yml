@@ -1,0 +1,20 @@
+- generic [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - heading "Sign in to Service Hub" [level=2] [ref=e12]
+      - paragraph [ref=e13]: Enter your credentials to access the admin dashboard.
+    - generic [ref=e14]:
+      - alert [ref=e34]: Invalid credentials
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: Username
+          - textbox "Username" [ref=e22]: admin
+        - generic [ref=e23]:
+          - generic [ref=e24]: Password
+          - textbox "Password" [ref=e29]: admin
+      - generic [ref=e30]:
+        - checkbox "Trust this computer, remember me" [ref=e31] [cursor=pointer]
+        - generic [ref=e32] [cursor=pointer]: Trust this computer, remember me
+      - button "Sign in" [active] [ref=e33]
