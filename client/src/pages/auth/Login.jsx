@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { LogIn, Lock, User } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import LoadingScreen from '../../components/LoadingScreen';
 import { APPS } from '../../layouts/AppShell';
 
 function getAccessibleApps(user) {
@@ -29,7 +30,7 @@ export default function Login() {
   const isLoading = useAuthStore((state) => state.isLoading);
   const navigate = useNavigate();
 
-  if (isLoading) return <div className="text-muted">Loading...</div>;
+  if (isLoading) return <LoadingScreen label="Signing in" />;
   if (isAuthenticated) return <Navigate to={getPostLoginPath(user)} replace />;
 
   const handleSubmit = async (e) => {

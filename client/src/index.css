@@ -493,6 +493,22 @@
     border-radius: var(--radius-sm-value);
   }
 
+  /* Animated trailing dots for loading labels */
+  @keyframes loadingDots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+  }
+  .loading-dots::after {
+    content: '';
+    display: inline-block;
+    width: 1ch;
+    text-align: left;
+    animation: loadingDots 1.4s steps(1, end) infinite;
+  }
+
   /* ─── Consistent page chrome ─────────────────────────────────────── */
   .page-container {
     padding: 2rem; /* p-8 */

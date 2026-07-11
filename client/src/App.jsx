@@ -28,6 +28,7 @@ import Directory from './pages/directory/index';
 import DirectoryShell from './pages/directory/DirectoryShell';
 import PortalShell from './pages/portal/PortalShell';
 import PortalDashboard from './pages/portal/PortalDashboard';
+import LoadingScreen from './components/LoadingScreen';
 import Welcome from './pages/Welcome';
 import SearchPage from './pages/Search';
 import PublicHome from './pages/public/Home';
@@ -39,7 +40,7 @@ import DirectoryDashboard from './pages/directory/DirectoryDashboard';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuthStore();
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/hub-admin" />;
   return children;
 }
