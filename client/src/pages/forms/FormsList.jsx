@@ -540,8 +540,7 @@ export default function FormsList() {
           </div>
         ) : viewMode === 'list' ? (
           <div className={`flex gap-6`}>
-            {/* Folder sidebar — only when folders exist */}
-            {folders.length > 0 && (
+            {/* Folder sidebar — always visible so users can create first folder */}
             <div className="w-52 flex-shrink-0 hidden md:block">
               <div className="sticky top-20">
                 <div className="flex items-center justify-between mb-3 px-1">
@@ -555,6 +554,9 @@ export default function FormsList() {
                   </button>
                 </div>
                 <div className="flex flex-col gap-0.5">
+                  {folders.length === 0 && (
+                    <span className="text-xs text-muted px-3 py-2">No folders yet. Click + to create one.</span>
+                  )}
                   {folders.map(folder => (
                     <div
                       key={folder.id}
@@ -606,12 +608,8 @@ export default function FormsList() {
                     </div>
                   ))}
                 </div>
-                {folders.length === 0 && (
-                  <p className="text-xs text-subtle px-3 py-2">No folders yet. Click + to create one.</p>
-                )}
               </div>
             </div>
-            )}
 
             {/* Form list */}
             <div className="flex-1 flex flex-col gap-2">
