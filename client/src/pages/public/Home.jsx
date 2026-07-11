@@ -686,7 +686,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
   return (
     <div className="min-h-screen bg-surface text-text-base">
       {renderHeader()}
-      <main>{renderContent()}</main>
+      <main id="main-content" role="main">{renderContent()}</main>
       {renderFooter()}
     </div>
   );

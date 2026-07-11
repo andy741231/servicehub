@@ -279,13 +279,6 @@ function AppShell() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Skip-to-content link for keyboard users */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-base focus:text-sm focus:font-medium"
-      >
-        Skip to main content
-      </a>
 
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (

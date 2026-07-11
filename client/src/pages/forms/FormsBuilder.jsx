@@ -471,13 +471,6 @@ export default function FormsBuilder() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Skip-to-content link for keyboard users */}
-      <a
-        href="#form-canvas"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-3 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-base focus:shadow-modal focus:text-small focus:font-medium"
-      >
-        Skip to canvas
-      </a>
       {/* ARIA live region for structural change announcements */}
       <div aria-live="polite" className="sr-only">{ariaAnnouncement}</div>
       <div className="flex flex-1 overflow-hidden">
