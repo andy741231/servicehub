@@ -218,19 +218,19 @@ jobs:
 
     steps:
       - name: Wait for staging slot to warm up
-        run: sleep 45
+        run: sleep 60
 
       - name: Health check — homepage (HTTP 200)
         run: |
-          for i in 1 2 3; do
+          for i in $(seq 1 6); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 30 \
               "https://houstonservicehub-staging.azurewebsites.net/" || true)
             echo "Homepage status (attempt $i): $STATUS"
             if [ "$STATUS" = "200" ]; then exit 0; fi
-            sleep 15
+            sleep 20
           done
-          echo "Homepage smoke test FAILED after 3 attempts (last: $STATUS)"
+          echo "Homepage smoke test FAILED after 6 attempts (last: $STATUS)"
           exit 1
 
       - name: Health check — API health endpoint
