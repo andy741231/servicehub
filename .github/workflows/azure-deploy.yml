@@ -123,6 +123,7 @@ jobs:
           npx prisma migrate resolve --applied "20260630_feat_form_version_history" || true
           npx prisma migrate resolve --applied "20260630_fixdb_guard_updatedat_column_add_and_resolve_faile" || true
           npx prisma migrate resolve --applied "20260707_add_user_preferences" || true
+          npx prisma migrate resolve --applied "20260711_add_form_folder_table" || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
@@ -264,6 +265,8 @@ jobs:
           npx prisma migrate resolve --applied "20260629_cleanupmigrations_remove_redundant_manual_migratio" || true
           npx prisma migrate resolve --applied "20260630_feat_form_version_history" || true
           npx prisma migrate resolve --applied "20260630_fixdb_guard_updatedat_column_add_and_resolve_faile" || true
+          npx prisma migrate resolve --applied "20260707_add_user_preferences" || true
+          npx prisma migrate resolve --applied "20260711_add_form_folder_table" || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 
