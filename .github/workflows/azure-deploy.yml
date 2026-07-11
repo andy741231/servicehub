@@ -218,20 +218,20 @@ jobs:
 
     steps:
       - name: Wait for staging slot to warm up
-        run: sleep 15
+        run: sleep 45
 
       - name: Health check — homepage (HTTP 200)
         run: |
-          # `|| true` swallows curl's non-zero exit (e.g. 28=timeout) so set -e
-          # doesn't abort the step before we can inspect the status code.
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 30 \
-            "https://houstonservicehub-staging.azurewebsites.net/" || true)
-          echo "Homepage status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "Homepage smoke test FAILED (got $STATUS)"
-            exit 1
-          fi
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              "https://houstonservicehub-staging.azurewebsites.net/" || true)
+            echo "Homepage status (attempt $i): $STATUS"
+            if [ "$STATUS" = "200" ]; then exit 0; fi
+            sleep 15
+          done
+          echo "Homepage smoke test FAILED after 3 attempts (last: $STATUS)"
+          exit 1
 
       - name: Health check — API health endpoint
         run: |
