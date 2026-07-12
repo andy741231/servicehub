@@ -35,6 +35,8 @@ import PublicHome from './pages/public/Home';
 import FormView from './pages/public/FormView';
 import WebDashboard from './pages/web/WebDashboard';
 import EmailDashboard from './pages/email/EmailDashboard';
+import TestEmail from './pages/email/TestEmail';
+import InboundEmails from './pages/email/InboundEmails';
 import DirectoryDashboard from './pages/directory/DirectoryDashboard';
 
 
@@ -123,6 +125,8 @@ export default function App() {
               <Route index element={<Navigate to="/hub-admin/email/dashboard" replace />} />
               <Route path="dashboard" element={<EmailDashboard />} />
               <Route path="campaigns/*" element={<EmailIndex />} />
+              <Route path="test" element={<TestEmail />} />
+              <Route path="inbound" element={<InboundEmails />} />
               <Route path="lists" element={<MailingLists />} />
               <Route path="templates" element={<div className="max-w-7xl mx-auto p-6 lg:p-8"><p className="text-subtle">Coming soon.</p></div>} />
             </Route>

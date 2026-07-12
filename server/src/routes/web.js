@@ -1,8 +1,5 @@
 import { Router } from 'express';
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
 import { getPageBySlug, updatePage } from '../controllers/web.js';
 import { listPages, createPage, updatePageMeta, deletePage, reorderPages } from '../controllers/webPages.js';
 import { getSiteStyles, updateSiteStyles } from '../controllers/webStyles.js';
@@ -11,19 +8,8 @@ import { listAssets, uploadAsset, deleteAsset } from '../controllers/webAssets.j
 import { verifyToken } from '../middleware/auth.js';
 import { requireAppAccess } from '../middleware/permissions.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.join(__dirname, '../../../uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
-  },
-});
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
   fileFilter: (req, file, cb) => {
     const allowed = [

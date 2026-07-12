@@ -1,4 +1,5 @@
 import prisma from '../db/client.js';
+import { sendTestEmail, sendCampaignToMailingList } from '../services/emailService.js';
 
 // Campaign Controllers
 export const getCampaigns = async (req, res) => {
@@ -134,20 +135,59 @@ export const sendCampaign = async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    // TODO: Implement actual email sending logic with email provider
-    // For now, we'll just update the status
+    if (!campaign.mailingListId) {
+      return res.status(400).json({ error: 'Campaign has no mailing list assigned' });
+    }
+
+    const recipients = await prisma.recipient.findMany({
+      where: { mailingListId: campaign.mailingListId, status: 'active' },
+    });
+
+    if (recipients.length === 0) {
+      return res.status(400).json({ error: 'Mailing list has no active recipients' });
+    }
+
+    await prisma.emailCampaign.update({
+      where: { id },
+      data: { status: 'sending' },
+    });
+
+    const result = await sendCampaignToMailingList(campaign, recipients);
+
     const updated = await prisma.emailCampaign.update({
       where: { id },
       data: {
         status: 'sent',
-        sentAt: new Date()
-      }
+        sentAt: new Date(),
+      },
+      include: { metrics: true, mailingList: true },
     });
 
-    res.json(updated);
+    res.json({ ...updated, sendResult: result });
   } catch (error) {
     console.error('Error sending campaign:', error);
-    res.status(500).json({ error: 'Failed to send campaign' });
+    await prisma.emailCampaign.update({
+      where: { id: req.params.id },
+      data: { status: 'draft' },
+    }).catch(() => {});
+    res.status(500).json({ error: 'Failed to send campaign: ' + error.message });
+  }
+};
+
+// Test Email Controller
+export const sendTestEmailController = async (req, res) => {
+  try {
+    const { to, subject, html } = req.body;
+
+    if (!to) {
+      return res.status(400).json({ error: 'Recipient email ("to") is required' });
+    }
+
+    await sendTestEmail(to, subject, html);
+    res.json({ message: `Test email sent to ${to}` });
+  } catch (error) {
+    console.error('Error sending test email:', error);
+    res.status(500).json({ error: 'Failed to send test email: ' + error.message });
   }
 };
 

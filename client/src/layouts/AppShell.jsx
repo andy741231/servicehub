@@ -3,7 +3,7 @@ import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Globe, ClipboardList, Mail, Users, BookOpen, LayoutDashboard, X,
   ChevronRight, ChevronDown, Gauge, Files, PanelTop, Palette, Images, FileStack,
-  Wrench, Inbox, BarChart3, Copy, UserPlus, FileText,
+  Wrench, Inbox, BarChart3, Copy, UserPlus, FileText, Send,
 } from 'lucide-react';
 import { APP_IDS } from 'shared';
 import useAuthStore from '../store/authStore';
@@ -39,6 +39,8 @@ export const APPS = [
       { label: 'Dashboard',     path: '/hub-admin/email/dashboard', Icon: Gauge },
       { label: 'Campaigns',     path: '/hub-admin/email/campaigns', Icon: Mail },
       { label: 'Mailing Lists', path: '/hub-admin/email/lists',     Icon: UserPlus },
+      { label: 'Test Email',    path: '/hub-admin/email/test',      Icon: Send },
+      { label: 'Inbox',         path: '/hub-admin/email/inbound',   Icon: Inbox },
       { label: 'Templates',     path: '/hub-admin/email/templates', Icon: FileText },
     ],
   },
@@ -277,6 +279,15 @@ function AppShell() {
 
   const useAccordion = accessibleApps.length === 1;
 
+  // Active sub-app for the brand row breadcrumb (null on non-app routes like Welcome/Search/Admin).
+  const activeApp = useMemo(
+    () => {
+      const id = activeAppId(location.pathname);
+      return id ? APPS.find((a) => a.id === id) ?? null : null;
+    },
+    [location.pathname],
+  );
+
   return (
     <div className="min-h-screen bg-background flex">
 
@@ -297,11 +308,29 @@ function AppShell() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Brand row */}
-        <div className="h-14 flex items-center px-6 border-b border-border shrink-0">
-          <Link to="/hub-admin/" onClick={closeSidebar} className="text-lg font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base transition-colors duration-150">
+        {/* Brand row — "Service Hub" links home; active app name links to its dashboard */}
+        <div className="h-14 flex items-center gap-2 px-6 border-b border-border shrink-0">
+          <Link
+            to="/hub-admin/"
+            onClick={closeSidebar}
+            className="text-lg font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base transition-colors duration-150 shrink-0"
+          >
             Service Hub
           </Link>
+          {activeApp && (
+            <>
+              <ChevronRight className="w-4 h-4 text-subtle shrink-0" aria-hidden="true" />
+              <Link
+                to={activeApp.path}
+                onClick={closeSidebar}
+                className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text-base transition-colors duration-150 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base"
+                aria-label={`${activeApp.label} dashboard`}
+              >
+                <activeApp.Icon className="w-4 h-4 shrink-0 text-subtle" />
+                <span className="truncate">{activeApp.label}</span>
+              </Link>
+            </>
+          )}
           <button
             onClick={closeSidebar}
             className="ml-auto lg:hidden p-2 rounded-base text-muted hover:bg-surface-raised hover:text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"

@@ -6,6 +6,7 @@ import {
   updateCampaign,
   deleteCampaign,
   sendCampaign,
+  sendTestEmailController,
   getMailingLists,
   createMailingList,
   updateMailingList,
@@ -16,6 +17,12 @@ import {
   deleteRecipient,
   getCampaignAnalytics
 } from '../controllers/email.js';
+import {
+  receiveInboundEmail,
+  getInboundEmails,
+  getInboundEmailById,
+  deleteInboundEmail,
+} from '../controllers/inboundEmail.js';
 
 const router = Router();
 
@@ -28,6 +35,9 @@ router.delete('/campaigns/:id', deleteCampaign);
 router.post('/campaigns/:id/send', sendCampaign);
 router.get('/campaigns/:id/analytics', getCampaignAnalytics);
 
+// Test email
+router.post('/test', sendTestEmailController);
+
 // Mailing list routes
 router.get('/lists', getMailingLists);
 router.post('/lists', createMailingList);
@@ -39,5 +49,11 @@ router.get('/lists/:listId/recipients', getRecipients);
 router.post('/lists/:listId/import', importRecipients);
 router.post('/lists/:listId/recipients', createRecipient);
 router.delete('/recipients/:id', deleteRecipient);
+
+// Inbound email routes
+router.post('/inbound', receiveInboundEmail);
+router.get('/inbound', getInboundEmails);
+router.get('/inbound/:id', getInboundEmailById);
+router.delete('/inbound/:id', deleteInboundEmail);
 
 export default router;

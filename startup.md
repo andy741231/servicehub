@@ -915,26 +915,11 @@ What doesn't need backing up: database (Azure SQL handles it), code (Git).
 
 ### Uploaded images are stored on local disk (not shared across slots)
 
-**Current behavior:** Uploaded images (web builder assets, etc.) are saved to an `/uploads` folder on the App Service instance's local disk via `multer`. Each deployment slot has its own separate disk, so:
+> **✅ Resolved:** File uploads now use Azure Blob Storage. See [Azure Blob Storage & Email Setup](#azure-blob-storage--email-setup) below for details.
 
-- Images uploaded to production are not visible on staging
-- Images uploaded to staging are not carried over during a slot swap — only code moves
-- If the App Service is restarted or redeployed, files in `/uploads` **may be wiped**
+Previously, uploaded images were saved to a local `/uploads` folder on the App Service instance. This caused issues across deployment slots. Files are now uploaded to Azure Blob Storage and served via blob URLs.
 
-**Correct fix (not yet implemented):** Migrate file storage to **Azure Blob Storage**.
-
-Files affected:
-- `server/src/routes/web.js` — multer `diskStorage` config
-- `server/src/controllers/webAssets.js` — upload/delete logic
-- `server/src/index.js` — `/uploads` static file serving
-
-Implementation plan when ready:
-1. Create an Azure Storage Account and a `uploads` container (public blob access)
-2. Add `AZURE_STORAGE_CONNECTION_STRING` and `AZURE_STORAGE_CONTAINER` to App Service app settings (both slots) and GitHub secrets
-3. Replace `multer.diskStorage` with [`multer-azure-blob-storage`](https://www.npmjs.com/package/multer-azure-blob-storage) or upload manually via `@azure/storage-blob`
-4. Update `uploadAsset` controller to store the blob URL instead of `/uploads/<filename>`
-5. Remove the `app.use('/uploads', express.static(...))` line from `index.js` — files are served directly from Azure CDN URLs
-6. Run a one-time migration script to move existing `/uploads` files to the blob container
+**Cost:** ~$0.018/GB/month (Hot tier, LRS). Negligible for typical image usage.
 
 
 # View Azure SQL Database / prisma studio IN PRODUCTION
@@ -942,8 +927,212 @@ Implementation plan when ready:
 DATABASE_URL='sqlserver://houstonservice-test.database.windows.net:1433;database=production-servicehub;user=servicehub_prod;password=<ask_team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30' npx prisma studio
 ```
 
+---
 
-**Cost:** ~$0.018/GB/month (Hot tier, LRS). Negligible for typical image usage.
+## Azure Blob Storage & Email Setup
+
+> **Note:** These services are **not required** for first-time setup. A new developer can run the app without blob storage or email sending configured. This section documents how to set up these services when needed (e.g. for testing file uploads or sending emails).
+
+### Overview
+
+| Service | Purpose | Azure Resource | Code |
+|---------|---------|----------------|------|
+| Azure Blob Storage | File uploads (web builder assets, images) | Storage Account `cihwebsitebackups`, container `servicehub-upload` | `server/src/services/blobStorage.js` |
+| Azure Communication Services (ACS) Email | Transactional & campaign email sending | ACS `servicehub-email` + Email Communication Service `servicehub-email-service` | `server/src/services/emailService.js` |
+
+### Environment Variables
+
+Add these to `.env` (local dev) or Azure App Service Application Settings (production):
+
+```env
+# Azure Blob Storage
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=<account>;AccountKey=<key>;EndpointSuffix=core.windows.net
+AZURE_STORAGE_CONTAINER_NAME=servicehub-upload
+
+# Azure Communication Services — Email
+AZURE_COMMUNICATION_CONNECTION_STRING=endpoint=https://<acs-name>.<region>.communication.azure.com/;accesskey=<key>
+AZURE_COMMUNICATION_SENDER_EMAIL=donotreply@<domain>.azurecomm.net
+```
+
+### 1. Azure Blob Storage Setup
+
+#### Via Azure CLI
+
+```bash
+# 1. Create a storage account (or use existing)
+az storage account create \
+  --name <storage-account-name> \
+  --resource-group App-Services-And-Related \
+  --location eastus \
+  --sku Standard_LRS
+
+# 2. Create a blob container
+az storage container create \
+  --name servicehub-upload \
+  --account-name <storage-account-name> \
+  --public-access blob
+
+# 3. Get the connection string
+az storage account show-connection-string \
+  --name <storage-account-name> \
+  --resource-group App-Services-And-Related \
+  --query connectionString -o tsv
+```
+
+Add the connection string to `.env` as `AZURE_STORAGE_CONNECTION_STRING`.
+
+#### How it works in the app
+
+- `server/src/routes/web.js` uses `multer.memoryStorage()` — files are held in memory, not written to disk
+- `server/src/controllers/webAssets.js` calls `uploadBlob()` from `server/src/services/blobStorage.js` to upload the file buffer to Azure
+- The blob URL is stored in the `WebAsset` table and served directly from Azure
+- Deleting an asset calls `deleteBlob()` to remove it from Azure
+
+### 2. Azure Communication Services Email Setup
+
+#### Via Azure CLI
+
+```bash
+# 1. Create ACS resource
+az communication create \
+  --name <acs-name> \
+  --resource-group App-Services-And-Related \
+  --location global \
+  --data-location unitedstates
+
+# 2. Create Email Communication Service
+az communication email create \
+  --name <email-service-name> \
+  --resource-group App-Services-And-Related \
+  --location global \
+  --data-location unitedstates
+
+# 3. Add an Azure-managed domain (for testing — auto-generated sender domain)
+az communication email domain create \
+  --email-service-name <email-service-name> \
+  --resource-group App-Services-And-Related \
+  --name AzureManagedDomain \
+  --location global \
+  --domain-management AzureManaged
+
+# 4. Link the email domain to the ACS resource
+az rest --method put \
+  --url 'https://management.azure.com/subscriptions/<subscription-id>/resourceGroups/App-Services-And-Related/providers/Microsoft.Communication/CommunicationServices/<acs-name>?api-version=2023-04-01' \
+  --body '{"location":"global","properties":{"dataLocation":"United States","linkedDomains":["/subscriptions/<subscription-id>/resourceGroups/App-Services-And-Related/providers/Microsoft.Communication/emailServices/<email-service-name>/domains/AzureManagedDomain"]}}'
+
+# 5. Get the ACS connection string
+az communication list-key \
+  --name <acs-name> \
+  --resource-group App-Services-And-Related \
+  --query primaryConnectionString -o tsv
+```
+
+The Azure-managed domain generates a sender address like `donotreply@<random-guid>.azurecomm.net`. Use this as `AZURE_COMMUNICATION_SENDER_EMAIL`.
+
+> **Azure-managed domain limits:** 100 emails/day, 30 emails/min. Cannot be increased. For production, add a custom domain with verified SPF/DKIM/DMARC records to get higher limits and a branded sender address.
+
+> **Custom domain (for production):** Replace step 3 with `--domain-management CustomerManaged --domain <your-domain>.com`. Azure will output DNS verification records (TXT, CNAME for DKIM) that you must add to your domain's DNS provider. Once verified, link it to the ACS resource the same way.
+
+#### How it works in the app
+
+- `server/src/services/emailService.js` uses `@azure/communication-email` `EmailClient` to send emails
+- `POST /api/email/test` — sends a single test email (`sendTestEmailController`)
+- `POST /api/email/campaigns/:id/send` — sends a campaign to all active recipients in the linked mailing list, creates `EmailLog` entries, and updates `CampaignMetrics`
+- Campaign emails support mail-merge placeholders: `{{firstName}}`, `{{lastName}}`, `{{email}}`
+
+#### Testing email sending
+
+```bash
+# Send a test email
+curl -X POST http://localhost:4000/api/email/test \
+  -H "Content-Type: application/json" \
+  -d '{"to":"your@email.com","subject":"Test","html":"<p>Hello from ServiceHub</p>"}'
+```
+
+### Current Azure Resources
+
+These resources are already provisioned in the `App-Services-And-Related` resource group:
+
+| Resource | Type | Name |
+|----------|------|------|
+| Storage Account | `Microsoft.Storage/storageAccounts` | `cihwebsitebackups` |
+| Blob Container | — | `servicehub-upload` |
+| ACS Resource | `Microsoft.Communication/CommunicationServices` | `servicehub-email` |
+| Email Communication Service | `Microsoft.Communication/emailServices` | `servicehub-email-service` |
+| Email Domain | `Microsoft.Communication/emailServices/domains` | `AzureManagedDomain` |
+| Sender Address (current) | — | `donotreply@c2eaf531-3f8a-48d4-a172-64301e315c6b.azurecomm.net` |
+| Custom Domain (pending DNS) | `Microsoft.Communication/emailServices/domains` | `churchinhouston.org` |
+
+### Custom Domain Setup — In Progress
+
+> **Status:** Domain resource created in Azure. **Waiting on DNS records to be added by domain owner.**
+> **Current sender:** Azure-managed domain (works, but emails may go to junk — no custom DKIM/SPF reputation).
+> **Target sender:** `serviceoffice@churchinhouston.org`
+
+The custom domain `churchinhouston.org` has been created in ACS but is **not yet verified**. The following DNS records must be added at the domain's DNS provider (registrar / Cloudflare / etc.) before the domain can be used.
+
+#### DNS Records to Add
+
+**1. Domain Verification (TXT)**
+| Field | Value |
+|-------|-------|
+| Type | TXT |
+| Name/Host | `churchinhouston.org` (or `@`) |
+| Value | `ms-domain-verification=c1c24933-bed9-46b1-8aa2-43e4154cebad` |
+| TTL | 3600 |
+
+**2. SPF (TXT)**
+| Field | Value |
+|-------|-------|
+| Type | TXT |
+| Name/Host | `churchinhouston.org` (or `@`) |
+| Value | `v=spf1 include:spf.protection.outlook.com -all` |
+| TTL | 3600 |
+
+> **Important:** `churchinhouston.org` uses Google Workspace, so it already has an SPF record (`v=spf1 include:_spf.google.com ~all`). **Replace** the existing SPF record with a merged version that includes both Google and Azure:
+> ```
+> v=spf1 include:_spf.google.com include:spf.protection.outlook.com -all
+> ```
+> Do **not** add a second SPF record — having two will cause SPF to fail.
+
+**3. DKIM 1 (CNAME)**
+| Field | Value |
+|-------|-------|
+| Type | CNAME |
+| Name/Host | `selector1-azurecomm-prod-net._domainkey` |
+| Value | `selector1-azurecomm-prod-net._domainkey.azurecomm.net` |
+| TTL | 3600 |
+
+**4. DKIM 2 (CNAME)**
+| Field | Value |
+|-------|-------|
+| Type | CNAME |
+| Name/Host | `selector2-azurecomm-prod-net._domainkey` |
+| Value | `selector2-azurecomm-prod-net._domainkey.azurecomm.net` |
+| TTL | 3600 |
+
+#### After DNS Records Are Added
+
+Once the DNS records are in place, run these commands to verify and link the domain:
+
+```bash
+# 1. Check verification status
+az communication email domain show \
+  --email-service-name servicehub-email-service \
+  --resource-group App-Services-And-Related \
+  --name churchinhouston.org \
+  --query "verificationStates" -o json
+
+# 2. Once all statuses show "Verified", link the domain to the ACS resource
+az rest --method put \
+  --url 'https://management.azure.com/subscriptions/e66e4de3-b754-4ec5-8e17-23a849af0356/resourceGroups/App-Services-And-Related/providers/Microsoft.Communication/CommunicationServices/servicehub-email?api-version=2023-04-01' \
+  --body '{"location":"global","properties":{"dataLocation":"United States","linkedDomains":["/subscriptions/e66e4de3-b754-4ec5-8e17-23a849af0356/resourceGroups/App-Services-And-Related/providers/Microsoft.Communication/emailServices/servicehub-email-service/domains/churchinhouston.org"]}}'
+
+# 3. Update .env sender email
+# AZURE_COMMUNICATION_SENDER_EMAIL=serviceoffice@churchinhouston.org
+```
+
+> **Note:** DNS propagation can take 15 minutes to a few hours. You can check with `nslookup -type=TXT churchinhouston.org` to see if the records have propagated.
 
 ---
 

@@ -1,0 +1,38 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: Login Page Mockups
+    - heading "ServiceHub — Login Mockups" [level=1] [ref=e5]
+    - paragraph [ref=e6]: Four visual directions for the login page. Click any card to open the full mockup.
+  - generic [ref=e7]:
+    - link "01 Match Existing App Centered card on the teal-tinted canvas — mirrors the current Login.jsx + AuthLayout exactly. Open mockup →" [ref=e8] [cursor=pointer]:
+      - /url: 01-match-existing-app.html
+      - generic [ref=e16]:
+        - generic [ref=e17]: "01"
+        - generic [ref=e18]: Match Existing App
+        - generic [ref=e19]: Centered card on the teal-tinted canvas — mirrors the current Login.jsx + AuthLayout exactly.
+        - generic [ref=e20]: Open mockup →
+    - link "02 Modern Split-Screen Branded gradient panel with value props on the left, clean form on the right. Collapses to single column on mobile. Open mockup →" [ref=e21] [cursor=pointer]:
+      - /url: 02-modern-split-screen.html
+      - generic [ref=e31]:
+        - generic [ref=e32]: "02"
+        - generic [ref=e33]: Modern Split-Screen
+        - generic [ref=e34]: Branded gradient panel with value props on the left, clean form on the right. Collapses to single column on mobile.
+        - generic [ref=e35]: Open mockup →
+    - link "03 Minimal Centered Card A compact, focused card on a soft solid background — no icons in inputs, just the essentials. Open mockup →" [ref=e36] [cursor=pointer]:
+      - /url: 03-minimal-centered-card.html
+      - generic [ref=e44]:
+        - generic [ref=e45]: "03"
+        - generic [ref=e46]: Minimal Centered Card
+        - generic [ref=e47]: A compact, focused card on a soft solid background — no icons in inputs, just the essentials.
+        - generic [ref=e48]: Open mockup →
+    - link "04 Glassmorphism Frosted-glass card floating over an animated teal-to-violet gradient with blurred light blobs. Open mockup →" [ref=e49] [cursor=pointer]:
+      - /url: 04-glassmorphism.html
+      - generic [ref=e57]:
+        - generic [ref=e58]: "04"
+        - generic [ref=e59]: Glassmorphism
+        - generic [ref=e60]: Frosted-glass card floating over an animated teal-to-violet gradient with blurred light blobs.
+        - generic [ref=e61]: Open mockup →
+  - paragraph [ref=e62]:
+    - text: All mockups use the Service Hub brand tokens (teal-600 primary, 16px card radius). Open
+    - code [ref=e63]: index.html
+    - text: in any browser — no build step required.

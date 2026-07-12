@@ -1,0 +1,8 @@
+- generic [active]:
+  - link "Skip to main content" [ref=f1e1] [cursor=pointer]:
+    - /url: "#main-content"
+  - status [ref=f1e2]:
+    - generic [ref=f1e6]:
+      - generic [ref=f1e7]: Service Hub
+      - generic [ref=f1e8]: Loading
+    - generic [ref=f1e9]: Loading…
