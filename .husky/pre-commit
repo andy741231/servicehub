@@ -1,41 +1,62 @@
-# Pre-commit hook to auto-generate Prisma migrations when schema.prisma changes
+# Pre-commit hook: block commits that introduce Prisma schema drift.
+#
+# If prisma/schema.prisma is staged, verify every model in it has a
+# corresponding CREATE TABLE in some migration file. This catches the
+# common mistake of running `prisma db push` without creating a migration
+# file — the change would work locally but silently fail in production
+# (which uses `prisma migrate deploy`).
+#
+# This is the local equivalent of the CI drift check in
+# .github/workflows/azure-deploy.yml.
+#
+# If this hook blocks your commit, see AGENT.md → "Schema Change Workflow":
+#   1. Run `npx prisma db push` (if not already done)
+#   2. Create prisma/migrations/<YYYYMMDD_name>/migration.sql with
+#      IF NOT EXISTS guards (idempotent)
+#   3. Run `npx prisma migrate deploy` to apply + record it
+#   4. git add the migration file and re-run your commit
+#   5. Do NOT use `prisma migrate resolve --applied` for new migrations.
 
-echo "🔍 Checking for Prisma schema changes..."
-
-# Check if prisma/schema.prisma is staged for commit
-if git diff --cached --name-only | grep -q "prisma/schema.prisma"; then
-  echo "✅ prisma/schema.prisma modified - generating migration..."
-  
-  # Generate migration name from commit message (first 50 chars, spaces to underscores)
-  COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "schema_change")
-  MIGRATION_NAME=$(date +%Y%m%d)_$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_' | head -c 50)
-  
-  # Create migration folder
-  MIGRATION_DIR="prisma/migrations/$MIGRATION_NAME"
-  mkdir -p "$MIGRATION_DIR"
-  
-  # Generate SQL diff
-  echo "📝 Generating migration: $MIGRATION_NAME"
-  npx prisma migrate diff \
-    --from-schema-datasource prisma/schema.prisma \
-    --to-schema-datamodel prisma/schema.prisma \
-    --script > "$MIGRATION_DIR/migration.sql"
-  
-  # Check if migration.sql has content (actual schema changes)
-  if [ -s "$MIGRATION_DIR/migration.sql" ]; then
-    echo "✨ Migration file created: $MIGRATION_DIR/migration.sql"
-    
-    # Mark migration as applied locally (since we already have the schema)
-    npx prisma migrate resolve --applied "$MIGRATION_NAME"
-    
-    # Add the migration file to this commit
-    git add "$MIGRATION_DIR/"
-    
-    echo "✅ Migration added to commit"
-  else
-    echo "⚠️  No schema changes detected - removing empty migration folder"
-    rm -rf "$MIGRATION_DIR"
-  fi
-else
-  echo "ℹ️  No Prisma schema changes detected"
+# Only run when schema.prisma is staged
+if ! git diff --cached --name-only | grep -q "prisma/schema.prisma"; then
+  exit 0
 fi
+
+echo "🔍 prisma/schema.prisma changed — checking for migration drift..."
+
+# Extract model names from schema.prisma.
+# -a forces text mode (Git Bash on Windows sometimes misidentifies files as binary)
+MODELS=$(grep -aoE '^model [A-Za-z0-9_]+' prisma/schema.prisma | sed 's/^model //')
+
+if [ -z "$MODELS" ]; then
+  echo "⚠️  No models found in schema.prisma — skipping drift check."
+  exit 0
+fi
+
+MISSING=""
+for MODEL in $MODELS; do
+  if ! grep -raqE "CREATE TABLE.*\[$MODEL\]" prisma/migrations/ 2>/dev/null; then
+    MISSING="$MISSING $MODEL"
+  fi
+done
+
+if [ -n "$MISSING" ]; then
+  echo ""
+  echo "❌ Schema drift detected! These models have no CREATE TABLE migration:"
+  echo "   $MISSING"
+  echo ""
+  echo "   Production deploy uses 'prisma migrate deploy' which only applies"
+  echo "   migration files. Without one, the table won't exist in production."
+  echo ""
+  echo "   To fix, see AGENT.md → 'Schema Change Workflow':"
+  echo "     1. npx prisma db push          (sync dev DB if not already done)"
+  echo "     2. Create prisma/migrations/<YYYYMMDD_name>/migration.sql"
+  echo "        with IF NOT EXISTS guards (idempotent)"
+  echo "     3. npx prisma migrate deploy   (apply + record the migration)"
+  echo "     4. git add the migration file, then re-run your commit"
+  echo ""
+  echo "   Do NOT use 'prisma migrate resolve --applied' for new migrations."
+  exit 1
+fi
+
+echo "✅ All models have corresponding migrations — no drift detected."

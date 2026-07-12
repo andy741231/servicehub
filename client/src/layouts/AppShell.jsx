@@ -71,7 +71,7 @@ function activeAppId(pathname) {
 // ── Drill-down sidebar ───────────────────────────────────────────────────
 // A stack of frames drives the visible level. Empty stack = root (app list).
 // One frame = drilled into that app, showing its section children.
-function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdminRole }) {
+function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdminRole, onDrillIn }) {
   const [stack, setStack] = useState([]); // [{ id, label }]
   const [direction, setDirection] = useState('forward'); // 'forward' | 'back'
 
@@ -94,7 +94,8 @@ function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdmi
   const drillIn = useCallback((app) => {
     setDirection('forward');
     setStack([{ id: app.id, label: app.label }]);
-  }, []);
+    onDrillIn(app.id);
+  }, [onDrillIn]);
 
   // The currently visible level's items.
   const currentFrame = stack[stack.length - 1] ?? null;
@@ -266,6 +267,7 @@ function AppShell() {
   const { user } = useAuthStore();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [drilldownAppId, setDrilldownAppId] = useState(null);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
@@ -279,13 +281,16 @@ function AppShell() {
 
   const useAccordion = accessibleApps.length === 1;
 
-  // Active sub-app for the brand row breadcrumb (null on non-app routes like Welcome/Search/Admin).
+  // Keep the brand breadcrumb in sync with both route changes and drilldown clicks.
+  useEffect(() => {
+    setDrilldownAppId(activeAppId(location.pathname));
+  }, [location.pathname]);
+
+  // Active sub-app for the brand row breadcrumb (including a drilldown selection
+  // made from the Welcome page before a dashboard route is opened).
   const activeApp = useMemo(
-    () => {
-      const id = activeAppId(location.pathname);
-      return id ? APPS.find((a) => a.id === id) ?? null : null;
-    },
-    [location.pathname],
+    () => (drilldownAppId ? APPS.find((a) => a.id === drilldownAppId) ?? null : null),
+    [drilldownAppId],
   );
 
   return (

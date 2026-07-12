@@ -1,0 +1,60 @@
+name: Schema Drift Check
+
+# Runs the Prisma schema/migration drift check on pull requests and on
+# pushes to main (before the deploy workflow). This catches the common
+# mistake of running `prisma db push` without creating a migration file —
+# the change would work locally but silently fail in production (which
+# uses `prisma migrate deploy`).
+#
+# The deploy workflow (azure-deploy.yml) also has this check as a safety
+# net, but this workflow catches it earlier — on the PR, before merge.
+
+on:
+  pull_request:
+    paths:
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/**'
+      - '.github/workflows/schema-drift-check.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/**'
+
+permissions:
+  contents: read
+
+jobs:
+  drift-check:
+    name: Check for schema/migration drift
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify every model in schema.prisma has a CREATE TABLE migration
+        run: |
+          # Static check: verify every model in schema.prisma has a
+          # corresponding CREATE TABLE in the migration files.
+          # This catches the common mistake of running `prisma db push`
+          # without creating a migration file.
+          MODELS=$(grep -oP '^model \K\w+' prisma/schema.prisma)
+          MISSING=""
+          for MODEL in $MODELS; do
+            # Match both [dbo].[Model] and [Model] patterns
+            if ! grep -rqE "CREATE TABLE.*\[$MODEL\]" prisma/migrations/ 2>/dev/null; then
+              MISSING="$MISSING $MODEL"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Schema drift detected! The following models in schema.prisma"
+            echo "::error::have no CREATE TABLE in any migration file:$MISSING"
+            echo "::error::Production deploy uses 'prisma migrate deploy' which only"
+            echo "::error::applies migration files. Run 'npx prisma db push' locally,"
+            echo "::error::then create a migration file manually."
+            echo "::error::See AGENT.md → 'Schema Change Workflow' for instructions."
+            exit 1
+          fi
+          echo "All models have corresponding migrations — no drift detected."
