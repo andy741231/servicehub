@@ -44,3 +44,6 @@ prisma/migrations/dev.db*
 
 # Docker volumes (local only)
 pgdata/
+
+# Temporary staging switchback doc (contains credentials)
+.SWITCHBACK-STAGING.md
