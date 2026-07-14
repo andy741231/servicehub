@@ -3,6 +3,12 @@ import { useParams } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import api from '../../utils/api';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, EffectFade, Navigation, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/effect-fade';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 import { Globe, Star, Image as ImageIcon, Check, Settings, MessageCircle, RefreshCw, Wrench, ChevronDown, Menu, X, FileX } from 'lucide-react';
 
 // Configure marked: GFM + line-break support, links open in new tab safely
@@ -22,9 +28,22 @@ marked.use({
 
 const renderMarkdown = (md) =>
   DOMPurify.sanitize(marked.parse(md || ''), {
-    ALLOWED_TAGS: ['p','br','strong','em','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img'],
+    ALLOWED_TAGS: ['p','br','strong','em','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img','span'],
     ALLOWED_ATTR: ['href','title','target','rel','src','alt','class'],
   });
+
+const buttonClass = (variant = 'gold') => `public-slider-button public-slider-button--${['gold', 'outline', 'default'].includes(variant) ? variant : 'gold'}`;
+
+const renderRichText = (value) => {
+  const source = value || '';
+  const html = /<(?:p|span|strong|em|h[1-6]|ul|ol|blockquote|a)(?:\s|>)/i.test(source)
+    ? source
+    : marked.parse(source);
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p','br','strong','em','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img','span'],
+    ALLOWED_ATTR: ['href','title','target','rel','src','alt','class'],
+  });
+};
 
 const resolveUrl = (url) => {
   if (!url) return '';
@@ -52,6 +71,68 @@ const IconMap = {
   'lucide-wrench':   Wrench,
 };
 
+const DEFAULT_SITE_TOKENS = {
+  colors: {
+    primary: '#152b45', secondary: '#54738e', accent: '#b08a4a',
+    background: '#f8f6f1', text: '#152b45', muted: '#647384',
+  },
+  fonts: {
+    heading: 'DM Sans, sans-serif', body: 'DM Sans, sans-serif',
+    serif: 'Libre Baskerville, Georgia, serif',
+  },
+  spacing: { base: 16 },
+  borderRadius: { default: 5 },
+};
+
+const hexToHsl = (hex) => {
+  const value = String(hex || '').replace('#', '').trim();
+  if (!/^[0-9a-f]{6}$/i.test(value)) return null;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(value.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4;
+    }
+    h /= 6;
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+};
+
+const fontFamilyUrl = (font) => {
+  const family = String(font || '').split(',')[0].trim();
+  return family ? family.replace(/ /g, '+') : '';
+};
+
+const extractVideoId = (value, provider) => {
+  const source = String(value || '').trim();
+  if (/^[\w-]+$/.test(source)) return source;
+  const patterns = provider === 'youtube'
+    ? [/(?:v=|youtu\.be\/|embed\/)([\w-]{6,})/i]
+    : [/(?:vimeo\.com\/|video\/)(\d+)/i];
+  return patterns.map(pattern => source.match(pattern)?.[1]).find(Boolean) || '';
+};
+
+const renderSlideBackground = (slide) => {
+  const type = slide.backgroundType || 'color';
+  if (type === 'video' && slide.videoUrl) {
+    return <video className="public-slider-background" autoPlay muted loop playsInline poster={resolveUrl(slide.posterImage)}><source src={resolveUrl(slide.videoUrl)} /></video>;
+  }
+  if (type === 'youtube' && slide.youtubeId) {
+    const id = extractVideoId(slide.youtubeId, 'youtube');
+    return id ? <iframe className="public-slider-background public-slider-embed" src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&rel=0&playsinline=1`} title="Slider background video" allow="autoplay; encrypted-media" /> : null;
+  }
+  if (type === 'vimeo' && slide.vimeoId) {
+    const id = extractVideoId(slide.vimeoId, 'vimeo');
+    return id ? <iframe className="public-slider-background public-slider-embed" src={`https://player.vimeo.com/video/${id}?background=1&autoplay=1&loop=1&muted=1`} title="Slider background video" allow="autoplay; fullscreen; picture-in-picture" /> : null;
+  }
+  return null;
+};
+
 export default function PublicHome({ previewData = null, previewMode = false }) {
   const { slug } = useParams();           // undefined on /, set on /:slug
 
@@ -66,6 +147,20 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!pageData || !('IntersectionObserver' in window)) return undefined;
+    const observer = new IntersectionObserver((entries, currentObserver) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          currentObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.public-site .public-reveal').forEach(element => observer.observe(element));
+    return () => observer.disconnect();
+  }, [pageData]);
 
   useEffect(() => {
     if (previewMode && previewData) {
@@ -86,6 +181,31 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       })
       .finally(() => setLoading(false));
   }, [previewMode, previewData, slug]);
+
+  const siteTokens = {
+    colors: { ...DEFAULT_SITE_TOKENS.colors, ...(pageData?.siteStyle?.tokens?.colors || {}) },
+    fonts: { ...DEFAULT_SITE_TOKENS.fonts, ...(pageData?.siteStyle?.tokens?.fonts || {}) },
+    spacing: { ...DEFAULT_SITE_TOKENS.spacing, ...(pageData?.siteStyle?.tokens?.spacing || {}) },
+    borderRadius: { ...DEFAULT_SITE_TOKENS.borderRadius, ...(pageData?.siteStyle?.tokens?.borderRadius || {}) },
+  };
+
+  useEffect(() => {
+    if (!pageData) return undefined;
+    const families = [...new Set([siteTokens.fonts.heading, siteTokens.fonts.body, siteTokens.fonts.serif]
+      .map(fontFamilyUrl)
+      .filter(Boolean))];
+    if (!families.length) return undefined;
+    const id = 'public-site-fonts';
+    let link = document.getElementById(id);
+    if (!link) {
+      link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    link.href = `https://fonts.googleapis.com/css2?${families.map(f => `family=${f}:ital,wght@0,400;0,500;0,600;0,700;1,400`).join('&')}&display=swap`;
+    return undefined;
+  }, [pageData, siteTokens.fonts.heading, siteTokens.fonts.body, siteTokens.fonts.serif]);
 
   if (loading) {
     return (
@@ -188,6 +308,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
     const logoWidth  = header?.logo?.width;
     const logoHeight = header?.logo?.height;
     const nav        = pageData.nav?.length ? pageData.nav : (header?.navigation || []);
+    const cta        = header?.cta;
     const hasBg      = header?.styles?.backgroundColor;
     const hStyle     = hasBg
       ? { backgroundColor: header.styles.backgroundColor, color: header.styles.textColor }
@@ -217,21 +338,19 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
           style={hStyle}
         >
           <div
-            className="flex items-center justify-between max-w-7xl mx-auto px-6"
-            style={{ height: logoHeight ? `${logoHeight}px` : '32px' }}
+            className="public-container flex items-center justify-between max-w-7xl mx-auto px-6"
+            style={{ minHeight: '82px' }}
           >
             {/* Logo */}
             <a
               href="/"
-              className="flex items-center gap-2.5 font-bold text-lg shrink-0 hover:opacity-75 transition-opacity"
+              className="public-brand flex items-center gap-3 font-bold text-sm shrink-0 hover:opacity-75 transition-opacity"
               style={hasBg ? {} : { color: 'inherit' }}
             >
               {logoImage
                 ? <img src={logoImage} alt={logoText} className="object-contain" style={logoStyle} />
-                : <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                    <Globe className="w-4.5 h-4.5 text-primary-foreground" />
-                  </div>}
-              <span>{logoText}</span>
+                : <span className="public-brand-mark" aria-hidden="true">{(logoText || 'H').charAt(0).toUpperCase()}</span>}
+              <span className="leading-tight tracking-wide">{logoText}<small className="public-brand-subtitle">{header?.logo?.subtitle || 'Your City, USA'}</small></span>
             </a>
 
             {/* Desktop nav */}
@@ -243,7 +362,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                     return (
                       <div key={i} className="relative group">
                         <button
-                          className={`flex items-center gap-1 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          className={`public-nav-link flex items-center gap-1 px-3.5 py-2 text-sm font-medium transition-colors ${
                             active
                               ? 'text-primary bg-primary-light'
                               : 'text-muted hover:text-text-base hover:bg-surface-raised'
@@ -272,7 +391,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                     <a
                       key={i}
                       href={item.href || '#'}
-                      className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`public-nav-link px-3.5 py-2 text-sm font-medium transition-colors ${
                         active
                           ? 'text-primary bg-primary-light'
                           : 'text-muted hover:text-text-base hover:bg-surface-raised'
@@ -283,6 +402,12 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                   );
                 })}
               </nav>
+            )}
+
+            {cta?.text && (
+              <a href={cta.href || '#'} className="public-header-cta hidden md:inline-flex">
+                {cta.text}<span aria-hidden="true">→</span>
+              </a>
             )}
 
             {/* Mobile hamburger */}
@@ -337,46 +462,40 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
     const copyright = footer?.copyright || `&copy; ${new Date().getFullYear()} ${pageData.title}. All rights reserved.`;
     const fStyle    = { backgroundColor: footer?.styles?.backgroundColor, color: footer?.styles?.textColor };
 
+    const logoText = header?.logo?.text || pageData.title;
+    const linkSections = sections.filter(section => section.type === 'links');
+    const infoSection = sections.find(section => section.type === 'contact-info');
+    const textSection = sections.find(section => section.type === 'text');
+
     return (
-      <footer className="bg-surface-raised border-t border-border py-12 px-6" style={fStyle}>
-        <div className="max-w-6xl mx-auto text-center">
-          {sections.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-left">
-              {sections.map((section, i) => (
-                <div key={i}>
-                  {section.title && <h3 className="text-lg font-bold mb-4">{section.title}</h3>}
-                  {section.type === 'contact-form' && (
-                    <form className="space-y-3" onSubmit={e => e.preventDefault()}>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input type="text"  placeholder="Name"    className="border rounded px-3 py-2 text-sm" />
-                        <input type="email" placeholder="Email"   className="border rounded px-3 py-2 text-sm" />
-                      </div>
-                      <textarea placeholder="Message" rows="3" className="w-full border rounded px-3 py-2 text-sm" />
-                      <button className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm hover:bg-primary-hover">Send Message</button>
-                    </form>
-                  )}
-                  {section.type === 'contact-info' && (
-                    <div className="space-y-2 text-sm">
-                      {section.email   && <p>{section.email}</p>}
-                      {section.phone   && <p>{section.phone}</p>}
-                      {section.address && <p>{section.address}</p>}
-                    </div>
-                  )}
-                  {section.type === 'links' && section.links?.length > 0 && (
-                    <div className="flex flex-wrap gap-4">
-                      {section.links.map((link, li) => (
-                        <a key={li} href={link.href || '#'} className="hover:underline">{link.label}</a>
-                      ))}
-                    </div>
-                  )}
-                  {section.type === 'text' && section.content && (
-                    <p className="text-sm">{section.content}</p>
-                  )}
-                </div>
-              ))}
+      <footer className="public-footer border-t py-14 px-6" style={fStyle}>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 pb-10">
+            <div>
+              <a href="/" className="public-brand flex items-center gap-3 font-bold text-sm">
+                <span className="public-brand-mark" aria-hidden="true">{logoText.charAt(0).toUpperCase()}</span>
+                <span className="leading-tight tracking-wide">{logoText}<small className="public-brand-subtitle">{header?.logo?.subtitle || 'Your City, USA'}</small></span>
+              </a>
+              <p className="mt-5 max-w-xs text-sm opacity-75">{textSection?.content || 'A local church for a changing city.'}</p>
             </div>
-          )}
-          <div className="text-sm opacity-70" dangerouslySetInnerHTML={{ __html: copyright }} />
+            <div className="public-footer-links">
+              {linkSections.flatMap(section => section.links || []).map((link, i) => (
+                <a key={i} href={link.href || '#'}>{link.label}</a>
+              ))}
+              {!linkSections.length && nav.map((item, i) => <a key={i} href={item.href || '#'}>{item.label}</a>)}
+            </div>
+            <div className="text-sm opacity-80">
+              {infoSection?.title && <strong className="block mb-3">{infoSection.title}</strong>}
+              {infoSection?.address && <p>{infoSection.address}</p>}
+              {infoSection?.phone && <p>{infoSection.phone}</p>}
+              {infoSection?.email && <p>{infoSection.email}</p>}
+              {!infoSection && <p>Sunday gatherings<br />9:00 AM · 11:00 AM</p>}
+            </div>
+          </div>
+          <div className="public-footer-bottom border-t pt-5 flex flex-wrap justify-between gap-3 text-xs opacity-70">
+            <span dangerouslySetInnerHTML={{ __html: copyright }} />
+            <span>{footer?.tagline || 'Made for belonging.'}</span>
+          </div>
         </div>
       </footer>
     );
@@ -399,7 +518,49 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
         borderColor:     cs.borderColor,
         borderRadius:    cs.borderRadius != null ? `${cs.borderRadius}px` : undefined,
       };
-      const cc = cs.className || '';
+      const cc = `${cs.className || ''} public-reveal`;
+
+      if (block.type === 'slider') {
+        const slider = block.content || {};
+        const slides = slider.slides || [];
+        const sliderHeight = slider.height || 'large';
+        return (
+          <section key={block.id} className={`public-slider public-slider--${sliderHeight} ${cc}`} style={sStyle} aria-label="Featured slides">
+            <Swiper
+              modules={[Autoplay, EffectFade, Navigation, Pagination]}
+              effect={slider.transition === 'fade' ? 'fade' : 'slide'}
+              speed={slider.transition === 'none' ? 0 : 650}
+              loop={slides.length > 1}
+              autoplay={slider.autoplay !== false && slides.length > 1 ? { delay: slider.interval || 6000, disableOnInteraction: false, pauseOnMouseEnter: true } : false}
+              navigation={slider.showArrows !== false && slides.length > 1}
+              pagination={slider.showDots !== false && slides.length > 1 ? { clickable: true } : false}
+            >
+              {slides.map((slide, index) => {
+                const backgroundStyle = slide.backgroundType === 'image' && slide.backgroundImage
+                  ? { backgroundImage: `url(${resolveUrl(slide.backgroundImage)})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  : slide.backgroundType === 'gradient'
+                    ? { background: slide.gradient || 'linear-gradient(135deg, #152b45, #54738e)' }
+                    : { backgroundColor: slide.backgroundColor || '#152b45' };
+                const align = slide.textAlign || 'left';
+                return (
+                  <SwiperSlide key={slide.id || index}>
+                    <div className="relative h-full min-h-inherit" style={backgroundStyle}>
+                      {renderSlideBackground(slide)}
+                      {slide.overlay && slide.overlay !== 'none' && <div className={`public-slider-overlay public-slider-overlay--${slide.overlay}`} />}
+                      <div className={`public-slider-content public-slider-content--${slide.verticalAlign || 'center'} public-slider-content--${align}-align`}>
+                        {slide.eyebrow && <div className="public-slider-eyebrow" dangerouslySetInnerHTML={{ __html: renderRichText(slide.eyebrow) }} />}
+                        {slide.title && <div className="public-slider-title" dangerouslySetInnerHTML={{ __html: renderRichText(slide.title) }} />}
+                        {slide.subtitle && <div className="public-slider-subtitle" dangerouslySetInnerHTML={{ __html: renderRichText(slide.subtitle) }} />}
+                        {slide.buttonText && <div className="public-slider-actions"><a href={slide.buttonLink || '#'} className={buttonClass(slide.buttonVariant)}>{slide.buttonText}<span aria-hidden="true">→</span></a></div>}
+                      </div>
+                    </div>
+                  </SwiperSlide>
+                );
+              })}
+            </Swiper>
+          </section>
+        );
+      }
 
       if (block.type === 'hero') return (
         <section
@@ -450,9 +611,38 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
         <section key={block.id} className={`py-12 px-6 max-w-3xl mx-auto ${cc}`} style={sStyle}>
           <div
             className="prose prose-lg max-w-none prose-headings:font-bold prose-p:mb-4 prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(block.content.content) }}
+            dangerouslySetInnerHTML={{ __html: renderRichText(block.content.content) }}
           />
         </section>
+      );
+
+      if (block.type === 'trust-bar') return (
+        <section key={block.id} className={`public-trust-bar ${cc}`} style={sStyle}>
+          <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {(block.content.items || []).map((item, index) => <div key={index} className="public-trust-item"><strong>{item.number}</strong><span>{item.label}</span></div>)}
+          </div>
+        </section>
+      );
+
+      if (block.type === 'split-banner') return (
+        <section key={block.id} className={`public-split-banner ${cc}`} style={sStyle}>
+          <div><div className="public-eyebrow">{block.content.eyebrow}</div><h2>{block.content.title}</h2><p>{block.content.body}</p>{block.content.buttonText && <a href={block.content.buttonLink || '#'} className={buttonClass(block.content.buttonVariant)}>{block.content.buttonText}<span aria-hidden="true">→</span></a>}</div>
+          <div className="public-service-times">{(block.content.times || []).map((time, index) => <div key={index}><strong>{time.label}</strong><span>{time.value}</span></div>)}</div>
+        </section>
+      );
+
+      if (block.type === 'events') return (
+        <section key={block.id} className={`py-20 px-6 ${cc}`} style={sStyle}>
+          <div className="max-w-6xl mx-auto"><div className="public-section-heading"><div className="public-eyebrow">{block.content.eyebrow}</div><h2>{block.content.title}</h2></div><div className="public-events">{(block.content.items || []).map((item, index) => <div className="public-event" key={index}><span className="public-event-date">{item.date}</span><div><h3>{item.title}</h3><p>{item.description}</p></div><span className="public-event-time">{item.time}</span></div>)}</div></div>
+        </section>
+      );
+
+      if (block.type === 'quote') return (
+        <section key={block.id} className={`public-quote ${cc}`} style={{ ...sStyle, backgroundColor: block.content.backgroundColor || '#eadfc9' }}><div className="max-w-6xl mx-auto px-6"><blockquote>“{block.content.quote}”</blockquote><cite>— {block.content.citation}</cite></div></section>
+      );
+
+      if (block.type === 'map') return (
+        <section key={block.id} className={`py-12 px-6 ${cc}`} style={sStyle}><div className="max-w-6xl mx-auto"><div className="public-map">{block.content.embedUrl ? <iframe src={block.content.embedUrl} title={block.content.address || 'Location map'} loading="lazy" /> : <span>{block.content.address || 'Add a location'}</span>}</div></div></section>
       );
 
       if (block.type === 'intro') return (
@@ -461,8 +651,8 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
             <h2 className="text-4xl font-bold mb-4">{block.content.title}</h2>
             <p className="text-xl mb-8 opacity-90">{block.content.content}</p>
             {block.content.buttonText && (
-              <a href={block.content.buttonLink || '#'} className="bg-surface text-primary px-6 py-3 rounded font-bold hover:bg-surface-raised">
-                {block.content.buttonText}
+              <a href={block.content.buttonLink || '#'} className={buttonClass(block.content.buttonVariant || 'gold')}>
+                {block.content.buttonText} <span aria-hidden="true">→</span>
               </a>
             )}
           </div>
@@ -472,6 +662,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       if (block.type === 'features') return (
         <section key={block.id} className={`py-20 max-w-6xl mx-auto px-6 ${cc}`} style={sStyle}>
           <div className="text-center mb-16">
+            {block.content.eyebrow && <div className="public-eyebrow mb-3">{block.content.eyebrow}</div>}
             <h2 className="text-3xl font-bold mb-2">{block.content.title}</h2>
             <p className="text-subtle">{block.content.subtitle}</p>
           </div>
@@ -479,12 +670,12 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
             {block.content.items?.map((item, i) => {
               const IconComp = IconMap[item.icon] || Star;
               return (
-                <div key={i} className="flex flex-col items-start">
+                <div key={i} className={`public-feature-card public-feature-card--${item.variant || 'default'}`}>
                   <div className="w-14 h-14 bg-primary-light text-primary rounded-full flex items-center justify-center mb-5">
-                    <IconComp className="w-7 h-7" />
+                    {block.content.numbered ? <span className="font-bold">{item.number || String(i + 1).padStart(2, '0')}</span> : <IconComp className="w-7 h-7" />}
                   </div>
                   <h3 className="text-xl font-bold text-text-base mb-3">{item.title}</h3>
-                  <p className="text-muted leading-relaxed">{item.text}</p>
+                  <p className="text-muted leading-relaxed">{item.text || item.description}</p>
                 </div>
               );
             })}
@@ -503,7 +694,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                   <h3 className="text-xl font-bold text-text-base mb-3 px-4">{item.title}</h3>
                   <p className="text-muted mb-6 px-4">{item.text}</p>
                   {item.buttonText && (
-                    <a href={item.buttonLink || '#'} className="inline-block border-2 border-border text-muted font-bold px-6 py-2 rounded hover:border-primary hover:text-primary transition">
+                    <a href={item.buttonLink || '#'} className={buttonClass(item.buttonVariant || 'outline')}>
                       {item.buttonText}
                     </a>
                   )}
@@ -567,7 +758,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                   </div>
-                  <h3 className="font-semibold mb-2">Email</h3>
+                  <h3 className="font-semibold mb-2">{block.content.emailLabel || 'Email'}</h3>
                   <a href={`mailto:${block.content.email}`} className="text-primary hover:text-primary-hover">{block.content.email}</a>
                 </div>
               )}
@@ -576,7 +767,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                   </div>
-                  <h3 className="font-semibold mb-2">Phone</h3>
+                  <h3 className="font-semibold mb-2">{block.content.phoneLabel || 'Phone'}</h3>
                   <a href={`tel:${block.content.phone}`} className="text-primary hover:text-primary-hover">{block.content.phone}</a>
                 </div>
               )}
@@ -585,11 +776,19 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                   </div>
-                  <h3 className="font-semibold mb-2">Address</h3>
+                  <h3 className="font-semibold mb-2">{block.content.addressLabel || 'Address'}</h3>
                   <p className="text-subtle">{block.content.address}</p>
                 </div>
               )}
             </div>
+            {block.content.showForm && (
+              <form className="public-contact-form mt-12 mx-auto max-w-2xl" onSubmit={event => event.preventDefault()}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><input required placeholder="Your name" /><input required type="email" placeholder="Email address" /></div>
+                <select required defaultValue="" aria-label="Reason for contacting us"><option value="" disabled>What can we help with?</option>{(block.content.reasonOptions || ['General question', 'Visit planning', 'Community care']).map(reason => <option key={reason}>{reason}</option>)}</select>
+                <textarea rows="4" placeholder="Your message" />
+                <button type="submit" className={buttonClass(block.content.buttonVariant || 'gold')}>Send message <span aria-hidden="true">→</span></button>
+              </form>
+            )}
           </div>
         </section>
       );
@@ -683,8 +882,36 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
     return renderBlocks(pageData.blocks || []);
   };
 
+  const colorVars = Object.fromEntries([
+    ['--primary', siteTokens.colors.primary],
+    ['--primary-hover', siteTokens.colors.primary],
+    ['--accent', siteTokens.colors.accent],
+    ['--primary-light', siteTokens.colors.secondary],
+    ['--primary-foreground', '#fffefa'],
+    ['--background', siteTokens.colors.background],
+    ['--surface', '#fffefa'],
+    ['--surface-raised', siteTokens.colors.background],
+    ['--surface-tertiary', siteTokens.colors.secondary],
+    ['--border', '#d9dde0'],
+    ['--border-soft', '#edf0f1'],
+    ['--border-strong', '#cbd1d6'],
+    ['--text-base', siteTokens.colors.text],
+    ['--text-muted', siteTokens.colors.muted],
+    ['--text-subtle', siteTokens.colors.muted],
+    ['--text-inverse', '#fffefa'],
+  ].map(([key, value]) => [key, hexToHsl(value) || value]));
+  const publicStyle = {
+    ...colorVars,
+    '--font-heading': siteTokens.fonts.heading,
+    '--font-body': siteTokens.fonts.body,
+    '--font-serif': siteTokens.fonts.serif,
+    '--space-base': `${siteTokens.spacing.base}px`,
+    '--radius-base-value': `${siteTokens.borderRadius.default}px`,
+    '--radius-card-value': `${siteTokens.borderRadius.default}px`,
+  };
+
   return (
-    <div className="min-h-screen bg-surface text-text-base">
+    <div className="public-site min-h-screen bg-surface text-text-base" style={publicStyle}>
       {renderHeader()}
       <main id="main-content" role="main">{renderContent()}</main>
       {renderFooter()}

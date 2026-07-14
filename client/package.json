@@ -26,6 +26,7 @@
     "react-router-dom": "^6.30.4",
     "recharts": "^3.9.2",
     "shared": "*",
+    "swiper": "^11.2.10",
     "tailwindcss": "^4.3.1",
     "zustand": "^5.0.14"
   },

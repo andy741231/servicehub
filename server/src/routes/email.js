@@ -15,7 +15,12 @@ import {
   importRecipients,
   createRecipient,
   deleteRecipient,
-  getCampaignAnalytics
+  getCampaignAnalytics,
+  getEmailTemplates,
+  getEmailTemplateById,
+  createEmailTemplate,
+  updateEmailTemplate,
+  deleteEmailTemplate
 } from '../controllers/email.js';
 import {
   receiveInboundEmail,
@@ -25,6 +30,13 @@ import {
 } from '../controllers/inboundEmail.js';
 
 const router = Router();
+
+// Email template routes
+router.get('/templates', getEmailTemplates);
+router.get('/templates/:id', getEmailTemplateById);
+router.post('/templates', createEmailTemplate);
+router.put('/templates/:id', updateEmailTemplate);
+router.delete('/templates/:id', deleteEmailTemplate);
 
 // Campaign routes
 router.get('/campaigns', getCampaigns);

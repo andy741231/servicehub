@@ -13,6 +13,7 @@ import WebStyles from './pages/web/Styles';
 import WebAssets from './pages/web/Assets';
 import WebHeaderFooter from './pages/web/HeaderFooter';
 import WebDraftTemplates from './pages/web/DraftTemplates';
+import WebPageTemplates from './pages/web/PageTemplates';
 import WebShell from './pages/web/WebShell';
 import FormsIndex from './pages/forms/index';
 import FormsList from './pages/forms/FormsList';
@@ -36,7 +37,9 @@ import FormView from './pages/public/FormView';
 import WebDashboard from './pages/web/WebDashboard';
 import EmailDashboard from './pages/email/EmailDashboard';
 import TestEmail from './pages/email/TestEmail';
-import InboundEmails from './pages/email/InboundEmails';
+import EmailTemplates from './pages/email/EmailTemplates';
+import EmailBuilder from './pages/email/builder/EmailBuilder';
+import PaymentReconciliation from './pages/portal/PaymentReconciliation';
 import DirectoryDashboard from './pages/directory/DirectoryDashboard';
 
 
@@ -106,6 +109,7 @@ export default function App() {
               <Route path="styles"          element={<WebStyles />} />
               <Route path="assets"          element={<WebAssets />} />
               <Route path="templates"       element={<WebDraftTemplates />} />
+              <Route path="page-templates"  element={<WebPageTemplates />} />
               <Route path="editor/:slug"    element={<WebIndex />} />
             </Route>
 
@@ -125,10 +129,12 @@ export default function App() {
               <Route index element={<Navigate to="/hub-admin/email/dashboard" replace />} />
               <Route path="dashboard" element={<EmailDashboard />} />
               <Route path="campaigns/*" element={<EmailIndex />} />
+              <Route path="builder" element={<EmailBuilder />} />
               <Route path="test" element={<TestEmail />} />
-              <Route path="inbound" element={<InboundEmails />} />
               <Route path="lists" element={<MailingLists />} />
-              <Route path="templates" element={<div className="max-w-7xl mx-auto p-6 lg:p-8"><p className="text-subtle">Coming soon.</p></div>} />
+              <Route path="templates" element={<EmailTemplates />} />
+              <Route path="templates/new" element={<EmailBuilder />} />
+              <Route path="templates/:id/edit" element={<EmailBuilder />} />
             </Route>
 
             {/* Directory — nested under DirectoryShell for tab nav */}
@@ -142,6 +148,7 @@ export default function App() {
             <Route path="portal" element={<PortalShell />}>
               <Route index element={<Navigate to="/hub-admin/portal/dashboard" replace />} />
               <Route path="dashboard" element={<PortalDashboard />} />
+              <Route path="payment-reconciliation" element={<PaymentReconciliation />} />
             </Route>
 
             {/* Admin */}

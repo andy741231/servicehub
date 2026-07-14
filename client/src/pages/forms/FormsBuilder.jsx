@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, Eye, Download, ArrowLeft, Share2, Check, Plus, X, Undo2, Redo2, History, Smartphone, Tablet, Monitor, Loader2, Search, PanelsTopLeft, MoreHorizontal, ChevronDown, Power, ChevronRight, Code, Copy, AlertTriangle, Menu, FileText, Layers } from 'lucide-react';
+import { Save, Eye, Download, ArrowLeft, Share2, Check, Plus, X, History, Loader2, Search, PanelsTopLeft, MoreHorizontal, ChevronDown, Power, ChevronRight, Code, Copy, AlertTriangle, Menu, FileText, Layers } from 'lucide-react';
+import BuilderHistoryControls from '../../components/builder/BuilderHistoryControls';
+import BuilderPreviewControls from '../../components/builder/BuilderPreviewControls';
+import BuilderSaveStatus from '../../components/builder/BuilderSaveStatus';
 import FormCanvas from './components/FormCanvas';
 import FormRenderer from './components/FormRenderer';
 import OutlineTree from './components/OutlineTree';
@@ -547,15 +550,7 @@ export default function FormsBuilder() {
                   <h1 className="text-sm font-semibold text-base truncate max-w-[200px]" title={formTitle}>
                     {formTitle || 'Untitled Form'}
                   </h1>
-                  <div className="flex items-center gap-1.5 text-xs text-muted">
-                    {saveStatus === 'saving' ? (
-                      <><Loader2 className="h-3 w-3 animate-spin" /> <span>Saving…</span></>
-                    ) : saveStatus === 'error' ? (
-                      <><span className="w-1.5 h-1.5 rounded-full bg-danger" /> <span>Save error</span></>
-                    ) : (
-                      <><span className="w-1.5 h-1.5 rounded-full bg-success" /> <span>{saveStatus === 'saved' ? 'Saved' : 'Saved'}</span></>
-                    )}
-                  </div>
+                  <BuilderSaveStatus status={saveStatus} />
                 </div>
               </div>
             </div>
@@ -919,28 +914,9 @@ export default function FormsBuilder() {
             </button>
           </div>
           <div className="w-px h-4 bg-border" />
-          {/* Device preview */}
-          <div className="flex items-center gap-1">
-            <button onClick={() => setDeviceWidth('desktop')} className={`p-1 rounded transition-colors ${deviceWidth === 'desktop' ? 'text-primary bg-primary-light' : 'text-muted hover:text-base hover:bg-surface'}`} title="Desktop preview" aria-label="Desktop preview" aria-pressed={deviceWidth === 'desktop'}>
-              <Monitor className="h-3.5 w-3.5" />
-            </button>
-            <button onClick={() => setDeviceWidth('tablet')} className={`p-1 rounded transition-colors ${deviceWidth === 'tablet' ? 'text-primary bg-primary-light' : 'text-muted hover:text-base hover:bg-surface'}`} title="Tablet preview" aria-label="Tablet preview" aria-pressed={deviceWidth === 'tablet'}>
-              <Tablet className="h-3.5 w-3.5" />
-            </button>
-            <button onClick={() => setDeviceWidth('mobile')} className={`p-1 rounded transition-colors ${deviceWidth === 'mobile' ? 'text-primary bg-primary-light' : 'text-muted hover:text-base hover:bg-surface'}`} title="Mobile preview" aria-label="Mobile preview" aria-pressed={deviceWidth === 'mobile'}>
-              <Smartphone className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <BuilderPreviewControls value={deviceWidth} onChange={setDeviceWidth} size="compact" />
           <div className="w-px h-4 bg-border" />
-          {/* Undo/redo */}
-          <div className="flex items-center gap-1">
-            <button onClick={undo} disabled={!_history.length} className="p-1 rounded hover:bg-surface text-muted hover:text-base transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Undo (Ctrl+Z)" aria-label="Undo">
-              <Undo2 className="h-3.5 w-3.5" />
-            </button>
-            <button onClick={redo} disabled={!_future.length} className="p-1 rounded hover:bg-surface text-muted hover:text-base transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Redo (Ctrl+Y)" aria-label="Redo">
-              <Redo2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <BuilderHistoryControls onUndo={undo} onRedo={redo} canUndo={_history.length > 0} canRedo={_future.length > 0} size="compact" />
           <div className="w-px h-4 bg-border" />
           {/* Schema label */}
           <div className="flex items-center gap-1.5 hidden sm:flex">

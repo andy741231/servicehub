@@ -20,6 +20,7 @@ export const APPS = [
       { label: 'Styles',          path: '/hub-admin/web/styles',        Icon: Palette },
       { label: 'Assets',          path: '/hub-admin/web/assets',        Icon: Images },
       { label: 'Draft Templates', path: '/hub-admin/web/templates',     Icon: FileStack },
+      { label: 'Page Templates',  path: '/hub-admin/web/page-templates', Icon: Copy },
     ],
   },
   {
@@ -38,9 +39,9 @@ export const APPS = [
     children: [
       { label: 'Dashboard',     path: '/hub-admin/email/dashboard', Icon: Gauge },
       { label: 'Campaigns',     path: '/hub-admin/email/campaigns', Icon: Mail },
+      { label: 'Builder',       path: '/hub-admin/email/builder',   Icon: Wrench },
       { label: 'Mailing Lists', path: '/hub-admin/email/lists',     Icon: UserPlus },
       { label: 'Test Email',    path: '/hub-admin/email/test',      Icon: Send },
-      { label: 'Inbox',         path: '/hub-admin/email/inbound',   Icon: Inbox },
       { label: 'Templates',     path: '/hub-admin/email/templates', Icon: FileText },
     ],
   },
@@ -54,7 +55,8 @@ export const APPS = [
   {
     id: APP_IDS.PORTAL, label: 'Portal', path: '/hub-admin/portal/dashboard', Icon: LayoutDashboard,
     children: [
-      { label: 'Dashboard', path: '/hub-admin/portal/dashboard', Icon: Gauge },
+      { label: 'Dashboard',              path: '/hub-admin/portal/dashboard',              Icon: Gauge },
+      { label: 'Payment Reconciliation', path: '/hub-admin/portal/payment-reconciliation', Icon: Inbox },
     ],
   },
 ];
@@ -309,40 +311,40 @@ function AppShell() {
       <aside
         role="navigation"
         aria-label="Main navigation"
-        className={`fixed lg:sticky top-0 left-0 h-screen w-[240px] bg-surface border-r border-border flex flex-col z-[60] transition-transform duration-200 ease-out lg:translate-x-0 lg:z-auto ${
+        className={`fixed lg:sticky top-0 left-0 h-screen w-[280px] bg-surface border-r border-border flex flex-col z-[60] transition-transform duration-200 ease-out lg:translate-x-0 lg:z-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand row — "Service Hub" links home; active app name links to its dashboard */}
-        <div className="h-14 flex items-center gap-2 px-6 border-b border-border shrink-0">
-          <Link
-            to="/hub-admin/"
-            onClick={closeSidebar}
-            className="text-lg font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base transition-colors duration-150 shrink-0"
-          >
-            Service Hub
-          </Link>
+        <div className={`px-6 border-b border-border shrink-0 ${activeApp ? 'py-3' : 'h-14 flex items-center'}`}>
+          <div className="flex items-center min-h-8">
+            <Link
+              to="/hub-admin/"
+              onClick={closeSidebar}
+              className="text-lg font-bold text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base transition-colors duration-150 shrink-0"
+            >
+              Service Hub
+            </Link>
+            <button
+              onClick={closeSidebar}
+              className="ml-auto lg:hidden p-2 rounded-base text-muted hover:bg-surface-raised hover:text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+              aria-label="Close navigation menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           {activeApp && (
-            <>
-              <ChevronRight className="w-4 h-4 text-subtle shrink-0" aria-hidden="true" />
-              <Link
-                to={activeApp.path}
-                onClick={closeSidebar}
-                className="flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text-base transition-colors duration-150 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base"
-                aria-label={`${activeApp.label} dashboard`}
-              >
-                <activeApp.Icon className="w-4 h-4 shrink-0 text-subtle" />
-                <span className="truncate">{activeApp.label}</span>
-              </Link>
-            </>
+            <Link
+              to={activeApp.path}
+              onClick={closeSidebar}
+              className="mt-1.5 flex items-center gap-1.5 pl-0.5 text-sm font-medium text-muted hover:text-text-base transition-colors duration-150 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base"
+              aria-label={`${activeApp.label} dashboard`}
+            >
+              <ChevronRight className="w-4 h-4 shrink-0 text-subtle" aria-hidden="true" />
+              <activeApp.Icon className="w-4 h-4 shrink-0 text-subtle" />
+              <span>{activeApp.label}</span>
+            </Link>
           )}
-          <button
-            onClick={closeSidebar}
-            className="ml-auto lg:hidden p-2 rounded-base text-muted hover:bg-surface-raised hover:text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-            aria-label="Close navigation menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {useAccordion ? (
@@ -358,6 +360,7 @@ function AppShell() {
             location={location}
             closeSidebar={closeSidebar}
             hasSuperAdminRole={hasSuperAdminRole}
+            onDrillIn={setDrilldownAppId}
           />
         )}
       </aside>

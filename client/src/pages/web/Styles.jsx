@@ -10,21 +10,22 @@ const GOOGLE_FONTS = [
   'Nunito', 'DM Sans', 'Outfit', 'Libre Baskerville',
 ];
 
-const DEFAULT_TOKENS = {
+export const DEFAULT_TOKENS = {
   colors: {
-    primary:    '#2563eb',
-    secondary:  '#7c3aed',
-    accent:     '#f59e0b',
-    background: '#ffffff',
-    text:       '#111827',
-    muted:      '#6b7280',
+    primary:    '#152b45',
+    secondary:  '#54738e',
+    accent:     '#b08a4a',
+    background: '#f8f6f1',
+    text:       '#152b45',
+    muted:      '#647384',
   },
   fonts: {
-    heading: 'Inter, sans-serif',
-    body:    'Inter, sans-serif',
+    heading: 'DM Sans, sans-serif',
+    body:    'DM Sans, sans-serif',
+    serif:   'Libre Baskerville, Georgia, serif',
   },
   spacing: { base: 16 },
-  borderRadius: { default: 8 },
+  borderRadius: { default: 5 },
 };
 
 function ColorSwatch({ label, value, onChange }) {
@@ -169,7 +170,7 @@ export default function Styles() {
             <h2 className="text-sm font-semibold text-text-base uppercase tracking-wide">Typography</h2>
           </div>
           <div className="px-5 py-4 space-y-4">
-            {[{ key: 'heading', label: 'Heading Font' }, { key: 'body', label: 'Body Font' }].map(({ key, label }) => (
+            {[{ key: 'heading', label: 'Heading Font' }, { key: 'body', label: 'Body Font' }, { key: 'serif', label: 'Serif Font' }].map(({ key, label }) => (
               <div key={key}>
                 <label className="block text-sm font-medium text-text-base mb-1.5">{label}</label>
                 <select

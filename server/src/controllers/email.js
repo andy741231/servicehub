@@ -1,6 +1,64 @@
 import prisma from '../db/client.js';
 import { sendTestEmail, sendCampaignToMailingList } from '../services/emailService.js';
 
+export const getEmailTemplates = async (req, res) => {
+  try {
+    const templates = await prisma.emailTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
+    res.json(templates);
+  } catch (error) {
+    console.error('Error fetching email templates:', error);
+    res.status(500).json({ error: 'Failed to fetch email templates' });
+  }
+};
+
+export const getEmailTemplateById = async (req, res) => {
+  try {
+    const template = await prisma.emailTemplate.findUnique({ where: { id: req.params.id } });
+    if (!template) return res.status(404).json({ error: 'Email template not found' });
+    res.json(template);
+  } catch (error) {
+    console.error('Error fetching email template:', error);
+    res.status(500).json({ error: 'Failed to fetch email template' });
+  }
+};
+
+export const createEmailTemplate = async (req, res) => {
+  try {
+    const { name, subject = '', document, bodyHtml, status = 'draft' } = req.body;
+    if (!name?.trim() || !document || !bodyHtml) return res.status(400).json({ error: 'Name, document, and rendered HTML are required' });
+    const template = await prisma.emailTemplate.create({ data: { name: name.trim(), subject, document, bodyHtml, status } });
+    res.status(201).json(template);
+  } catch (error) {
+    console.error('Error creating email template:', error);
+    res.status(500).json({ error: 'Failed to create email template' });
+  }
+};
+
+export const updateEmailTemplate = async (req, res) => {
+  try {
+    const { name, subject = '', document, bodyHtml, status = 'draft' } = req.body;
+    if (!name?.trim() || !document || !bodyHtml) return res.status(400).json({ error: 'Name, document, and rendered HTML are required' });
+    const template = await prisma.emailTemplate.update({
+      where: { id: req.params.id },
+      data: { name: name.trim(), subject, document, bodyHtml, status },
+    });
+    res.json(template);
+  } catch (error) {
+    console.error('Error updating email template:', error);
+    res.status(500).json({ error: 'Failed to update email template' });
+  }
+};
+
+export const deleteEmailTemplate = async (req, res) => {
+  try {
+    await prisma.emailTemplate.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Email template deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting email template:', error);
+    res.status(500).json({ error: 'Failed to delete email template' });
+  }
+};
+
 // Campaign Controllers
 export const getCampaigns = async (req, res) => {
   try {

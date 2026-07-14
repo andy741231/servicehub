@@ -572,6 +572,456 @@ toast('Draft auto-saved.', 'info');
 
 ---
 
+## Known Issues (Tech Debt — fix later)
+
+These are confirmed gaps between what the editor UI promises and what the public
+renderer actually applies. Documented here so they aren't re-discovered from
+scratch. Each entry lists the symptom, root cause, and the fix sketch.
+
+### A. Site-wide Styles page tokens never reach the public site
+
+**Symptom:** The Styles page (`client/src/pages/web/Styles.jsx`) lets admins edit
+Colors, Typography (heading/body fonts), Spacing (base), and Shape (border
+radius). Saving persists a `tokens` object to `WebSiteStyle.tokens` via
+`PUT /web/styles`. None of these values affect the published page.
+
+**Root cause:** The public renderer `client/src/pages/public/Home.jsx` never
+fetches `/web/styles` and never reads `WebSiteStyle.tokens`. The site's actual
+theming comes from hardcoded Tailwind theme classes (`text-primary`,
+`bg-surface-raised`, …) and CSS custom properties (`hsl(var(--text-base))`, …)
+defined in `client/src/index.css`. The Styles page is effectively a dead UI —
+it writes to the DB but nothing reads it back.
+
+**Confirmed by grep:** `Home.jsx` has zero references to `/web/styles`,
+`siteStyle`, `tokens` (in the styling sense), or `WebSiteStyle`. The only
+`tokens` matches in `Home.jsx` are the unrelated `marked` renderer link tokens.
+
+**Fix sketch:**
+1. In `Home.jsx`, fetch `/web/styles` alongside `/web/:slug` (or have the
+   `/web/:slug` response include the site style tokens to avoid a second
+   round-trip).
+2. Inject the tokens as CSS custom properties on a root wrapper (e.g.
+   `--color-primary`, `--font-heading`, `--font-body`, `--space-base`,
+   `--radius-base`) so they override the defaults from `index.css` for the
+   public site only.
+3. Load the selected Google Font(s) dynamically (a `<link>` to
+   `fonts.googleapis.com` or a `@font-face` injection) so the heading/body
+   font choices actually take effect.
+4. Map the token keys to the existing Tailwind theme variables the renderer
+   already uses, so `text-primary`, `bg-primary`, etc. pick up the new values
+   without rewriting every block renderer.
+
+### B. Text block has no typography controls; only color + alignment apply
+
+**Symptom:** In the web editor, opening the style panel for a `text` block shows
+a "Typography" section that contains **only a Text Color picker**. There are no
+font-family, font-size, font-weight, or font-style controls for text blocks.
+The Text Alignment control (left/center/right/justify) does exist and works.
+
+**Root cause:** The `TypographyControls` component in `InlineEditor.jsx` (with
+`fontFamily`, `fontSize`, `fontWeight`, `fontStyle`, `textAlign` fields) is
+wired **only to the hero block** — it writes `titleFontFamily`,
+`titleFontSize`, … and `subtitleFontFamily`, `subtitleFontSize`, … onto
+`block.style`. The text block's style panel never renders `TypographyControls`;
+its "Typography" section is a hardcoded block that only exposes `color`.
+
+On the renderer side, `Home.jsx`'s `text` branch renders the markdown content
+inside a `prose` container and applies `sStyle` (background, color, padding,
+margin, border, radius, `textAlign`) to the wrapping `<section>`. It does not
+read any font-family/size/weight/style keys for text blocks, so even if the
+editor wrote them, they wouldn't apply to the inner prose `div`.
+
+**What currently works for text blocks on the published page:**
+- `block.style.color` (text color) → applied via `sStyle.color` on the section,
+  cascades into prose. ✓
+- `block.style.textAlign` → applied via `sStyle.textAlign` on the section. ✓
+- `block.style.backgroundColor`, padding, margin, border, radius,
+  `customClasses` → applied to the section wrapper. ✓
+
+**What does NOT work:**
+- Font family, font size, font weight, font style — no editor controls, no
+  renderer support. The published text uses `prose` Tailwind classes and
+  inherits fonts from the global theme. ✗
+
+**Fix sketch:**
+1. In `InlineEditor.jsx`, render `TypographyControls` (or a text-block-specific
+   variant) inside the text block's style panel, writing plain
+   `fontFamily` / `fontSize` / `fontWeight` / `fontStyle` keys onto
+   `block.style` (not the `title*` / `subtitle*` prefixed keys the hero block
+   uses).
+2. In `Home.jsx`'s `text` branch, apply those keys as inline styles on the
+   inner prose `div` (not just the outer `<section>`), so they override the
+   `prose` defaults. Note: `prose` sets its own font sizes on headings/paragraphs,
+   so the inline style may need `!important` or a wrapper class that disables
+   prose's typography modifiers (e.g. `prose-p:font-[inherit]`).
+
+### C. Section-level vs block-level style overlap (FYI, not a bug)
+
+The renderer applies `WebSection` padding/margin/background to the section
+wrapper and `WebBlock.style` padding/margin/background to the block wrapper.
+When both set background color, the block background paints over the section
+background within the block's padding. This is intentional but worth knowing
+when debugging "why doesn't my section background show" — check whether the
+nested block has its own `backgroundColor`.
+
+---
+
+## Roadmap: Harbor Theme + Slider + WYSIWYG
+
+Reference mockup: `landing2/index.html` (+ `about.html`, `contact.html`),
+`landing2/styles.css`, `landing2/script.js`. The mockup is a three-page
+"Harbor Church" site with a warm editorial design (navy/gold/ivory palette,
+Libre Baskerville serif + DM Sans, eyebrow labels, numbered circles, navy
+banners, hairline borders, reveal-on-scroll animations).
+
+The goal is to (1) apply the mockup's theme to our front-facing renderer,
+(2) build a Revolution-Slider-style slider block (replacing the hero block)
+with image / color / gradient / video (HTML5 + YouTube + Vimeo) backgrounds,
+(3) add a WYSIWYG text editor with a font-type dropdown so editors can mark
+words as serif-italic inline, and (4) build the remaining mockup blocks.
+
+### Confirmed scope decisions
+
+- **Slider replaces the hero block** — the existing `hero` block is removed
+  from the block palette. The renderer keeps the `hero` case for backward
+  compatibility with already-saved pages.
+- **Video: all three types at launch** — HTML5 self-hosted (`.mp4`/`.webm`
+  via Assets), YouTube embed, Vimeo embed.
+- **WYSIWYG editor with font-type dropdown** — title/subtitle/eyebrow fields
+  use a rich text editor where the user can select text and change its font
+  family (e.g. sans → serif italic) via a toolbar dropdown. This replaces the
+  plain text inputs and the asterisk-syntax idea. The WYSIWYG is a reusable
+  component used by the slider and eventually the text block and other blocks.
+- **Styles page wired to the renderer** — fixes Known Issue A. The Styles
+  page's color/typography/spacing/shape tokens are injected as CSS custom
+  properties on the public renderer root, seeded with the Harbor palette.
+
+---
+
+### Phase 1 — Theme Infrastructure (fixes Known Issue A)
+
+Wire the Styles page to actually drive the public renderer, seed it with the
+Harbor palette, and restyle the header/footer to match the mockup.
+
+**Tasks:**
+
+1. **Renderer fetches site styles** — in `Home.jsx`, fetch `/web/styles`
+   alongside `/web/:slug` (or include tokens in the `/web/:slug` response to
+   avoid a second round-trip). Inject the `WebSiteStyle.tokens` as CSS custom
+   properties on the renderer root wrapper:
+   - `--color-primary` ← tokens.colors.primary (navy `#152b45`)
+   - `--color-accent` ← tokens.colors.accent (gold `#b08a4a`)
+   - `--color-background` ← tokens.colors.background (ivory `#f8f6f1`)
+   - `--color-text` ← tokens.colors.text (navy)
+   - `--color-muted` ← tokens.colors.muted (slate `#647384`)
+   - `--font-heading` ← tokens.fonts.heading
+   - `--font-body` ← tokens.fonts.body
+   - `--space-base` ← tokens.spacing.base
+   - `--radius-base` ← tokens.borderRadius.default
+
+2. **Seed Harbor defaults** — update `DEFAULT_TOKENS` in `Styles.jsx` to the
+   Harbor palette and fonts:
+   - Colors: primary `#152b45`, secondary `#54738e`, accent `#b08a4a`,
+     background `#f8f6f1`, text `#152b45`, muted `#647384`
+   - Fonts: heading `DM Sans, sans-serif`, body `DM Sans, sans-serif`,
+     plus a new `serif` token: `Libre Baskerville, Georgia, serif`
+
+3. **Dynamic Google Fonts loading** — when the renderer fetches tokens, inject
+   a `<link href="https://fonts.googleapis.com/css2?family=DM+Sans...&family=Libre+Baskerville...">`
+   into `<head>` so the selected fonts actually load. Only load families that
+   aren't already in the document.
+
+4. **Add a `serif` font token** — extend `DEFAULT_TOKENS.fonts` with a `serif`
+   key (`Libre Baskerville, Georgia, serif`). Add a third font dropdown to the
+   Styles page Typography section. The renderer exposes it as
+   `--font-serif` for use by the WYSIWYG font-type dropdown and by block
+   renderers that apply serif emphasis.
+
+5. **Restyle header renderer** — update `renderHeader()` in `Home.jsx` to
+   match the mockup:
+   - Brand mark: circle with letter (from `logo.text` first char), navy bg
+   - Brand copy: name + small uppercase city line
+   - Nav links: slate color, gold underline on hover/active
+   - CTA button: support a new `header.cta` field
+     `{ text, href }` rendered as a navy button on the right
+   - Sticky, translucent ivory background with blur
+
+6. **Restyle footer renderer** — update `renderFooter()` in `Home.jsx`:
+   - 3-column grid: brand+tagline | link column | gatherings+email
+   - Bottom bar: copyright + tagline
+   - Hairline borders, slate text on ivory
+
+7. **Add `harbor` to the Tailwind theme** — add the Harbor CSS variables to
+   `client/src/index.css` as the new defaults (or scoped under a
+   `.template-harbor` class if we want to keep multiple themes). Map them to
+   the existing Tailwind theme tokens (`--color-primary` → `primary`, etc.)
+   so `text-primary`, `bg-primary`, `text-muted`, etc. pick up the Harbor
+   values automatically.
+
+**Files touched:** `Home.jsx`, `Styles.jsx`, `index.css`, `webStyles.js`
+(maybe, if we include tokens in the page response).
+
+**Estimated effort:** ~3-4 hours
+
+---
+
+### Phase 2 — WYSIWYG Text Editor with Font-Type Dropdown
+
+Build a reusable rich text editor component that replaces plain text inputs
+for title/subtitle/eyebrow fields. The key feature is a toolbar with a
+**font-family dropdown** so editors can select text and switch it to serif
+italic (or any other font family) inline — this is how the mockup's
+"A place to *belong.*" emphasis is achieved.
+
+**Tasks:**
+
+1. **Reuse the existing WYSIWYG library** — the project already depends on
+   `react-quill` and uses it in the Forms and Email builders. Do not add TipTap
+   or another editor dependency. Use Quill's whitelisted `font` format for
+   `sans`, `serif`, and `serif-italic`.
+
+2. **Build `RichTextEditor` component** (`client/src/components/RichTextEditor.jsx`):
+   - Wrap the existing `ReactQuill` component with the shared project styling
+   - Toolbar: font-family dropdown (Sans / Serif / Serif Italic), bold,
+     italic, underline, strike, headings, lists, alignment, links, clean
+   - Register Quill's custom font whitelist and map the font classes to the
+     site's `--font-body` and `--font-serif` tokens
+   - Outputs a sanitized-compatible HTML string via `onChange(html)`
+   - Accepts a `value` prop and `onChange(html)` callback
+   - Keep the component reusable for the slider and other rich text fields
+
+3. **Renderer support** — the slider (and other blocks using the WYSIWYG)
+   render the HTML via `dangerouslySetInnerHTML` (already the pattern for
+   text blocks). Preserve Quill's `ql-font-*` classes and map them to the
+   public site's font tokens. Add `DOMPurify.sanitize()` for safety (already
+   used for markdown blocks).
+
+4. **Font-family options** — the dropdown offers:
+   - "Sans" → `var(--font-body)` (DM Sans)
+   - "Serif" → `var(--font-serif)` (Libre Baskerville)
+   - "Serif Italic" → `var(--font-serif)` + `font-style: italic`
+   - Future: more options driven by the Styles page font tokens
+
+5. **Use the editor in web blocks** — the existing web text block now uses
+   `<RichTextEditor>` instead of the custom Markdown toolbar. The slider's
+   eyebrow/title/subtitle fields should use the same component when Phase 3
+   is implemented.
+
+**Files touched:** new `client/src/components/RichTextEditor.jsx`,
+`InlineEditor.jsx` (text block now uses it; slider fields will reuse it),
+`Home.jsx` (renderer — already supports `dangerouslySetInnerHTML`).
+
+**Estimated effort:** ~1-2 hours (existing `react-quill` dependency and toolbar patterns are reused)
+
+---
+
+### Phase 3 — Slider Block (replaces hero)
+
+Build a Revolution-Slider-style carousel block with image / color / gradient /
+video (HTML5 + YouTube + Vimeo) backgrounds, text overlay, buttons, and
+Swiper-powered transitions.
+
+**Tasks:**
+
+1. **Add Swiper dependency** — run `npm install swiper` in `client/`.
+   Import `Swiper`, `SwiperSlide`, and modules (`Autoplay`, `Pagination`,
+   `Navigation`, `EffectFade`, `Parallax`) in `Home.jsx`.
+
+2. **Slider block data shape** —
+   ```js
+   {
+     type: 'slider',
+     content: {
+       autoplay: true,
+       interval: 6000,          // ms per slide
+       transition: 'fade',      // 'fade' | 'slide' | 'none'
+       showArrows: true,
+       showDots: true,
+       height: 'full',          // 'full' (100vh) | 'large' (600px) | 'medium' (450px) | custom px
+       slides: [
+         {
+           id: 'slide-uuid',
+           backgroundType: 'image',   // 'image'|'color'|'gradient'|'video'|'youtube'|'vimeo'
+           // image/gradient:
+           backgroundImage: '/uploads/hero.jpg',
+           backgroundColor: '#152b45',
+           // video (HTML5):
+           videoUrl: '/uploads/hero.mp4',
+           posterImage: '/uploads/hero-poster.jpg',
+           // youtube:
+           youtubeId: 'dQw4w9WgXcQ',
+           // vimeo:
+           vimeoId: '76979871',
+           // shared:
+           overlay: 'dark',           // 'dark'|'light'|'none'
+           textAlign: 'left',         // 'left'|'center'|'right'
+           verticalAlign: 'center',   // 'top'|'center'|'bottom'
+           eyebrow: 'Welcome to Harbor Church',   // WYSIWYG HTML
+           title: 'A place to <span style="font-family:var(--font-serif);font-style:italic">belong.</span>',
+           subtitle: 'We are a welcoming community...',  // WYSIWYG HTML
+           buttonText: 'Plan your first visit',
+           buttonLink: '/contact',
+           buttonVariant: 'gold',     // 'gold'|'outline'|'default'
+         }
+       ]
+     }
+   }
+   ```
+
+3. **Slider renderer in `Home.jsx`** —
+   - `<Swiper>` wrapper with configured modules
+   - Per-slide background rendering based on `backgroundType`:
+     - `image`: `<div>` with `background-image: url(...)`, `background-size: cover`
+     - `color`: `<div>` with `background-color`
+     - `gradient`: `<div>` with CSS gradient (store the gradient string)
+     - `video` (HTML5): `<video autoPlay muted loop playsInline poster={...}>`
+     - `youtube`: `<iframe src="https://www.youtube.com/embed/{id}?autoplay=1&mute=1&controls=0&loop=1&playlist={id}&showinfo=0&modestbranding=1&rel=0">` with CSS to fill the slide
+     - `vimeo`: `<iframe src="https://player.vimeo.com/video/{id}?background=1">`
+   - Overlay layer (`dark` = semi-opaque navy gradient, `light` = semi-opaque white, `none` = nothing)
+   - Content layer: eyebrow, title (WYSIWYG HTML via `dangerouslySetInnerHTML`), subtitle, button
+   - Content positioned by `textAlign` + `verticalAlign`
+   - Button styled by `buttonVariant` (gold / outline / default)
+
+4. **Slider editor in `InlineEditor.jsx`** —
+   - **Slide list panel**: shows all slides with thumbnails, add/remove/reorder (drag-and-drop via `@hello-pangea/dnd` or up/down buttons)
+   - **Per-slide editor** (shown when a slide is selected):
+     - Background type toggle (image / color / gradient / video / youtube / vimeo)
+     - Conditional fields based on type:
+       - image: background image URL (the existing Assets page can upload/select the asset)
+       - color: `ColorPicker`
+       - gradient: gradient string input (or a simple 2-color picker that builds a CSS gradient)
+       - video: HTML5 video URL + poster image URL (the existing Assets page can upload/select the video)
+       - youtube: YouTube ID/URL input
+       - vimeo: Vimeo ID/URL input
+     - Overlay selector (dark / light / none)
+     - Eyebrow, title, subtitle: `<RichTextEditor>` (from Phase 2)
+     - Button text, button link, button variant dropdown
+     - Text alignment (horizontal + vertical)
+   - **Slider-level settings** (separate panel or top of block editor):
+     - Autoplay toggle + interval (ms)
+     - Transition style (fade / slide / none)
+     - Height (full / large / medium / custom)
+     - Show arrows / show dots toggles
+
+5. **Assets route: support video uploads** — in `server/src/controllers/webAssets.js`:
+   - Allow MIME types: `video/mp4`, `video/webm`, `video/ogg`
+   - Bump upload size limit (Azure App Service: check `web.config` `<requestLimits maxAllowedContentLength>`, Express `multer` `limits.fileSize`). Target: ~50MB.
+   - Return the video URL the same way image uploads do
+
+6. **Remove `hero` from the block palette** — in `InlineEditor.jsx`'s `addBlock()` / block palette, remove the `hero` option. Keep the `hero` renderer case in `Home.jsx` for backward compatibility with existing saved pages.
+
+7. **Default slider content** — `addBlock('slider')` creates a single-slide slider with a color background and placeholder text, so the editor never starts empty.
+
+**Files touched:** `Home.jsx`, `InlineEditor.jsx`, `server/src/routes/web.js`,
+`client/src/index.css`, `client/package.json` (Swiper dep).
+
+**Estimated effort:** ~9-11 hours (slider core ~5-6 hrs + all three video
+types ~3-4 hrs + assets route ~0.5 hr + testing ~1 hr)
+
+---
+
+### Phase 4 — Remaining Mockup Blocks + Polish
+
+Build the rest of the mockup's components as new blocks or extensions, plus
+global enhancements.
+
+**Tasks:**
+
+1. **New block: `trust-bar`** — 3 items with big numbers + labels.
+   `content: { items: [{ number, label }] }`
+
+2. **New block: `split-banner`** — 2-col navy banner: left copy (eyebrow,
+   title, text, button) + right service-times list.
+   `content: { eyebrow, title, body, buttonText, buttonLink, buttonVariant, times: [{ label, value }] }`
+
+3. **New block: `events`** — rows of date | title+desc | time.
+   `content: { items: [{ date, title, description, time }] }`
+
+4. **New block: `quote`** — big serif blockquote on gold-soft background.
+   `content: { quote, citation, backgroundColor }`
+
+5. **New block: `map`** (optional) — address + CSS placeholder or real map
+   embed (Google Maps iframe). `content: { address, embedUrl }`
+
+6. **Extend `features` block** — add per-card `variant` (white / blue / navy
+   background) and a `numbered` mode (numbered circles instead of icons).
+   Add `eyebrow` to the section heading.
+
+7. **Extend `contact` block** — add form fields (name, email, reason select,
+   message) + detail labels, matching the mockup's contact layout. This may
+   need a backend endpoint to store submissions (or just a mailto / front-end
+   only for v1).
+
+8. **Button variant system** — any block with a button supports
+   `buttonVariant: 'gold' | 'outline' | 'default'`. Add a shared
+   `buttonClass(variant)` helper used by all block renderers.
+
+9. **Reveal-on-scroll animation** — add an `IntersectionObserver` in
+   `Home.jsx` that adds an `is-visible` class to sections when they enter
+   the viewport. CSS handles the fade-up transition. This is a global
+   renderer enhancement, not a per-block thing.
+
+10. **Page-level `eyebrow` support** — several mockup sections use an eyebrow
+    label above the heading. Add an optional `eyebrow` field to block content
+    where relevant (slider already has it; add to features, events, etc.).
+
+**Files touched:** `Home.jsx`, `InlineEditor.jsx`.
+
+**Estimated effort:** ~6-8 hours
+
+**Implementation note:** The Phase 4 blocks are now implemented as `trust-bar`,
+`split-banner`, `events`, `quote`, and `map`. The `features` block supports
+numbered cards and card variants, and the public renderer includes scoped
+Harbor styling plus reduced-motion-aware reveal-on-scroll behavior.
+
+All Phase 4 tasks are complete. Features now supports an eyebrow, numbered
+cards, and variants; contact includes configurable detail labels and a reason
+select; buttons use the shared `buttonClass(variant)` helper; and public blocks
+support reduced-motion-aware reveal-on-scroll behavior.
+
+---
+
+### Total estimated effort
+
+| Phase | Scope | Hours | Status |
+|-------|-------|-------|--------|
+| 1 | Theme infrastructure (Styles → renderer, Harbor palette, header/footer) | 3-4 | ✅ Done |
+| 2 | WYSIWYG editor with font-type dropdown (react-quill) | 1-2 | ✅ Done |
+| 3 | Slider block with image/color/gradient/video (HTML5+YouTube+Vimeo) | 9-11 | ✅ Done |
+| 4 | Remaining mockup blocks + reveal animations + button variants | 6-8 | ✅ Done |
+| **Total** | | **19-25** | |
+
+### Implementation order
+
+Phases 1 → 2 → 3 → 4. Phase 1 gives the renderer the right colors/fonts/
+header/footer (the "canvas"). Phase 2 builds the WYSIWYG that the slider
+needs for serif-italic emphasis. Phase 3 builds the slider itself. Phase 4
+fills in the remaining mockup blocks.
+
+### Dependencies to install
+
+- `swiper` (slider carousel) — in `client/`
+- No new WYSIWYG dependency — reuse the existing `react-quill` package in
+  `client/`
+
+### Verification per phase
+
+- **Phase 1:** Styles page changes → refresh public site → colors/fonts/
+  header/footer match the mockup. Try changing a color in Styles → save →
+  public site updates.
+- **Phase 2:** Web text block → enter content → select a word → choose
+  "Serif Italic" from the font dropdown → word renders in Libre Baskerville
+  italic on the public site. The slider's eyebrow, title, and subtitle fields
+  use the same component.
+- **Phase 3:** Add a slider block → add slides with each background type →
+  save → public site shows autoplaying slider with transitions, arrows, dots.
+  Upload a video → use as slide background → plays muted/looped. Paste a
+  YouTube ID → embed plays. Paste a Vimeo ID → embed plays.
+- **Phase 4:** Build a page matching the mockup using the new blocks →
+  compare side-by-side with `landing2/index.html`.
+
+---
+
 ## 14. Constraints & Guardrails
 
 - **Do not** use Prisma `Json` type for `WebBlock.content` or `WebPage` data.

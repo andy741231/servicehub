@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Save, Eye, Send, Clock, ArrowLeft, Upload, Users, Plus } from 'lucide-react';
+import { Save, Eye, Send, Clock, ArrowLeft } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import BuilderHistoryControls from '../../components/builder/BuilderHistoryControls';
+import BuilderPreviewControls from '../../components/builder/BuilderPreviewControls';
+import BuilderSaveStatus from '../../components/builder/BuilderSaveStatus';
+import BuilderToolbar from '../../components/builder/BuilderToolbar';
+import useDocumentHistory from '../../components/builder/useDocumentHistory';
 import useEmailStore from './store/emailStore';
+import api from '../../utils/api';
 import { useAlert } from '../../components/Dialog';
 
 export default function CampaignComposer() {
@@ -11,10 +17,9 @@ export default function CampaignComposer() {
   const navigate = useNavigate();
   const isEditing = !!id;
   
-  const { mailingLists, fetchMailingLists, createCampaign, updateCampaign, sendCampaign, loading } = useEmailStore();
+  const { mailingLists, fetchMailingLists, fetchCampaignById, createCampaign, updateCampaign, sendCampaign, loading } = useEmailStore();
   const { alertDialog, AlertDialogMount } = useAlert();
-
-  const [campaign, setCampaign] = useState({
+  const { value: campaign, commit: setCampaign, reset, undo, redo, canUndo, canRedo } = useDocumentHistory({
     name: '',
     subject: '',
     bodyHtml: '',
@@ -25,13 +30,24 @@ export default function CampaignComposer() {
   const [showPreview, setShowPreview] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
+  const [previewDevice, setPreviewDevice] = useState('desktop');
+  const [saveStatus, setSaveStatus] = useState('idle');
+  const [templates, setTemplates] = useState([]);
 
   useEffect(() => {
     fetchMailingLists();
-    if (isEditing && id) {
-      // TODO: Fetch existing campaign data
-    }
-  }, [isEditing, id, fetchMailingLists]);
+    api.get('/email/templates').then(({ data }) => setTemplates(data)).catch(() => setTemplates([]));
+    if (!isEditing || !id) return;
+    fetchCampaignById(id)
+      .then((loadedCampaign) => reset({
+        name: loadedCampaign.name || '',
+        subject: loadedCampaign.subject || '',
+        bodyHtml: loadedCampaign.bodyHtml || '',
+        mailingListId: loadedCampaign.mailingListId || '',
+        status: loadedCampaign.status || 'draft'
+      }))
+      .catch((error) => console.error('Failed to load campaign:', error));
+  }, [fetchCampaignById, fetchMailingLists, id, isEditing, reset]);
 
   const handleSave = async () => {
     // Validate required fields
@@ -44,6 +60,7 @@ export default function CampaignComposer() {
       return;
     }
 
+    setSaveStatus('saving');
     try {
       if (isEditing && id) {
         await updateCampaign(id, campaign);
@@ -51,8 +68,10 @@ export default function CampaignComposer() {
         await createCampaign(campaign);
         navigate('/hub-admin/email');
       }
+      setSaveStatus('saved');
     } catch (error) {
       console.error('Failed to save campaign:', error);
+      setSaveStatus('error');
       await alertDialog({
         title: 'Save Failed',
         message: 'Failed to save campaign. Please try again.',
@@ -120,6 +139,27 @@ export default function CampaignComposer() {
     ]
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const isInputTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) || event.target.isContentEditable;
+      if (isInputTarget) return;
+      const modifier = event.ctrlKey || event.metaKey;
+      if (modifier && event.key.toLowerCase() === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        undo();
+      } else if (modifier && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) {
+        event.preventDefault();
+        redo();
+      } else if (modifier && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave, redo, undo]);
+
   if (showPreview) {
     return (
       <div className="min-h-screen bg-background">
@@ -134,7 +174,7 @@ export default function CampaignComposer() {
               <span className="text-body">Back to Editor</span>
             </button>
           </div>
-          <div className="bg-surface border border-border rounded-card shadow-card p-8">
+          <div className={`${previewDevice === 'mobile' ? 'mx-auto max-w-sm' : previewDevice === 'tablet' ? 'mx-auto max-w-xl' : ''} bg-surface border border-border rounded-card shadow-card p-8`}>
             <h1 className="text-heading font-semibold text-base mb-4">{campaign.subject || 'Subject Line'}</h1>
             <div 
               className="prose max-w-none"
@@ -150,56 +190,53 @@ export default function CampaignComposer() {
     <div className="flex h-screen bg-background">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Toolbar */}
-        <div className="h-14 bg-surface border-b border-border flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/hub-admin/email')}
-              className="p-2 min-h-[44px] min-w-[44px] text-subtle hover:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors"
-              title="Back to Dashboard"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="h-6 w-px bg-border" />
-            <h1 className="text-heading font-semibold text-base">
-              {isEditing ? 'Edit Campaign' : 'New Campaign'}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowPreview(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
-              title="Preview campaign"
-            >
-              <Eye className="h-4 w-4" />
-              <span className="text-body">Preview</span>
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-3 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
-              title="Save as draft"
-            >
-              <Save className="h-4 w-4" />
-              <span className="text-body">Save Draft</span>
-            </button>
-            <button
-              onClick={() => setShowSchedule(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-surface-raised border border-border rounded-base hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
-              title="Schedule campaign"
-            >
-              <Clock className="h-4 w-4" />
-              <span className="text-body">Schedule</span>
-            </button>
-            <button
-              onClick={handleSend}
-              className="flex items-center gap-2 px-3 py-2 bg-primary text-inverse rounded-base hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 min-h-[44px] font-medium transition-colors duration-150"
-              title="Send immediately"
-            >
-              <Send className="h-4 w-4" />
-              <span className="text-body">Send Now</span>
-            </button>
-          </div>
-        </div>
+        <BuilderToolbar
+          title={isEditing ? 'Edit Campaign' : 'New Campaign'}
+          description="Email campaign draft"
+          onBack={() => navigate('/hub-admin/email')}
+          status={<BuilderSaveStatus status={saveStatus} />}
+        >
+          <BuilderHistoryControls onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} />
+          <BuilderPreviewControls value={previewDevice} onChange={setPreviewDevice} />
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            className="flex min-h-[40px] items-center gap-2 rounded-base border border-border bg-surface-raised px-3 py-2 text-body font-medium transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+            title="Preview campaign"
+          >
+            <Eye className="h-4 w-4" />
+            <span className="hidden sm:inline">Preview</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={loading}
+            className="flex min-h-[40px] items-center gap-2 rounded-base border border-border bg-surface-raised px-3 py-2 text-body font-medium transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Save as draft"
+          >
+            <Save className="h-4 w-4" />
+            <span className="hidden sm:inline">Save Draft</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSchedule(true)}
+            className="flex min-h-[40px] items-center gap-2 rounded-base border border-border bg-surface-raised px-3 py-2 text-body font-medium transition-colors hover:bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+            title="Schedule campaign"
+          >
+            <Clock className="h-4 w-4" />
+            <span className="hidden sm:inline">Schedule</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={loading}
+            className="flex min-h-[40px] items-center gap-2 rounded-base bg-primary px-3 py-2 text-body font-medium text-inverse transition-colors hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Send immediately"
+          >
+            <Send className="h-4 w-4" />
+            <span className="hidden sm:inline">Send Now</span>
+          </button>
+        </BuilderToolbar>
 
         {/* Editor Area */}
         <div className="flex-1 overflow-y-auto p-8">
@@ -211,17 +248,32 @@ export default function CampaignComposer() {
                   <input
                     type="text"
                     value={campaign.name}
-                    onChange={(e) => setCampaign({ ...campaign, name: e.target.value })}
+                    onChange={(e) => setCampaign((current) => ({ ...current, name: e.target.value }))}
                     placeholder="e.g., Summer Newsletter"
                     className="w-full h-11 px-3 border border-border-strong rounded-base bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-subtle"
                   />
+                </div>
+                <div>
+                  <label className="block text-label text-muted mb-2">Start from a template</label>
+                  <select
+                    defaultValue=""
+                    onChange={(event) => {
+                      const template = templates.find((item) => item.id === event.target.value);
+                      if (!template) return;
+                      setCampaign((current) => ({ ...current, subject: template.subject || current.subject, bodyHtml: template.bodyHtml }));
+                    }}
+                    className="w-full h-11 px-3 border border-border-strong rounded-base bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body"
+                  >
+                    <option value="">Choose a saved template…</option>
+                    {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-label text-muted mb-2">Subject Line</label>
                   <input
                     type="text"
                     value={campaign.subject}
-                    onChange={(e) => setCampaign({ ...campaign, subject: e.target.value })}
+                    onChange={(e) => setCampaign((current) => ({ ...current, subject: e.target.value }))}
                     placeholder="e.g., Your Summer Updates Are Here"
                     className="w-full h-11 px-3 border border-border-strong rounded-base bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body placeholder:text-subtle"
                   />
@@ -230,7 +282,7 @@ export default function CampaignComposer() {
                   <label className="block text-label text-muted mb-2">Recipient List</label>
                   <select
                     value={campaign.mailingListId}
-                    onChange={(e) => setCampaign({ ...campaign, mailingListId: e.target.value })}
+                    onChange={(e) => setCampaign((current) => ({ ...current, mailingListId: e.target.value }))}
                     className="w-full h-11 px-3 border border-border-strong rounded-base bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 text-body"
                   >
                     <option value="">Select a list...</option>
@@ -255,7 +307,7 @@ export default function CampaignComposer() {
                 <ReactQuill
                   theme="snow"
                   value={campaign.bodyHtml}
-                  onChange={(content) => setCampaign({ ...campaign, bodyHtml: content })}
+                  onChange={(content) => setCampaign((current) => ({ ...current, bodyHtml: content }))}
                   modules={quillModules}
                   placeholder="Write your email content here..."
                 />

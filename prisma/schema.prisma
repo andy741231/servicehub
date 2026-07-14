@@ -71,7 +71,31 @@ model WebPage {
   hideFromNav Boolean    @default(false) // hide from main navigation
   blocks      WebBlock[]
   sections    WebSection[]
+  versions    WebPageVersion[]
   updatedAt   DateTime   @updatedAt
+}
+
+model WebPageTemplate {
+  id          String   @id @default(uuid())
+  name        String   @db.NVarChar(255)
+  description String?  @db.NVarChar(1000)
+  snapshot    String   @db.NVarChar(Max) // JSON page-content snapshot, isolated to the Web Builder
+  createdById String
+  createdByName String @db.NVarChar(255)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WebPageVersion {
+  id            String   @id @default(uuid())
+  pageId        String
+  title         String   @db.NVarChar(255)
+  snapshot      String   @db.NVarChar(Max) // JSON page-content snapshot at save time
+  savedById     String
+  savedByName   String   @db.NVarChar(255)
+  versionNumber Int
+  createdAt     DateTime @default(now())
+  page          WebPage  @relation(fields: [pageId], references: [id])
 }
 
 model WebSection {
@@ -163,6 +187,17 @@ model EmailCampaign {
   deletedAt      DateTime?          // Soft delete support
   logs           EmailLog[]
   metrics        CampaignMetrics?
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String
+  subject   String   @default("")
+  document  String   @db.NVarChar(Max)
+  bodyHtml  String   @db.NVarChar(Max)
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model MailingList {

@@ -131,6 +131,8 @@ export const getPageBySlug = async (req, res) => {
       }
     }
 
+    const siteStyle = await prisma.webSiteStyle.findFirst();
+
     // ── Build nav from Pages list ─────────────────────────────────────────
     const allNavPages = await prisma.webPage.findMany({
       where: { isPublished: true, hideFromNav: false },
@@ -154,6 +156,9 @@ export const getPageBySlug = async (req, res) => {
       ...page,
       header: sharedHeader,
       footer: sharedFooter,
+      siteStyle: siteStyle
+        ? { ...siteStyle, tokens: parseJsonField(siteStyle.tokens) }
+        : null,
       sections: page.sections.map(parseSection),
       // Keep legacy blocks field for any older clients
       blocks: page.blocks.map(parseBlock),
@@ -170,12 +175,39 @@ export const updatePage = async (req, res) => {
     const { slug } = req.params;
     const { template, header, footer, sections } = req.body;
 
-    const existingPage = await prisma.webPage.findUnique({ where: { slug } });
+    const existingPage = await prisma.webPage.findUnique({
+      where: { slug },
+      include: {
+        sections: { orderBy: { order: 'asc' }, include: { blocks: { orderBy: { order: 'asc' } } }, },
+        blocks: { orderBy: { order: 'asc' } },
+      },
+    });
     if (!existingPage) {
       return res.status(404).json({ error: 'Page not found' });
     }
 
     const updatedPage = await prisma.$transaction(async (tx) => {
+      // Snapshot the current page before every save so a prior state is always recoverable.
+      const versionCount = await tx.webPageVersion.count({ where: { pageId: existingPage.id } });
+      const savedBy = req.user?.id
+        ? await tx.user.findUnique({ where: { id: req.user.id }, select: { name: true } })
+        : null;
+      await tx.webPageVersion.create({
+        data: {
+          pageId: existingPage.id,
+          title: existingPage.title,
+          snapshot: JSON.stringify({
+            template: existingPage.template,
+            header: parseJsonField(existingPage.header),
+            footer: parseJsonField(existingPage.footer),
+            sections: existingPage.sections.map(parseSection),
+          }),
+          savedById: req.user?.id || '',
+          savedByName: savedBy?.name || 'Unknown',
+          versionNumber: versionCount + 1,
+        },
+      });
+
       // 1. Update page-level fields
       const page = await tx.webPage.update({
         where: { slug },

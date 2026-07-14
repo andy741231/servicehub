@@ -2,16 +2,21 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
-  Plus, Trash2, GripVertical, Image as ImageIcon, Eye, Monitor, Smartphone, Tablet, 
+  Plus, Trash2, GripVertical, Image as ImageIcon, Eye,
   Palette, Type, Settings, Save, X, Check, AlertCircle, ChevronDown, ChevronUp,
   Link as LinkIcon, Edit3, Move, Copy, Upload,
   Zap, AlignLeft, AlignCenter, AlignRight, AlignJustify, Hand, Star, Sparkles, LayoutGrid, MessageSquare, Mail, Video, Columns,
-  Bold, Italic, Rows3, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, ExternalLink, HelpCircle
+  Bold, Italic, Rows3, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, ExternalLink, HelpCircle, History
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import api from '../../utils/api';
 import ColorPicker from '../../components/ColorPicker';
+import BuilderHistoryControls from '../../components/builder/BuilderHistoryControls';
+import BuilderPreviewControls from '../../components/builder/BuilderPreviewControls';
+import BuilderSaveStatus from '../../components/builder/BuilderSaveStatus';
+import RichTextEditor from '../../components/RichTextEditor';
+import WebVersionHistoryPanel from './WebVersionHistoryPanel';
 
 const resolveUrl = (url) => {
   if (!url) return '';
@@ -28,8 +33,13 @@ const resolveUrl = (url) => {
 };
 
 const BLOCK_TYPES = [
-  { id: 'hero',         name: 'Hero',         Icon: Zap,          description: 'Large hero section with title and subtitle' },
-  { id: 'text',         name: 'Text',         Icon: AlignLeft,    description: 'Text content with markdown support' },
+  { id: 'slider',       name: 'Slider',       Icon: ImageIcon,     description: 'Slides with images, color, text, and video backgrounds' },
+  { id: 'text',         name: 'Text',         Icon: AlignLeft,    description: 'Rich text content with formatting' },
+  { id: 'trust-bar',     name: 'Trust Bar',   Icon: Star,          description: 'Numbered proof points and highlights' },
+  { id: 'split-banner',  name: 'Split Banner',Icon: Hand,          description: 'Two-column callout with service times' },
+  { id: 'events',        name: 'Events',      Icon: Rows3,         description: 'Upcoming events list' },
+  { id: 'quote',         name: 'Quote',       Icon: Quote,          description: 'Large testimonial quote' },
+  { id: 'map',           name: 'Map',         Icon: LayoutGrid,     description: 'Location and map placeholder' },
   { id: 'intro',        name: 'Introduction', Icon: Hand,         description: 'Introduction section with button' },
   { id: 'features',     name: 'Features',     Icon: Star,         description: 'Feature grid with icons' },
   { id: 'highlights',   name: 'Highlights',   Icon: Sparkles,     description: 'Highlight cards with images' },
@@ -1519,6 +1529,185 @@ const EditableBlock = ({
   );
 };
 
+const SLIDER_DEFAULT_SLIDE = {
+  id: '',
+  backgroundType: 'color',
+  backgroundColor: '#152b45',
+  overlay: 'dark',
+  textAlign: 'left',
+  verticalAlign: 'center',
+  eyebrow: '<p>New slide</p>',
+  title: '<p>Slide title</p>',
+  subtitle: '<p>Add a message for this slide.</p>',
+  buttonText: '',
+  buttonLink: '#',
+  buttonVariant: 'gold',
+};
+
+const SliderBlockEditor = ({ block, onChange }) => {
+  const content = block.content || {};
+  const slides = content.slides?.length ? content.slides : [{ ...SLIDER_DEFAULT_SLIDE, id: `slide-${Date.now()}` }];
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const selected = slides[Math.min(selectedIndex, slides.length - 1)];
+
+  const updateContent = (updates) => onChange({ ...content, ...updates });
+  const updateSlide = (updates) => {
+    const nextSlides = slides.map((slide, index) => index === selectedIndex ? { ...slide, ...updates } : slide);
+    updateContent({ slides: nextSlides });
+  };
+  const addSlide = () => {
+    const next = { ...SLIDER_DEFAULT_SLIDE, id: `slide-${Date.now()}` };
+    updateContent({ slides: [...slides, next] });
+    setSelectedIndex(slides.length);
+  };
+  const removeSlide = () => {
+    if (slides.length === 1) return;
+    const nextSlides = slides.filter((_, index) => index !== selectedIndex);
+    updateContent({ slides: nextSlides });
+    setSelectedIndex(Math.max(0, Math.min(selectedIndex, nextSlides.length - 1)));
+  };
+  const moveSlide = (direction) => {
+    const nextIndex = selectedIndex + direction;
+    if (nextIndex < 0 || nextIndex >= slides.length) return;
+    const nextSlides = [...slides];
+    [nextSlides[selectedIndex], nextSlides[nextIndex]] = [nextSlides[nextIndex], nextSlides[selectedIndex]];
+    updateContent({ slides: nextSlides });
+    setSelectedIndex(nextIndex);
+  };
+
+  return (
+    <div className="space-y-5 p-5 bg-surface-raised border border-border rounded-lg">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-text-base">Slider settings</h3>
+          <p className="text-xs text-subtle mt-1">Build rich, media-backed slides with text and calls to action.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input type="checkbox" checked={content.autoplay !== false} onChange={e => updateContent({ autoplay: e.target.checked })} />
+            Autoplay
+          </label>
+          <label className="flex items-center gap-2 text-xs text-muted">
+            Delay
+            <input type="number" min="1000" step="500" value={content.interval || 6000} onChange={e => updateContent({ interval: Number(e.target.value) || 6000 })} className="w-20 px-2 py-1.5 border border-border rounded" />
+            ms
+          </label>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <label className="text-xs text-muted">Transition
+          <select value={content.transition || 'fade'} onChange={e => updateContent({ transition: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
+            <option value="fade">Fade</option><option value="slide">Slide</option><option value="none">None</option>
+          </select>
+        </label>
+        <label className="text-xs text-muted">Height
+          <select value={content.height || 'large'} onChange={e => updateContent({ height: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
+            <option value="medium">Medium</option><option value="large">Large</option><option value="full">Full screen</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-xs text-muted pt-5"><input type="checkbox" checked={content.showArrows !== false} onChange={e => updateContent({ showArrows: e.target.checked })} /> Arrows</label>
+        <label className="flex items-center gap-2 text-xs text-muted pt-5"><input type="checkbox" checked={content.showDots !== false} onChange={e => updateContent({ showDots: e.target.checked })} /> Dots</label>
+      </div>
+
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {slides.map((slide, index) => (
+          <button key={slide.id || index} type="button" onClick={() => setSelectedIndex(index)} className={`shrink-0 w-28 h-16 rounded border text-left p-2 text-xs overflow-hidden ${index === selectedIndex ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`} style={{ backgroundColor: slide.backgroundColor || '#152b45' }}>
+            <span className="block text-white font-semibold truncate">{index + 1}. {slide.title?.replace(/<[^>]+>/g, '') || 'Untitled'}</span>
+          </button>
+        ))}
+        <button type="button" onClick={addSlide} className="shrink-0 w-28 h-16 border-2 border-dashed border-border rounded text-xs text-muted hover:border-primary hover:text-primary">+ Add slide</button>
+      </div>
+
+      {selected && (
+        <div className="space-y-4 border-t border-border pt-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-muted uppercase tracking-wide">Slide {selectedIndex + 1}</h4>
+            <div className="flex gap-1">
+              <button type="button" onClick={() => moveSlide(-1)} disabled={selectedIndex === 0} className="px-2 py-1 text-xs border border-border rounded disabled:opacity-40">←</button>
+              <button type="button" onClick={() => moveSlide(1)} disabled={selectedIndex === slides.length - 1} className="px-2 py-1 text-xs border border-border rounded disabled:opacity-40">→</button>
+              <button type="button" onClick={removeSlide} disabled={slides.length === 1} className="px-2 py-1 text-xs border border-danger text-danger rounded disabled:opacity-40">Remove</button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <label className="text-xs text-muted">Background type
+              <select value={selected.backgroundType || 'color'} onChange={e => updateSlide({ backgroundType: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
+                <option value="color">Color</option><option value="gradient">Gradient</option><option value="image">Image</option><option value="video">HTML5 video</option><option value="youtube">YouTube</option><option value="vimeo">Vimeo</option>
+              </select>
+            </label>
+            <label className="text-xs text-muted">Overlay
+              <select value={selected.overlay || 'dark'} onChange={e => updateSlide({ overlay: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
+                <option value="dark">Dark</option><option value="light">Light</option><option value="none">None</option>
+              </select>
+            </label>
+            <label className="text-xs text-muted">Horizontal alignment
+              <select value={selected.textAlign || 'left'} onChange={e => updateSlide({ textAlign: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
+                <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+              </select>
+            </label>
+            <label className="text-xs text-muted">Vertical alignment
+              <select value={selected.verticalAlign || 'center'} onChange={e => updateSlide({ verticalAlign: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
+                <option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option>
+              </select>
+            </label>
+          </div>
+
+          {selected.backgroundType === 'color' && (
+            <div className="flex items-center gap-3"><ColorPicker value={selected.backgroundColor || '#152b45'} onChange={value => updateSlide({ backgroundColor: value })} label="Slide background color" /><span className="text-xs font-mono text-muted">{selected.backgroundColor || '#152b45'}</span></div>
+          )}
+          {(selected.backgroundType === 'gradient' || selected.backgroundType === 'image' || selected.backgroundType === 'video') && (
+            <label className="block text-xs text-muted">{selected.backgroundType === 'gradient' ? 'CSS gradient' : selected.backgroundType === 'image' ? 'Background image URL' : 'HTML5 video URL'}
+              <input value={selected.backgroundType === 'gradient' ? (selected.gradient || '') : selected.backgroundType === 'image' ? (selected.backgroundImage || '') : (selected.videoUrl || '')} onChange={e => updateSlide(selected.backgroundType === 'gradient' ? { gradient: e.target.value } : selected.backgroundType === 'image' ? { backgroundImage: e.target.value } : { videoUrl: e.target.value })} placeholder={selected.backgroundType === 'gradient' ? 'linear-gradient(135deg, #152b45, #54738e)' : '/uploads/filename'} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" />
+            </label>
+          )}
+          {selected.backgroundType === 'video' && <label className="block text-xs text-muted">Poster image URL<input value={selected.posterImage || ''} onChange={e => updateSlide({ posterImage: e.target.value })} placeholder="/uploads/poster.jpg" className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>}
+          {selected.backgroundType === 'youtube' && <label className="block text-xs text-muted">YouTube URL or video ID<input value={selected.youtubeId || ''} onChange={e => updateSlide({ youtubeId: e.target.value })} placeholder="https://youtube.com/watch?v=..." className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>}
+          {selected.backgroundType === 'vimeo' && <label className="block text-xs text-muted">Vimeo URL or video ID<input value={selected.vimeoId || ''} onChange={e => updateSlide({ vimeoId: e.target.value })} placeholder="https://vimeo.com/..." className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div><label className="text-xs text-muted">Eyebrow</label><RichTextEditor value={selected.eyebrow || ''} onChange={value => updateSlide({ eyebrow: value })} minHeight={90} /></div>
+            <div><label className="text-xs text-muted">Title</label><RichTextEditor value={selected.title || ''} onChange={value => updateSlide({ title: value })} minHeight={90} /></div>
+            <div><label className="text-xs text-muted">Subtitle</label><RichTextEditor value={selected.subtitle || ''} onChange={value => updateSlide({ subtitle: value })} minHeight={90} /></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label className="text-xs text-muted">Button text<input value={selected.buttonText || ''} onChange={e => updateSlide({ buttonText: e.target.value })} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>
+            <label className="text-xs text-muted">Button link<input value={selected.buttonLink || ''} onChange={e => updateSlide({ buttonLink: e.target.value })} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>
+            <label className="text-xs text-muted">Button style<select value={selected.buttonVariant || 'gold'} onChange={e => updateSlide({ buttonVariant: e.target.value })} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface"><option value="gold">Gold</option><option value="outline">Outline</option><option value="default">Navy</option></select></label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const StructuredBlockEditor = ({ block, onChange }) => {
+  const content = block.content || {};
+  const update = (changes) => onChange({ ...content, ...changes });
+  const input = (key, label, placeholder = '') => (
+    <label className="block text-xs text-muted">{label}
+      <input value={content[key] || ''} onChange={e => update({ [key]: e.target.value })} placeholder={placeholder} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" />
+    </label>
+  );
+  const arrayRows = (key, fields, emptyRow) => (
+    <div className="space-y-2">
+      {(content[key] || []).map((row, index) => (
+        <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-start">
+          {fields.map(field => <input key={field.key} value={row[field.key] || ''} onChange={e => { const rows = [...(content[key] || [])]; rows[index] = { ...rows[index], [field.key]: e.target.value }; update({ [key]: rows }); }} placeholder={field.label} className="px-2 py-2 border border-border rounded bg-surface text-sm" />)}
+          <button type="button" onClick={() => update({ [key]: (content[key] || []).filter((_, i) => i !== index) })} className="px-2 py-2 text-xs text-danger border border-danger rounded">×</button>
+        </div>
+      ))}
+      <button type="button" onClick={() => update({ [key]: [...(content[key] || []), { ...emptyRow }] })} className="px-3 py-2 text-xs border border-dashed border-border rounded text-muted hover:border-primary hover:text-primary">+ Add item</button>
+    </div>
+  );
+
+  if (block.type === 'trust-bar') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg"><h3 className="text-sm font-semibold">Trust bar items</h3>{arrayRows('items', [{ key: 'number', label: 'Number' }, { key: 'label', label: 'Label' }], { number: '01', label: 'New point' })}</div>;
+  if (block.type === 'split-banner') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg"><div className="grid md:grid-cols-2 gap-3">{input('eyebrow', 'Eyebrow')}{input('title', 'Title')}</div>{input('body', 'Body text')}<div className="grid md:grid-cols-3 gap-3">{input('buttonText', 'Button text')}{input('buttonLink', 'Button link')}<label className="block text-xs text-muted">Button style<select value={content.buttonVariant || 'gold'} onChange={e => update({ buttonVariant: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface"><option value="gold">Gold</option><option value="outline">Outline</option><option value="default">Navy</option></select></label></div><h3 className="text-sm font-semibold pt-2">Service times</h3>{arrayRows('times', [{ key: 'label', label: 'Label' }, { key: 'value', label: 'Value' }], { label: 'Sunday morning', value: '9:00 AM' })}</div>;
+  if (block.type === 'events') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg">{input('eyebrow', 'Eyebrow')}{input('title', 'Title')}<h3 className="text-sm font-semibold pt-2">Events</h3>{arrayRows('items', [{ key: 'date', label: 'Date' }, { key: 'title', label: 'Title' }], { date: 'AUG 18', title: 'New event' })}{(content.items || []).map((item, index) => <div key={`details-${index}`} className="grid md:grid-cols-2 gap-2"><input value={item.description || ''} onChange={e => { const items = [...content.items]; items[index] = { ...items[index], description: e.target.value }; update({ items }); }} placeholder="Description" className="px-2 py-2 border border-border rounded bg-surface text-sm" /><input value={item.time || ''} onChange={e => { const items = [...content.items]; items[index] = { ...items[index], time: e.target.value }; update({ items }); }} placeholder="Time" className="px-2 py-2 border border-border rounded bg-surface text-sm" /></div>)}</div>;
+  if (block.type === 'quote') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg">{input('quote', 'Quote')}{input('citation', 'Citation')}{input('backgroundColor', 'Background color', '#eadfc9')}</div>;
+  return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg">{input('address', 'Address')}{input('embedUrl', 'Map embed URL (optional)')}</div>;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1537,14 +1726,41 @@ const DEFAULT_SECTION = {
 
 const makeDefaultBlockContent = (type) => {
   switch (type) {
+    case 'slider':       return {
+      autoplay: true,
+      interval: 6000,
+      transition: 'fade',
+      showArrows: true,
+      showDots: true,
+      height: 'large',
+      slides: [{
+        id: `slide-${Date.now()}`,
+        backgroundType: 'color',
+        backgroundColor: '#152b45',
+        overlay: 'dark',
+        textAlign: 'left',
+        verticalAlign: 'center',
+        eyebrow: '<p>Welcome</p>',
+        title: '<p>A place to belong.</p>',
+        subtitle: '<p>Add a compelling message here.</p>',
+        buttonText: 'Learn more',
+        buttonLink: '#',
+        buttonVariant: 'gold',
+      }],
+    };
     case 'hero':         return { title: 'Your Hero Title', subtitle: 'Add a compelling subtitle here' };
     case 'text':         return { content: 'Start writing your content here...' };
-    case 'intro':        return { title: 'Introduction', content: 'Add your introduction text here...', buttonText: 'Learn More', buttonLink: '#' };
-    case 'features':     return { title: 'Key Features', subtitle: 'Highlight what makes you unique', items: [] };
+    case 'trust-bar':    return { items: [{ number: '01', label: 'One welcoming community' }, { number: '03', label: 'Ways to connect each week' }, { number: '∞', label: 'Room for your next step' }] };
+    case 'split-banner': return { eyebrow: 'Your first Sunday', title: 'Come curious. Leave encouraged.', body: 'There is no dress code, no perfect background required, and no pressure to have all the answers.', buttonText: 'What to expect', buttonLink: '#', buttonVariant: 'gold', times: [{ label: 'Sunday morning', value: '9:00 AM · 11:00 AM' }, { label: 'Midweek table', value: 'Wednesdays · 6:30 PM' }] };
+    case 'events':       return { eyebrow: 'Coming up', title: 'Make room on your calendar.', items: [{ date: 'AUG 18', title: 'Community Picnic', description: 'Bring a blanket and something to share.', time: '12:30 PM' }] };
+    case 'quote':        return { quote: 'A church should be a place where people can come as they are.', citation: 'The community' };
+    case 'map':          return { address: '128 Harbor Street, Your City', embedUrl: '' };
+    case 'intro':        return { title: 'Introduction', content: 'Add your introduction text here...', buttonText: 'Learn More', buttonLink: '#', buttonVariant: 'gold' };
+    case 'features':     return { eyebrow: 'Why Harbor', title: 'A place to belong.', subtitle: 'Highlight what makes your community unique', numbered: false, items: [] };
     case 'highlights':   return { title: 'Highlights', items: [] };
     case 'gallery':      return { title: 'Gallery', images: [] };
     case 'testimonials': return { title: 'Testimonials', testimonials: [] };
-    case 'contact':      return { title: 'Contact Us', subtitle: 'Get in touch with our team', email: 'contact@example.com', phone: '+1 (555) 123-4567', address: '123 Main St, City, State 12345' };
+    case 'contact':      return { title: 'Contact Us', subtitle: 'Get in touch with our team', email: 'contact@example.com', phone: '+1 (555) 123-4567', address: '123 Main St, City, State 12345', emailLabel: 'Email', phoneLabel: 'Phone', addressLabel: 'Address', reasonOptions: ['General question', 'Visit planning', 'Community care'] };
     case 'video':        return { title: 'Featured Video', videoUrl: '', description: 'Add a video description...' };
     case 'grid':         return { columns: 3, gap: 24, items: [{ width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }] };
     default:             return {};
@@ -1866,6 +2082,8 @@ export default function InlineEditor() {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [lastChangeTime, setLastChangeTime] = useState(0);
   const saveRef = useRef();
@@ -1949,6 +2167,26 @@ export default function InlineEditor() {
     }
   };
 
+  const handleUndo = () => {
+    if (historyIndex <= 0) return;
+    const previousState = history[historyIndex - 1];
+    setSections(previousState.sections);
+    setHeader(previousState.header);
+    setFooter(previousState.footer);
+    setHistoryIndex(historyIndex - 1);
+    setLastChangeTime(Date.now());
+  };
+
+  const handleRedo = () => {
+    if (historyIndex >= history.length - 1) return;
+    const nextState = history[historyIndex + 1];
+    setSections(nextState.sections);
+    setHeader(nextState.header);
+    setFooter(nextState.footer);
+    setHistoryIndex(historyIndex + 1);
+    setLastChangeTime(Date.now());
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Only handle shortcuts when not typing in input fields
@@ -1965,27 +2203,13 @@ export default function InlineEditor() {
       // Ctrl/Cmd + Z: Undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        if (historyIndex > 0) {
-          const previousState = history[historyIndex - 1];
-          setSections(previousState.sections);
-          setHeader(previousState.header);
-          setFooter(previousState.footer);
-          setHistoryIndex(historyIndex - 1);
-          setLastChangeTime(Date.now());
-        }
+        handleUndo();
       }
 
       // Ctrl/Cmd + Shift + Z: Redo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
         e.preventDefault();
-        if (historyIndex < history.length - 1) {
-          const nextState = history[historyIndex + 1];
-          setSections(nextState.sections);
-          setHeader(nextState.header);
-          setFooter(nextState.footer);
-          setHistoryIndex(historyIndex + 1);
-          setLastChangeTime(Date.now());
-        }
+        handleRedo();
       }
 
       // Escape: Close modals/dropdowns
@@ -2142,6 +2366,9 @@ export default function InlineEditor() {
     const ubc = (updates) => updateBlockContent(sIdx, bIdx, updates);
     const ub  = (updates) => updateBlock(sIdx, bIdx, updates);
     const blockComponents = {
+      slider: () => (
+        <SliderBlockEditor block={block} onChange={ubc} />
+      ),
       hero: () => (
         <HeroBlock
           block={block}
@@ -2153,12 +2380,19 @@ export default function InlineEditor() {
       ),
       text: () => (
         <div className="py-8 px-6 max-w-3xl mx-auto">
-          <MarkdownContentEditor
+          <RichTextEditor
             value={block.content.content}
             onChange={(value) => updateBlockContent(sIdx, bIdx, { content: value })}
+            placeholder="Start writing your content here…"
+            minHeight={220}
           />
         </div>
       ),
+      'trust-bar': () => <StructuredBlockEditor block={block} onChange={ubc} />,
+      'split-banner': () => <StructuredBlockEditor block={block} onChange={ubc} />,
+      events: () => <StructuredBlockEditor block={block} onChange={ubc} />,
+      quote: () => <StructuredBlockEditor block={block} onChange={ubc} />,
+      map: () => <StructuredBlockEditor block={block} onChange={ubc} />,
       intro: () => (
         <div className="py-20 px-6 text-center bg-surface-raised">
           <EditableText
@@ -2187,6 +2421,13 @@ export default function InlineEditor() {
       ),
       features: () => (
         <div className="py-20 px-6 max-w-6xl mx-auto text-center">
+          <EditableText
+            content={block.content.eyebrow}
+            onChange={(value) => ubc({ eyebrow: value })}
+            placeholder="Features Eyebrow"
+            className="text-xs font-semibold tracking-widest uppercase text-primary mb-3 block"
+            tag="div"
+          />
           <EditableText
             content={block.content.title}
             onChange={(value) => ubc({ title: value })}
@@ -2232,6 +2473,10 @@ export default function InlineEditor() {
                 />
               </div>
             ))}
+          </div>
+          <div className="flex items-center justify-center gap-3 mt-5">
+            <button type="button" onClick={() => ubc({ items: [...(block.content.items || []), { icon: 'lucide-star', number: String((block.content.items || []).length + 1).padStart(2, '0'), title: 'New feature', description: 'Describe this feature.' }] })} className="px-3 py-2 text-xs border border-dashed border-border rounded text-muted hover:border-primary hover:text-primary">+ Add feature</button>
+            <label className="text-xs text-muted"><input type="checkbox" checked={block.content.numbered === true} onChange={e => ubc({ numbered: e.target.checked })} /> Numbered</label>
           </div>
         </div>
       ),
@@ -2451,6 +2696,11 @@ export default function InlineEditor() {
                     multiline
                   />
                 </div>
+                <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={block.content.showForm === true} onChange={e => ubc({ showForm: e.target.checked })} /> Include contact form on the public page</label>
+                {block.content.showForm && <label className="block text-xs text-muted">Reason options (comma separated)<input value={(block.content.reasonOptions || []).join(', ')} onChange={e => ubc({ reasonOptions: e.target.value.split(',').map(option => option.trim()).filter(Boolean) })} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {['emailLabel', 'phoneLabel', 'addressLabel'].map(key => <input key={key} value={block.content[key] || ''} onChange={e => ubc({ [key]: e.target.value })} placeholder={key.replace('Label', ' label')} className="px-2 py-2 border border-border rounded bg-surface text-xs" />)}
+                </div>
               </div>
             </div>
           </div>
@@ -2585,30 +2835,8 @@ export default function InlineEditor() {
           </div>
           
           <div className="flex items-center gap-6">
-            {/* Device preview - improved */}
-            <div className="flex items-center gap-2 bg-surface-raised rounded-xl p-1.5">
-              <button
-                onClick={() => setPreviewDevice('desktop')}
-                className={`p-2.5 min-h-[44px] rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${previewDevice === 'desktop' ? 'bg-surface shadow-card text-primary' : 'text-muted hover:bg-surface'}`}
-                title="Desktop view"
-              >
-                <Monitor className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setPreviewDevice('tablet')}
-                className={`p-2.5 min-h-[44px] rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${previewDevice === 'tablet' ? 'bg-surface shadow-card text-primary' : 'text-muted hover:bg-surface'}`}
-                title="Tablet view"
-              >
-                <Tablet className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setPreviewDevice('mobile')}
-                className={`p-2.5 min-h-[44px] rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${previewDevice === 'mobile' ? 'bg-surface shadow-card text-primary' : 'text-muted hover:bg-surface'}`}
-                title="Mobile view"
-              >
-                <Smartphone className="w-5 h-5" />
-              </button>
-            </div>
+            <BuilderPreviewControls value={previewDevice} onChange={setPreviewDevice} />
+            <BuilderHistoryControls onUndo={handleUndo} onRedo={handleRedo} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} />
 
             {/* Publish / Draft toggle */}
             <button
@@ -2636,42 +2864,40 @@ export default function InlineEditor() {
               {publishSaving ? 'Updating...' : isPublished ? 'Published' : 'Draft'}
             </button>
 
-            {/* Save status */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-raised border border-border min-w-[120px] justify-center">
-              {saveStatus === 'saving' && (
-                <div className="flex items-center gap-2 text-small text-primary font-medium">
-                  <AlertCircle className="w-4 h-4 animate-spin" />
-                  Saving...
-                </div>
-              )}
-              {saveStatus === 'saved' && (
-                <div className="flex items-center gap-2 text-small text-success font-medium">
-                  <Check className="w-4 h-4" />
-                  All changes saved
-                </div>
-              )}
-              {saveStatus === 'error' && (
-                <div className="flex items-center gap-2 text-small text-danger font-medium">
-                  <X className="w-4 h-4" />
-                  Save failed
-                </div>
-              )}
-              {saveStatus === 'unsaved' && (
-                <div className="flex items-center gap-2 text-small text-muted">
-                  <div className="w-2 h-2 rounded-full bg-border" />
-                  Unsaved changes
-                </div>
-              )}
-              {saveStatus === 'idle' && (
-                <div className="flex items-center gap-2 text-small text-muted">
-                  <Check className="w-4 h-4 opacity-40" />
-                  Saved
-                </div>
-              )}
+            <div className="flex min-w-[120px] justify-center rounded-lg border border-border bg-surface-raised px-4 py-2 text-small font-medium">
+              <BuilderSaveStatus status={saveStatus} />
             </div>
 
             {/* Actions - improved styling */}
             <div className="flex items-center gap-3">
+              <button
+                onClick={async () => {
+                  const name = window.prompt('Name this reusable page template:', pageData?.title || pageSlug);
+                  if (!name?.trim() || templateSaving) return;
+                  setTemplateSaving(true);
+                  try {
+                    await api.post('/web/page-templates', { name: name.trim(), snapshot: { template: pageData?.template, header, footer, sections } });
+                  } catch (error) {
+                    console.error('Failed to save page template:', error);
+                  } finally {
+                    setTemplateSaving(false);
+                  }
+                }}
+                disabled={templateSaving}
+                className="px-4 py-2.5 min-h-[44px] text-muted hover:bg-surface-raised rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50"
+                title="Save this page as a reusable template"
+              >
+                <Copy className="w-4 h-4" />
+                <span className="hidden sm:inline">{templateSaving ? 'Saving…' : 'Save template'}</span>
+              </button>
+              <button
+                onClick={() => setShowVersionHistory(true)}
+                className="px-4 py-2.5 min-h-[44px] text-muted hover:bg-surface-raised rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                title="Version history"
+              >
+                <History className="w-4 h-4" />
+                <span className="hidden sm:inline">History</span>
+              </button>
               <button
                 onClick={() => setShowKeyboardHelp(true)}
                 className="px-4 py-2.5 min-h-[44px] text-muted hover:bg-surface-raised rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
@@ -2699,6 +2925,25 @@ export default function InlineEditor() {
           </div>
         </div>
       </div>
+
+      {showVersionHistory && (
+        <WebVersionHistoryPanel
+          slug={pageSlug}
+          onClose={() => setShowVersionHistory(false)}
+          onRestored={(page) => {
+            const restoredSections = page.sections || [];
+            const restoredHeader = page.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} };
+            const restoredFooter = page.footer || { sections: [], copyright: '', styles: {} };
+            setPageData(page);
+            setSections(restoredSections);
+            setHeader(restoredHeader);
+            setFooter(restoredFooter);
+            setHistory([{ sections: restoredSections, header: restoredHeader, footer: restoredFooter }]);
+            setHistoryIndex(0);
+            setLastChangeTime(0);
+          }}
+        />
+      )}
 
       {/* Main editor area — sections */}
       <div className="flex">

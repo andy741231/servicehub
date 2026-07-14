@@ -8,10 +8,10 @@ export const getSiteStyles = async (req, res) => {
       style = await prisma.webSiteStyle.create({
         data: {
           tokens: JSON.stringify({
-            colors: { primary: '#2563eb', secondary: '#7c3aed', accent: '#f59e0b', background: '#ffffff', text: '#111827', muted: '#6b7280' },
-            fonts: { heading: 'Inter, sans-serif', body: 'Inter, sans-serif' },
+            colors: { primary: '#152b45', secondary: '#54738e', accent: '#b08a4a', background: '#f8f6f1', text: '#152b45', muted: '#647384' },
+            fonts: { heading: 'DM Sans, sans-serif', body: 'DM Sans, sans-serif', serif: 'Libre Baskerville, Georgia, serif' },
             spacing: { base: 16 },
-            borderRadius: { default: 8 },
+            borderRadius: { default: 5 },
           })
         }
       });
