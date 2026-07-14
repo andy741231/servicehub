@@ -461,6 +461,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
     const sections  = footer?.sections || [];
     const copyright = footer?.copyright || `&copy; ${new Date().getFullYear()} ${pageData.title}. All rights reserved.`;
     const fStyle    = { backgroundColor: footer?.styles?.backgroundColor, color: footer?.styles?.textColor };
+    const nav       = pageData.nav?.length ? pageData.nav : (header?.navigation || []);
 
     const logoText = header?.logo?.text || pageData.title;
     const linkSections = sections.filter(section => section.type === 'links');
