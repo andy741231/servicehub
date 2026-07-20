@@ -9,6 +9,11 @@ description: >
 
   **For UI/UX work:** Also invoke the `ui-ux-pro-max` skill for advanced design guidance, accessibility
   best practices, interaction patterns, and UX validation when building or reviewing UI components.
+  Prefer **shadcn/ui** (https://ui.shadcn.com) for accessible, Radix-based primitives — it integrates
+  cleanly with the Tailwind + React stack used here. shadcn is wired as an **MCP server** (`shadcn`)
+  in `.devin/config.json` — invoke it via MCP
+  (`mcp_call_tool` with `server_name: "shadcn"`) to generate/install components directly.
+  See `install-ux-mcp.md` for the full install + verification plan.
 ---
 
 # Service Hub — Multi-App Platform
@@ -17,7 +22,7 @@ description: >
 
 Service Hub is a **monorepo, single-backend, multi-frontend** web platform. All sub-apps share one auth system, one database, and one shell UI. New sub-apps plug in with minimal changes.
 
-**Stack:** Node.js · React · Azure SQL (SQL Server) · Tailwind CSS  
+**Stack:** Node.js · React · Azure SQL (SQL Server) · Tailwind CSS · @dnd-kit · react-hook-form + zod · react-colorful · @react-email · @craftjs/core
 **Local dev DB:** Azure SQL `test-servicehub` (remote, no local DB needed)  
 **Production DB:** Azure SQL `production-servicehub`  
 **Deploy:** Azure App Service (`houstonservicehub.azurewebsites.net`)  
@@ -40,6 +45,23 @@ service-hub/
 │   │   │   ├── auth/               # Login, Register
 │   │   │   ├── admin/              # User Management
 │   │   │   ├── web/                # App 1 - Web Builder
+│   │   │   │   ├── InlineEditor.jsx  # Thin re-export → editor/WebEditor
+│   │   │   │   └── editor/           # Craft.js migration (Step 5.1 done)
+│   │   │   │       ├── WebEditor.jsx      # Orchestrator (replaces InlineEditor monolith)
+│   │   │   │       ├── editorComponents.jsx # Editable blocks, sections, toolbars
+│   │   │   │       ├── editorUtils.js     # Shared constants, block types, factories
+│   │   │   │       ├── BlockPalette.jsx   # Left sidebar — block type list
+│   │   │   │       ├── BlockRenderer.jsx  # Re-exports EditableBlock + editors
+│   │   │   │       ├── SectionEditor.jsx  # Re-exports SectionWrapper + AddSectionModal
+│   │   │   │       ├── SectionList.jsx    # Re-exports SectionWrapper
+│   │   │   │       ├── PropertyPanel.jsx  # Re-exports field editors / dialogs
+│   │   │   │       ├── SliderInspectorPanel.jsx # Right-hand inspector for slider block (Craft.js useEditor)
+│   │   │   │       ├── PreviewFrame.jsx   # Device-width preview frame
+│   │   │   │       ├── useWebHistory.js   # Undo/redo hook
+│   │   │   │       ├── craftSerializer.js # DB ↔ Craft.js conversion
+│   │   │   │       ├── WebCraftRoot.jsx   # Craft.js Editor/Frame wrapper
+│   │   │   │       └── craftBlocks/       # Craft.js user components (Step 5.2)
+│   │   │   │           └── SectionBlock.jsx
 │   │   │   ├── forms/              # App 2 - Form Builder
 │   │   │   ├── email/              # App 3 - Email Sender
 │   │   │   ├── directory/          # App 4 - Directory

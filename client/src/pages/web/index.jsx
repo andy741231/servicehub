@@ -1,7 +1,5 @@
-// Import the new inline editor
-import InlineEditor from './InlineEditor';
+import WebEditor from './editor/WebEditor';
 
 export default function WebIndex() {
-  // Use the new inline editor by default
-  return <InlineEditor />;
+  return <WebEditor />;
 }

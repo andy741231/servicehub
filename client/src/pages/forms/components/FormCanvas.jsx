@@ -1,8 +1,7 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Trash2, Copy, GitBranch, SeparatorHorizontal, Plus, LayoutTemplate, Columns, Grid3x3, Rows3, LayoutGrid, X, CopyPlus, ChevronDown, ChevronRight, Settings2, Star, Calculator, Repeat, FolderOpen } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import RichTextEditor from '../../../components/RichTextEditor';
 import useFormStore from '../store/formStore';
 import { evaluateConditionalLogic, hasConditionalLogic } from '../utils/conditionalLogic';
 import { getFormulaPreview } from '../utils/formula';
@@ -23,19 +22,6 @@ const QUICK_ADD_TYPES = [
   { type: 'select', label: 'Dropdown' },
   { type: 'phone', label: 'Phone' },
 ];
-
-// Quill toolbar config for content blocks — kept simple for in-canvas editing
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ align: [] }],
-    ['link'],
-    ['clean'],
-  ],
-};
-const QUILL_FORMATS = ['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'align', 'link'];
 
 const FIELD_COMPONENTS = {
   text: ({ field, isPreview }) => (
@@ -169,14 +155,11 @@ const FIELD_COMPONENTS = {
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <ReactQuill
-        theme="snow"
+      <RichTextEditor
         value={field.content || ''}
         onChange={(html) => onContentChange && onContentChange(field.id, html)}
-        modules={QUILL_MODULES}
-        formats={QUILL_FORMATS}
-        readOnly={isPreview}
         placeholder="Add your content here…"
+        minHeight={120}
       />
     </div>
   ),

@@ -4,8 +4,7 @@ import useFormStore from '../store/formStore';
 import { CONDITION_OPERATORS, DEFAULT_CONDITIONAL_LOGIC, hasConditionalLogic } from '../utils/conditionalLogic';
 import { DEFAULT_THEME } from '../store/formStore';
 import AccessSchedulePanel from './AccessSchedulePanel';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import RichTextEditor from '../../../components/RichTextEditor';
 import { uploadFile } from '../api/formsApi';
 import { getFormulaPreview } from '../utils/formula';
 import ColorPicker from '../../../components/ColorPicker';
@@ -1349,22 +1348,10 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                 Thank You Message
               </label>
               <div className="prose-editor">
-                <ReactQuill
-                  theme="snow"
+                <RichTextEditor
                   value={theme.thankYouMessage || ''}
                   onChange={(value) => updateFormTheme({ thankYouMessage: value })}
-                  className="bg-background [&_.ql-container]:min-h-[100px] [&_.ql-container]:text-body [&_.ql-container]:font-sans [&_.ql-toolbar]:border-border [&_.ql-container]:border-border [&_.ql-container]:rounded-b-base [&_.ql-toolbar]:rounded-t-base"
-                  modules={{
-                    toolbar: [
-                      [{ header: [1, 2, 3, false] }],
-                      ['bold', 'italic', 'underline'],
-                      [{ list: 'ordered' }, { list: 'bullet' }],
-                      [{ align: [] }],
-                      ['link'],
-                      ['clean'],
-                    ],
-                  }}
-                  formats={['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'align', 'link']}
+                  minHeight={100}
                 />
               </div>
             </div>

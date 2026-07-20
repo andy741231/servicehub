@@ -18,6 +18,38 @@ Welcome to **Service Hub**! This guide covers everything a new developer needs t
 
 > **No Docker required.** The database runs on Azure SQL and is accessed directly over the internet. Both local dev and production share the same Azure SQL server but use separate databases.
 
+### UX Libraries & MCPs
+
+Installed per `install-ux-mcp.md` plan (July 2026):
+
+| Library | Scope | Role |
+|---------|-------|------|
+| `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities` | Shared | Drag-and-drop for non-canvas surfaces (page reordering, asset sorting) |
+| `react-hook-form`, `zod`, `@hookform/resolvers` | Shared | Form validation (zod schemas in `formValidation.js`) |
+| `react-aria`, `react-aria-components` | Shared | Accessibility primitives (focus traps, keyboard nav) |
+| `radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge` | Shared | shadcn/ui primitives — accordion, toggle, toggle-group, separator in `client/src/components/ui/`; `cn()` helper in `client/src/lib/utils.js` |
+| `immer` | Shared | Immutable state updates (used by `craftSerializer.js`) |
+| `react-colorful` | Shared | Color picker engine (replaces custom `ColorPicker.jsx` internals) |
+| `use-debounce` | Shared | Debounced inline text edits |
+| `@react-email/components`, `@react-email/render` | Email | React Email rendering (replaces hand-rolled HTML in `emailBlocks.js`) |
+| `mjml`, `mjml-react` | Email | MJML escape hatch for complex email layouts |
+| `@azure/communication-email` | Server | Azure Communication Services Email SDK |
+| `react-confetti-canvas` | Forms | Confetti animation on form submission success screen |
+| `@craftjs/core`, `@craftjs/utils` | Web | Page-builder engine (node tree, selection, drag, serialization) |
+| `react-moveable` | Web | Drag/resize/rotate handles for canvas blocks |
+| `react-rnd` | Web | Resizable+draggable wrapper for sections |
+
+**MCPs configured** in `.devin/config.json`: `shadcn`, `azure`.
+
+**Key migrations:**
+- Email builder: `compileEmailHtml` now uses `@react-email/render` with React Email components in `emailComponents/`
+- Forms: validation delegated to zod via `formValidation.js`; confetti on success screen
+- Web: Craft.js migration in progress under `client/src/pages/web/editor/`:
+  - Step 5.1: `InlineEditor.jsx` split into `WebEditor.jsx` + `editorComponents.jsx` + utils
+  - Step 5.2: 16 craft block components + `craftSerializer` (DB ↔ Craft) + `WebCraftRoot`
+  - Step 5.3: `USE_CRAFT = true` enables Craft canvas (`CraftCanvas`/`Frame`); undo/redo bridges Craft history; set `USE_CRAFT = false` to fall back to legacy `@hello-pangea/dnd` canvas
+  - Public renderer unchanged (DB shape only)
+
 ---
 
 ## Prerequisites

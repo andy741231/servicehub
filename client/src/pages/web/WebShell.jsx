@@ -20,7 +20,7 @@ function ViewSiteAction() {
 
 export default function WebShell() {
   const location = useLocation();
-  const { registerActions } = useTopBar();
+  const { registerActions, registerTitle } = useTopBar();
 
   // Don't render the shell chrome for the editor route — clear actions
   // so the global TopBar shows only the shared user menu.
@@ -30,6 +30,11 @@ export default function WebShell() {
     registerActions(isEditor ? null : <ViewSiteAction />);
     return () => registerActions(null);
   }, [isEditor, registerActions]);
+
+  useEffect(() => {
+    registerTitle('Website');
+    return () => registerTitle('');
+  }, [registerTitle]);
 
   return <Outlet />;
 }

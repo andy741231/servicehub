@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* ============================================================
    DARK MODE VARIANT (Tailwind v4)
@@ -362,41 +363,112 @@
   .public-site .public-event-time { display: none; }
 }
 
-/* Rich text editor font choices are shared by the web builder editor and
-   the sanitized HTML rendered on the public site. */
-.web-rich-text-editor .ql-editor {
+/* ============================================================
+   TIPTAP / PROSEMIRROR EDITOR STYLES
+   Ensures headings, lists, and formatting render visually
+   inside the WYSIWYG editor (replaces old Quill CSS).
+   ============================================================ */
+.web-rich-text-editor .ProseMirror {
   min-height: var(--rich-text-min-height, 180px);
+  padding: 12px 16px;
+  overflow-y: auto;
 }
-.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="sans"]::before,
-.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="sans"]::before {
-  content: 'Sans';
-  font-family: var(--font-body, sans-serif);
+.web-rich-text-editor .ProseMirror h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0.6em 0 0.3em;
 }
-.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
-.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before {
-  content: 'Serif';
-  font-family: var(--font-serif, Georgia, serif);
+.web-rich-text-editor .ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.5em 0 0.25em;
 }
-.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="serif-italic"]::before,
-.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="serif-italic"]::before {
-  content: 'Serif italic';
-  font-family: var(--font-serif, Georgia, serif);
+.web-rich-text-editor .ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.4em 0 0.2em;
+}
+.web-rich-text-editor .ProseMirror p {
+  margin: 0.3em 0;
+}
+.web-rich-text-editor .ProseMirror ul,
+.web-rich-text-editor .ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.3em 0;
+}
+.web-rich-text-editor .ProseMirror ul {
+  list-style: disc;
+}
+.web-rich-text-editor .ProseMirror ol {
+  list-style: decimal;
+}
+.web-rich-text-editor .ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: hsl(var(--text-muted));
   font-style: italic;
 }
-.ql-editor .ql-font-serif,
-.ql-font-serif {
-  font-family: var(--font-serif, Georgia, serif);
+.web-rich-text-editor .ProseMirror pre {
+  background: hsl(var(--surface-raised));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-base-value);
+  padding: 0.75em 1em;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
 }
-.ql-editor .ql-font-serif-italic,
-.ql-font-serif-italic {
-  font-family: var(--font-serif, Georgia, serif);
+.web-rich-text-editor .ProseMirror code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.875em;
+  background: hsl(var(--surface-raised));
+  padding: 0.15em 0.3em;
+  border-radius: 4px;
+}
+.web-rich-text-editor .ProseMirror a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  cursor: pointer;
+}
+.web-rich-text-editor .ProseMirror hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1em 0;
+}
+.web-rich-text-editor .ProseMirror strong { font-weight: 700; }
+.web-rich-text-editor .ProseMirror em { font-style: italic; }
+.web-rich-text-editor .ProseMirror s { text-decoration: line-through; }
+.web-rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--text-subtle));
+  pointer-events: none;
+  height: 0;
+}
+
+/* Placeholder for empty contentEditable elements in web editor */
+[contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: hsl(var(--text-subtle));
+  pointer-events: none;
   font-style: italic;
+  opacity: 0.6;
 }
-.public-site .ql-font-serif,
-.public-site .ql-font-serif-italic {
+
+/* Font family classes — applied by TipTap font-family extension,
+   shared between editor and public site rendering */
+.font-sans { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); }
+.font-serif { font-family: var(--font-serif, Georgia, serif); }
+.font-serif-italic { font-family: var(--font-serif, Georgia, serif); font-style: italic; }
+
+.public-site .font-serif,
+.public-site .font-serif-italic {
   font-family: var(--font-serif, Georgia, serif);
 }
-.public-site .ql-font-serif-italic {
+.public-site .font-serif-italic {
   font-style: italic;
 }
 
@@ -659,6 +731,22 @@
   }
   .animate-page-in {
     animation: pageFadeIn 200ms ease-out;
+  }
+
+  /* Accordion (shadcn/ui v4 Accordion) */
+  @keyframes accordion-down {
+    from { height: 0; }
+    to   { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to   { height: 0; }
+  }
+  .animate-accordion-down {
+    animation: accordion-down 200ms ease-out;
+  }
+  .animate-accordion-up {
+    animation: accordion-up 200ms ease-out;
   }
 
   /* Drill-down sidebar: new level slides in from the right (drilling in)

@@ -44,9 +44,21 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken });
 });
 
-// Health check endpoint — used by CI smoke tests and Azure monitoring
+// Prisma readiness flag — flipped true once $connect() succeeds. The health
+// endpoint reports 503 until then so probes/proxy don't route traffic to a
+// server whose DB pool isn't ready yet (cold-start protection).
+let prismaReady = false;
+export const isPrismaReady = () => prismaReady;
+
+// Health check endpoint — used by CI smoke tests and Azure monitoring.
+// Returns 503 with a "warming_up" status until Prisma has connected, so the
+// Vite dev proxy and Azure warm-up probe don't forward requests to a server
+// whose DB pool is still being established.
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  if (prismaReady) {
+    return res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  }
+  res.status(503).json({ status: 'warming_up', timestamp: new Date().toISOString() });
 });
 
 app.use('/api', routes);
@@ -69,10 +81,31 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Warm up the Prisma connection before accepting requests so the first
-// public page load doesn't hit a cold database connection and return 500.
-await prisma.$connect();
-
+// Bind the HTTP server FIRST so the port is reserved immediately and the
+// Vite dev proxy never hits ECONNREFUSED during a cold DB start. Prisma is
+// warmed up in the background with retry — see warmUpPrisma() below.
 app.listen(port, () => {
   console.log(`Server listening on port ${port} [${isProd ? 'production' : 'development'}]`);
 });
+
+// Warm up the Prisma connection pool in the background with exponential
+// backoff. This must NOT block app.listen() (otherwise a slow remote Azure
+// SQL handshake exceeds the default 10s pool timeout and crashes the process
+// before the server ever binds — see P2024 cold-start crashes). Likewise it
+// must NOT crash the process on failure: routes that touch the DB will
+// surface their own errors, and /api/health stays 503 until this resolves.
+const warmUpPrisma = async (attempt = 1) => {
+  try {
+    await prisma.$connect();
+    prismaReady = true;
+    console.log('Prisma connected');
+  } catch (err) {
+    console.error(`Prisma connect attempt ${attempt} failed: ${err.message}`);
+    if (attempt < 10) {
+      setTimeout(() => warmUpPrisma(attempt + 1), Math.min(3000 * attempt, 15000));
+    } else {
+      console.error('Prisma gave up warming up after 10 attempts. Server is up but DB routes will fail until the DB is reachable and the process is restarted.');
+    }
+  }
+};
+warmUpPrisma();

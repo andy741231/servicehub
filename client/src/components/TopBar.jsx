@@ -179,7 +179,9 @@ export default function TopBar({ onMenuClick }) {
           <Menu className="w-5 h-5" />
         </button>
       )}
-      <h1 className="text-base font-semibold text-text-base truncate flex-shrink-0 hidden sm:block">{title}</h1>
+      {title ? (
+        <h1 className="text-base font-semibold text-text-base truncate flex-shrink-0 hidden sm:block">{title}</h1>
+      ) : null}
 
       {/* Center: global search (hidden on mobile, visible on sm+) */}
       <div className="hidden sm:flex flex-1 justify-center max-w-md mx-auto">

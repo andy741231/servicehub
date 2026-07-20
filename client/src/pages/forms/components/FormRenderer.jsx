@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import ConfettiCanvas from 'react-confetti-canvas';
 import { CheckCircle, Loader2, Star, PenTool, X, Lock } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { DEFAULT_THEME } from '../store/formStore';
@@ -6,6 +7,7 @@ import { evaluateConditionalLogic } from '../utils/conditionalLogic';
 import { uploadFile } from '../api/formsApi';
 import { evaluateSchedule, nextTransition, formatDuration, formatDayTime } from '../utils/schedule';
 import { evaluateFormula, formatComputedValue } from '../utils/formula';
+import { validateFieldZod } from '../utils/formValidation';
 import { useToast } from '../../../components/Toast';
 import { useAlert } from '../../../components/Dialog';
 
@@ -788,69 +790,7 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     });
   }, [formData, form.fields]);
 
-  const validateField = (field, value) => {
-    // Computed fields are auto-calculated — never validate them
-    if (field.type === 'computed') return null;
-    const label = field.label || 'This field';
-    const requiredMsg = field.validationMessage || `${label} is required`;
-
-    // Determine "emptiness" including object-style fields (name, address)
-    const isEmptyObject = (v) => v && typeof v === 'object' && !Array.isArray(v) &&
-      Object.values(v).every((x) => x === undefined || x === null || x === '');
-    const isEmpty = !value || (Array.isArray(value) && value.length === 0) || isEmptyObject(value);
-
-    if (field.required && isEmpty) {
-      return requiredMsg;
-    }
-    if (isEmpty) return null;
-
-    if (field.type === 'email' && value) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) {
-        return field.validationMessage || 'Please enter a valid email address';
-      }
-    }
-
-    if (field.type === 'url' && value) {
-      try {
-        const u = new URL(value);
-        if (!u.protocol.startsWith('http')) throw new Error();
-      } catch {
-        return field.validationMessage || 'Please enter a valid URL (https://...)';
-      }
-    }
-
-    if (field.type === 'number' && value) {
-      const numValue = parseFloat(value);
-      if (field.minValue != null && numValue < field.minValue) {
-        return `Minimum value is ${field.minValue}`;
-      }
-      if (field.maxValue != null && numValue > field.maxValue) {
-        return `Maximum value is ${field.maxValue}`;
-      }
-    }
-
-    if ((field.type === 'text' || field.type === 'textarea' || field.type === 'url') && value) {
-      if (field.minLength && value.length < field.minLength) {
-        return `Minimum ${field.minLength} characters required`;
-      }
-      if (field.maxLength && value.length > field.maxLength) {
-        return `Maximum ${field.maxLength} characters allowed`;
-      }
-      if (field.pattern) {
-        try {
-          const re = new RegExp(field.pattern);
-          if (!re.test(value)) {
-            return field.validationMessage || 'Please match the requested format';
-          }
-        } catch {
-          // Invalid regex in config — ignore rather than crash
-        }
-      }
-    }
-
-    return null;
-  };
+  const validateField = (field, value) => validateFieldZod(field, value);
 
   // Move focus to the first invalid field so keyboard/screen-reader users can
   // find the error without hunting. Called after a failed validatePage/validateForm.
@@ -1026,10 +966,11 @@ export default function FormRenderer({ form, onSubmit, preview = false }) {
     const confirmationId = `SH-${Date.now().toString(36).toUpperCase()}`;
     return (
       <div
-        className="min-h-screen flex items-center justify-center p-4"
+        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
         style={{ backgroundColor: theme.backgroundColor, fontFamily: theme.fontFamily }}
       >
-        <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 text-center">
+        <ConfettiCanvas className="absolute inset-0 pointer-events-none" />
+        <div className="max-w-md w-full bg-surface rounded-xl shadow-lg p-8 text-center relative z-10">
           <CheckCircle className="h-16 w-16 mx-auto mb-4" style={{ color: theme.primaryColor }} />
           <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textColor }}>
             {theme.thankYouTitle}

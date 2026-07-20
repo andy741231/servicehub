@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, Eye, Send, Clock, ArrowLeft } from 'lucide-react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import RichTextEditor from '../../components/RichTextEditor';
 import BuilderHistoryControls from '../../components/builder/BuilderHistoryControls';
 import BuilderPreviewControls from '../../components/builder/BuilderPreviewControls';
 import BuilderSaveStatus from '../../components/builder/BuilderSaveStatus';
@@ -128,16 +127,6 @@ export default function CampaignComposer() {
     }
   };
 
-  const quillModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['link', 'image'],
-      ['clean']
-    ]
-  };
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -304,12 +293,11 @@ export default function CampaignComposer() {
                 </p>
               </div>
               <div className="min-h-[400px]">
-                <ReactQuill
-                  theme="snow"
+                <RichTextEditor
                   value={campaign.bodyHtml}
                   onChange={(content) => setCampaign((current) => ({ ...current, bodyHtml: content }))}
-                  modules={quillModules}
                   placeholder="Write your email content here..."
+                  minHeight={400}
                 />
               </div>
             </div>
