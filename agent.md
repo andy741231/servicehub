@@ -22,12 +22,20 @@ description: >
 
 Service Hub is a **monorepo, single-backend, multi-frontend** web platform. All sub-apps share one auth system, one database, and one shell UI. New sub-apps plug in with minimal changes.
 
-**Stack:** Node.js · React · Azure SQL (SQL Server) · Tailwind CSS · @dnd-kit · react-hook-form + zod · react-colorful · @react-email · @craftjs/core
+**Stack:** Node.js · React · Azure SQL (SQL Server) · Tailwind CSS · @hello-pangea/dnd · react-hook-form + zod · react-colorful · @react-email · react-rnd
 **Local dev DB:** Azure SQL `test-servicehub` (remote, no local DB needed)  
 **Production DB:** Azure SQL `production-servicehub`  
 **Deploy:** Azure App Service (`houstonservicehub.azurewebsites.net`)  
 **CI/CD:** GitHub Actions → Azure (push to `main` auto-deploys)  
 **Version Control:** GitHub (`github.com/andy741231/servicehub`)
+
+> **Web Builder editor note:** The active visual editor is the **Fluid Engine**
+> (`WebEditor.jsx` → `editor/fluid/FluidSection.jsx` +
+> `FluidBlock.jsx`). Each section is a 24-column CSS Grid; blocks are
+> positioned via grid coordinates (`colStart`/`colEnd`/`rowStart`/`rowEnd`)
+> and can overlap/layer via `zIndex`. Drag and resize use `react-rnd` with
+> snap-to-grid. Press "G" to toggle the grid overlay. See `web-grid.md` for
+> the previous grid architecture and the Fluid Engine design.
 
 ---
 
@@ -46,7 +54,7 @@ service-hub/
 │   │   │   ├── admin/              # User Management
 │   │   │   ├── web/                # App 1 - Web Builder
 │   │   │   │   ├── InlineEditor.jsx  # Thin re-export → editor/WebEditor
-│   │   │   │   └── editor/           # Craft.js migration (Step 5.1 done)
+│   │   │   │   └── editor/           # Fluid Engine (active visual editor)
 │   │   │   │       ├── WebEditor.jsx      # Orchestrator (replaces InlineEditor monolith)
 │   │   │   │       ├── editorComponents.jsx # Editable blocks, sections, toolbars
 │   │   │   │       ├── editorUtils.js     # Shared constants, block types, factories
@@ -55,13 +63,12 @@ service-hub/
 │   │   │   │       ├── SectionEditor.jsx  # Re-exports SectionWrapper + AddSectionModal
 │   │   │   │       ├── SectionList.jsx    # Re-exports SectionWrapper
 │   │   │   │       ├── PropertyPanel.jsx  # Re-exports field editors / dialogs
-│   │   │   │       ├── SliderInspectorPanel.jsx # Right-hand inspector for slider block (Craft.js useEditor)
 │   │   │   │       ├── PreviewFrame.jsx   # Device-width preview frame
 │   │   │   │       ├── useWebHistory.js   # Undo/redo hook
-│   │   │   │       ├── craftSerializer.js # DB ↔ Craft.js conversion
-│   │   │   │       ├── WebCraftRoot.jsx   # Craft.js Editor/Frame wrapper
-│   │   │   │       └── craftBlocks/       # Craft.js user components (Step 5.2)
-│   │   │   │           └── SectionBlock.jsx
+│   │   │   │       ├── InlineTextEditor.jsx # contentEditable + floating toolbar
+│   │   │   │       └── fluid/             # Fluid Engine (react-rnd + CSS Grid)
+│   │   │   │           ├── FluidSection.jsx
+│   │   │   │           └── FluidBlock.jsx
 │   │   │   ├── forms/              # App 2 - Form Builder
 │   │   │   ├── email/              # App 3 - Email Sender
 │   │   │   ├── directory/          # App 4 - Directory

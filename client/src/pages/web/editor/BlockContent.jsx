@@ -1,50 +1,9 @@
 import React, { useMemo, useCallback } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
-import RichTextEditor from '../../../components/RichTextEditor';
 import {
   HeroBlock,
   StructuredBlockEditor,
 } from './editorComponents';
 import { makeDefaultBlockContent } from './editorUtils';
-
-const MemoizedRichTextEditor = React.memo(RichTextEditor, (prevProps, nextProps) => {
-  // Prevent re-render when value change came from the editor itself.
-  // Only re-render if non-value props changed.
-  return prevProps.placeholder === nextProps.placeholder &&
-    prevProps.minHeight === nextProps.minHeight &&
-    prevProps.font === nextProps.font;
-});
-
-/**
- * Compact slider preview for the canvas. The full editor lives in the
- * right-hand SliderInspectorPanel (shown when this block is selected).
- * Renders a small visual summary: first slide's background + title overlay.
- */
-function SliderCanvasPreview({ block }) {
-  const content = block.content || {};
-  const slides = content.slides || [];
-  const first = slides[0] || {};
-  const bg = first.backgroundColor || '#152b45';
-  const title = (first.title || 'Untitled slide').replace(/<[^>]+>/g, '');
-  const heightLabel = content.height === 'full' ? 'Full screen' : content.height === 'medium' ? 'Medium' : 'Large';
-
-  return (
-    <div
-      className="relative w-full flex items-center justify-center text-center p-8"
-      style={{ backgroundColor: bg, minHeight: 180 }}
-    >
-      <div className="absolute inset-0 bg-black/30" />
-      <div className="relative z-10 text-white">
-        <div className="flex items-center justify-center gap-2 mb-2 text-xs uppercase tracking-widest opacity-80">
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          Slider · {slides.length} slide{slides.length === 1 ? '' : 's'} · {heightLabel}
-        </div>
-        <div className="text-xl font-semibold truncate max-w-md mx-auto">{title}</div>
-        <div className="mt-2 text-xs opacity-70">Click to edit in the inspector panel →</div>
-      </div>
-    </div>
-  );
-}
 
 export default function BlockContent({
   block,
@@ -63,9 +22,6 @@ export default function BlockContent({
   const bIdx = 0;
 
   switch (block.type) {
-    case 'slider':
-      return <SliderCanvasPreview block={block} />;
-
     case 'hero':
       return (
         <HeroBlock
@@ -80,10 +36,13 @@ export default function BlockContent({
     case 'text':
       return (
         <div className="py-8 px-6 max-w-3xl mx-auto">
-          <MemoizedRichTextEditor
-            value={block.content.content}
+          <EditableText
+            content={block.content.content}
             onChange={(value) => updateBlockContent(sIdx, bIdx, { content: value })}
             placeholder="Start writing your content here..."
+            className="prose prose-sm max-w-none focus:outline-none"
+            tag="div"
+            multiline
             minHeight={220}
           />
         </div>

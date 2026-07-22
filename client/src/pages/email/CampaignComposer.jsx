@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, Eye, Send, Clock, ArrowLeft } from 'lucide-react';
-import RichTextEditor from '../../components/RichTextEditor';
+import TiptapEditor from '../../components/TiptapEditor';
 import BuilderHistoryControls from '../../components/builder/BuilderHistoryControls';
 import BuilderPreviewControls from '../../components/builder/BuilderPreviewControls';
 import BuilderSaveStatus from '../../components/builder/BuilderSaveStatus';
@@ -293,7 +293,7 @@ export default function CampaignComposer() {
                 </p>
               </div>
               <div className="min-h-[400px]">
-                <RichTextEditor
+                <TiptapEditor
                   value={campaign.bodyHtml}
                   onChange={(content) => setCampaign((current) => ({ ...current, bodyHtml: content }))}
                   placeholder="Write your email content here..."

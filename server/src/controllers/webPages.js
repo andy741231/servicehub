@@ -76,16 +76,28 @@ export const updatePageMeta = async (req, res) => {
 export const deletePage = async (req, res) => {
   try {
     const { id } = req.params;
-    // Delete children first
+    // Collect this page + any child nav items so we can tear down all
+    // dependent rows in the right FK order inside one transaction.
+    // WebBlock, WebSection, and WebPageVersion all reference WebPage with
+    // onDelete: NoAction (SQL Server), so they must be removed first.
     const children = await prisma.webPage.findMany({ where: { parentId: id }, select: { id: true } });
-    for (const child of children) {
-      await prisma.webBlock.deleteMany({ where: { pageId: child.id } });
-      await prisma.webPage.delete({ where: { id: child.id } });
-    }
-    await prisma.webBlock.deleteMany({ where: { pageId: id } });
-    await prisma.webPage.delete({ where: { id } });
+    const pageIds = [id, ...children.map((c) => c.id)];
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Blocks first — they FK to both WebSection and WebPage.
+      await tx.webBlock.deleteMany({ where: { pageId: { in: pageIds } } });
+      // 2. Sections — they FK to WebPage.
+      await tx.webSection.deleteMany({ where: { pageId: { in: pageIds } } });
+      // 3. Saved versions — they FK to WebPage.
+      await tx.webPageVersion.deleteMany({ where: { pageId: { in: pageIds } } });
+      // 4. Finally the pages themselves (children first is safe, but order
+      //    doesn't matter once dependents are gone).
+      await tx.webPage.deleteMany({ where: { id: { in: pageIds } } });
+    });
+
     res.json({ ok: true });
   } catch (e) {
+    console.error('deletePage error:', e);
     res.status(500).json({ error: 'Failed to delete page' });
   }
 };

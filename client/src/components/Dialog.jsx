@@ -123,6 +123,59 @@ function ModalShell({ onClose, children }) {
   );
 }
 
+/**
+ * AccessibleModal — a flexible modal shell with focus trap, Escape handling,
+ * focus restoration, and scroll locking. Supports custom sizes and labels.
+ *
+ * Props:
+ * - onClose: required, called on Escape / backdrop click
+ * - labelledById: id of the title element for aria-labelledby
+ * - label: accessible name for aria-label (if no title element)
+ * - maxWidth: max-width class (e.g. 'max-w-2xl', 'max-w-5xl'); default 'max-w-md'
+ * - className: additional classes for the dialog panel
+ * - children: dialog content
+ */
+export function AccessibleModal({ onClose, labelledById, label, maxWidth = 'max-w-md', className = '', children }) {
+  const containerRef = useFocusTrap(true);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Scroll lock on the body while the modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={containerRef}
+        className={`bg-surface rounded-2xl shadow-modal w-full ${maxWidth} mx-4 overflow-hidden animate-[fadeInScale_0.15s_ease-out] ${className}`}
+        onMouseDown={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledById}
+        aria-label={label}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── Variant config ──────────────────────────────────────────────────────────
 
 const VARIANTS = {

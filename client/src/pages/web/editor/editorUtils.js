@@ -1,7 +1,19 @@
 import {
-  Image as ImageIcon, AlignLeft, Star, Hand, Rows3, Quote, LayoutGrid,
+  AlignLeft, Star, Hand, Rows3, Quote, LayoutGrid,
   Sparkles, MessageSquare, Mail, Video, Columns
 } from 'lucide-react';
+
+/**
+ * Generate a stable client-side ID.
+ * Uses crypto.randomUUID() when available (all modern browsers), with a
+ * timestamp+random fallback for older environments.
+ */
+export function generateClientId(prefix = 'entity') {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export const resolveUrl = (url) => {
   if (!url) return '';
@@ -17,7 +29,6 @@ export const resolveUrl = (url) => {
 };
 
 export const BLOCK_TYPES = [
-  { id: 'slider',       name: 'Slider',       Icon: ImageIcon,     description: 'Slides with images, color, text, and video backgrounds' },
   { id: 'text',         name: 'Text',         Icon: AlignLeft,    description: 'Rich text content with formatting' },
   { id: 'trust-bar',     name: 'Trust Bar',   Icon: Star,          description: 'Numbered proof points and highlights' },
   { id: 'split-banner',  name: 'Split Banner',Icon: Hand,          description: 'Two-column callout with service times' },
@@ -37,6 +48,14 @@ export const BLOCK_TYPES = [
 export const DEFAULT_SECTION = {
   columns: 1,
   gap: 24,
+  fluidConfig: {
+    gridColumns: 24,
+    rowHeight: 80,
+    gap: { horizontal: 8, vertical: 8 },
+    fillScreen: false,
+    minHeight: 320,
+    verticalAlignment: 'top',
+  },
   paddingTop: 48,
   paddingBottom: 48,
   paddingLeft: 0,
@@ -48,28 +67,6 @@ export const DEFAULT_SECTION = {
 
 export const makeDefaultBlockContent = (type) => {
   switch (type) {
-    case 'slider':       return {
-      autoplay: true,
-      interval: 6000,
-      transition: 'fade',
-      showArrows: true,
-      showDots: true,
-      height: 'large',
-      slides: [{
-        id: `slide-${Date.now()}`,
-        backgroundType: 'color',
-        backgroundColor: '#152b45',
-        overlay: 'dark',
-        textAlign: 'left',
-        verticalAlign: 'center',
-        eyebrow: '<p>Welcome</p>',
-        title: '<p>A place to belong.</p>',
-        subtitle: '<p>Add a compelling message here.</p>',
-        buttonText: 'Learn more',
-        buttonLink: '#',
-        buttonVariant: 'gold',
-      }],
-    };
     case 'hero':         return { title: 'Your Hero Title', subtitle: 'Add a compelling subtitle here' };
     case 'text':         return { content: 'Start writing your content here...' };
     case 'trust-bar':    return { items: [{ number: '01', label: 'One welcoming community' }, { number: '03', label: 'Ways to connect each week' }, { number: '∞', label: 'Room for your next step' }] };
@@ -106,21 +103,81 @@ export const SPACING_PRESETS = [
   { label: 'XL',     value: 120 },
 ];
 
-export function createBlock(type) {
+export function createBlock(type, options = {}) {
+  const fluid = options.fluid || {
+    colStart: 1,
+    colEnd: 25,   // full width (24-col grid, 1-indexed lines)
+    rowStart: 1,
+    rowEnd: 3,    // 2 rows tall by default
+    zIndex: 0,
+  };
   return {
-    id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: generateClientId('block'),
     type,
     content: makeDefaultBlockContent(type),
+    fluid,
     order: 0,
+  };
+}
+
+/**
+ * Auto-stack a new block below existing blocks in a section.
+ * Returns fluid coords for a new block placed at the bottom of the grid.
+ */
+export function autoStackFluid(blocks, gridColumns = 24) {
+  if (!blocks || blocks.length === 0) {
+    return { colStart: 1, colEnd: gridColumns + 1, rowStart: 1, rowEnd: 3, zIndex: 0 };
+  }
+  const maxRowEnd = blocks.reduce((max, b) => {
+    const fe = b.fluid?.rowEnd ?? 3;
+    return Math.max(max, fe);
+  }, 1);
+  const maxZ = blocks.reduce((max, b) => {
+    const z = b.fluid?.zIndex ?? 0;
+    return Math.max(max, z);
+  }, 0);
+  return {
+    colStart: 1,
+    colEnd: gridColumns + 1,
+    rowStart: maxRowEnd,
+    rowEnd: maxRowEnd + 2,
+    zIndex: maxZ + 1,
   };
 }
 
 export function createSection(overrides = {}) {
   return {
-    id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: generateClientId('section'),
     ...DEFAULT_SECTION,
     blocks: [],
     order: 0,
     ...overrides,
+  };
+}
+
+/**
+ * Deep-clone a block with a new client ID.
+ * Preserves content, fluid coords, and type — only the ID is regenerated.
+ */
+export function duplicateBlock(block) {
+  return {
+    ...block,
+    id: generateClientId('block'),
+    content: JSON.parse(JSON.stringify(block.content || {})),
+    fluid: block.fluid ? { ...block.fluid } : undefined,
+    fluidMobile: block.fluidMobile ? { ...block.fluidMobile } : undefined,
+  };
+}
+
+/**
+ * Deep-clone a section with a new client ID.
+ * Also regenerates IDs for all nested blocks.
+ */
+export function duplicateSection(section) {
+  return {
+    ...section,
+    id: generateClientId('section'),
+    fluidConfig: section.fluidConfig ? JSON.parse(JSON.stringify(section.fluidConfig)) : null,
+    blocks: (section.blocks || []).map(duplicateBlock),
   };
 }

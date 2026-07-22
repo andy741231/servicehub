@@ -3,282 +3,47 @@ import {
   Plus, Trash2, GripVertical, Image as ImageIcon, Eye,
   Palette, Type, Settings, Save, X, Check, AlertCircle, ChevronDown, ChevronUp,
   Link as LinkIcon, Edit3, Move, Copy, Upload,
-  Zap, AlignLeft, AlignCenter, AlignRight, AlignJustify, Hand, Star, Sparkles, LayoutGrid, MessageSquare, Mail, Video, Columns,
-  Bold, Italic, Rows3, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, ExternalLink, HelpCircle, History
+  Columns,
+  Bold, Italic, Rows3, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, ExternalLink, HelpCircle
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import api from '../../../utils/api';
 import ColorPicker from '../../../components/ColorPicker';
-import RichTextEditor from '../../../components/RichTextEditor';
+import { AccessibleModal } from '../../../components/Dialog';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import InlineTextEditor from './InlineTextEditor';
 import { resolveUrl, BLOCK_TYPES, DEFAULT_SECTION, makeDefaultBlockContent, SECTION_LAYOUTS, SPACING_PRESETS } from './editorUtils';
-const BaseEditableText = ({ 
-  content, 
-  onChange, 
+const BaseEditableText = ({
+  content,
+  onChange,
   onEditingStart,
   onEditingEnd,
   placeholder = 'Click to edit',
   className = '',
   style = {},
   multiline = false,
-  tag = 'span'
+  tag = 'span',
+  minHeight,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(content || '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    setValue(content || '');
-  }, [content]);
-
-  const handleClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsEditing(true);
-    onEditingStart?.();
-    setTimeout(() => {
-      if (ref.current) {
-        ref.current.focus();
-        // Select all text
-        if (ref.current.select) {
-          ref.current.select();
-        } else if (ref.current.setSelectionRange) {
-          ref.current.setSelectionRange(0, ref.current.value.length);
-        }
-      }
-    }, 0);
-  };
-
-  const handleBlur = async (e) => {
-    const next = e.relatedTarget;
-    if (next?.closest('.field-toolbar')) {
-      // Clicking a toolbar control should keep the input focused so the toolbar remains visible.
-      ref.current?.focus();
-      return;
-    }
-    setIsEditing(false);
-    onEditingEnd?.(e);
-    if (value !== content) {
-      setIsSaving(true);
-      try {
-        await onChange(value);
-        setShowSaved(true);
-        setTimeout(() => setShowSaved(false), 2000);
-      } catch (error) {
-        console.error('Failed to save:', error);
-        setValue(content); // Revert on error
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      setValue(content);
-      setIsEditing(false);
-      onEditingEnd?.();
-    } else if (e.key === 'Enter' && !multiline) {
-      e.preventDefault();
-      ref.current?.blur();
-    }
-  };
-
-  const Tag = tag;
-
-  if (isEditing) {
-    const InputComponent = multiline ? 'textarea' : 'input';
-    return (
-      <div className="relative">
-        <InputComponent
-          ref={ref}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className={`${className} border-2 border-primary rounded-base px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 bg-surface shadow-card transition-all duration-150`}
-          style={style}
-          placeholder={placeholder}
-          {...(multiline ? { rows: 3 } : {})}
-        />
-        {isSaving && (
-          <div className="absolute -top-10 right-0 bg-primary-light text-primary text-small font-medium px-3 py-1.5 rounded-base shadow-card flex items-center gap-1.5 animate-in slide-in-from-top-1">
-            <AlertCircle className="w-3 h-3 animate-spin" />
-            Saving...
-          </div>
-        )}
-        {showSaved && (
-          <div className="absolute -top-10 right-0 bg-success-light text-success text-small font-medium px-3 py-1.5 rounded-base shadow-card flex items-center gap-1.5 animate-in slide-in-from-top-1">
-            <Check className="w-3 h-3" />
-            Saved
-          </div>
-        )}
-      </div>
-    );
-  }
-
+  // Delegate to the inline contentEditable + dark floating toolbar editor.
+  // This preserves the existing prop signature so all 57 BlockContent call
+  // sites get the inline editor without any changes. The old click-to-input
+  // behavior is replaced by direct in-place editing with a mockup-style
+  // floating toolbar (see text-editor-mocup.html).
   return (
-    <Tag 
-      className={`${className} cursor-text relative group transition-all duration-150 ${
-        isHovered ? 'bg-primary-light/50 rounded-base px-2 -mx-2' : ''
-      } focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-base`}
+    <InlineTextEditor
+      content={content}
+      onChange={onChange}
+      onEditingStart={onEditingStart}
+      onEditingEnd={onEditingEnd}
+      placeholder={placeholder}
+      className={className}
       style={style}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleClick(e);
-        }
-      }}
-      aria-label={`Edit ${placeholder.toLowerCase()}`}
-    >
-      {content ? (
-        <span dangerouslySetInnerHTML={{ __html: content }} />
-      ) : (
-        <span className="opacity-40 italic text-subtle">
-          {placeholder}
-        </span>
-      )}
-      {/* Improved edit indicator */}
-      <div className={`absolute -top-2 -right-2 bg-primary text-primary-foreground p-1.5 rounded-base shadow-dropdown transition-all duration-150 ${
-        isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-      }`}>
-        <Edit3 className="w-3 h-3" />
-      </div>
-    </Tag>
-  );
-};
-
-// Improved inline formatting toolbar with better design
-const TextToolbar = ({ format = {}, onChange, onDelete, position = 'top' }) => {
-  const {
-    fontFamily = '',
-    fontSize = '',
-    textAlign = 'left',
-    fontWeight = 'normal',
-    fontStyle = 'normal',
-  } = format;
-
-  const update = (key, value) => onChange({ ...format, [key]: value });
-
-  const alignOptions = [
-    { id: 'left', Icon: AlignLeft },
-    { id: 'center', Icon: AlignCenter },
-    { id: 'right', Icon: AlignRight },
-    { id: 'justify', Icon: AlignJustify },
-  ];
-
-  const toggleBold = () => update('fontWeight', fontWeight === 'bold' ? 'normal' : 'bold');
-  const toggleItalic = () => update('fontStyle', fontStyle === 'italic' ? 'normal' : 'italic');
-
-  return (
-    <div
-      role="toolbar"
-      aria-label="Text formatting"
-      className={`absolute left-1/2 -translate-x-1/2 ${
-        position === 'top' ? '-top-14' : 'bottom-full mb-2'
-      } flex items-center gap-1.5 bg-surface/95 backdrop-blur-sm border border-border rounded-lg shadow-dropdown p-1.5 z-40 animate-in slide-in-from-top-1`}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* Font family */}
-      <select
-        value={fontFamily}
-        onChange={(e) => update('fontFamily', e.target.value)}
-        title="Font family"
-        className="h-9 px-2 text-small border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 bg-surface hover:bg-surface-raised transition-colors duration-150"
-      >
-        <option value="">Default</option>
-        <option value="Arial, sans-serif">Arial</option>
-        <option value="Georgia, serif">Georgia</option>
-        <option value="Times New Roman, serif">Times New Roman</option>
-        <option value="Courier New, monospace">Courier New</option>
-        <option value="Verdana, sans-serif">Verdana</option>
-      </select>
-
-      {/* Font size */}
-      <div className="relative">
-        <input
-          type="number"
-          min={8}
-          max={120}
-          value={fontSize || ''}
-          onChange={(e) => update('fontSize', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
-          placeholder="Size"
-          title="Font size (px)"
-          className="w-16 h-9 px-2 text-small border border-border rounded-base focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 hover:bg-surface-raised transition-colors duration-150"
-        />
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-small text-subtle pointer-events-none">px</span>
-      </div>
-
-      <div className="w-px h-5 bg-border mx-1" />
-
-      {/* Alignment */}
-      <div className="flex items-center bg-surface-raised rounded-base p-0.5">
-        {alignOptions.map(({ id, Icon }) => (
-          <button
-            key={id}
-            onClick={() => update('textAlign', id)}
-            className={`p-2 min-h-[44px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
-              textAlign === id 
-                ? 'bg-surface shadow-card text-primary' 
-                : 'text-muted hover:bg-surface'
-            }`}
-            title={`Align ${id}`}
-          >
-            <Icon className="w-4 h-4" />
-          </button>
-        ))}
-      </div>
-
-      <div className="w-px h-5 bg-border mx-1" />
-
-      {/* Text style */}
-      <div className="flex items-center bg-surface-raised rounded-base p-0.5">
-        <button
-          onClick={toggleBold}
-          className={`p-2 min-h-[44px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
-            fontWeight === 'bold' 
-              ? 'bg-surface shadow-card text-primary' 
-              : 'text-muted hover:bg-surface'
-          }`}
-          title="Bold"
-        >
-          <Bold className="w-4 h-4" />
-        </button>
-        <button
-          onClick={toggleItalic}
-          className={`p-2 min-h-[44px] rounded-base transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
-            fontStyle === 'italic' 
-              ? 'bg-surface shadow-card text-primary' 
-              : 'text-muted hover:bg-surface'
-          }`}
-          title="Italic"
-        >
-          <Italic className="w-4 h-4" />
-        </button>
-      </div>
-
-      {onDelete && (
-        <>
-          <div className="w-px h-5 bg-border mx-1" />
-          <button
-            onClick={onDelete}
-            className="p-2 min-h-[44px] hover:bg-danger-light text-danger rounded-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-1"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </>
-      )}
-    </div>
+      multiline={multiline}
+      tag={tag}
+      minHeight={minHeight}
+    />
   );
 };
 
@@ -445,63 +210,31 @@ const MarkdownContentEditor = ({ value, onChange }) => {
   );
 };
 
-// Dedicated hero block editor with per-field formatting toolbars
+// Dedicated hero block editor — formatting is handled inline by the
+// FloatingToolbar that appears when text is selected in an EditableText field.
 const HeroBlock = ({ block, index, updateBlockContent, updateBlock, EditableText }) => {
   const titleColor = block.style?.color || (block.content.backgroundImage ? 'hsl(var(--text-inverse))' : 'hsl(var(--text-base))');
   const subtitleColor = block.style?.color || (block.content.backgroundImage ? 'hsl(var(--text-muted))' : 'hsl(var(--text-muted))');
 
-  const titleFormat = {
-    fontFamily: block.style?.titleFontFamily || '',
-    fontSize: block.style?.titleFontSize || '',
+  // Base styles from block.style (color, background). Per-field font family /
+  // size / weight / alignment are now applied inline via the FloatingToolbar
+  // and stored in the HTML content, not in block.style.
+  const titleStyle = {
+    color: titleColor,
+    fontFamily: block.style?.titleFontFamily || undefined,
+    fontSize: block.style?.titleFontSize ? `${block.style.titleFontSize}px` : undefined,
     textAlign: block.style?.titleTextAlign || 'left',
     fontWeight: block.style?.titleFontWeight || 'normal',
     fontStyle: block.style?.titleFontStyle || 'normal',
   };
-  const subtitleFormat = {
-    fontFamily: block.style?.subtitleFontFamily || '',
-    fontSize: block.style?.subtitleFontSize || '',
+  const subtitleStyle = {
+    color: subtitleColor,
+    fontFamily: block.style?.subtitleFontFamily || undefined,
+    fontSize: block.style?.subtitleFontSize ? `${block.style.subtitleFontSize}px` : undefined,
     textAlign: block.style?.subtitleTextAlign || 'left',
     fontWeight: block.style?.subtitleFontWeight || 'normal',
     fontStyle: block.style?.subtitleFontStyle || 'normal',
   };
-
-  const titleStyle = {
-    color: titleColor,
-    fontFamily: titleFormat.fontFamily || undefined,
-    fontSize: titleFormat.fontSize ? `${titleFormat.fontSize}px` : undefined,
-    textAlign: titleFormat.textAlign,
-    fontWeight: titleFormat.fontWeight,
-    fontStyle: titleFormat.fontStyle,
-  };
-  const subtitleStyle = {
-    color: subtitleColor,
-    fontFamily: subtitleFormat.fontFamily || undefined,
-    fontSize: subtitleFormat.fontSize ? `${subtitleFormat.fontSize}px` : undefined,
-    textAlign: subtitleFormat.textAlign,
-    fontWeight: subtitleFormat.fontWeight,
-    fontStyle: subtitleFormat.fontStyle,
-  };
-
-  const updateTitleFormat = (fmt) => updateBlock(index, {
-    style: {
-      ...block.style,
-      titleFontFamily: fmt.fontFamily,
-      titleFontSize: fmt.fontSize,
-      titleTextAlign: fmt.textAlign,
-      titleFontWeight: fmt.fontWeight,
-      titleFontStyle: fmt.fontStyle,
-    }
-  });
-  const updateSubtitleFormat = (fmt) => updateBlock(index, {
-    style: {
-      ...block.style,
-      subtitleFontFamily: fmt.fontFamily,
-      subtitleFontSize: fmt.fontSize,
-      subtitleTextAlign: fmt.textAlign,
-      subtitleFontWeight: fmt.fontWeight,
-      subtitleFontStyle: fmt.fontStyle,
-    }
-  });
 
   return (
     <div
@@ -516,41 +249,23 @@ const HeroBlock = ({ block, index, updateBlockContent, updateBlock, EditableText
       )}
 
       <div className="relative z-10">
-        <div className="relative inline-block w-full [&:focus-within_.field-toolbar]:block">
-          <div className="field-toolbar hidden">
-            <TextToolbar
-              format={titleFormat}
-              onChange={updateTitleFormat}
-              onDelete={() => updateBlockContent(index, { title: '' })}
-            />
-          </div>
-          <EditableText
-            content={block.content.title}
-            onChange={(value) => updateBlockContent(index, { title: value })}
-            placeholder="Hero Title"
-            className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 block"
-            style={titleStyle}
-            tag="h1"
-          />
-        </div>
-        <div className="relative inline-block w-full [&:focus-within_.field-toolbar]:block">
-          <div className="field-toolbar hidden">
-            <TextToolbar
-              format={subtitleFormat}
-              onChange={updateSubtitleFormat}
-              onDelete={() => updateBlockContent(index, { subtitle: '' })}
-            />
-          </div>
-          <EditableText
-            content={block.content.subtitle}
-            onChange={(value) => updateBlockContent(index, { subtitle: value })}
-            placeholder="Hero Subtitle"
-            className="text-xl max-w-2xl mx-auto block"
-            style={subtitleStyle}
-            tag="div"
-            multiline
-          />
-        </div>
+        <EditableText
+          content={block.content.title}
+          onChange={(value) => updateBlockContent(index, { title: value })}
+          placeholder="Hero Title"
+          className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 block"
+          style={titleStyle}
+          tag="h1"
+        />
+        <EditableText
+          content={block.content.subtitle}
+          onChange={(value) => updateBlockContent(index, { subtitle: value })}
+          placeholder="Hero Subtitle"
+          className="text-xl max-w-2xl mx-auto block"
+          style={subtitleStyle}
+          tag="div"
+          multiline
+        />
       </div>
     </div>
   );
@@ -1495,176 +1210,6 @@ const EditableBlock = ({
   );
 };
 
-const SLIDER_DEFAULT_SLIDE = {
-  id: '',
-  backgroundType: 'color',
-  backgroundColor: '#152b45',
-  overlay: 'dark',
-  textAlign: 'left',
-  verticalAlign: 'center',
-  eyebrow: '<p>New slide</p>',
-  title: '<p>Slide title</p>',
-  subtitle: '<p>Add a message for this slide.</p>',
-  buttonText: '',
-  buttonLink: '#',
-  buttonVariant: 'gold',
-};
-
-const SliderBlockEditor = ({ block, onChange }) => {
-  const content = block.content || {};
-  const slides = content.slides?.length ? content.slides : [{ ...SLIDER_DEFAULT_SLIDE, id: `slide-${Date.now()}` }];
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const selected = slides[Math.min(selectedIndex, slides.length - 1)];
-
-  const updateContent = (updates) => onChange({ ...content, ...updates });
-  const updateSlide = (updates) => {
-    const nextSlides = slides.map((slide, index) => index === selectedIndex ? { ...slide, ...updates } : slide);
-    updateContent({ slides: nextSlides });
-  };
-  const addSlide = () => {
-    const next = { ...SLIDER_DEFAULT_SLIDE, id: `slide-${Date.now()}` };
-    updateContent({ slides: [...slides, next] });
-    setSelectedIndex(slides.length);
-  };
-  const removeSlide = () => {
-    if (slides.length === 1) return;
-    const nextSlides = slides.filter((_, index) => index !== selectedIndex);
-    updateContent({ slides: nextSlides });
-    setSelectedIndex(Math.max(0, Math.min(selectedIndex, nextSlides.length - 1)));
-  };
-  const moveSlide = (direction) => {
-    const nextIndex = selectedIndex + direction;
-    if (nextIndex < 0 || nextIndex >= slides.length) return;
-    const nextSlides = [...slides];
-    [nextSlides[selectedIndex], nextSlides[nextIndex]] = [nextSlides[nextIndex], nextSlides[selectedIndex]];
-    updateContent({ slides: nextSlides });
-    setSelectedIndex(nextIndex);
-  };
-
-  return (
-    <div className="p-4 bg-surface-raised border border-border rounded-lg">
-      <div className="mb-3">
-        <h3 className="text-sm font-semibold text-text-base">Slider settings</h3>
-        <p className="text-xs text-subtle mt-1">Build rich, media-backed slides with text and calls to action.</p>
-      </div>
-
-      <Accordion type="multiple" defaultValue={['slides']} className="w-full">
-        <AccordionItem value="global">
-          <AccordionTrigger>Global settings</AccordionTrigger>
-          <AccordionContent>
-            <div className="flex flex-wrap items-center gap-4 mb-3">
-              <label className="flex items-center gap-2 text-xs text-muted">
-                <input type="checkbox" checked={content.autoplay !== false} onChange={e => updateContent({ autoplay: e.target.checked })} />
-                Autoplay
-              </label>
-              <label className="flex items-center gap-2 text-xs text-muted">
-                Delay
-                <input type="number" min="1000" step="500" value={content.interval || 6000} onChange={e => updateContent({ interval: Number(e.target.value) || 6000 })} className="w-20 px-2 py-1.5 border border-border rounded" />
-                ms
-              </label>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <label className="text-xs text-muted">Transition
-                <select value={content.transition || 'fade'} onChange={e => updateContent({ transition: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
-                  <option value="fade">Fade</option><option value="slide">Slide</option><option value="none">None</option>
-                </select>
-              </label>
-              <label className="text-xs text-muted">Height
-                <select value={content.height || 'large'} onChange={e => updateContent({ height: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
-                  <option value="medium">Medium</option><option value="large">Large</option><option value="full">Full screen</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-2 text-xs text-muted pt-5"><input type="checkbox" checked={content.showArrows !== false} onChange={e => updateContent({ showArrows: e.target.checked })} /> Arrows</label>
-              <label className="flex items-center gap-2 text-xs text-muted pt-5"><input type="checkbox" checked={content.showDots !== false} onChange={e => updateContent({ showDots: e.target.checked })} /> Dots</label>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="slides">
-          <AccordionTrigger>Slides ({slides.length})</AccordionTrigger>
-          <AccordionContent>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {slides.map((slide, index) => (
-                <button key={slide.id || index} type="button" onClick={() => setSelectedIndex(index)} className={`shrink-0 w-28 h-16 rounded border text-left p-2 text-xs overflow-hidden ${index === selectedIndex ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`} style={{ backgroundColor: slide.backgroundColor || '#152b45' }}>
-                  <span className="block text-white font-semibold truncate">{index + 1}. {slide.title?.replace(/<[^>]+>/g, '') || 'Untitled'}</span>
-                </button>
-              ))}
-              <button type="button" onClick={addSlide} className="shrink-0 w-28 h-16 border-2 border-dashed border-border rounded text-xs text-muted hover:border-primary hover:text-primary">+ Add slide</button>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {selected && (
-        <AccordionItem value="selected">
-          <AccordionTrigger>Edit slide {selectedIndex + 1}</AccordionTrigger>
-          <AccordionContent>
-          <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-muted uppercase tracking-wide">Slide {selectedIndex + 1}</h4>
-            <div className="flex gap-1">
-              <button type="button" onClick={() => moveSlide(-1)} disabled={selectedIndex === 0} aria-label="Move slide up" title="Move slide up" className="px-2 py-1 text-xs border border-border rounded disabled:opacity-40 flex items-center justify-center">
-                <ChevronUp className="w-3.5 h-3.5" />
-              </button>
-              <button type="button" onClick={() => moveSlide(1)} disabled={selectedIndex === slides.length - 1} aria-label="Move slide down" title="Move slide down" className="px-2 py-1 text-xs border border-border rounded disabled:opacity-40 flex items-center justify-center">
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              <button type="button" onClick={removeSlide} disabled={slides.length === 1} aria-label="Remove slide" title="Remove slide" className="px-2 py-1 text-xs border border-danger text-danger rounded disabled:opacity-40">Remove</button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <label className="text-xs text-muted">Background type
-              <select value={selected.backgroundType || 'color'} onChange={e => updateSlide({ backgroundType: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
-                <option value="color">Color</option><option value="gradient">Gradient</option><option value="image">Image</option><option value="video">HTML5 video</option><option value="youtube">YouTube</option><option value="vimeo">Vimeo</option>
-              </select>
-            </label>
-            <label className="text-xs text-muted">Overlay
-              <select value={selected.overlay || 'dark'} onChange={e => updateSlide({ overlay: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
-                <option value="dark">Dark</option><option value="light">Light</option><option value="none">None</option>
-              </select>
-            </label>
-            <label className="text-xs text-muted">Horizontal alignment
-              <select value={selected.textAlign || 'left'} onChange={e => updateSlide({ textAlign: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
-                <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
-              </select>
-            </label>
-            <label className="text-xs text-muted">Vertical alignment
-              <select value={selected.verticalAlign || 'center'} onChange={e => updateSlide({ verticalAlign: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface">
-                <option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option>
-              </select>
-            </label>
-          </div>
-
-          {selected.backgroundType === 'color' && (
-            <div className="flex items-center gap-3"><ColorPicker value={selected.backgroundColor || '#152b45'} onChange={value => updateSlide({ backgroundColor: value })} label="Slide background color" /><span className="text-xs font-mono text-muted">{selected.backgroundColor || '#152b45'}</span></div>
-          )}
-          {(selected.backgroundType === 'gradient' || selected.backgroundType === 'image' || selected.backgroundType === 'video') && (
-            <label className="block text-xs text-muted">{selected.backgroundType === 'gradient' ? 'CSS gradient' : selected.backgroundType === 'image' ? 'Background image URL' : 'HTML5 video URL'}
-              <input value={selected.backgroundType === 'gradient' ? (selected.gradient || '') : selected.backgroundType === 'image' ? (selected.backgroundImage || '') : (selected.videoUrl || '')} onChange={e => updateSlide(selected.backgroundType === 'gradient' ? { gradient: e.target.value } : selected.backgroundType === 'image' ? { backgroundImage: e.target.value } : { videoUrl: e.target.value })} placeholder={selected.backgroundType === 'gradient' ? 'linear-gradient(135deg, #152b45, #54738e)' : '/uploads/filename'} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" />
-            </label>
-          )}
-          {selected.backgroundType === 'video' && <label className="block text-xs text-muted">Poster image URL<input value={selected.posterImage || ''} onChange={e => updateSlide({ posterImage: e.target.value })} placeholder="/uploads/poster.jpg" className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>}
-          {selected.backgroundType === 'youtube' && <label className="block text-xs text-muted">YouTube URL or video ID<input value={selected.youtubeId || ''} onChange={e => updateSlide({ youtubeId: e.target.value })} placeholder="https://youtube.com/watch?v=..." className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>}
-          {selected.backgroundType === 'vimeo' && <label className="block text-xs text-muted">Vimeo URL or video ID<input value={selected.vimeoId || ''} onChange={e => updateSlide({ vimeoId: e.target.value })} placeholder="https://vimeo.com/..." className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div><label className="text-xs text-muted">Eyebrow</label><RichTextEditor value={selected.eyebrow || ''} onChange={value => updateSlide({ eyebrow: value })} minHeight={90} /></div>
-            <div><label className="text-xs text-muted">Title</label><RichTextEditor value={selected.title || ''} onChange={value => updateSlide({ title: value })} minHeight={90} /></div>
-            <div><label className="text-xs text-muted">Subtitle</label><RichTextEditor value={selected.subtitle || ''} onChange={value => updateSlide({ subtitle: value })} minHeight={90} /></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label className="text-xs text-muted">Button text<input value={selected.buttonText || ''} onChange={e => updateSlide({ buttonText: e.target.value })} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>
-            <label className="text-xs text-muted">Button link<input value={selected.buttonLink || ''} onChange={e => updateSlide({ buttonLink: e.target.value })} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" /></label>
-            <label className="text-xs text-muted">Button style<select value={selected.buttonVariant || 'gold'} onChange={e => updateSlide({ buttonVariant: e.target.value })} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface"><option value="gold">Gold</option><option value="outline">Outline</option><option value="default">Navy</option></select></label>
-          </div>
-          </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-      </Accordion>
-    </div>
-  );
-};
 
 const StructuredBlockEditor = ({ block, onChange }) => {
   const content = block.content || {};
@@ -1728,8 +1273,7 @@ const AddSectionModal = ({ onClose, onAdd }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] animate-in fade-in duration-200" onClick={onClose} onKeyDown={e => { if (e.key === 'Escape') onClose(); }}>
-      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="add-section-title">
+    <AccessibleModal onClose={onClose} labelledById="add-section-title" maxWidth="max-w-2xl" className="max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="p-6 border-b border-border bg-surface-raised flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1741,7 +1285,7 @@ const AddSectionModal = ({ onClose, onAdd }) => {
               <p className="text-sm text-muted">Choose a layout for your new section</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors" aria-label="Close">
             <X className="w-5 h-5 text-muted" />
           </button>
         </div>
@@ -1829,8 +1373,7 @@ const AddSectionModal = ({ onClose, onAdd }) => {
             Add Section
           </button>
         </div>
-      </div>
-    </div>
+    </AccessibleModal>
   );
 };
 
@@ -1838,7 +1381,7 @@ const AddSectionModal = ({ onClose, onAdd }) => {
 // SectionWrapper — hover UI for sections
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSection, onDuplicateSection, onUpdateSection, children }) => {
+const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSection, onDuplicateSection, onUpdateSection, children, readOnly }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -1859,10 +1402,13 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Section hover outline */}
-      <div className={`absolute inset-0 border-2 border-dashed pointer-events-none transition-opacity duration-150 z-10 ${isHovered ? 'border-primary-light opacity-100' : 'border-transparent opacity-0'}`} />
+      {!readOnly && (
+        <div className={`absolute inset-0 border-2 border-dashed pointer-events-none transition-opacity duration-150 z-10 ${isHovered ? 'border-primary-light opacity-100' : 'border-transparent opacity-0'}`} />
+      )}
 
       {/* Section actions toolbar — top-left on hover */}
-      <div className={`absolute top-2 left-2 z-20 flex items-center gap-1 bg-surface/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-1 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+      {!readOnly && (
+        <div className={`absolute top-2 left-2 z-20 flex items-center gap-1 bg-surface/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-1 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <span className="px-2 text-xs font-medium text-muted border-r border-border mr-1">Section {sectionIndex + 1}</span>
         <button
           onClick={() => setShowSettings(s => !s)}
@@ -1886,9 +1432,10 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
+      )}
 
       {/* Inline settings panel */}
-      {showSettings && (
+      {showSettings && !readOnly && (
         <div className="absolute top-10 left-2 z-30 bg-surface border border-border rounded-xl shadow-xl p-4 w-72" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-text-base">Section Settings</h4>
@@ -1942,6 +1489,7 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
       </div>
 
       {/* "Add Section" button — appears at the bottom of this section on hover */}
+      {!readOnly && (
       <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-150 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <button
           onClick={() => onAddSectionBelow(sectionIndex)}
@@ -1951,6 +1499,7 @@ const SectionWrapper = ({ section, sectionIndex, onAddSectionBelow, onDeleteSect
           Add Section
         </button>
       </div>
+      )}
     </div>
   );
 };
@@ -1970,7 +1519,6 @@ const AddBlockButton = ({ onClick }) => (
 );
 export {
   BaseEditableText,
-  TextToolbar,
   renderMarkdownPreview,
   MarkdownContentEditor,
   HeroBlock,
@@ -1978,7 +1526,6 @@ export {
   BaseEditableButton,
   BackgroundImageDialog,
   EditableBlock,
-  SliderBlockEditor,
   StructuredBlockEditor,
   AddSectionModal,
   SectionWrapper,

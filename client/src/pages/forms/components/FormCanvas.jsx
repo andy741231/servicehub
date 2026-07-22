@@ -1,7 +1,7 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Trash2, Copy, GitBranch, SeparatorHorizontal, Plus, LayoutTemplate, Columns, Grid3x3, Rows3, LayoutGrid, X, CopyPlus, ChevronDown, ChevronRight, Settings2, Star, Calculator, Repeat, FolderOpen } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import RichTextEditor from '../../../components/RichTextEditor';
+import TiptapEditor from '../../../components/TiptapEditor';
 import useFormStore from '../store/formStore';
 import { evaluateConditionalLogic, hasConditionalLogic } from '../utils/conditionalLogic';
 import { getFormulaPreview } from '../utils/formula';
@@ -155,7 +155,7 @@ const FIELD_COMPONENTS = {
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <RichTextEditor
+      <TiptapEditor
         value={field.content || ''}
         onChange={(html) => onContentChange && onContentChange(field.id, html)}
         placeholder="Add your content here…"

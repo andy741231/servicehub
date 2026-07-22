@@ -64,7 +64,7 @@ const ToolbarButton = ({ active, onClick, title, children }) => (
   </button>
 );
 
-export default function RichTextEditor({
+export default function TiptapEditor({
   value = '',
   onChange,
   placeholder = 'Start writing…',

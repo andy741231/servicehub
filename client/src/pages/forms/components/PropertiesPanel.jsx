@@ -4,7 +4,7 @@ import useFormStore from '../store/formStore';
 import { CONDITION_OPERATORS, DEFAULT_CONDITIONAL_LOGIC, hasConditionalLogic } from '../utils/conditionalLogic';
 import { DEFAULT_THEME } from '../store/formStore';
 import AccessSchedulePanel from './AccessSchedulePanel';
-import RichTextEditor from '../../../components/RichTextEditor';
+import TiptapEditor from '../../../components/TiptapEditor';
 import { uploadFile } from '../api/formsApi';
 import { getFormulaPreview } from '../utils/formula';
 import ColorPicker from '../../../components/ColorPicker';
@@ -1348,7 +1348,7 @@ export default function PropertiesPanel({ selectedField, selectedSection, onUpda
                 Thank You Message
               </label>
               <div className="prose-editor">
-                <RichTextEditor
+                <TiptapEditor
                   value={theme.thankYouMessage || ''}
                   onChange={(value) => updateFormTheme({ thankYouMessage: value })}
                   minHeight={100}

@@ -1,46 +1,39 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
-  Plus, Trash2, GripVertical, Image as ImageIcon, Eye,
-  Palette, Type, Settings, Save, X, Check, AlertCircle, ChevronDown, ChevronUp,
-  Link as LinkIcon, Edit3, Move, Copy, Upload,
-  Zap, AlignLeft, AlignCenter, AlignRight, AlignJustify, Hand, Star, Sparkles, LayoutGrid, MessageSquare, Mail, Video, Columns,
-  Bold, Italic, Rows3, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code, Minus, ExternalLink, HelpCircle, History
+  Plus, Type, X, Edit3, Copy, Sparkles, Rows3, History, Eye, AlertCircle, Layers,
 } from 'lucide-react';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import api from '../../../utils/api';
-import ColorPicker from '../../../components/ColorPicker';
-import BuilderHistoryControls from '../../../components/builder/BuilderHistoryControls';
-import BuilderPreviewControls from '../../../components/builder/BuilderPreviewControls';
-import BuilderSaveStatus from '../../../components/builder/BuilderSaveStatus';
-import RichTextEditor from '../../../components/RichTextEditor';
+import { useConfirm, AccessibleModal } from '../../../components/Dialog';
+import { useToast } from '../../../components/Toast';
+import EditorToolbar from './EditorToolbar';
+import EditorDialogs from './EditorDialogs';
+import LayersPanel from './LayersPanel';
+import MobileLayoutInspector from './MobileLayoutInspector';
 import WebVersionHistoryPanel from '../WebVersionHistoryPanel';
-import { resolveUrl, BLOCK_TYPES, DEFAULT_SECTION, makeDefaultBlockContent, SECTION_LAYOUTS, SPACING_PRESETS } from './editorUtils';
+import { resolveUrl, BLOCK_TYPES, DEFAULT_SECTION, makeDefaultBlockContent, SECTION_LAYOUTS, SPACING_PRESETS, createBlock, createSection, duplicateBlock as duplicateBlockEntity, duplicateSection as duplicateSectionEntity, autoStackFluid } from './editorUtils';
 import {
   BaseEditableText,
-  TextToolbar,
-  MarkdownContentEditor,
   HeroBlock,
   BaseEditableImage,
   BaseEditableButton,
   BackgroundImageDialog,
   EditableBlock,
-  SliderBlockEditor,
   StructuredBlockEditor,
   AddSectionModal,
   SectionWrapper,
   AddBlockButton,
 } from './editorComponents';
 import BlockContent from './BlockContent';
-import WebCraftRoot, { CraftCanvas } from './WebCraftRoot';
-import SliderInspectorPanel from './SliderInspectorPanel';
+import ReadOnlyBlockContent from './ReadOnlyBlockContent';
+import PublicHome from '../../public/Home';
+import FluidSection from './fluid/FluidSection.jsx';
 export default function WebEditor() {
   const { slug: routeSlug } = useParams();
   const pageSlug = routeSlug || 'home';
 
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null); // { status, message } | null
   const [saving, setSaving] = useState(false);
   const [pageData, setPageData] = useState(null);
   // sections is the canonical top-level state; blocks is kept only for legacy grid nested blocks
@@ -52,46 +45,87 @@ export default function WebEditor() {
   const [blockPaletteTarget, setBlockPaletteTarget] = useState(null);
   // Section modal: null = closed, number = insert after that index (-1 = at top)
   const [addSectionAfterIndex, setAddSectionAfterIndex] = useState(null);
-  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
+  const [saveStatus, setSaveStatus] = useState('clean'); // 'clean' | 'dirty' | 'saving' | 'saved' | 'error'
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const [isPublished, setIsPublished] = useState(true);
-  const [publishSaving, setPublishSaving] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showLayersPanel, setShowLayersPanel] = useState(false);
+  const [announcement, setAnnouncement] = useState(''); // screen-reader-only live region
   const [templateSaving, setTemplateSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [lastChangeTime, setLastChangeTime] = useState(0);
+  const [viewMode, setViewMode] = useState('live'); // 'live' | 'edit'
+  const [transitionDirection, setTransitionDirection] = useState(null); // 'enter' | 'exit' | null
+  const [isExiting, setIsExiting] = useState(false);
+  const [hasPublishedSnapshot, setHasPublishedSnapshot] = useState(false);
+  const [publishSaving, setPublishSaving] = useState(false);
+  const [viewport, setViewport] = useState('desktop'); // 'desktop' | 'mobile'
   const saveRef = useRef();
-  const craftHistoryRef = useRef(null);
-  const USE_CRAFT = true; // Step 5.3 — Craft.js canvas engine
+  const [selectedBlockIds, setSelectedBlockIds] = useState(() => new Set());
+
+  // Accessible confirm dialog (replaces window.confirm)
+  const { confirmDialog, ConfirmDialogMount } = useConfirm();
+  // Toast notifications (used for delete-undo pattern)
+  const { toast, ToastMount } = useToast();
+
+  // ─── Dirty-exit protection ────────────────────────────────────────────────
+  // beforeunload — catches tab close, refresh, and external navigation.
+  // In-app route navigation (sidebar links, back button) is handled by the
+  // browser's native beforeunload when the user clicks a link, plus the
+  // handleExitEdit confirm dialog for the editor's own Exit button.
+  // (Note: useBlocker requires a data router; this app uses BrowserRouter,
+  //  so we rely on beforeunload + explicit confirm in handleExitEdit.)
+  const isDirty = saveStatus === 'dirty' || saveStatus === 'error';
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires this
+      return '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 
   // Wrapper components that notify parent of editing state
   const EditableText = useCallback((props) => (
     <BaseEditableText
       {...props}
-      onEditingStart={() => { setIsEditing(true); props.onEditingStart?.(); }}
+      onEditingStart={() => { props.onEditingStart?.(); }}
       onEditingEnd={(e) => {
-        const next = e?.relatedTarget;
-        if (!next?.closest('.field-toolbar')) {
-          setIsEditing(false);
-        }
         props.onEditingEnd?.(e);
       }}
     />
   ), []);
 
   const EditableImage = useCallback((props) => (
-    <BaseEditableImage {...props} onEditingStart={() => setIsEditing(true)} onEditingEnd={() => setIsEditing(false)} />
+    <BaseEditableImage {...props} onEditingStart={() => props.onEditingStart?.()} onEditingEnd={() => props.onEditingEnd?.()} />
   ), []);
 
   const EditableButton = useCallback((props) => (
-    <BaseEditableButton {...props} onEditingStart={() => setIsEditing(true)} onEditingEnd={() => setIsEditing(false)} />
+    <BaseEditableButton {...props} onEditingStart={() => props.onEditingStart?.()} onEditingEnd={() => props.onEditingEnd?.()} />
   ), []);
+
+  // Selection handler — supports Cmd/Ctrl+click for multi-select
+  const handleSelectBlock = useCallback((id, { additive = false } = {}) => {
+    setSelectedBlockIds((prev) => {
+      if (additive) {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      }
+      return new Set([id]);
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedBlockIds(new Set()), []);
 
   const fetchPage = useCallback(async () => {
     try {
       setLoading(true);
+      setFetchError(null);
       const { data } = await api.get(`/web/admin/${pageSlug}`);
       setPageData(data);
       const loadedSections = data.sections && data.sections.length > 0
@@ -104,12 +138,20 @@ export default function WebEditor() {
       setHeader(data.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} });
       setFooter(data.footer || { sections: [], copyright: '', styles: {} });
       setIsPublished(data.isPublished ?? true);
+      setHasPublishedSnapshot(data.hasPublishedSnapshot ?? false);
 
       const initialState = { sections: loadedSections, header: data.header || {}, footer: data.footer || {} };
       setHistory([initialState]);
       setHistoryIndex(0);
     } catch (error) {
       console.error('Failed to fetch page data:', error);
+      const status = error?.response?.status;
+      let message = 'Something went wrong while loading this page.';
+      if (status === 401) message = 'Your session has expired. Please sign in again.';
+      else if (status === 403) message = 'You do not have permission to edit this page.';
+      else if (status === 404) message = `Page "${pageSlug}" was not found.`;
+      else if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network')) message = 'Network error — check your connection and try again.';
+      setFetchError({ status, message });
     } finally {
       setLoading(false);
     }
@@ -123,6 +165,8 @@ export default function WebEditor() {
   // Save function ref to avoid stale closures and dependency issues
   saveRef.current = async () => {
     if (saveStatus === 'saving') return;
+    // No-op if there are no unsaved changes
+    if (saveStatus === 'clean' || saveStatus === 'saved') return;
 
     try {
       setSaveStatus('saving');
@@ -136,20 +180,102 @@ export default function WebEditor() {
         })),
       });
       setPageData(data);
+      const savedAt = new Date();
+      setLastSavedAt(savedAt);
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      // After 2s, transition from "Saved" (green) to "clean" (muted) — still truthful
+      setTimeout(() => setSaveStatus((s) => (s === 'saved' ? 'clean' : s)), 2000);
     } catch (error) {
       console.error('Failed to save page:', error);
+      // Stay in 'error' until the user explicitly retries — no auto-clear
       setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
-  const handleUndo = () => {
-    if (USE_CRAFT && craftHistoryRef.current?.canUndo?.()) {
-      craftHistoryRef.current.undo();
+  const handlePublish = async () => {
+    if (publishSaving) return;
+    setPublishSaving(true);
+    try {
+      // Save first — never publish stale draft state
+      if (saveStatus === 'dirty' || saveStatus === 'error') {
+        await new Promise((resolve, reject) => {
+          const prev = saveStatus;
+          setSaveStatus('saving');
+          api.put(`/web/${pageSlug}`, {
+            header,
+            footer,
+            sections: sections.map((sec, sIdx) => ({
+              ...sec,
+              order: sIdx,
+              blocks: (sec.blocks || []).map((b, bIdx) => ({ ...b, order: bIdx })),
+            })),
+          })
+            .then(({ data }) => {
+              setPageData(data);
+              setLastSavedAt(new Date());
+              setSaveStatus('clean');
+              resolve();
+            })
+            .catch((err) => {
+              console.error('Failed to save before publish:', err);
+              setSaveStatus('error');
+              reject(err);
+            });
+          void prev;
+        });
+      }
+      await api.post(`/web/${pageSlug}/publish`);
+      setHasPublishedSnapshot(true);
+      setIsPublished(true);
+      toast('Page published', 'success');
+    } catch (error) {
+      console.error('Failed to publish page:', error);
+      toast('Failed to publish page. Please try again.', 'error');
+    } finally {
+      setPublishSaving(false);
+    }
+  };
+
+  const transitionToViewMode = useCallback((nextMode) => {
+    if (nextMode === viewMode) return;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setTransitionDirection(nextMode === 'edit' ? 'enter' : 'exit');
+    setIsExiting(false);
+    if (document.startViewTransition && !prefersReducedMotion) {
+      document.startViewTransition(() => setViewMode(nextMode));
       return;
     }
+    setViewMode(nextMode);
+  }, [viewMode]);
+
+  const handleExitEdit = async () => {
+    // Confirm before discarding unsaved changes
+    if (saveStatus === 'dirty' || saveStatus === 'error') {
+      const ok = await confirmDialog({
+        title: 'Exit without saving?',
+        message: 'You have unsaved changes that will be lost when you exit edit mode.',
+        confirmLabel: 'Exit without saving',
+        cancelLabel: 'Stay and save',
+        variant: 'warning',
+      });
+      if (!ok) return;
+      // Reset save status since the user explicitly chose to discard
+      setSaveStatus('clean');
+    }
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      transitionToViewMode('live');
+      return;
+    }
+    setTransitionDirection('exit');
+    setIsExiting(true);
+    setTimeout(() => {
+      setViewMode('live');
+      setIsExiting(false);
+    }, 320);
+  };
+
+  const handleUndo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       const state = history[newIndex];
@@ -157,14 +283,17 @@ export default function WebEditor() {
       setSections(state.sections);
       setHeader(state.header || header);
       setFooter(state.footer || footer);
+      setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
+      // Clear selection if selected blocks no longer exist in the restored state
+      if (selectedBlockIds.size > 0) {
+        const allBlockIds = new Set((state.sections || []).flatMap((s) => (s.blocks || []).map((b) => b.id)));
+        const surviving = new Set([...selectedBlockIds].filter((id) => allBlockIds.has(id)));
+        if (surviving.size !== selectedBlockIds.size) setSelectedBlockIds(surviving);
+      }
     }
   };
 
   const handleRedo = () => {
-    if (USE_CRAFT && craftHistoryRef.current?.canRedo?.()) {
-      craftHistoryRef.current.redo();
-      return;
-    }
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       const state = history[newIndex];
@@ -172,6 +301,13 @@ export default function WebEditor() {
       setSections(state.sections);
       setHeader(state.header || header);
       setFooter(state.footer || footer);
+      setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
+      // Clear selection if selected blocks no longer exist in the restored state
+      if (selectedBlockIds.size > 0) {
+        const allBlockIds = new Set((state.sections || []).flatMap((s) => (s.blocks || []).map((b) => b.id)));
+        const surviving = new Set([...selectedBlockIds].filter((id) => allBlockIds.has(id)));
+        if (surviving.size !== selectedBlockIds.size) setSelectedBlockIds(surviving);
+      }
     }
   };
 
@@ -206,6 +342,45 @@ export default function WebEditor() {
         setAddSectionAfterIndex(null);
       }
 
+      // Arrow keys: Nudge selected block(s) by 1 grid cell (Shift = 3 cells)
+      if (selectedBlockIds.size > 0 && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 3 : 1;
+        const isMobile = viewport === 'mobile';
+        const newSections = sections.map((sec) => {
+          const gridColumns = isMobile ? 6 : (sec.fluidConfig?.gridColumns || 24);
+          const blocks = (sec.blocks || []).map((block) => {
+            if (!selectedBlockIds.has(block.id)) return block;
+            const fluidKey = isMobile ? 'fluidMobile' : 'fluid';
+            const defaultFluid = isMobile
+              ? { colStart: 1, colEnd: 7, rowStart: 1, rowEnd: 3, zIndex: 0 }
+              : { colStart: 1, colEnd: 5, rowStart: 1, rowEnd: 3, zIndex: 0 };
+            const fluid = block[fluidKey] || defaultFluid;
+            let { colStart, colEnd, rowStart, rowEnd } = fluid;
+            if (e.key === 'ArrowLeft')  { colStart = Math.max(1, colStart - step); colEnd = colStart + (fluid.colEnd - fluid.colStart); }
+            if (e.key === 'ArrowRight') { colEnd = Math.min(gridColumns + 1, colEnd + step); colStart = colEnd - (fluid.colEnd - fluid.colStart); }
+            if (e.key === 'ArrowUp')    { rowStart = Math.max(1, rowStart - step); rowEnd = rowStart + (fluid.rowEnd - fluid.rowStart); }
+            if (e.key === 'ArrowDown')  { rowEnd = rowEnd + step; rowStart = rowEnd - (fluid.rowEnd - fluid.rowStart); }
+            return { ...block, [fluidKey]: { ...fluid, colStart, colEnd, rowStart, rowEnd } };
+          });
+          return { ...sec, blocks };
+        });
+        setSections(newSections);
+        saveToHistory(newSections, header, footer);
+      }
+
+      // Delete/Backspace: Delete selected block(s)
+      if (selectedBlockIds.size > 0 && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        const newSections = sections.map((sec) => ({
+          ...sec,
+          blocks: (sec.blocks || []).filter((b) => !selectedBlockIds.has(b.id)),
+        }));
+        setSections(newSections);
+        saveToHistory(newSections, header, footer);
+        setSelectedBlockIds(new Set());
+      }
+
       // Ctrl/Cmd + P: Preview
       if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
         e.preventDefault();
@@ -227,56 +402,100 @@ export default function WebEditor() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [history, historyIndex, sections]);
+  }, [history, historyIndex, sections, selectedBlockIds, header, footer, viewport]);
 
-  // Auto-save with debounce - only when user is not actively editing and changes have been made
-  useEffect(() => {
-    if (isEditing || historyIndex < 0 || lastChangeTime === 0) return;
-
-    const timer = setTimeout(() => {
-      saveRef.current();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [isEditing, historyIndex, lastChangeTime]);
-
+  const MAX_HISTORY = 50; // Bound history to prevent memory growth
   const saveToHistory = (newSections, newHeader, newFooter) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push({ sections: newSections, header: newHeader, footer: newFooter });
+    // Bound: drop oldest entries if exceeding MAX_HISTORY
+    while (newHistory.length > MAX_HISTORY) newHistory.shift();
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     setLastChangeTime(Date.now());
+    // Mark unsaved — but don't overwrite an in-flight saving/error status
+    setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
   };
+
+  // Debounced history commit for typing — groups rapid contentEditable
+  // changes into a single history entry per ~800ms idle interval.
+  const pendingHistoryRef = useRef(null);
+  const saveToHistoryDebounced = useCallback((newSections, newHeader, newFooter) => {
+    // Update state immediately, but defer the history push
+    setSections(newSections);
+    setLastChangeTime(Date.now());
+    setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
+    // Store the latest state; the timeout will commit it
+    pendingHistoryRef.current = { sections: newSections, header: newHeader, footer: newFooter };
+    if (!window.__webEditorHistoryTimer) {
+      window.__webEditorHistoryTimer = setTimeout(() => {
+        if (pendingHistoryRef.current) {
+          const { sections: s, header: h, footer: f } = pendingHistoryRef.current;
+          pendingHistoryRef.current = null;
+          saveToHistory(s, h, f);
+        }
+        window.__webEditorHistoryTimer = null;
+      }, 800);
+    }
+  }, [history, historyIndex]);
 
   // —— Section-level operations ————————————————————————————————————————————————
 
   const addSection = (sectionConfig, afterIndex) => {
-    const newSection = { ...DEFAULT_SECTION, ...sectionConfig, blocks: sectionConfig.blocks || [] };
+    const newSection = createSection(sectionConfig);
     const insertAt = afterIndex == null ? sections.length : afterIndex + 1;
     const newSections = [...sections.slice(0, insertAt), newSection, ...sections.slice(insertAt)];
     setSections(newSections);
-    if (!USE_CRAFT) saveToHistory(newSections, header, footer);
+    saveToHistory(newSections, header, footer);
     setAddSectionAfterIndex(null);
   };
 
   const deleteSection = (sIdx) => {
+    const deletedSection = sections[sIdx];
+    if (!deletedSection) return;
     const newSections = sections.filter((_, i) => i !== sIdx);
     setSections(newSections);
-    if (!USE_CRAFT) saveToHistory(newSections, header, footer);
+    saveToHistory(newSections, header, footer);
+    // Undo toast — restore the section at its original position
+    toast('Section deleted', {
+      type: 'info',
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setSections((prev) => {
+            const restored = [...prev.slice(0, sIdx), deletedSection, ...prev.slice(sIdx)];
+            saveToHistory(restored, header, footer);
+            return restored;
+          });
+          setAnnouncement('Section restored');
+        },
+      },
+    });
+    setAnnouncement(`Section ${sIdx + 1} deleted`);
   };
 
   const duplicateSection = (sIdx) => {
     const sec = sections[sIdx];
-    const newSec = JSON.parse(JSON.stringify(sec));
-    delete newSec.id;
+    const newSec = duplicateSectionEntity(sec);
     const newSections = [...sections.slice(0, sIdx + 1), newSec, ...sections.slice(sIdx + 1)];
     setSections(newSections);
-    if (!USE_CRAFT) saveToHistory(newSections, header, footer);
+    saveToHistory(newSections, header, footer);
+  };
+
+  const moveSection = (sIdx, direction) => {
+    const newIdx = sIdx + direction;
+    if (newIdx < 0 || newIdx >= sections.length) return;
+    const newSections = [...sections];
+    [newSections[sIdx], newSections[newIdx]] = [newSections[newIdx], newSections[sIdx]];
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
   };
 
   const updateSection = (sIdx, updates) => {
     const newSections = sections.map((s, i) => i === sIdx ? { ...s, ...updates } : s);
     setSections(newSections);
-    if (!USE_CRAFT) saveToHistory(newSections, header, footer);
+    saveToHistory(newSections, header, footer);
   };
 
   // —— Block-level operations (within a section) ———————————————————————————————
@@ -284,12 +503,14 @@ export default function WebEditor() {
   const updateSectionBlocks = (sIdx, newBlocks) => {
     const newSections = sections.map((s, i) => i === sIdx ? { ...s, blocks: newBlocks } : s);
     setSections(newSections);
-    if (!USE_CRAFT) saveToHistory(newSections, header, footer);
+    saveToHistory(newSections, header, footer);
   };
 
   const addBlockToSection = (sIdx, type) => {
     const sec = sections[sIdx];
-    const newBlock = { type, content: makeDefaultBlockContent(type) };
+    const gridColumns = sec.fluidConfig?.gridColumns || 24;
+    const fluid = autoStackFluid(sec.blocks || [], gridColumns);
+    const newBlock = createBlock(type, { fluid });
     updateSectionBlocks(sIdx, [...(sec.blocks || []), newBlock]);
     setBlockPaletteTarget(null);
   };
@@ -306,28 +527,51 @@ export default function WebEditor() {
       if (i !== bIdx) return b;
       return { ...b, content: { ...b.content, ...contentUpdates } };
     });
-    updateSectionBlocks(sIdx, newBlocks);
+    const newSections = sections.map((s, i) => i === sIdx ? { ...s, blocks: newBlocks } : s);
+    // Use debounced history for content changes (typing) to group keystrokes
+    saveToHistoryDebounced(newSections, header, footer);
   };
 
   const deleteBlock = (sIdx, bIdx) => {
     const sec = sections[sIdx];
+    const deletedBlock = sec?.blocks?.[bIdx];
+    if (!deletedBlock) return;
     updateSectionBlocks(sIdx, (sec.blocks || []).filter((_, i) => i !== bIdx));
-  };
-
-  const moveBlock = (sIdx, fromIndex, toIndex) => {
-    const sec = sections[sIdx];
-    const newBlocks = [...(sec.blocks || [])];
-    const [moved] = newBlocks.splice(fromIndex, 1);
-    newBlocks.splice(toIndex, 0, moved);
-    updateSectionBlocks(sIdx, newBlocks);
+    // Undo toast — restore the block at its original position
+    toast('Block deleted', {
+      type: 'info',
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setSections((prev) => prev.map((s, i) => {
+            if (i !== sIdx) return s;
+            const restoredBlocks = [...(s.blocks || []).slice(0, bIdx), deletedBlock, ...(s.blocks || []).slice(bIdx)];
+            saveToHistory(prev.map((s2, j) => j === sIdx ? { ...s2, blocks: restoredBlocks } : s2), header, footer);
+            return { ...s, blocks: restoredBlocks };
+          }));
+          setAnnouncement('Block restored');
+        },
+      },
+    });
+    setAnnouncement(`Block deleted from section ${sIdx + 1}`);
   };
 
   const duplicateBlock = (sIdx, bIdx) => {
     const sec = sections[sIdx];
     const block = sec.blocks[bIdx];
-    const newBlock = { ...block, content: JSON.parse(JSON.stringify(block.content)) };
-    delete newBlock.id;
+    const newBlock = duplicateBlockEntity(block);
     const newBlocks = [...sec.blocks.slice(0, bIdx + 1), newBlock, ...sec.blocks.slice(bIdx + 1)];
+    updateSectionBlocks(sIdx, newBlocks);
+  };
+
+  const moveBlock = (sIdx, bIdx, direction) => {
+    const sec = sections[sIdx];
+    if (!sec?.blocks) return;
+    const newIdx = bIdx + direction;
+    if (newIdx < 0 || newIdx >= sec.blocks.length) return;
+    const newBlocks = [...sec.blocks];
+    [newBlocks[bIdx], newBlocks[newIdx]] = [newBlocks[newIdx], newBlocks[bIdx]];
     updateSectionBlocks(sIdx, newBlocks);
   };
 
@@ -341,12 +585,6 @@ export default function WebEditor() {
     updateBlockContent(sIdx, parentBIdx, { items });
   };
 
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    const sIdx = parseInt(result.source.droppableId.replace('section-', ''), 10);
-    moveBlock(sIdx, result.source.index, result.destination.index);
-  };
-
   const renderEditableBlock = (block, sIdx, bIdx) => (
     <BlockContent
       block={block}
@@ -358,6 +596,35 @@ export default function WebEditor() {
       onAddNestedBlock={(colIndex, type) => addNestedBlock(sIdx, bIdx, colIndex, type)}
     />
   );
+
+  // ── Error state: fetch failed — show retry + back to pages ───────────────
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-raised p-6">
+        <div className="max-w-md w-full bg-surface rounded-2xl shadow-modal p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-danger-light flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-7 h-7 text-danger" />
+          </div>
+          <h2 className="text-xl font-semibold text-text-base mb-2">Couldn't load page</h2>
+          <p className="text-sm text-muted mb-6">{fetchError.message}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => fetchPage()}
+              className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary-hover rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary min-h-[44px]"
+            >
+              Retry
+            </button>
+            <a
+              href="/hub-admin/web/pages"
+              className="px-4 py-2 text-sm font-medium text-text-base bg-surface border border-border rounded-lg hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary min-h-[44px] inline-flex items-center"
+            >
+              Back to Pages
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -376,132 +643,150 @@ export default function WebEditor() {
     mobile: 'max-w-md mx-auto border-x-4 border-border shadow-dropdown'
   };
 
-  return (
-    <WebCraftRoot
-      enabled={USE_CRAFT}
-      sections={sections}
-      historyApiRef={craftHistoryRef}
-      onAddSectionBelow={(i) => setAddSectionAfterIndex(i)}
-      onAddBlock={(sectionIndex) => setBlockPaletteTarget({ sectionIndex })}
-      onDeleteSection={(i) => deleteSection(i)}
-      onDuplicateSection={(i) => duplicateSection(i)}
-      onCraftChange={(nextSections) => {
-        setSections(nextSections);
-        setLastChangeTime(Date.now());
-      }}
-    >
-    <div className="min-h-screen bg-surface-raised">
-      {/* Improved top toolbar */}
-      <div className="bg-surface border-b border-border px-6 py-4 sticky top-0 z-40 shadow-card">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
+  // ── Live view mode: renders the actual public site (read-only) ──────────
+  if (viewMode === 'live') {
+    // Build a preview payload from the editor's current state so the live
+    // view reflects unpublished draft edits, not just the saved DB row.
+    const previewData = {
+      ...pageData,
+      sections,
+      header,
+      footer,
+      // Keep siteStyle / title / template coming from the fetched page so the
+      // public renderer has the same tokens & chrome as the real site.
+      siteStyle: pageData?.siteStyle,
+      title: pageData?.title,
+      template: pageData?.template,
+    };
+
+    return (
+      <div className={`min-h-screen bg-surface ${transitionDirection === 'enter' ? 'editor-stage-live-exit' : transitionDirection === 'exit' ? 'editor-stage-live-enter' : ''}`} style={{ viewTransitionName: 'editor-stage' }}>
+        {/* Minimal live view toolbar */}
+        <div className="bg-surface border-b border-border px-6 py-3 sticky top-0 z-40 shadow-sm">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-dropdown">
-                <LayoutGrid className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-base">Website Editor</h1>
-                <p className="text-small text-muted">Page: {pageSlug}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <BuilderPreviewControls value={previewDevice} onChange={setPreviewDevice} />
-            <BuilderHistoryControls onUndo={handleUndo} onRedo={handleRedo} canUndo={USE_CRAFT || historyIndex > 0} canRedo={USE_CRAFT || historyIndex < history.length - 1} />
-
-            {/* Publish / Draft toggle */}
-            <button
-              onClick={async () => {
-                if (!pageData?.id || publishSaving) return;
-                setPublishSaving(true);
-                try {
-                  await api.patch(`/web/pages/${pageData.id}`, { isPublished: !isPublished });
-                  setIsPublished(p => !p);
-                } catch (e) {
-                  console.error('Failed to toggle publish status:', e);
-                } finally {
-                  setPublishSaving(false);
-                }
-              }}
-              disabled={publishSaving}
-              className={`px-4 py-2.5 min-h-[44px] rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed ${
-                isPublished
-                  ? 'bg-success/10 text-success hover:bg-success/20'
-                  : 'bg-surface-raised text-muted hover:bg-border'
-              }`}
-              title={isPublished ? 'Page is published — click to set to Draft' : 'Page is a draft — click to Publish'}
-            >
-              <div className={`w-2 h-2 rounded-full ${isPublished ? 'bg-success' : 'bg-muted'}`} />
-              {publishSaving ? 'Updating...' : isPublished ? 'Published' : 'Draft'}
-            </button>
-
-            <div className="flex min-w-[120px] justify-center rounded-lg border border-border bg-surface-raised px-4 py-2 text-small font-medium">
-              <BuilderSaveStatus status={saveStatus} />
-            </div>
-
-            {/* Actions - improved styling */}
-            <div className="flex items-center gap-3">
+              {/* Edit button — top left */}
               <button
-                onClick={async () => {
-                  const name = window.prompt('Name this reusable page template:', pageData?.title || pageSlug);
-                  if (!name?.trim() || templateSaving) return;
-                  setTemplateSaving(true);
-                  try {
-                    await api.post('/web/page-templates', { name: name.trim(), snapshot: { template: pageData?.template, header, footer, sections } });
-                  } catch (error) {
-                    console.error('Failed to save page template:', error);
-                  } finally {
-                    setTemplateSaving(false);
-                  }
-                }}
-                disabled={templateSaving}
-                className="px-4 py-2.5 min-h-[44px] text-muted hover:bg-surface-raised rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50"
-                title="Save this page as a reusable template"
+                onClick={() => transitionToViewMode('edit')}
+                className="px-5 py-2 min-h-[40px] bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover flex items-center gap-2 transition-colors font-medium text-sm shadow-sm"
               >
-                <Copy className="w-4 h-4" />
-                <span className="hidden sm:inline">{templateSaving ? 'Saving—' : 'Save template'}</span>
+                <Edit3 className="w-4 h-4" />
+                Edit
               </button>
-              <button
-                onClick={() => setShowVersionHistory(true)}
-                className="px-4 py-2.5 min-h-[44px] text-muted hover:bg-surface-raised rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
-                title="Version history"
-              >
-                <History className="w-4 h-4" />
-                <span className="hidden sm:inline">History</span>
-              </button>
-              <button
-                onClick={() => setShowKeyboardHelp(true)}
-                className="px-4 py-2.5 min-h-[44px] text-muted hover:bg-surface-raised rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
-                title="Keyboard shortcuts"
-              >
-                <Type className="w-4 h-4" />
-                <span className="hidden sm:inline">Shortcuts</span>
-              </button>
-              <button
-                onClick={() => window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank')}
-                className="px-4 py-2.5 min-h-[44px] text-muted hover:bg-surface-raised rounded-xl flex items-center gap-2 transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
-              >
-                <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline">Preview</span>
-              </button>
-              <button
-                onClick={() => saveRef.current()}
-                disabled={saveStatus === 'saving'}
-                className="px-5 py-2.5 min-h-[44px] bg-primary text-primary-foreground rounded-xl hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors duration-150 font-medium shadow-dropdown focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed"
-              >
-                <Save className="w-4 h-4" />
-                Save
-              </button>
+              {/* Publish status badge */}
+              {hasPublishedSnapshot && isPublished && (
+                <span className="flex items-center gap-1.5 text-xs text-success bg-success/10 px-2 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                  Published
+                </span>
+              )}
+              {!hasPublishedSnapshot && (
+                <span className="flex items-center gap-1.5 text-xs text-muted bg-surface-raised px-2 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-muted" />
+                  Not yet published
+                </span>
+              )}
+              {hasPublishedSnapshot && !isPublished && (
+                <span className="flex items-center gap-1.5 text-xs text-warning bg-warning/10 px-2 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-warning" />
+                  Unpublished
+                </span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Live preview — render the actual public site */}
+        <div className="bg-surface">
+          {sections.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+              <p className="text-muted">This page has no content yet</p>
+              <button
+                onClick={() => transitionToViewMode('edit')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
+              >
+                <Edit3 className="w-5 h-5" />
+                Start Editing
+              </button>
+            </div>
+          ) : (
+            <PublicHome previewMode previewData={previewData} />
+          )}
+        </div>
       </div>
+    );
+  }
+
+  // ── Edit mode: full-screen overlay editor ──────────────────────────────
+  return (
+    <div className={`fixed inset-0 z-[100] bg-surface-raised overflow-y-auto ${isExiting ? 'editor-stage-edit-exit' : 'editor-stage-edit-enter'}`} style={{ viewTransitionName: 'editor-stage' }}>
+      <EditorToolbar
+        saveStatus={saveStatus}
+        lastSavedAt={lastSavedAt}
+        saveRef={saveRef}
+        onExit={handleExitEdit}
+        pageTitle={pageData?.title}
+        pageSlug={pageSlug}
+        hasPublishedSnapshot={hasPublishedSnapshot}
+        isPublished={isPublished}
+        viewport={viewport}
+        previewDevice={previewDevice}
+        onBreakpointChange={(bp) => {
+          if (bp === 'mobile') {
+            setViewport('mobile');
+            setPreviewDevice('mobile');
+          } else if (bp === 'tablet') {
+            setViewport('desktop');
+            setPreviewDevice('tablet');
+          } else {
+            setViewport('desktop');
+            setPreviewDevice('desktop');
+          }
+        }}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+        onPublish={handlePublish}
+        publishSaving={publishSaving}
+        onSaveTemplate={async () => {
+          const name = window.prompt('Name this reusable page template:', pageData?.title || pageSlug);
+          if (!name?.trim() || templateSaving) return;
+          setTemplateSaving(true);
+          try {
+            await api.post('/web/page-templates', { name: name.trim(), snapshot: { template: pageData?.template, header, footer, sections } });
+            toast('Template saved', 'success');
+          } catch (error) {
+            console.error('Failed to save page template:', error);
+            toast('Failed to save template. Please try again.', 'error');
+          } finally {
+            setTemplateSaving(false);
+          }
+        }}
+        templateSaving={templateSaving}
+        onShowVersionHistory={() => setShowVersionHistory(true)}
+        onShowKeyboardHelp={() => setShowKeyboardHelp(true)}
+        onToggleLayersPanel={() => setShowLayersPanel(s => !s)}
+        showLayersPanel={showLayersPanel}
+        toast={toast}
+      />
 
       {showVersionHistory && (
         <WebVersionHistoryPanel
           slug={pageSlug}
           onClose={() => setShowVersionHistory(false)}
+          onRestored={(restoredPage) => {
+            // Restore from version history — marks dirty so user can save
+            const restoredSections = restoredPage?.sections || [];
+            setSections(restoredSections);
+            setHeader(restoredPage?.header || header);
+            setFooter(restoredPage?.footer || footer);
+            setShowVersionHistory(false);
+            setSaveStatus('dirty');
+            // Reset history so the restored state is the new baseline
+            setHistory([{ sections: restoredSections, header: restoredPage?.header || {}, footer: restoredPage?.footer || {} }]);
+            setHistoryIndex(0);
+          }}
           onRestored={(page) => {
             const restoredSections = page.sections || [];
             const restoredHeader = page.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} };
@@ -517,32 +802,36 @@ export default function WebEditor() {
         />
       )}
 
-      {/* Main editor area — sections */}
-      <div className="flex">
+      {/* Main editor area — sections + optional layers panel */}
+      <div className="flex min-h-screen">
+        {showLayersPanel && (
+          <LayersPanel
+            sections={sections}
+            selectedBlockIds={selectedBlockIds}
+            onSelectSection={(sIdx) => { setSelectedBlockIds(new Set()); }}
+            onSelectBlock={(sIdx, bIdx) => {
+              const block = sections[sIdx]?.blocks?.[bIdx];
+              if (block) setSelectedBlockIds(new Set([block.id]));
+            }}
+            onMoveSection={moveSection}
+            onDuplicateSection={duplicateSection}
+            onDeleteSection={deleteSection}
+            onMoveBlock={moveBlock}
+            onDuplicateBlock={duplicateBlock}
+            onDeleteBlock={deleteBlock}
+            onClose={() => setShowLayersPanel(false)}
+          />
+        )}
         <div className="flex-1">
-          <div className={`min-h-screen ${previewDevice === 'desktop' ? 'bg-surface' : 'bg-surface-raised py-8'}`}>
-            <div className={`${deviceClasses[previewDevice]} bg-surface min-h-screen ${previewDevice !== 'desktop' ? 'rounded-xl overflow-hidden' : ''}`}>
+          <div className={`min-h-screen ${(previewDevice !== 'desktop' || viewport === 'mobile') ? 'py-8' : ''}`}>
+            <div className={`${deviceClasses[previewDevice]} min-h-screen bg-surface ${previewDevice !== 'desktop' ? 'rounded-xl overflow-hidden' : ''} ${viewport === 'mobile' ? 'max-w-md mx-auto border-x-4 border-border shadow-dropdown' : ''}`}>
 
-              {USE_CRAFT ? (
-                <>
-                  {sections.length === 0 && (
-                    <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 p-8">
-                      <p className="text-muted">Canvas is empty — add a section to begin</p>
-                      <button
-                        type="button"
-                        onClick={() => setAddSectionAfterIndex(-1)}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
-                      >
-                        <Plus className="w-5 h-5" />
-                        Add Section
-                      </button>
-                    </div>
-                  )}
-                  <CraftCanvas className="min-h-[60vh]" />
-                </>
-              ) : (
-              <>
-
+              {/* ── Fluid Engine canvas ───────────────────────────────────────
+                  Each section is a 24-column CSS Grid. Blocks are positioned
+                  via grid coordinates (colStart/colEnd/rowStart/rowEnd) and
+                  can be freely dragged, resized, and layered (zIndex).
+                  Press "G" to toggle the grid overlay.
+              */}
 
               {/* Empty state */}
               {sections.length === 0 && (
@@ -564,285 +853,100 @@ export default function WebEditor() {
                 </div>
               )}
 
-              {/* Sections list */}
+              {/* Fluid sections */}
               {sections.map((section, sIdx) => (
-                <SectionWrapper
+                <FluidSection
                   key={section.id || sIdx}
                   section={section}
                   sectionIndex={sIdx}
-                  onAddSectionBelow={(i) => setAddSectionAfterIndex(i)}
+                  selectedBlockIds={selectedBlockIds}
+                  onSelectBlock={handleSelectBlock}
+                  onClearSelection={clearSelection}
+                  onUpdateBlock={updateBlock}
+                  onUpdateBlockContent={updateBlockContent}
+                  onUpdateSection={updateSection}
+                  onDeleteBlock={deleteBlock}
+                  onDuplicateBlock={duplicateBlock}
+                  onAddBlock={(sIdx) => setBlockPaletteTarget({ sectionIndex: sIdx })}
                   onDeleteSection={deleteSection}
                   onDuplicateSection={duplicateSection}
-                  onUpdateSection={updateSection}
-                >
-                  {/* Blocks inside section — multi-column grid if columns > 1 */}
-                  {section.columns > 1 ? (
-                    <div
-                      className="grid"
-                      style={{
-                        gridTemplateColumns: `repeat(${section.columns}, 1fr)`,
-                        gap: `${section.gap ?? 24}px`,
-                      }}
-                    >
-                      {Array.from({ length: section.columns }).map((_, colIdx) => {
-                        // Distribute blocks across columns in order
-                        const colBlocks = (section.blocks || []).filter((_, bi) => bi % section.columns === colIdx);
-                        const colBlockIndices = (section.blocks || []).reduce((acc, _, bi) => {
-                          if (bi % section.columns === colIdx) acc.push(bi);
-                          return acc;
-                        }, []);
-                        return (
-                          <div key={colIdx} className="min-h-[60px]">
-                            <DragDropContext onDragEnd={handleDragEnd}>
-                              <Droppable droppableId={`section-${sIdx}`}>
-                                {(provided) => (
-                                  <div {...provided.droppableProps} ref={provided.innerRef}>
-                                    {colBlocks.map((block, i) => {
-                                      const bIdx = colBlockIndices[i];
-                                      return (
-                                        <Draggable key={bIdx} draggableId={`s${sIdx}-b${bIdx}`} index={bIdx}>
-                                          {(provided, snapshot) => (
-                                            <div ref={provided.innerRef} {...provided.draggableProps} className="mb-2">
-                                              <EditableBlock
-                                                block={block}
-                                                index={bIdx}
-                                                onUpdate={(idx, updates) => updateBlock(sIdx, idx, updates)}
-                                                onDelete={(idx) => deleteBlock(sIdx, idx)}
-                                                onMoveUp={(idx) => idx > 0 && moveBlock(sIdx, idx, idx - 1)}
-                                                onMoveDown={(idx) => idx < section.blocks.length - 1 && moveBlock(sIdx, idx, idx + 1)}
-                                                onDuplicate={(idx) => duplicateBlock(sIdx, idx)}
-                                                onUpdateContent={(updates) => updateBlockContent(sIdx, bIdx, updates)}
-                                                saveRef={saveRef}
-                                                isDragging={snapshot.isDragging}
-                                              >
-                                                <div {...provided.dragHandleProps} className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto p-2 cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
-                                                  <GripVertical className="w-5 h-5 text-subtle" />
-                                                </div>
-                                                {renderEditableBlock(block, sIdx, bIdx)}
-                                              </EditableBlock>
-                                            </div>
-                                          )}
-                                        </Draggable>
-                                      );
-                                    })}
-                                    {provided.placeholder}
-                                  </div>
-                                )}
-                              </Droppable>
-                            </DragDropContext>
-                            <AddBlockButton onClick={() => setBlockPaletteTarget({ sectionIndex: sIdx })} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    /* Single-column: blocks stacked vertically */
-                    <DragDropContext onDragEnd={handleDragEnd}>
-                      <Droppable droppableId={`section-${sIdx}`}>
-                        {(provided) => (
-                          <div {...provided.droppableProps} ref={provided.innerRef}>
-                            {(section.blocks || []).map((block, bIdx) => (
-                              <Draggable key={bIdx} draggableId={`s${sIdx}-b${bIdx}`} index={bIdx}>
-                                {(provided, snapshot) => (
-                                  <div ref={provided.innerRef} {...provided.draggableProps} className="mb-2">
-                                    <EditableBlock
-                                      block={block}
-                                      index={bIdx}
-                                      onUpdate={(idx, updates) => updateBlock(sIdx, idx, updates)}
-                                      onDelete={(idx) => deleteBlock(sIdx, idx)}
-                                      onMoveUp={(idx) => idx > 0 && moveBlock(sIdx, idx, idx - 1)}
-                                      onMoveDown={(idx) => idx < section.blocks.length - 1 && moveBlock(sIdx, idx, idx + 1)}
-                                      onDuplicate={(idx) => duplicateBlock(sIdx, idx)}
-                                      onUpdateContent={(updates) => updateBlockContent(sIdx, bIdx, updates)}
-                                      saveRef={saveRef}
-                                      isDragging={snapshot.isDragging}
-                                    >
-                                      <div {...provided.dragHandleProps} className="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto p-2 cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
-                                        <GripVertical className="w-5 h-5 text-subtle" />
-                                      </div>
-                                      {renderEditableBlock(block, sIdx, bIdx)}
-                                    </EditableBlock>
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </DragDropContext>
-                  )}
-
-                  {/* Add Block button — always visible inside section */}
-                  {section.columns <= 1 && (
-                    <div className="px-6 py-3">
-                      <AddBlockButton onClick={() => setBlockPaletteTarget({ sectionIndex: sIdx })} />
-                    </div>
-                  )}
-                </SectionWrapper>
+                  onMoveSectionUp={(i) => moveSection(i, -1)}
+                  onMoveSectionDown={(i) => moveSection(i, 1)}
+                  onAddSectionBelow={(i) => setAddSectionAfterIndex(i)}
+                  EditableText={EditableText}
+                  EditableButton={EditableButton}
+                  EditableImage={EditableImage}
+                  onAddNestedBlock={(sIdx, bIdx, colIndex, type) => addNestedBlock(sIdx, bIdx, colIndex, type)}
+                  readOnly={false}
+                  viewport={viewport}
+                />
               ))}
 
-              {/* Bottom "Add Section" button — shown when page has sections */}
+              {/* Bottom add-section hint */}
               {sections.length > 0 && (
-                <div className="p-8 text-center border-t border-border bg-gradient-to-b from-surface to-surface-raised">
+                <div className="py-8 text-center">
                   <button
                     onClick={() => setAddSectionAfterIndex(sections.length - 1)}
-                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-primary-hover text-primary-foreground rounded-xl hover:from-primary-hover hover:to-primary-hover transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 font-semibold text-lg"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-surface-raised border border-border text-muted hover:text-primary hover:border-primary rounded-xl transition-colors"
                   >
-                    <Plus className="w-6 h-6" />
+                    <Plus className="w-5 h-5" />
                     Add Section
                   </button>
-                  <p className="mt-3 text-sm text-muted">
+                  <p className="text-xs text-muted mt-2">
                     or press <kbd className="px-2 py-0.5 bg-surface-tertiary rounded text-xs font-mono">+</kbd> to add a section
                   </p>
                 </div>
               )}
 
-              </>
-              )}
 
             </div>
           </div>
         </div>
-
-        {/* Right-hand inspector panel — slider settings (shown when a slider block is selected) */}
-        {USE_CRAFT && <SliderInspectorPanel />}
+        {/* Mobile layout inspector — shown when in mobile viewport with a selected block */}
+        {viewport === 'mobile' && selectedBlockIds.size > 0 && (() => {
+          // Find the first selected block and its section index
+          for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+            const sec = sections[sIdx];
+            if (!sec?.blocks) continue;
+            for (let bIdx = 0; bIdx < sec.blocks.length; bIdx++) {
+              if (selectedBlockIds.has(sec.blocks[bIdx].id)) {
+                const block = sec.blocks[bIdx];
+                return (
+                  <MobileLayoutInspector
+                    block={block}
+                    onUpdate={(fluidMobile) => updateSectionBlocks(sIdx, (blocks) => blocks.map((b, i) => i === bIdx ? { ...b, fluidMobile } : b))}
+                    onClose={() => setSelectedBlockIds(new Set())}
+                    onMoveUp={() => moveBlock(sIdx, bIdx, -1)}
+                    onMoveDown={() => moveBlock(sIdx, bIdx, 1)}
+                    canMoveUp={bIdx > 0}
+                    canMoveDown={bIdx < (sec.blocks.length - 1)}
+                  />
+                );
+              }
+            }
+          }
+          return null;
+        })()}
       </div>
 
-      {/* Add Section modal */}
-      {addSectionAfterIndex !== null && (
-        <AddSectionModal
-          onClose={() => setAddSectionAfterIndex(null)}
-          onAdd={(sectionConfig) => addSection(sectionConfig, addSectionAfterIndex)}
-        />
-      )}
+      {/* Dialogs (Add Section, Add Block, Keyboard Help) */}
+      <EditorDialogs
+        addSectionAfterIndex={addSectionAfterIndex}
+        onAddSection={addSection}
+        onCloseAddSection={() => setAddSectionAfterIndex(null)}
+        blockPaletteTarget={blockPaletteTarget}
+        onAddBlock={addBlockToSection}
+        onCloseBlockPalette={() => setBlockPaletteTarget(null)}
+        showKeyboardHelp={showKeyboardHelp}
+        onCloseKeyboardHelp={() => setShowKeyboardHelp(false)}
+      />
 
-      {/* Block palette modal — for adding blocks inside a section */}
-      {blockPaletteTarget !== null && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] animate-in fade-in duration-200" onMouseDown={e => { if (e.target === e.currentTarget) setBlockPaletteTarget(null); }} onKeyDown={e => { if (e.key === 'Escape') setBlockPaletteTarget(null); }}>
-          <div className="bg-surface rounded-2xl shadow-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="block-palette-title">
-            <div className="p-6 border-b border-border bg-surface-raised">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center">
-                    <Plus className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 id="block-palette-title" className="text-xl font-semibold text-text-base">Add Block</h3>
-                    <p className="text-sm text-muted">Choose a block type to add to this section</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setBlockPaletteTarget(null)}
-                  className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors"
-                  title="Close (Esc)"
-                >
-                  <X className="w-5 h-5 text-muted" />
-                </button>
-              </div>
-            </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {BLOCK_TYPES.map(({ id, name, Icon, description }) => (
-                  <button
-                    key={id}
-                    onClick={() => addBlockToSection(blockPaletteTarget.sectionIndex, id)}
-                    className="p-5 border-2 border-border rounded-xl hover:border-primary-light hover:bg-primary-light hover:shadow-lg transition-all duration-200 text-left group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-surface-raised group-hover:bg-primary-light flex items-center justify-center flex-shrink-0 transition-colors">
-                        <Icon className="w-6 h-6 text-muted group-hover:text-primary transition-colors" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-text-base mb-1 group-hover:text-primary transition-colors">{name}</div>
-                        <div className="text-sm text-muted leading-relaxed">{description}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Improved keyboard shortcuts help modal */}
-      {showKeyboardHelp && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] animate-in fade-in duration-200" onMouseDown={e => { if (e.target === e.currentTarget) setShowKeyboardHelp(false); }} onKeyDown={e => { if (e.key === 'Escape') setShowKeyboardHelp(false); }}>
-          <div className="bg-surface rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300" onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="keyboard-help-title">
-            <div className="p-6 border-b border-border bg-surface-raised">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-info-light flex items-center justify-center">
-                    <Type className="w-5 h-5 text-info" />
-                  </div>
-                  <div>
-                    <h3 id="keyboard-help-title" className="text-xl font-semibold text-text-base">Keyboard Shortcuts</h3>
-                    <p className="text-sm text-muted">Speed up your editing workflow</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowKeyboardHelp(false)}
-                  className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors"
-                  title="Close (Esc)"
-                >
-                  <X className="w-5 h-5 text-muted" />
-                </button>
-              </div>
-            </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    { action: 'Save', shortcut: 'Ctrl/Cmd + S' },
-                    { action: 'Undo', shortcut: 'Ctrl/Cmd + Z' },
-                    { action: 'Redo', shortcut: 'Ctrl/Cmd + Shift + Z' },
-                    { action: 'Preview', shortcut: 'Ctrl/Cmd + P' },
-                    { action: 'Add Section', shortcut: '+' },
-                    { action: 'Close Dialog', shortcut: 'Esc' },
-                    { action: 'Show Help', shortcut: '?' },
-                  ].map(({ action, shortcut }) => (
-                    <div key={action} className="flex justify-between items-center p-3 bg-surface-raised rounded-lg">
-                      <span className="text-text-base font-medium">{action}</span>
-                      <kbd className="px-3 py-1.5 bg-surface border border-border-strong rounded-lg text-sm font-mono shadow-sm">{shortcut}</kbd>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="p-5 bg-gradient-to-br from-primary-light to-info-light rounded-xl border border-primary-light">
-                  <h4 className="font-semibold text-primary mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    Pro Tips
-                  </h4>
-                  <ul className="text-sm text-primary space-y-2">
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-0.5">-</span>
-                      <span>Click any text to edit it inline with auto-save</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-0.5">-</span>
-                      <span>Hover over blocks to reveal action toolbar</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-0.5">-</span>
-                      <span>Drag blocks to reorder them on the page</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-0.5">-</span>
-                      <span>Use the style panel (palette icon) for advanced styling</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-0.5">-</span>
-                      <span>Switch device previews to see responsive layouts</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Accessible confirm dialog mount (dirty-exit protection) */}
+      {ConfirmDialogMount}
+      {/* Toast notifications (delete undo, etc.) */}
+      {ToastMount}
+      {/* Screen-reader-only live region for announcements (selection, deletion, etc.) */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</div>
     </div>
-    </WebCraftRoot>
   );
 }

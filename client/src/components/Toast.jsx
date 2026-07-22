@@ -10,6 +10,8 @@
  *   toast('Double-check your input.', 'warning');
  *   toast('Page created.', 'success');
  *   toast('FYI: draft saved.', 'info');
+ *   // With action button (e.g. Undo):
+ *   toast('Section deleted.', { type: 'info', action: { label: 'Undo', onClick: restoreSection } });
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -24,7 +26,7 @@ const CONFIGS = {
 
 let _id = 0;
 
-function ToastItem({ id, message, type = 'success', onDismiss }) {
+function ToastItem({ id, message, type = 'success', action, duration, onDismiss }) {
   const cfg = CONFIGS[type] || CONFIGS.success;
   const [visible, setVisible] = useState(false);
 
@@ -34,19 +36,36 @@ function ToastItem({ id, message, type = 'success', onDismiss }) {
     const t = setTimeout(() => {
       setVisible(false);
       setTimeout(() => onDismiss(id), 300);
-    }, 3500);
+    }, duration || 3500);
     return () => clearTimeout(t);
-  }, [id, onDismiss]);
+  }, [id, duration, onDismiss]);
+
+  const handleAction = () => {
+    action?.onClick?.();
+    setVisible(false);
+    setTimeout(() => onDismiss(id), 300);
+  };
 
   return (
     <div
       className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg min-w-[280px] max-w-sm ${cfg.bg} ${cfg.text}
         transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+      role="status"
+      aria-live="polite"
     >
       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${cfg.iconBg}`}>
         <cfg.Icon className="w-3.5 h-3.5 text-primary-foreground" />
       </div>
       <span className="flex-1 text-sm font-medium">{message}</span>
+      {action && (
+        <button
+          onClick={handleAction}
+          className="flex-shrink-0 px-3 py-1.5 text-sm font-semibold rounded-md bg-white/15 hover:bg-white/25 transition-colors min-h-[36px]"
+          aria-label={action.label}
+        >
+          {action.label}
+        </button>
+      )}
       <button
         onClick={() => { setVisible(false); setTimeout(() => onDismiss(id), 300); }}
         className="flex-shrink-0 p-3 min-w-[44px] min-h-[44px] opacity-60 hover:opacity-100 transition-opacity"
@@ -61,15 +80,19 @@ function ToastItem({ id, message, type = 'success', onDismiss }) {
 /**
  * useToast()
  * Returns { toast, ToastMount }
- * - toast(message, type?) — shows a toast
+ * - toast(message, typeOrOptions?) — shows a toast. Pass a string for type,
+ *   or an object { type, action: { label, onClick }, duration } for advanced use.
  * - ToastMount — renders the toast stack; mount once in component JSX
  */
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
-  const toast = useCallback((message, type = 'success') => {
+  const toast = useCallback((message, typeOrOptions = 'success') => {
     const id = ++_id;
-    setToasts(prev => [...prev, { id, message, type }]);
+    const opts = typeof typeOrOptions === 'string'
+      ? { type: typeOrOptions }
+      : typeOrOptions;
+    setToasts(prev => [...prev, { id, message, ...opts }]);
   }, []);
 
   const dismiss = useCallback((id) => {

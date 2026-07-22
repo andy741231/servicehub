@@ -63,6 +63,7 @@ model WebPage {
   header      String?    // JSON serialized — parsed/serialized in controller
   footer      String?    // JSON serialized — parsed/serialized in controller
   isPublished Boolean    @default(true)
+  publishedSnapshot String? @db.NVarChar(Max) // JSON snapshot of published content (header, footer, sections+blocks). Null = use live sections/blocks as published (backward compat).
   navLabel    String?
   href        String?    // for external link nav items
   parentId    String?    // self-referencing for sub-menu items
@@ -102,8 +103,9 @@ model WebSection {
   id             String     @id @default(uuid())
   pageId         String
   order          Int
-  columns        Int        @default(1)   // 1 = full-width, 2-6 = multi-column
-  gap            Int        @default(24)  // px gap between columns
+  columns        Int        @default(1)   // legacy: 1 = full-width, 2-6 = multi-column
+  gap            Int        @default(24)  // legacy: px gap between columns
+  fluidConfig    String?    // JSON string — Fluid Engine settings: { gridColumns, gap:{horizontal,vertical}, fillScreen, minHeight, verticalAlignment }
   paddingTop     Int        @default(48)
   paddingBottom  Int        @default(48)
   paddingLeft    Int        @default(0)

@@ -110,6 +110,7 @@ export default function App() {
               <Route path="assets"          element={<WebAssets />} />
               <Route path="templates"       element={<WebDraftTemplates />} />
               <Route path="page-templates"  element={<WebPageTemplates />} />
+              <Route path="editor"         element={<Navigate to="/hub-admin/web/pages" replace />} />
               <Route path="editor/:slug"    element={<WebIndex />} />
             </Route>
 

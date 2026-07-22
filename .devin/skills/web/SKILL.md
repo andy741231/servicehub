@@ -41,14 +41,59 @@ theme tokens as the source of truth for colors, typography, and spacing.
 
 ## 2. Stack & Conventions
 
-- **Frontend:** React, Vite, Tailwind CSS, `@hello-pangea/dnd` for drag-and-drop,
-  `lucide-react` for icons, `marked` for markdown text blocks.
+- **Frontend:** React, Vite, Tailwind CSS, `react-rnd` for the Fluid Engine
+  drag/resize, `lucide-react` for icons, `marked` for markdown text blocks.
+- **Active editor path:** `WebEditor.jsx` runs the Fluid Engine
+  (`FluidSection` + `FluidBlock` in `editor/fluid/`). The Craft.js branch
+  and legacy `@hello-pangea/dnd` drag-and-drop in the web editor have been
+  removed. `@hello-pangea/dnd` remains in use by the Forms, Email, and Web
+  Pages list apps.
+- **Fluid Engine:** Each section is a 24-column CSS Grid. Blocks are
+  positioned via grid coordinates (`colStart`/`colEnd`/`rowStart`/`rowEnd`)
+  and can overlap/layer via `zIndex`. Drag and resize use `react-rnd` with
+  `dragGrid`/`resizeGrid` for snap-to-grid. Press "G" to toggle the grid
+  overlay. See `web-grid.md` for the previous grid architecture and the
+  Fluid Engine design.
+- **Editor chrome (mockup-driven):** `FluidSection.jsx` and `FluidBlock.jsx`
+  follow `builder-mockup.html` for hover/select/edit interactions — solid
+  2px `--primary` outline on hover or select, top/bottom `+ Add Section`
+  pills, top-left Layers + `+ Add Block` pill, top-right side-panel
+  (Edit Section / View Layouts / Duplicate / Save / Move up / Move down /
+  Remove) + `Ask Beacon` pill, bottom-right height toggle. Blocks show a
+  top-left icon-only toolbar (Text/Edit/Bring forward/Pin/Duplicate/Delete/
+  Add) with 9×9 white-square resize handles. Inline text editing switches
+  the outline to dashed and hides the handles. See §10.
+- **Inline text editor:** `InlineTextEditor.jsx` is the active text editor
+  for all web blocks. It's a `contentEditable` + dark floating toolbar
+  (portal to `document.body`, z-index 9999 so it floats above the editor
+  overlay at z-100). Styled after `text-editor-mocup.html` — dark `#181b22`
+  bar, white icon buttons, accent active state, arrow pointer that flips
+  below the selection. Formatting via `document.execCommand` (deprecated
+  but universally supported; no new dependency). See §10.
 - **Backend:** Node.js + Express, Prisma, Azure SQL.
 - **State:** React `useState` for builder history/undo; no global store for the
   web builder.
-- **Serialization:** Azure SQL has no native JSON type, so `WebBlock.content` is
-  stored as a **JSON string**. The controller parses/serializes at the boundary.
-  **Never** change `content` from `String` to `Json` in the Prisma schema.
+- **Serialization:** Azure SQL has no native JSON type, so `WebBlock.content`
+  is stored as a **JSON string**. Block `fluid` coords are stored inside
+  `content` as `_fluid`. Section `fluidConfig` is stored in the
+  `WebSection.fluidConfig` column (JSON string). The controller
+  parses/serializes at the boundary. **Never** change `content` from
+  `String` to `Json` in the Prisma schema.
+
+### Three "grid" concepts (disambiguation)
+
+The codebase has three distinct things called "grid." Do not confuse them:
+
+1. **Fluid Engine grid** (active) — `WebSection.fluidConfig` defines a
+   24-column CSS Grid. Blocks are positioned via `fluid.colStart`/`colEnd`/
+   `rowStart`/`rowEnd` (stored in `content._fluid`). Driven by
+   `FluidSection.jsx` and `FluidBlock.jsx` using `react-rnd`.
+2. **`WebSection.columns`** (legacy) — the old section-level CSS grid
+   (1–6 columns). No longer used by the active editor but still in the
+   schema for backward compatibility.
+3. **`GridBlock`** (legacy block type, renderer removed) — a *block type*
+   with its own `content.columns` and nested `content.items[]` of blocks.
+   A completely separate mechanism for nesting blocks inside a block.
 
 ## 3. File Map
 
@@ -63,6 +108,17 @@ client/src/pages/web/
 ├── Assets.jsx           # Media asset library
 ├── HeaderFooter.jsx     # Header & footer editor
 ├── WebDashboard.jsx     # Dashboard overview
+client/src/pages/web/editor/
+├── WebEditor.jsx        # Active editor orchestrator (Fluid Engine)
+├── editorComponents.jsx # BaseEditableText (delegates to InlineTextEditor), block editors, SectionWrapper
+├── InlineTextEditor.jsx # ★ Inline contentEditable + dark floating toolbar (text-editor-mocup.html)
+├── BlockContent.jsx     # Maps block.type → editable field tree (uses EditableText 57+ times)
+├── BlockRenderer.jsx    # Re-exports EditableBlock + editors
+├── editorUtils.js       # BLOCK_TYPES, DEFAULT_SECTION, factories, autoStackFluid
+├── fluid/
+│   ├── FluidSection.jsx # ★ 24-col CSS Grid section + mockup-style corner chrome
+│   └── FluidBlock.jsx   # ★ react-rnd overlay + selection/hover/editing outlines + icon toolbar
+└── ...
 client/src/pages/public/
 ├── Home.jsx             # Public dynamic renderer
 server/src/controllers/
@@ -357,6 +413,11 @@ behavior as the "publish" step and write draft rows to a separate table.
 - Grid blocks expose their own `Droppable` columns so blocks can be dragged into
   or out of a column. The drag handler must accept `draggableId` values that encode
   both the block path and the parent grid column index.
+- In the Fluid Engine, drag/resize is handled by `react-rnd` overlays in
+  `FluidBlock.jsx` (not `@hello-pangea/dnd`). The overlay sits on top of the
+  CSS-Grid-placed visual block; when selected, the overlay body becomes
+  `pointer-events: none` so clicks reach the contentEditable below, while the
+  drag handle and resize handles keep `pointer-events: auto`.
 
 ### Undo / Redo
 
@@ -379,6 +440,108 @@ behavior as the "publish" step and write draft rows to a separate table.
 - Supported style keys: `backgroundColor`, `textColor`, `padding`, `margin`,
   `customClasses`.
 - The public renderer applies these as inline styles and Tailwind classes.
+
+### Editor chrome — `builder-mockup.html` patterns (FluidSection / FluidBlock)
+
+The section and block chrome in `editor/fluid/FluidSection.jsx` and
+`FluidBlock.jsx` follow `builder-mockup.html`. Key patterns:
+
+- **Section outline:** solid 2px `hsl(var(--primary))` outline (not border —
+  avoids layout shift) shown on hover (`isHovered`) or selection
+  (`isSelected`). Selected sections get `z-index: 5`.
+- **Section corner chrome (top-left):** white `Layers` icon-sq-btn (36×36,
+  8px radius, shadow) + light `+ Add Block` pill. Both fade in on hover.
+- **Section corner chrome (top-right):** white side-panel with `Edit Section`
+  / `View Layouts` rows, a 4-cell icon row (Duplicate / Save-as-tall /
+  Move up / Move down), and a danger `Remove` row. Below it: an `Ask Beacon`
+  pill (AI-assist placeholder). All fade in on hover.
+- **Section top/bottom-center:** `+ Add Section` pills (uppercase, 20px
+  radius, accent bg, shadow) — top adds above, bottom adds below.
+- **Section bottom-right:** accent-filled `ArrowUpDown` icon-sq-btn to
+  toggle `fluidConfig.fillScreen` (fill-screen vs hug-content height).
+- **Section selection auto-clears** when a block inside it gets selected
+  ("only one toolbar shows at once" — mockup spec).
+- **Block outlines:** hover (non-selected, non-editing) → 2px solid
+  `--primary` (6px offset). Selected (non-editing) → same solid outline.
+  Editing → 2px **dashed** `--primary` (6px offset). Outlines use the
+  `outline` CSS property, not `border`, to avoid layout shift.
+- **Block toolbar:** top-left (`top: -46, left: 0`), icon-only, white bg
+  with shadow — Text style / Edit / Bring forward / Pin / Duplicate /
+  Delete / Add block. A secondary top-right cluster holds Bring-to-Front /
+  Send-to-Back layering shortcuts.
+- **Block resize handles:** 9×9 white squares with 2px `--primary` border,
+  2px radius (matches mockup spec). Hidden while editing.
+- **Block drag handle:** accent-colored grip pill above the block, visible
+  only when selected and not editing. Has `pointer-events: auto` so it can
+  initiate drag even while the overlay body is `pointer-events: none`.
+- **`isEditing` tracking in FluidBlock:** wraps `EditableText/Button/Image`
+  to capture `onEditingStart`/`onEditingEnd`. While editing, the react-rnd
+  overlay is `pointer-events: none` and resize handles are hidden so the
+  contentEditable receives all mouse events.
+- **Topbar (WebEditor.jsx edit mode):** dark `#181b22`, 52px-tall bar per
+  `builder-mockup.html`. Left: white `SAVE` pill + `Exit` + save status.
+  Center: absolute-centered page title (white, bold) + `Page · Published/
+  Unpublished/Draft` subtitle. Right: Desktop/Mobile viewport toggle,
+  preview-device controls, undo/redo, Publish (green dot), and icon-only
+  Template / History / Shortcuts / Preview actions.
+
+### Inline text editor — `InlineTextEditor.jsx` (`text-editor-mocup.html`)
+
+All web block text fields (hero title/subtitle, text content, intro, features,
+highlights, gallery captions, testimonials, contact info, etc. — 57+ call
+sites in `BlockContent.jsx`) go through `BaseEditableText`, which delegates
+to `InlineTextEditor`. Key patterns:
+
+- **Stack:** `contentEditable` + `document.execCommand` (no new dependency).
+  `execCommand` is technically deprecated but universally supported; remains
+  the simplest way to format a contentEditable without a full rich-text
+  framework. The original Craft.js `EditableText` + `FloatingToolbar` used
+  the same approach — the design was lifted into `InlineTextEditor`.
+- **Toolbar:** dark `#181b22` floating bar with white icon buttons, accent
+  (`--primary`) active state, 8px radius, soft shadow, and a small arrow
+  pointer (`::after`) that flips when the toolbar is below the selection.
+  Buttons: Undo · Redo · H1 · H2 · P · B · I · U · S · Bullet list ·
+  Numbered list · Quote · Code block · Align left · Align center ·
+  Align right · Link · Image. Matches `text-editor-mocup.html` exactly.
+- **Portal:** rendered via `createPortal` to `document.body` so it escapes
+  the Fluid Engine grid container's overflow/stacking context.
+- **z-index:** `9999` — must be higher than the WebEditor's full-screen
+  overlay (`z-[100]`) and the FluidBlock toolbars (`z-[100]`) since the
+  toolbar is portaled to `document.body` and needs to float above
+  everything in the editor. Modals also use `z-[9999]`.
+- **Positioning:** appears above the current text selection; flips below if
+  there isn't enough room above. Hidden on collapsed (caret-only) selections
+  and when the selection leaves the editor. Re-measures after becoming
+  visible (initial estimate may be off).
+- **Active formatting state:** detected via `queryCommandState` /
+  `queryCommandValue` on `selectionchange` and reflected as accent-filled
+  buttons.
+- **Selection preservation:** toolbar buttons use `onMouseDown preventDefault`
+  so the editor's selection isn't cleared before the command runs.
+- **Link/Image:** use `window.prompt()` for URL entry (matches the mockup's
+  `data-prompt="true"` pattern). TODO: replace with a proper dialog per
+  §13 (no `window.prompt` rule).
+- **Single-line vs multiline:** `multiline={false}` (headings, button labels,
+  eyebrows) — Enter commits/blurs instead of inserting `<br>`; paste is
+  sanitized to plain text; `<br>`/`<div>`/`<p>` are stripped on blur.
+  `multiline={true}` (text blocks, intro content) — Enter inserts line
+  breaks normally; paste preserves formatting.
+- **Escape to commit:** pressing Escape blurs the editor, committing the
+  edit (matches `builder-mockup.html`'s "Click outside or press Esc to
+  commit and exit" spec).
+- **Placeholder:** uses `data-placeholder` attribute, picked up by the
+  existing `[contenteditable="true"]:empty::before` rule in `index.css`.
+  `handleInput` strips a sole leftover `<br>` after deleting all text so
+  the placeholder reappears reliably.
+- **`onChange(innerHTML)`** fires on every input. `onEditingStart` /
+  `onEditingEnd` fire on focus/blur so `FluidBlock` can toggle its dashed
+  editing outline.
+- **`handleBlurSanitize`** only fires `onChange` if sanitization actually
+  changed the innerHTML (diff check), avoiding redundant state updates and
+  history entries on every blur.
+- **CSS:** `.inline-text-toolbar`, `.inline-text-toolbar-btn`,
+  `.inline-text-toolbar-div` in `index.css` (search for "InlineTextEditor").
+  Includes a `prefers-reduced-motion` guard.
 
 ## 11. Public Renderer Patterns
 
@@ -571,6 +734,38 @@ toast('Draft auto-saved.', 'info');
 - Use `toast('…', 'error')` after a delete to provide undo-style feedback even if undo isn't implemented yet.
 
 ---
+
+## Recently Completed (2026-07-21)
+
+### Editor chrome — `builder-mockup.html` alignment
+
+Reworked `FluidSection.jsx` and `FluidBlock.jsx` to match `builder-mockup.html`:
+- Solid 2px `--primary` outline (using `outline`, not `border`) on hover/select
+- Top/bottom `+ Add Section` pills, top-left Layers + `+ Add Block` pill
+- Top-right side-panel (Edit Section / View Layouts / Duplicate / Save /
+  Move up / Move down / Remove) + `Ask Beacon` pill
+- Bottom-right height toggle (fill-screen vs hug-content)
+- Block toolbar moved to top-left, icon-only; 9×9 white-square resize handles
+- Dashed outline + hidden handles during inline text editing
+- Dark `#181b22` 52px topbar in `WebEditor.jsx` with centered page title +
+  `Page · Published/Unpublished/Draft` subtitle, white SAVE pill on left,
+  Desktop/Mobile/Preview on right
+
+### Inline text editor — `text-editor-mocup.html`
+
+New `InlineTextEditor.jsx` replaces the old click-to-input `BaseEditableText`:
+- `contentEditable` + `document.execCommand` (no new dependency)
+- Dark floating toolbar (portal to `document.body`, z-index 9999) with arrow
+  pointer, flip-below, accent active state
+- Buttons: Undo · Redo · H1 · H2 · P · B · I · U · S · lists · quote · code ·
+  align · link · image
+- Single-line vs multiline handling, Escape-to-commit, paste sanitization,
+  placeholder reliability
+- All 57+ `EditableText` call sites in `BlockContent.jsx` get the inline
+  editor for free via `BaseEditableText` delegation
+
+See §10 "Editor chrome" and "Inline text editor" for full documentation.
+Phase 2 (WYSIWYG) in the Roadmap is marked ✅ DONE.
 
 ## Known Issues (Tech Debt — fix later)
 
@@ -765,7 +960,7 @@ Harbor palette, and restyle the header/footer to match the mockup.
 
 ---
 
-### Phase 2 — WYSIWYG Text Editor with Font-Type Dropdown
+### Phase 2 — WYSIWYG Text Editor with Font-Type Dropdown ✅ DONE (2026-07-21)
 
 Build a reusable rich text editor component that replaces plain text inputs
 for title/subtitle/eyebrow fields. The key feature is a toolbar with a
@@ -773,45 +968,43 @@ for title/subtitle/eyebrow fields. The key feature is a toolbar with a
 italic (or any other font family) inline — this is how the mockup's
 "A place to *belong.*" emphasis is achieved.
 
-**Tasks:**
+**Status: implemented 2026-07-21.** The implementation diverged from the
+original plan (Quill) in favor of a lighter approach that matches
+`text-editor-mocup.html`. See §10 "Inline text editor" for the full
+documentation. Summary of what was actually built:
 
-1. **Reuse the existing WYSIWYG library** — the project already depends on
-   `react-quill` and uses it in the Forms and Email builders. Do not add TipTap
-   or another editor dependency. Use Quill's whitelisted `font` format for
-   `sans`, `serif`, and `serif-italic`.
+- **Component:** `client/src/pages/web/editor/InlineTextEditor.jsx` (not
+  `client/src/components/RichTextEditor.jsx` as originally planned).
+- **Stack:** `contentEditable` + `document.execCommand` (not `react-quill`).
+  No new dependency was added. The original Craft.js `EditableText`
+  + `FloatingToolbar` used the same approach; the design was lifted into
+  the new component.
+- **Wiring:** `BaseEditableText` in `editorComponents.jsx` delegates to
+  `InlineTextEditor` with the same prop signature, so all 57+ `EditableText`
+  call sites in `BlockContent.jsx` get the inline editor for free — no
+  call-site changes needed.
+- **Toolbar:** dark `#181b22` floating bar (portal to `document.body`,
+  z-index 9999) with white icon buttons, accent active state, arrow
+  pointer that flips below the selection. Buttons: Undo · Redo · H1 · H2 ·
+  P · B · I · U · S · Bullet list · Numbered list · Quote · Code block ·
+  Align left · Align center · Align right · Link · Image.
+- **Font-family dropdown:** NOT implemented yet. The mockup's
+  `text-editor-mocup.html` doesn't have one — it uses H1/H2/P block-type
+  buttons instead. A font-family dropdown can be added later by extending
+  the toolbar and using `execCommand('fontName', value)`.
+- **Single-line vs multiline:** `multiline={false}` fields (headings,
+  button labels, eyebrows) commit on Enter, sanitize paste to plain text,
+  and strip `<br>`/`<div>`/`<p>` on blur. `multiline={true}` fields (text
+  blocks, intro content) preserve line breaks and formatting.
+- **CSS:** `.inline-text-toolbar*` styles in `client/src/index.css`.
+- **Known follow-ups:**
+  - Replace `window.prompt()` for Link/Image URL entry with a proper dialog
+    per §13 (no `window.prompt` rule).
+  - Add a font-family dropdown if/when the design calls for one.
 
-2. **Build `RichTextEditor` component** (`client/src/components/RichTextEditor.jsx`):
-   - Wrap the existing `ReactQuill` component with the shared project styling
-   - Toolbar: font-family dropdown (Sans / Serif / Serif Italic), bold,
-     italic, underline, strike, headings, lists, alignment, links, clean
-   - Register Quill's custom font whitelist and map the font classes to the
-     site's `--font-body` and `--font-serif` tokens
-   - Outputs a sanitized-compatible HTML string via `onChange(html)`
-   - Accepts a `value` prop and `onChange(html)` callback
-   - Keep the component reusable for the slider and other rich text fields
-
-3. **Renderer support** — the slider (and other blocks using the WYSIWYG)
-   render the HTML via `dangerouslySetInnerHTML` (already the pattern for
-   text blocks). Preserve Quill's `ql-font-*` classes and map them to the
-   public site's font tokens. Add `DOMPurify.sanitize()` for safety (already
-   used for markdown blocks).
-
-4. **Font-family options** — the dropdown offers:
-   - "Sans" → `var(--font-body)` (DM Sans)
-   - "Serif" → `var(--font-serif)` (Libre Baskerville)
-   - "Serif Italic" → `var(--font-serif)` + `font-style: italic`
-   - Future: more options driven by the Styles page font tokens
-
-5. **Use the editor in web blocks** — the existing web text block now uses
-   `<RichTextEditor>` instead of the custom Markdown toolbar. The slider's
-   eyebrow/title/subtitle fields should use the same component when Phase 3
-   is implemented.
-
-**Files touched:** new `client/src/components/RichTextEditor.jsx`,
-`InlineEditor.jsx` (text block now uses it; slider fields will reuse it),
-`Home.jsx` (renderer — already supports `dangerouslySetInnerHTML`).
-
-**Estimated effort:** ~1-2 hours (existing `react-quill` dependency and toolbar patterns are reused)
+**Files touched:** new `client/src/pages/web/editor/InlineTextEditor.jsx`,
+`client/src/pages/web/editor/editorComponents.jsx` (BaseEditableText
+delegation), `client/src/index.css` (toolbar styles).
 
 ---
 

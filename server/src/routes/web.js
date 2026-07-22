@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { getPageBySlug, updatePage } from '../controllers/web.js';
+import { getPageBySlug, updatePage, publishPage, unpublishPage, getAdminPage } from '../controllers/web.js';
 import { listPages, createPage, updatePageMeta, deletePage, reorderPages } from '../controllers/webPages.js';
 import { getSiteStyles, updateSiteStyles } from '../controllers/webStyles.js';
 import { getDraftTemplates, updateDraftTemplates } from '../controllers/webDraftTemplates.js';
@@ -61,8 +61,12 @@ router.get('/assets', ...protect, listAssets);
 router.post('/assets', ...protect, upload.single('file'), uploadAsset);
 router.delete('/assets/:id', ...protect, deleteAsset);
 
-// ── Admin page fetch (bypasses draft check) ──
-router.get('/admin/:slug([a-z0-9-]+)', ...protect, getPageBySlug);
+// ── Admin page fetch (always returns live draft, bypasses publishedSnapshot) ──
+router.get('/admin/:slug([a-z0-9-]+)', ...protect, getAdminPage);
+
+// ── Publish / unpublish ──
+router.post('/:slug([a-z0-9-]+)/publish', ...protect, publishPage);
+router.post('/:slug([a-z0-9-]+)/unpublish', ...protect, unpublishPage);
 
 // ── Page-by-slug (catch-all — must be LAST) ──
 router.get('/page/:slug', getPageBySlug);

@@ -12,14 +12,26 @@ const stringifyJsonField = (value) => {
   return typeof value === 'string' ? value : JSON.stringify(value);
 };
 
-const parseBlock = (block) => ({
-  ...block,
-  content: typeof block.content === 'string' ? JSON.parse(block.content) : block.content,
-});
+const parseBlock = (block) => {
+  const content = typeof block.content === 'string' ? JSON.parse(block.content) : (block.content || {});
+  const { _fluid, _fluidMobile, ...restContent } = content;
+  // Preserve existing block.fluid if already extracted (e.g. when parseBlock
+  // runs again on an already-parsed snapshot). Only set from _fluid when
+  // extracting from a raw DB row.
+  const existingFluid = block.fluid;
+  const existingFluidMobile = block.fluidMobile;
+  return {
+    ...block,
+    content: restContent,
+    fluid: existingFluid || _fluid || null,
+    fluidMobile: existingFluidMobile || _fluidMobile || null,
+  };
+};
 
 // Parse a full section (including its nested blocks)
 const parseSection = (section) => ({
   ...section,
+  fluidConfig: section.fluidConfig ? (typeof section.fluidConfig === 'string' ? JSON.parse(section.fluidConfig) : section.fluidConfig) : null,
   blocks: (section.blocks || []).map(parseBlock),
 });
 
@@ -36,9 +48,30 @@ const DEFAULT_SECTION = {
   backgroundColor: null,
 };
 
+// Build a serializable snapshot of the page's current live state (for publishing)
+const buildSnapshot = (page) => ({
+  template: page.template,
+  header: parseJsonField(page.header),
+  footer: parseJsonField(page.footer),
+  sections: (page.sections || []).map(parseSection),
+});
+
+// Parse a stored publishedSnapshot back into usable shape
+const parseSnapshot = (raw) => {
+  if (!raw) return null;
+  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  return {
+    template: parsed.template,
+    header: parsed.header,
+    footer: parsed.footer,
+    sections: (parsed.sections || []).map(parseSection),
+  };
+};
+
 export const getPageBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
+    const isAdmin = !!req.user;
 
     let page = await prisma.webPage.findUnique({
       where: { slug },
@@ -53,7 +86,7 @@ export const getPageBySlug = async (req, res) => {
     });
 
     // Block public access to unpublished (draft) pages
-    if (page && !page.isPublished && !req.user) {
+    if (page && !page.isPublished && !isAdmin) {
       return res.status(404).json({ error: 'Page not found' });
     }
 
@@ -116,18 +149,41 @@ export const getPageBySlug = async (req, res) => {
       });
     }
 
-    // ── Shared header/footer: always read from the "home" page ──────────────
-    let sharedHeader = parseJsonField(page.header);
-    let sharedFooter = parseJsonField(page.footer);
+    // ── For public (non-admin) requests, use publishedSnapshot if available ──
+    // The live sections/blocks are the draft; publishedSnapshot is what the public sees.
+    let renderedSections = page.sections.map(parseSection);
+    let renderedHeader = parseJsonField(page.header);
+    let renderedFooter = parseJsonField(page.footer);
+    let renderedTemplate = page.template;
 
+    if (!isAdmin && page.publishedSnapshot) {
+      const snapshot = parseSnapshot(page.publishedSnapshot);
+      if (snapshot) {
+        renderedSections = snapshot.sections;
+        renderedHeader = snapshot.header;
+        renderedFooter = snapshot.footer;
+        renderedTemplate = snapshot.template;
+      }
+    }
+
+    // ── Shared header/footer: always read from the "home" page ──────────────
+    // For public requests, prefer the home page's publishedSnapshot header/footer.
     if (slug !== 'home') {
       const homePage = await prisma.webPage.findUnique({
         where: { slug: 'home' },
-        select: { header: true, footer: true },
+        select: { header: true, footer: true, publishedSnapshot: true },
       });
       if (homePage) {
-        sharedHeader = parseJsonField(homePage.header) || sharedHeader;
-        sharedFooter = parseJsonField(homePage.footer) || sharedFooter;
+        if (!isAdmin && homePage.publishedSnapshot) {
+          const homeSnapshot = parseSnapshot(homePage.publishedSnapshot);
+          if (homeSnapshot) {
+            renderedHeader = homeSnapshot.header || renderedHeader;
+            renderedFooter = homeSnapshot.footer || renderedFooter;
+          }
+        } else {
+          renderedHeader = parseJsonField(homePage.header) || renderedHeader;
+          renderedFooter = parseJsonField(homePage.footer) || renderedFooter;
+        }
       }
     }
 
@@ -154,12 +210,13 @@ export const getPageBySlug = async (req, res) => {
 
     res.json({
       ...page,
-      header: sharedHeader,
-      footer: sharedFooter,
+      template: renderedTemplate,
+      header: renderedHeader,
+      footer: renderedFooter,
       siteStyle: siteStyle
         ? { ...siteStyle, tokens: parseJsonField(siteStyle.tokens) }
         : null,
-      sections: page.sections.map(parseSection),
+      sections: renderedSections,
       // Keep legacy blocks field for any older clients
       blocks: page.blocks.map(parseBlock),
       nav: navItems,
@@ -237,6 +294,7 @@ export const updatePage = async (req, res) => {
               order: sIdx,
               columns:         sec.columns        ?? 1,
               gap:             sec.gap            ?? 24,
+              fluidConfig:     sec.fluidConfig ? JSON.stringify(sec.fluidConfig) : null,
               paddingTop:      sec.paddingTop     ?? 48,
               paddingBottom:   sec.paddingBottom  ?? 48,
               paddingLeft:     sec.paddingLeft    ?? 0,
@@ -255,7 +313,7 @@ export const updatePage = async (req, res) => {
                 sectionId: newSection.id,
                 type:      block.type,
                 order:     bIdx,
-                content:   JSON.stringify(block.content),
+                content:   JSON.stringify({ ...block.content, _fluid: block.fluid, _fluidMobile: block.fluidMobile }),
               })),
             });
           }
@@ -281,5 +339,154 @@ export const updatePage = async (req, res) => {
   } catch (error) {
     console.error('Error updating web page:', error);
     res.status(500).json({ error: 'Failed to update web page' });
+  }
+};
+
+// POST /api/web/:slug/publish — copy current draft into publishedSnapshot
+export const publishPage = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const page = await prisma.webPage.findUnique({
+      where: { slug },
+      include: {
+        sections: { orderBy: { order: 'asc' }, include: { blocks: { orderBy: { order: 'asc' } } } },
+        blocks: { orderBy: { order: 'asc' } },
+      },
+    });
+    if (!page) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+
+    const snapshot = buildSnapshot(page);
+
+    const updated = await prisma.webPage.update({
+      where: { slug },
+      data: {
+        isPublished: true,
+        publishedSnapshot: JSON.stringify(snapshot),
+      },
+    });
+
+    res.json({
+      ...updated,
+      header: parseJsonField(updated.header),
+      footer: parseJsonField(updated.footer),
+      publishedSnapshot: snapshot,
+      isPublished: true,
+    });
+  } catch (error) {
+    console.error('Error publishing web page:', error);
+    res.status(500).json({ error: 'Failed to publish page' });
+  }
+};
+
+// POST /api/web/:slug/unpublish — set isPublished=false (page hidden from public)
+export const unpublishPage = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const page = await prisma.webPage.findUnique({ where: { slug } });
+    if (!page) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+
+    const updated = await prisma.webPage.update({
+      where: { slug },
+      data: { isPublished: false },
+    });
+
+    res.json({ ...updated, isPublished: false });
+  } catch (error) {
+    console.error('Error unpublishing web page:', error);
+    res.status(500).json({ error: 'Failed to unpublish page' });
+  }
+};
+
+// GET /api/web/admin/:slug — always returns the live draft (for the editor)
+export const getAdminPage = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    let page = await prisma.webPage.findUnique({
+      where: { slug },
+      include: {
+        sections: {
+          orderBy: { order: 'asc' },
+          include: { blocks: { orderBy: { order: 'asc' } } },
+        },
+        blocks: { orderBy: { order: 'asc' } },
+      },
+    });
+
+    if (!page) {
+      page = await prisma.webPage.create({
+        data: {
+          slug,
+          title: slug.charAt(0).toUpperCase() + slug.slice(1) + ' Page',
+          template: 'modern',
+        },
+        include: {
+          sections: { orderBy: { order: 'asc' }, include: { blocks: { orderBy: { order: 'asc' } } } },
+          blocks: { orderBy: { order: 'asc' } },
+        },
+      });
+
+      const section = await prisma.webSection.create({
+        data: {
+          pageId: page.id,
+          order: 0,
+          ...DEFAULT_SECTION,
+          blocks: {
+            create: [{
+              pageId: page.id,
+              type: 'hero',
+              order: 0,
+              content: JSON.stringify({
+                title: 'Welcome to our platform',
+                subtitle: 'Discover amazing features and build your online presence.',
+              }),
+            }],
+          },
+        },
+        include: { blocks: { orderBy: { order: 'asc' } } },
+      });
+
+      page.sections = [section];
+    }
+
+    // Migrate legacy page-level blocks into a section if none exist yet
+    if (page.sections.length === 0 && page.blocks.length > 0) {
+      const section = await prisma.webSection.create({
+        data: { pageId: page.id, order: 0, ...DEFAULT_SECTION },
+      });
+      await Promise.all(
+        page.blocks.map((b, i) =>
+          prisma.webBlock.update({ where: { id: b.id }, data: { sectionId: section.id, order: i } })
+        )
+      );
+      page = await prisma.webPage.findUnique({
+        where: { slug },
+        include: {
+          sections: { orderBy: { order: 'asc' }, include: { blocks: { orderBy: { order: 'asc' } } } },
+          blocks: { orderBy: { order: 'asc' } },
+        },
+      });
+    }
+
+    // Check if there are unpublished draft changes (publishedSnapshot exists but differs from live)
+    const hasPublishedSnapshot = !!page.publishedSnapshot;
+
+    res.json({
+      ...page,
+      header: parseJsonField(page.header),
+      footer: parseJsonField(page.footer),
+      sections: page.sections.map(parseSection),
+      blocks: page.blocks.map(parseBlock),
+      hasPublishedSnapshot,
+    });
+  } catch (error) {
+    console.error('Error fetching admin page:', error);
+    res.status(500).json({ error: 'Failed to fetch page' });
   }
 };

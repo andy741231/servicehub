@@ -3,12 +3,6 @@ import { useParams } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import api from '../../utils/api';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, EffectFade, Navigation, Pagination } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/effect-fade';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
 import { Globe, Star, Image as ImageIcon, Check, Settings, MessageCircle, RefreshCw, Wrench, ChevronDown, Menu, X, FileX } from 'lucide-react';
 
 // Configure marked: GFM + line-break support, links open in new tab safely
@@ -28,21 +22,29 @@ marked.use({
 
 const renderMarkdown = (md) =>
   DOMPurify.sanitize(marked.parse(md || ''), {
-    ALLOWED_TAGS: ['p','br','strong','em','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img','span'],
-    ALLOWED_ATTR: ['href','title','target','rel','src','alt','class'],
+    ALLOWED_TAGS: ['p','br','strong','em','b','i','u','s','strike','del','ins','sub','sup','small','mark','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img','span','font','div'],
+    ALLOWED_ATTR: ['href','title','target','rel','src','alt','class','style','face','size','color','align'],
   });
 
 const buttonClass = (variant = 'gold') => `public-slider-button public-slider-button--${['gold', 'outline', 'default'].includes(variant) ? variant : 'gold'}`;
 
 const renderRichText = (value) => {
   const source = value || '';
-  const html = /<(?:p|span|strong|em|h[1-6]|ul|ol|blockquote|a)(?:\s|>)/i.test(source)
+  const html = /<(?:p|span|strong|em|b|i|u|s|strike|del|h[1-6]|ul|ol|blockquote|a|font)(?:\s|>)/i.test(source)
     ? source
     : marked.parse(source);
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['p','br','strong','em','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img','span'],
-    ALLOWED_ATTR: ['href','title','target','rel','src','alt','class'],
+    ALLOWED_TAGS: ['p','br','strong','em','b','i','u','s','strike','del','ins','sub','sup','small','mark','a','ul','ol','li','blockquote','code','pre','h1','h2','h3','h4','h5','h6','hr','img','span','font','div'],
+    ALLOWED_ATTR: ['href','title','target','rel','src','alt','class','style','face','size','color','align'],
   });
+};
+
+// Helper for rendering a rich-text field as HTML inside an existing element.
+// Returns a dangerouslySetInnerHTML object, or undefined for empty values so
+// React renders nothing instead of an empty wrapper.
+const rt = (value) => {
+  const html = renderRichText(value);
+  return html ? { __html: html } : undefined;
 };
 
 const resolveUrl = (url) => {
@@ -106,31 +108,6 @@ const hexToHsl = (hex) => {
 const fontFamilyUrl = (font) => {
   const family = String(font || '').split(',')[0].trim();
   return family ? family.replace(/ /g, '+') : '';
-};
-
-const extractVideoId = (value, provider) => {
-  const source = String(value || '').trim();
-  if (/^[\w-]+$/.test(source)) return source;
-  const patterns = provider === 'youtube'
-    ? [/(?:v=|youtu\.be\/|embed\/)([\w-]{6,})/i]
-    : [/(?:vimeo\.com\/|video\/)(\d+)/i];
-  return patterns.map(pattern => source.match(pattern)?.[1]).find(Boolean) || '';
-};
-
-const renderSlideBackground = (slide) => {
-  const type = slide.backgroundType || 'color';
-  if (type === 'video' && slide.videoUrl) {
-    return <video className="public-slider-background" autoPlay muted loop playsInline poster={resolveUrl(slide.posterImage)}><source src={resolveUrl(slide.videoUrl)} /></video>;
-  }
-  if (type === 'youtube' && slide.youtubeId) {
-    const id = extractVideoId(slide.youtubeId, 'youtube');
-    return id ? <iframe className="public-slider-background public-slider-embed" src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&rel=0&playsinline=1`} title="Slider background video" allow="autoplay; encrypted-media" /> : null;
-  }
-  if (type === 'vimeo' && slide.vimeoId) {
-    const id = extractVideoId(slide.vimeoId, 'vimeo');
-    return id ? <iframe className="public-slider-background public-slider-embed" src={`https://player.vimeo.com/video/${id}?background=1&autoplay=1&loop=1&muted=1`} title="Slider background video" allow="autoplay; fullscreen; picture-in-picture" /> : null;
-  }
-  return null;
 };
 
 export default function PublicHome({ previewData = null, previewMode = false }) {
@@ -506,6 +483,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
     if (!blocks?.length) return null;
     return blocks.map((block) => {
       const cs = block.style || {};
+      const bc = block.content || {};
       const sStyle = {
         backgroundColor: cs.backgroundColor,
         color:           cs.color,
@@ -518,50 +496,15 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
         borderStyle:     cs.borderStyle,
         borderColor:     cs.borderColor,
         borderRadius:    cs.borderRadius != null ? `${cs.borderRadius}px` : undefined,
+        height:          bc._height != null ? `${bc._height}px` : undefined,
+        gridColumn:      bc._colStart
+          ? `${bc._colStart} / span ${bc._colSpan || 1}`
+          : bc._colSpan > 1 ? `span ${bc._colSpan}` : undefined,
+        gridRow:         bc._rowStart
+          ? `${bc._rowStart} / span ${bc._rowSpan || 1}`
+          : bc._rowSpan > 1 ? `span ${bc._rowSpan}` : undefined,
       };
       const cc = `${cs.className || ''} public-reveal`;
-
-      if (block.type === 'slider') {
-        const slider = block.content || {};
-        const slides = slider.slides || [];
-        const sliderHeight = slider.height || 'large';
-        return (
-          <section key={block.id} className={`public-slider public-slider--${sliderHeight} ${cc}`} style={sStyle} aria-label="Featured slides">
-            <Swiper
-              modules={[Autoplay, EffectFade, Navigation, Pagination]}
-              effect={slider.transition === 'fade' ? 'fade' : 'slide'}
-              speed={slider.transition === 'none' ? 0 : 650}
-              loop={slides.length > 1}
-              autoplay={slider.autoplay !== false && slides.length > 1 ? { delay: slider.interval || 6000, disableOnInteraction: false, pauseOnMouseEnter: true } : false}
-              navigation={slider.showArrows !== false && slides.length > 1}
-              pagination={slider.showDots !== false && slides.length > 1 ? { clickable: true } : false}
-            >
-              {slides.map((slide, index) => {
-                const backgroundStyle = slide.backgroundType === 'image' && slide.backgroundImage
-                  ? { backgroundImage: `url(${resolveUrl(slide.backgroundImage)})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                  : slide.backgroundType === 'gradient'
-                    ? { background: slide.gradient || 'linear-gradient(135deg, #152b45, #54738e)' }
-                    : { backgroundColor: slide.backgroundColor || '#152b45' };
-                const align = slide.textAlign || 'left';
-                return (
-                  <SwiperSlide key={slide.id || index}>
-                    <div className="relative h-full min-h-inherit" style={backgroundStyle}>
-                      {renderSlideBackground(slide)}
-                      {slide.overlay && slide.overlay !== 'none' && <div className={`public-slider-overlay public-slider-overlay--${slide.overlay}`} />}
-                      <div className={`public-slider-content public-slider-content--${slide.verticalAlign || 'center'} public-slider-content--${align}-align`}>
-                        {slide.eyebrow && <div className="public-slider-eyebrow" dangerouslySetInnerHTML={{ __html: renderRichText(slide.eyebrow) }} />}
-                        {slide.title && <div className="public-slider-title" dangerouslySetInnerHTML={{ __html: renderRichText(slide.title) }} />}
-                        {slide.subtitle && <div className="public-slider-subtitle" dangerouslySetInnerHTML={{ __html: renderRichText(slide.subtitle) }} />}
-                        {slide.buttonText && <div className="public-slider-actions"><a href={slide.buttonLink || '#'} className={buttonClass(slide.buttonVariant)}>{slide.buttonText}<span aria-hidden="true">→</span></a></div>}
-                      </div>
-                    </div>
-                  </SwiperSlide>
-                );
-              })}
-            </Swiper>
-          </section>
-        );
-      }
 
       if (block.type === 'hero') return (
         <section
@@ -588,9 +531,8 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                 fontWeight: cs.titleFontWeight || undefined,
                 fontStyle: cs.titleFontStyle || undefined,
               }}
-            >
-              {block.content.title}
-            </h1>
+              dangerouslySetInnerHTML={rt(block.content.title)}
+            />
             <p
               className="text-xl max-w-2xl mx-auto"
               style={{
@@ -601,9 +543,8 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                 fontWeight: cs.subtitleFontWeight || undefined,
                 fontStyle: cs.subtitleFontStyle || undefined,
               }}
-            >
-              {block.content.subtitle}
-            </p>
+              dangerouslySetInnerHTML={rt(block.content.subtitle)}
+            />
           </div>
         </section>
       );
@@ -627,19 +568,19 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
 
       if (block.type === 'split-banner') return (
         <section key={block.id} className={`public-split-banner ${cc}`} style={sStyle}>
-          <div><div className="public-eyebrow">{block.content.eyebrow}</div><h2>{block.content.title}</h2><p>{block.content.body}</p>{block.content.buttonText && <a href={block.content.buttonLink || '#'} className={buttonClass(block.content.buttonVariant)}>{block.content.buttonText}<span aria-hidden="true">→</span></a>}</div>
+          <div><div className="public-eyebrow" dangerouslySetInnerHTML={rt(block.content.eyebrow)} /><h2 dangerouslySetInnerHTML={rt(block.content.title)} /><p dangerouslySetInnerHTML={rt(block.content.body)} />{block.content.buttonText && <a href={block.content.buttonLink || '#'} className={buttonClass(block.content.buttonVariant)}>{block.content.buttonText}<span aria-hidden="true">→</span></a>}</div>
           <div className="public-service-times">{(block.content.times || []).map((time, index) => <div key={index}><strong>{time.label}</strong><span>{time.value}</span></div>)}</div>
         </section>
       );
 
       if (block.type === 'events') return (
         <section key={block.id} className={`py-20 px-6 ${cc}`} style={sStyle}>
-          <div className="max-w-6xl mx-auto"><div className="public-section-heading"><div className="public-eyebrow">{block.content.eyebrow}</div><h2>{block.content.title}</h2></div><div className="public-events">{(block.content.items || []).map((item, index) => <div className="public-event" key={index}><span className="public-event-date">{item.date}</span><div><h3>{item.title}</h3><p>{item.description}</p></div><span className="public-event-time">{item.time}</span></div>)}</div></div>
+          <div className="max-w-6xl mx-auto"><div className="public-section-heading"><div className="public-eyebrow" dangerouslySetInnerHTML={rt(block.content.eyebrow)} /><h2 dangerouslySetInnerHTML={rt(block.content.title)} /></div><div className="public-events">{(block.content.items || []).map((item, index) => <div className="public-event" key={index}><span className="public-event-date">{item.date}</span><div><h3 dangerouslySetInnerHTML={rt(item.title)} /><p dangerouslySetInnerHTML={rt(item.description)} /></div><span className="public-event-time">{item.time}</span></div>)}</div></div>
         </section>
       );
 
       if (block.type === 'quote') return (
-        <section key={block.id} className={`public-quote ${cc}`} style={{ ...sStyle, backgroundColor: block.content.backgroundColor || '#eadfc9' }}><div className="max-w-6xl mx-auto px-6"><blockquote>“{block.content.quote}”</blockquote><cite>— {block.content.citation}</cite></div></section>
+        <section key={block.id} className={`public-quote ${cc}`} style={{ ...sStyle, backgroundColor: block.content.backgroundColor || '#eadfc9' }}><div className="max-w-6xl mx-auto px-6"><blockquote dangerouslySetInnerHTML={rt(block.content.quote && `“${block.content.quote}”`)} /><cite dangerouslySetInnerHTML={rt(block.content.citation && `— ${block.content.citation}`)} /></div></section>
       );
 
       if (block.type === 'map') return (
@@ -649,8 +590,8 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       if (block.type === 'intro') return (
         <section key={block.id} className={`bg-primary text-primary-foreground py-20 text-center ${cc}`} style={sStyle}>
           <div className="max-w-4xl mx-auto px-6">
-            <h2 className="text-4xl font-bold mb-4">{block.content.title}</h2>
-            <p className="text-xl mb-8 opacity-90">{block.content.content}</p>
+            <h2 className="text-4xl font-bold mb-4" dangerouslySetInnerHTML={rt(block.content.title)} />
+            <p className="text-xl mb-8 opacity-90" dangerouslySetInnerHTML={rt(block.content.content)} />
             {block.content.buttonText && (
               <a href={block.content.buttonLink || '#'} className={buttonClass(block.content.buttonVariant || 'gold')}>
                 {block.content.buttonText} <span aria-hidden="true">→</span>
@@ -663,9 +604,9 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       if (block.type === 'features') return (
         <section key={block.id} className={`py-20 max-w-6xl mx-auto px-6 ${cc}`} style={sStyle}>
           <div className="text-center mb-16">
-            {block.content.eyebrow && <div className="public-eyebrow mb-3">{block.content.eyebrow}</div>}
-            <h2 className="text-3xl font-bold mb-2">{block.content.title}</h2>
-            <p className="text-subtle">{block.content.subtitle}</p>
+            {block.content.eyebrow && <div className="public-eyebrow mb-3" dangerouslySetInnerHTML={rt(block.content.eyebrow)} />}
+            <h2 className="text-3xl font-bold mb-2" dangerouslySetInnerHTML={rt(block.content.title)} />
+            <p className="text-subtle" dangerouslySetInnerHTML={rt(block.content.subtitle)} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {block.content.items?.map((item, i) => {
@@ -675,8 +616,8 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                   <div className="w-14 h-14 bg-primary-light text-primary rounded-full flex items-center justify-center mb-5">
                     {block.content.numbered ? <span className="font-bold">{item.number || String(i + 1).padStart(2, '0')}</span> : <IconComp className="w-7 h-7" />}
                   </div>
-                  <h3 className="text-xl font-bold text-text-base mb-3">{item.title}</h3>
-                  <p className="text-muted leading-relaxed">{item.text || item.description}</p>
+                  <h3 className="text-xl font-bold text-text-base mb-3" dangerouslySetInnerHTML={rt(item.title)} />
+                  <p className="text-muted leading-relaxed" dangerouslySetInnerHTML={rt(item.text || item.description)} />
                 </div>
               );
             })}
@@ -687,13 +628,13 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       if (block.type === 'highlights') return (
         <section key={block.id} className={`bg-surface-raised py-20 px-6 ${cc}`} style={sStyle}>
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+            <h2 className="text-3xl font-bold text-center mb-12" dangerouslySetInnerHTML={rt(block.content.title)} />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {block.content.items?.map((item, i) => (
                 <div key={i} className="bg-surface rounded-xl overflow-hidden shadow-sm hover:shadow-md transition pb-6 text-center">
                   <img src={item.image} alt={item.title} className="w-full h-48 object-cover mb-6" />
-                  <h3 className="text-xl font-bold text-text-base mb-3 px-4">{item.title}</h3>
-                  <p className="text-muted mb-6 px-4">{item.text}</p>
+                  <h3 className="text-xl font-bold text-text-base mb-3 px-4" dangerouslySetInnerHTML={rt(item.title)} />
+                  <p className="text-muted mb-6 px-4" dangerouslySetInnerHTML={rt(item.text)} />
                   {item.buttonText && (
                     <a href={item.buttonLink || '#'} className={buttonClass(item.buttonVariant || 'outline')}>
                       {item.buttonText}
@@ -709,14 +650,14 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       if (block.type === 'gallery') return (
         <section key={block.id} className={`py-20 px-6 bg-surface-raised ${cc}`} style={sStyle}>
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+            <h2 className="text-3xl font-bold text-center mb-12" dangerouslySetInnerHTML={rt(block.content.title)} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {block.content.images?.map((image, i) => (
                 <div key={i} className="group relative overflow-hidden rounded-lg shadow-md">
                   <img src={image.url} alt={image.caption || `Gallery ${i+1}`} className="w-full h-64 object-cover group-hover:scale-105 transition duration-300" />
                   {image.caption && (
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                      <p className="text-inverse text-sm">{image.caption}</p>
+                      <p className="text-inverse text-sm" dangerouslySetInnerHTML={rt(image.caption)} />
                     </div>
                   )}
                 </div>
@@ -729,18 +670,18 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       if (block.type === 'testimonials') return (
         <section key={block.id} className={`py-20 px-6 bg-surface ${cc}`} style={sStyle}>
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-12">{block.content.title}</h2>
+            <h2 className="text-3xl font-bold text-center mb-12" dangerouslySetInnerHTML={rt(block.content.title)} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {block.content.testimonials?.map((t, i) => (
                 <div key={i} className="bg-surface-raised rounded-lg p-6 shadow-sm">
                   <div className="flex items-center gap-4 mb-4">
                     {t.avatar && <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full object-cover" />}
                     <div>
-                      <h4 className="font-semibold text-text-base">{t.name}</h4>
-                      <p className="text-sm text-subtle">{t.role}</p>
+                      <h4 className="font-semibold text-text-base" dangerouslySetInnerHTML={rt(t.name)} />
+                      <p className="text-sm text-subtle" dangerouslySetInnerHTML={rt(t.role)} />
                     </div>
                   </div>
-                  <p className="text-muted italic">"{t.quote}"</p>
+                  <p className="text-muted italic" dangerouslySetInnerHTML={rt(t.quote && `"${t.quote}"`)} />
                 </div>
               ))}
             </div>
@@ -751,8 +692,8 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
       if (block.type === 'contact') return (
         <section key={block.id} className={`py-20 px-6 bg-surface-tertiary text-inverse ${cc}`} style={sStyle}>
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">{block.content.title}</h2>
-            <p className="text-xl text-subtle mb-12">{block.content.subtitle}</p>
+            <h2 className="text-3xl font-bold mb-4" dangerouslySetInnerHTML={rt(block.content.title)} />
+            <p className="text-xl text-subtle mb-12" dangerouslySetInnerHTML={rt(block.content.subtitle)} />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {block.content.email && (
                 <div className="text-center">
@@ -821,8 +762,8 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
         return (
           <section key={block.id} className={`py-20 px-6 bg-surface-raised ${cc}`} style={sStyle}>
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl font-bold text-text-base mb-4">{block.content.title}</h2>
-              {block.content.description && <p className="text-xl text-muted mb-12">{block.content.description}</p>}
+              <h2 className="text-3xl font-bold text-text-base mb-4" dangerouslySetInnerHTML={rt(block.content.title)} />
+              {block.content.description && <p className="text-xl text-muted mb-12" dangerouslySetInnerHTML={rt(block.content.description)} />}
               {embedUrl ? (
                 <div className="aspect-video rounded-lg overflow-hidden shadow-lg">
                   <iframe src={embedUrl} title={block.content.title} className="w-full h-full" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
@@ -853,6 +794,81 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
           backgroundColor: section.backgroundColor || undefined,
         };
 
+        // Fluid Engine section — 24-col grid with block placement via grid coords
+        if (section.fluidConfig) {
+          const cfg = section.fluidConfig;
+          const gridColumns = cfg.gridColumns || 24;
+          const mobileGridColumns = 6;
+          const rowHeight = cfg.rowHeight || 80;
+          const gapH = cfg.gap?.horizontal ?? 8;
+          const gapV = cfg.gap?.vertical ?? 8;
+          const blocks = section.blocks || [];
+          const maxRowEnd = blocks.reduce((max, b) => Math.max(max, b.fluid?.rowEnd ?? 3), 1);
+          const maxMobileRowEnd = blocks.reduce((max, b) => Math.max(max, b.fluidMobile?.rowEnd ?? b.fluid?.rowEnd ?? 3), 1);
+          const vAlign = cfg.verticalAlignment === 'center' ? 'center' : cfg.verticalAlignment === 'bottom' ? 'end' : 'start';
+          return (
+            <div key={section.id || sIdx} style={{ ...sectionStyle, minHeight: cfg.fillScreen ? (cfg.minHeight || 320) : undefined }}>
+              {/* Desktop / tablet layout (>= 768px) */}
+              <div
+                className="fluid-grid-desktop"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
+                  gridTemplateRows: `repeat(${Math.max(maxRowEnd, 4)}, ${rowHeight}px)`,
+                  gap: `${gapV}px ${gapH}px`,
+                  alignContent: vAlign,
+                }}
+              >
+                {blocks.map((block, bIdx) => {
+                  const f = block.fluid || {};
+                  return (
+                    <div
+                      key={block.id || bIdx}
+                      style={{
+                        gridColumn: `${f.colStart || 1} / ${f.colEnd || gridColumns + 1}`,
+                        gridRow: `${f.rowStart || 1} / ${f.rowEnd || 3}`,
+                        zIndex: f.zIndex ?? 0,
+                        position: 'relative',
+                      }}
+                    >
+                      {renderBlocks([block])}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Mobile layout (< 768px) — uses fluidMobile coords if present */}
+              <div
+                className="fluid-grid-mobile"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${mobileGridColumns}, 1fr)`,
+                  gridTemplateRows: `repeat(${Math.max(maxMobileRowEnd, 4)}, ${rowHeight}px)`,
+                  gap: `${gapV}px ${gapH}px`,
+                  alignContent: vAlign,
+                }}
+              >
+                {blocks.map((block, bIdx) => {
+                  const f = block.fluidMobile || block.fluid || {};
+                  return (
+                    <div
+                      key={block.id || bIdx}
+                      style={{
+                        gridColumn: `${f.colStart || 1} / ${f.colEnd || mobileGridColumns + 1}`,
+                        gridRow: `${f.rowStart || 1} / ${f.rowEnd || 3}`,
+                        zIndex: f.zIndex ?? 0,
+                        position: 'relative',
+                      }}
+                    >
+                      {renderBlocks([block])}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        // Legacy column-based section
         return (
           <div key={section.id || sIdx} style={sectionStyle}>
             {section.columns > 1 ? (
@@ -863,14 +879,7 @@ export default function PublicHome({ previewData = null, previewMode = false }) 
                   gap: `${section.gap ?? 24}px`,
                 }}
               >
-                {Array.from({ length: section.columns }).map((_, colIdx) => {
-                  const colBlocks = (section.blocks || []).filter((_, bi) => bi % section.columns === colIdx);
-                  return (
-                    <div key={colIdx}>
-                      {renderBlocks(colBlocks)}
-                    </div>
-                  );
-                })}
+                {renderBlocks(section.blocks || [])}
               </div>
             ) : (
               renderBlocks(section.blocks || [])
