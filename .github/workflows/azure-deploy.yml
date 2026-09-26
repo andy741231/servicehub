@@ -83,10 +83,10 @@ jobs:
           cp -r node_modules/.prisma deploy/node_modules/.prisma
           # Copy web.config for IIS/iisnode on Windows Azure App Service
           cp web.config deploy/
-          # Install server production dependencies standalone (no workspaces)
           cd deploy
-          npm install --omit=dev --ignore-scripts
-          # Remove workspace ref to 'shared' if present
+          # Remove workspace refs BEFORE install — 'shared': '*' otherwise
+          # resolves to the unrelated npm-registry package and the server
+          # crashes at startup on `import ... from 'shared'`.
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json'));
@@ -97,6 +97,11 @@ jobs:
             pkg.engines = { node: '>=22' };
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
+          # Install server production dependencies standalone (no workspaces)
+          npm install --omit=dev --ignore-scripts
+          # Inject the real workspace 'shared' package (npm can't install it)
+          rm -rf node_modules/shared
+          cp -r ../shared node_modules/shared
           cd ..
           echo "Deploy folder size: $(du -sh deploy | cut -f1)"
 
