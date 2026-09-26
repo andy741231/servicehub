@@ -55,3 +55,6 @@ server/uploads/
 phone_list*.json
 phone_list*.csv
 *.parsed.json
+
+# Importer report/warnings output (member PII — never commit)
+scratch/
