@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import api from '../utils/api';
 import useThemeStore from './themeStore';
+import useDirectoryStore from '../pages/directory/store/directoryStore';
 
 // Load persisted state from localStorage
 const loadPersistedState = () => {
@@ -67,6 +68,9 @@ const useAuthStore = create((set, get) => ({
     } catch (error) {
       // Server may reject an expired access token; still clear local state.
     }
+    // A Hub user may also hold a directory session — clear both so stale
+    // role/district data never leaks into the next sign-in.
+    useDirectoryStore.getState().logout();
     set({ user: null, isAuthenticated: false, wasLoggedIn: true, showLoggedOutMessage: true });
     savePersistedState(get());
   },

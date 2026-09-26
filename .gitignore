@@ -47,3 +47,11 @@ pgdata/
 
 # Temporary staging switchback doc (contains credentials)
 .SWITCHBACK-STAGING.md
+
+# Member photo uploads (local dev storage)
+server/uploads/
+
+# Phone-list source/export artifacts (member PII — never commit)
+phone_list*.json
+phone_list*.csv
+*.parsed.json

@@ -23,21 +23,31 @@ function getSender() {
   return senderAddress;
 }
 
-export async function sendTestEmail(to, subject, html) {
+export async function sendEmail(to, subject, html, { plainText } = {}) {
   const emailClient = getClient();
   const from = getSender();
 
   const message = {
     senderAddress: from,
     recipients: { to: [{ address: to }] },
-    content: {
-      subject: subject || 'ServiceHub Test Email',
-      html: html || '<p>This is a test email from ServiceHub.</p>',
-    },
+    content: { subject, html, ...(plainText ? { plainText } : {}) },
   };
 
-  const result = await emailClient.beginSend(message);
+  const poller = await emailClient.beginSend(message);
+  // Wait for ACS to accept/reject the message (bounded — a slow poll means
+  // the message was queued, not that it failed).
+  const result = await Promise.race([
+    poller.pollUntilDone(),
+    new Promise((resolve) => setTimeout(() => resolve(null), 15000)),
+  ]);
+  if (result && result.status && result.status !== 'Succeeded') {
+    throw new Error(`Email send failed with status: ${result.status}`);
+  }
   return result;
+}
+
+export async function sendTestEmail(to, subject, html) {
+  return sendEmail(to, subject || 'ServiceHub Test Email', html || '<p>This is a test email from ServiceHub.</p>');
 }
 
 export async function sendCampaignEmail(recipient, campaign) {

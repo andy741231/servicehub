@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from './store/authStore';
+import useDirectoryStore from './pages/directory/store/directoryStore';
 import useThemeStore from './store/themeStore';
 import AuthLayout from './layouts/AuthLayout';
 import AppShell from './layouts/AppShell';
@@ -41,12 +42,29 @@ import EmailTemplates from './pages/email/EmailTemplates';
 import EmailBuilder from './pages/email/builder/EmailBuilder';
 import PaymentReconciliation from './pages/portal/PaymentReconciliation';
 import DirectoryDashboard from './pages/directory/DirectoryDashboard';
+import DirectoryLogin from './pages/directory/DirectoryLogin';
+import DirectoryVerify from './pages/directory/DirectoryVerify';
+import SaintLayout from './pages/directory/SaintLayout';
+import DirectoryMyProfile from './pages/directory/MyProfile';
 
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuthStore();
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/hub-admin" />;
+  return children;
+}
+
+// Saint-facing guard — checks the directory session cookie (separate from
+// Hub auth) and bounces to the directory login, not the admin login.
+function SaintProtectedRoute({ children }) {
+  const session = useDirectoryStore((s) => s.session);
+  const checkSession = useDirectoryStore((s) => s.checkSession);
+  useEffect(() => {
+    if (session === undefined) checkSession();
+  }, [session, checkSession]);
+  if (session === undefined) return <LoadingScreen />;
+  if (!session) return <Navigate to="/directory/login" />;
   return children;
 }
 
@@ -65,8 +83,10 @@ export default function App() {
   const { checkAuth } = useAuthStore();
 
   useEffect(() => {
-    // Check auth on admin routes and the dedicated login page. Other public
-    // routes (/, /form/:slug, /:slug) don't need a session.
+    // Check Hub auth on admin routes and the dedicated login page. Directory
+    // routes use their own session (SaintProtectedRoute checks it) — a saint
+    // has no Hub token, so checkAuth must not run there or it would clobber
+    // auth state with a spurious logout flag.
     const path = window.location.pathname;
     if (path.startsWith('/hub-admin') || path === '/login') {
       checkAuth();
@@ -83,6 +103,15 @@ export default function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
         </Route>
+
+        {/* ── Saint-facing directory (outside hub-admin) ── */}
+        <Route path="/directory/login" element={<DirectoryLogin />} />
+        <Route path="/directory/verify" element={<DirectoryVerify />} />
+        <Route element={<SaintProtectedRoute><SaintLayout /></SaintProtectedRoute>}>
+          <Route path="/directory" element={<Directory />} />
+          <Route path="/directory/me" element={<DirectoryMyProfile />} />
+        </Route>
+
         <Route path="/:slug" element={<PublicHome />} />
 
         {/* ── Admin backend (/hub-admin/*) ── */}
@@ -143,6 +172,8 @@ export default function App() {
               <Route index element={<Navigate to="/hub-admin/directory/dashboard" replace />} />
               <Route path="dashboard" element={<DirectoryDashboard />} />
               <Route path="browse" element={<Directory />} />
+              <Route path="members" element={<Navigate to="/hub-admin/directory/browse?view=table" replace />} />
+              <Route path="me" element={<DirectoryMyProfile />} />
             </Route>
 
             {/* Portal — nested under PortalShell for tab nav */}

@@ -3,7 +3,7 @@ import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Globe, ClipboardList, Mail, Users, BookOpen, LayoutDashboard, X,
   ChevronRight, ChevronDown, Gauge, Files, PanelTop, Palette, Images, FileStack,
-  Wrench, Inbox, BarChart3, Copy, UserPlus, FileText, Send,
+  Wrench, Inbox, BarChart3, Copy, UserPlus, FileText, Send, IdCard,
 } from 'lucide-react';
 import { APP_IDS } from 'shared';
 import useAuthStore from '../store/authStore';
@@ -48,8 +48,9 @@ export const APPS = [
   {
     id: APP_IDS.DIRECTORY, label: 'Directory', path: '/hub-admin/directory/dashboard', Icon: BookOpen,
     children: [
-      { label: 'Dashboard', path: '/hub-admin/directory/dashboard', Icon: Gauge },
-      { label: 'Browse',    path: '/hub-admin/directory/browse',    Icon: BookOpen },
+      { label: 'Dashboard',  path: '/hub-admin/directory/dashboard', Icon: Gauge },
+      { label: 'Browse',     path: '/hub-admin/directory/browse',    Icon: BookOpen },
+      { label: 'My Profile', path: '/hub-admin/directory/me',        Icon: IdCard },
     ],
   },
   {

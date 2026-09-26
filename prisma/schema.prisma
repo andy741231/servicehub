@@ -26,6 +26,7 @@ model User {
   createdAt    DateTime @default(now())
   roles        UserRole[]
   permissions  AppPermission[]
+  directoryMembers DirectoryMember[]
 }
 
 model Role {
@@ -105,7 +106,7 @@ model WebSection {
   order          Int
   columns        Int        @default(1)   // legacy: 1 = full-width, 2-6 = multi-column
   gap            Int        @default(24)  // legacy: px gap between columns
-  fluidConfig    String?    // JSON string — Fluid Engine settings: { gridColumns, gap:{horizontal,vertical}, fillScreen, minHeight, verticalAlignment }
+  fluidConfig    String?    @db.NVarChar(Max) // JSON string — Fluid Engine settings: { gridColumns, gap:{horizontal,vertical}, fillScreen, minHeight, verticalAlignment }
   paddingTop     Int        @default(48)
   paddingBottom  Int        @default(48)
   paddingLeft    Int        @default(0)
@@ -284,4 +285,126 @@ model WebAsset {
   size         Int
   url          String   // relative path like /uploads/filename
   createdAt    DateTime @default(now())
+}
+
+// ----------------------------------------------------------------------------
+// App 4 — Directory (church phone list)
+// ----------------------------------------------------------------------------
+
+// NB: userId + spouseMemberId uniqueness is enforced by filtered unique indexes
+// (WHERE col IS NOT NULL) created in the 20260915_add_directory_tables migration.
+// Prisma @unique can't express filtered indexes on SQL Server — an unfiltered
+// unique index would allow only ONE null, breaking members without logins/spouses.
+
+model DirectoryMember {
+  id                String   @id @default(uuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id])
+
+  // Identity
+  email             String?
+  firstName         String
+  middleName        String?
+  lastName          String
+  otherName         String?                // other spelling, maiden name, non-English script
+  gender            String?                // "brother" | "sister"
+  maritalStatus     String?                // "single" | "married" | "widowed" | "divorced"
+  dateOfBirth       DateTime?
+  photoUrl          String?
+
+  // Household / couple
+  isHeadOfHousehold Boolean  @default(false)
+  spouseMemberId    String?
+  spouse            DirectoryMember?  @relation("Spouses", fields: [spouseMemberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  spouseOf          DirectoryMember[] @relation("Spouses")
+  spouseFirstName   String?                // free-text for a spouse not in the list
+  spouseLastName    String?
+  coupleId          String?                // system-generated, shared by both spouses
+
+  // Directory metadata
+  role              String   @default("saint")    // "saint" | "helper" | "approver" | "admin"
+  status            String   @default("pending")  // "pending" | "active" | "inactive" | "moved" | "deceased" | "negative" | "duplicate" | "delete"
+  district          String
+  smallGroup        String?
+  locality          String   @default("Houston")
+  optedIn           Boolean  @default(true)
+  addedAt           DateTime @default(now())
+
+  // Import provenance — where the record came from and whether anyone has
+  // verified it since. Legacy phone-list rows are reviewed over time.
+  source           String?   // e.g. "pdf-2024" | "manual" | null
+  sourceAsOf       DateTime? // date the source data was current (list year)
+  importBatchId    String?   // groups rows from one import run
+  lastVerifiedAt   DateTime? // staff confirmed the record is accurate
+
+  // Contact
+  phone1            String?
+  phone2            String?
+  phonePrivacy      Boolean  @default(true)   // true = visible to other saints
+  address           String?
+  apartment         String?
+  city              String?
+  state             String?
+  zip               String?
+  addressPrivacy    Boolean  @default(false)  // false = hidden from other saints
+
+  // Audit (last-change fields)
+  changeType        String?
+  changedAt         DateTime?
+  changedByName     String?
+  account           DirectoryAccount?
+  auditLogs         DirectoryAuditLog[]
+  loginTokens       DirectoryLoginToken[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([district])
+  @@index([status])
+  @@index([lastName])
+}
+
+model DirectoryAuditLog {
+  id         String          @id @default(uuid())
+  memberId   String
+  actorId    String
+  actorName  String
+  changeType String          // "created" | "updated" | "activated" | "status_changed" | "role_changed" | "district_changed" | "deleted"
+  summary    String?         @db.NVarChar(Max)
+  createdAt  DateTime        @default(now())
+  member     DirectoryMember @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([memberId])
+}
+
+// Saint-facing sign-in — intentionally separate from the Hub User table so
+// directory sessions can never become Hub sessions. Email is the login
+// identifier and must be unique across accounts; members without email simply
+// cannot sign in (helpers manage them).
+model DirectoryAccount {
+  id             String   @id @default(uuid())
+  memberId       String   @unique
+  member         DirectoryMember @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  email          String   @unique                // normalized (lowercase) login email
+  passwordHash   String?                          // null = magic-link only
+  sessionVersion Int      @default(1)             // bump revokes every issued session
+  passwordSetAt  DateTime?
+  lastLoginAt    DateTime?
+  disabledAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// One-time magic-link sign-in tokens for saints (no password needed).
+// The raw token travels in the emailed link; only its SHA-256 hash is stored.
+model DirectoryLoginToken {
+  id        String          @id @default(uuid())
+  memberId  String
+  tokenHash String          @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime        @default(now())
+  member    DirectoryMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
 }
