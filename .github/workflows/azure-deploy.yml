@@ -67,6 +67,10 @@ jobs:
             exit 1
           fi
           echo "All models have corresponding migrations — no drift detected."
+          # Column-level check: every scalar field must appear as [field] in
+          # migration SQL — catches columns added via db push without a
+          # migration file (which the table check above can't see).
+          node server/scripts/check-column-drift.mjs
 
       - name: Assemble self-contained deployment folder
         run: |
@@ -285,6 +289,22 @@ jobs:
             exit 1
           fi
 
+      # Exercises a real Prisma -> DB query, not just the static SPA shell or
+      # the DB-free /api/health. A missing-column schema gap 500s here instead
+      # of sailing through to production.
+      - name: Health check — page data API (DB-backed)
+        run: |
+          for i in $(seq 1 6); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              "https://houstonservicehub-staging.azurewebsites.net/api/web/page/home" || true)
+            echo "Page data status (attempt $i): $STATUS"
+            if [ "$STATUS" = "200" ]; then exit 0; fi
+            sleep 20
+          done
+          echo "Page data smoke test FAILED after 6 attempts (last: $STATUS)"
+          exit 1
+
       - name: All smoke tests passed
         run: echo "All staging smoke tests passed — proceeding to production swap."
 
@@ -358,4 +378,19 @@ jobs:
             sleep 15
           done
           echo "Production health check FAILED. Check Azure portal."
+          exit 1
+
+      # Same DB-backed check on production — verifies the swapped app actually
+      # serves data, not just the DB-free /api/health endpoint.
+      - name: Verify production serves page data (DB-backed)
+        run: |
+          for i in $(seq 1 6); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              "https://houstonservicehub.azurewebsites.net/api/web/page/home" || true)
+            echo "Page data status (attempt $i): $STATUS"
+            if [ "$STATUS" = "200" ]; then exit 0; fi
+            sleep 15
+          done
+          echo "Production page data check FAILED (last: $STATUS)"
           exit 1
