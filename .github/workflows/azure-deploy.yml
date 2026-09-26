@@ -292,6 +292,10 @@ jobs:
           npx prisma migrate resolve --applied "20260630_fixdb_guard_updatedat_column_add_and_resolve_faile" || true
           npx prisma migrate resolve --applied "20260707_add_user_preferences" || true
           npx prisma migrate resolve --applied "20260711_add_form_folder_table" || true
+          # One-time rollback marker: 20260925 failed on first prod run (batch
+          # compiled CREATE INDEX before the column it referenced existed).
+          # --rolled-back lets migrate deploy retry it; nothing had applied.
+          npx prisma migrate resolve --rolled-back "20260925_directory_sms_and_sync" || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 

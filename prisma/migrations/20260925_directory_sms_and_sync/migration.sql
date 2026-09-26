@@ -57,8 +57,11 @@ BEGIN
 
   -- phonelist CognitoID (e.g. "827.1"): unique when present, but many rows
   -- arrive without one — filtered unique, same pattern as userId.
+  -- EXEC(): legacyId may be created moments earlier in THIS batch — plain
+  -- CREATE INDEX would compile against pre-ALTER metadata and fail with
+  -- "Invalid column name 'legacyId'" (happened on first prod run).
   IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'DirectoryMember_legacyId_key' AND object_id = OBJECT_ID('DirectoryMember'))
-    CREATE UNIQUE INDEX [DirectoryMember_legacyId_key] ON [DirectoryMember] ([legacyId]) WHERE [legacyId] IS NOT NULL;
+    EXEC('CREATE UNIQUE INDEX [DirectoryMember_legacyId_key] ON [DirectoryMember] ([legacyId]) WHERE [legacyId] IS NOT NULL');
 END;
 
 -- ── DirectorySmsPhone: per-NUMBER SMS state ────────────────────────────────
