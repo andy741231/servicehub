@@ -110,8 +110,9 @@ A directory JWT can NEVER authorize Hub routes (different cookie name +
 - `serializeMember` relies on `account` being included in queries for
   `hasAccount` — every member `include` carries `account: { select: { id } }`.
 - The 2024 PDF import (`pdf-2024-final` batch): 811 rows, name/phone/district
-  only — no email/address/gender/marital status. `W` district = Katy. Two
-  "Sunny Chen" records are confirmed different people.
+  only — no email/address/gender/marital status. `W` district = `West` (the
+  phonelist sheet's name; renamed by migration `20260926_directory_district_names`).
+  Two "Sunny Chen" records are confirmed different people.
 
 ## Pending (not yet implemented)
 - **CSV import/export** — bulk load path beyond the one-off PDF import.
