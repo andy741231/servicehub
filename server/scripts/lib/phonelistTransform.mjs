@@ -348,7 +348,7 @@ export function mapRow(rec, ctx, { asOf, tz, batchId }) {
 
 // ── Full-sheet analysis ─────────────────────────────────────────────────────
 
-export function analyzeSheet({ headers = [], records = [] }, { asOf, tz = 'America/Mexico_City', batchId } = {}) {
+export function analyzeSheet({ headers = [], records = [] }, { asOf, tz = 'America/Chicago', batchId } = {}) {
   const warnings = [];
   const push = (severity, code, ctx, field, value, detail) => warnings.push({
     severity, code,

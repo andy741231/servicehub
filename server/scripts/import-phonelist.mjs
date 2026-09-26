@@ -8,7 +8,7 @@
 // per-row warnings CSV to <repo>/scratch/. --apply writes to the database
 // after a typed confirmation (the database name). --purge-batch removes a
 // prior import batch (dev/test only; always prompts). The sheet's "Last
-// change" wall-clock values are read in --tz (default America/Mexico_City);
+// change" wall-clock values are read in --tz (default America/Chicago);
 // --as-of defaults to the CSV file's mtime. If DATABASE_URL is not in the
 // environment, the repo-root .env is loaded.
 
@@ -36,7 +36,7 @@ const USAGE = `Usage:
   node server/scripts/import-phonelist.mjs --purge-batch <batchId>`;
 
 export function parseArgs(argv) {
-  const args = { csvPath: null, apply: false, yes: false, offline: false, asOf: null, tz: 'America/Mexico_City', purgeBatch: null };
+  const args = { csvPath: null, apply: false, yes: false, offline: false, asOf: null, tz: 'America/Chicago', purgeBatch: null };
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];

@@ -410,7 +410,7 @@ test('parseArgs rejects --apply --offline and --purge-batch with --apply', () =>
   const a = parseArgs(['s.csv']);
   assert.equal(a.csvPath, 's.csv');
   assert.equal(a.apply, false);
-  assert.equal(a.tz, 'America/Mexico_City');
+  assert.equal(a.tz, 'America/Chicago');
 });
 
 test('purgeRefusal refuses prod-looking and unknown database names', () => {
