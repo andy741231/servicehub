@@ -844,9 +844,14 @@ export function buildDbPlan(analysis, db) {
   const sms = { create: [], fill: [], unchanged: [] };
   for (const [phone, seed] of analysis.smsPhones) {
     const ex = existingPhones.get(phone);
-    if (!ex) sms.create.push(phone);
-    else if ((ex.optedOutAt === null && seed.optedOutAt !== null)
-      || (ex.welcomedAt === null && seed.welcomedAt !== null)) sms.fill.push(phone);
+    if (!ex) {
+      sms.create.push({ phone, optedOutAt: seed.optedOutAt, welcomedAt: seed.welcomedAt });
+      continue;
+    }
+    const data = {};
+    if (ex.optedOutAt === null && seed.optedOutAt !== null) data.optedOutAt = seed.optedOutAt;
+    if (ex.welcomedAt === null && seed.welcomedAt !== null) data.welcomedAt = seed.welcomedAt;
+    if (Object.keys(data).length) sms.fill.push({ phone, data });
     else sms.unchanged.push(phone);
   }
 
