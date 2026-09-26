@@ -28,8 +28,15 @@ import {
   getInboundEmailById,
   deleteInboundEmail,
 } from '../controllers/inboundEmail.js';
+import { verifyToken } from '../middleware/auth.js';
 
 const router = Router();
+
+// Public: inbound-email webhook (the controller validates INBOUND_EMAIL_WEBHOOK_SECRET)
+router.post('/inbound', receiveInboundEmail);
+
+// Everything below requires a Hub session
+router.use(verifyToken);
 
 // Email template routes
 router.get('/templates', getEmailTemplates);
@@ -63,7 +70,6 @@ router.post('/lists/:listId/recipients', createRecipient);
 router.delete('/recipients/:id', deleteRecipient);
 
 // Inbound email routes
-router.post('/inbound', receiveInboundEmail);
 router.get('/inbound', getInboundEmails);
 router.get('/inbound/:id', getInboundEmailById);
 router.delete('/inbound/:id', deleteInboundEmail);
