@@ -8,6 +8,7 @@ import {
   STATUS_PERMISSIONS,
   REMOVED_STATUSES,
 } from '../src/controllers/directory.js';
+import { canonicalPhone } from '../src/utils/phone.js';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 const saintCtx = { role: 'saint', district: 'Central 1', member: { id: 'saint-1' } };
@@ -100,4 +101,26 @@ test('status permission matrix matches spec', () => {
   assert.ok(!STATUS_PERMISSIONS.approver.includes('delete'));
   assert.ok(STATUS_PERMISSIONS.admin.includes('delete'));
   assert.ok(STATUS_PERMISSIONS.admin.includes('pending'));
+});
+
+// ── Phone canonicalization (SMS matching depends on NNN-NNN-NNNN storage) ───
+
+test('canonicalPhone normalizes 10-digit NANP numbers', () => {
+  assert.equal(canonicalPhone('713-555-1234'), '713-555-1234');
+  assert.equal(canonicalPhone('(713) 555-1234'), '713-555-1234');
+  assert.equal(canonicalPhone('713.555.1234'), '713-555-1234');
+  assert.equal(canonicalPhone('7135551234'), '713-555-1234');
+  assert.equal(canonicalPhone('713 555 1234'), '713-555-1234');
+});
+
+test('canonicalPhone strips a leading country code', () => {
+  assert.equal(canonicalPhone('1-713-555-1234'), '713-555-1234');
+  assert.equal(canonicalPhone('+1 (713) 555-1234'), '713-555-1234');
+  assert.equal(canonicalPhone('+17135551234'), '713-555-1234');
+});
+
+test('canonicalPhone stores null for placeholders and malformed values', () => {
+  for (const bad of [null, undefined, '', '5', '.', '555-1234', '71355512345', 'abc', '+44 20 7946 0958']) {
+    assert.equal(canonicalPhone(bad), null, `input=${bad}`);
+  }
 });

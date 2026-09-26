@@ -13,6 +13,7 @@ import {
   DIRECTORY_GENDERS,
 } from 'shared';
 import { userHasRole } from '../middleware/permissions.js';
+import { canonicalPhone } from '../utils/phone.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -188,6 +189,7 @@ function nullifyEmpty(data) {
 }
 
 const DATE_FIELDS = ['dateOfBirth', 'lastVerifiedAt', 'sourceAsOf'];
+const PHONE_FIELDS = ['phone1', 'phone2'];
 
 function pickFields(body, allowed) {
   const data = {};
@@ -196,6 +198,9 @@ function pickFields(body, allowed) {
   }
   for (const f of DATE_FIELDS) {
     if (data[f] !== undefined) data[f] = data[f] ? new Date(data[f]) : null;
+  }
+  for (const f of PHONE_FIELDS) {
+    if (data[f] !== undefined) data[f] = canonicalPhone(data[f]);
   }
   return data;
 }
