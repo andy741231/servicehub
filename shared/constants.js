@@ -18,6 +18,23 @@ export const DIRECTORY_DISTRICTS = [
   'North', 'West',
 ];
 
+// District name → SMS shortname from the worksheet's wk_DistrictsTable
+// (what the legacy phonelist appended to lookup results, e.g. ", C1").
+export const DIRECTORY_DISTRICT_SHORTNAMES = {
+  'Central 1': 'C1',
+  'Central 2': 'C2',
+  'Central 3': 'C3',
+  'C - Sugar Land': 'CL1',
+  'C - Diho': 'CL2',
+  'C - Medical Ctr': 'CL3',
+  'S - Spanish Lang': 'SL',
+  'Southwest': 'SW',
+  'South': 'S',
+  'Southeast': 'SE',
+  'North': 'N',
+  'West': 'W',
+};
+
 export const DIRECTORY_ROLES = {
   SAINT: 'saint',
   HELPER: 'helper',
