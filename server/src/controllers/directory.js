@@ -548,7 +548,7 @@ export const updateMember = async (req, res) => {
     if (data.email !== undefined && data.email !== member.email) {
       const account = await prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
       if (account && data.email) {
-        const clash = await prisma.directoryAccount.findUnique({ where: { email: data.email.trim().toLowerCase() } });
+        const clash = await prisma.directoryAccount.findFirst({ where: { email: data.email.trim().toLowerCase() } });
         if (clash && clash.memberId !== member.id) {
           return res.status(409).json({ error: 'Another directory sign-in already uses that email' });
         }
@@ -767,7 +767,7 @@ export const updateMe = async (req, res) => {
     if (data.email !== undefined && data.email !== member.email) {
       const account = await prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
       if (account && data.email) {
-        const clash = await prisma.directoryAccount.findUnique({ where: { email: data.email.trim().toLowerCase() } });
+        const clash = await prisma.directoryAccount.findFirst({ where: { email: data.email.trim().toLowerCase() } });
         if (clash && clash.memberId !== member.id) {
           return res.status(409).json({ error: 'Another directory sign-in already uses that email' });
         }

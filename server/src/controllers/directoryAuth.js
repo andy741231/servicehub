@@ -18,7 +18,7 @@ async function findOrCreateAccountForMember(member) {
   const existing = await prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
   if (existing) return existing;
   return prisma.directoryAccount.create({
-    data: { memberId: member.id, email: normalizeEmail(member.email) },
+    data: { memberId: member.id, email: normalizeEmail(member.email) || null },
   });
 }
 
@@ -195,7 +195,7 @@ export const directoryLogin = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
-    const account = await prisma.directoryAccount.findUnique({
+    const account = await prisma.directoryAccount.findFirst({
       where: { email: normalizeEmail(email) },
       include: { member: true },
     });

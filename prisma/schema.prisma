@@ -337,6 +337,14 @@ model DirectoryMember {
   importBatchId    String?   // groups rows from one import run
   lastVerifiedAt   DateTime? // staff confirmed the record is accurate
 
+  // Phone-list lineage + Google Contacts sync state (uniqueness on legacyId is
+  // a filtered unique index in the migration — same pattern as userId).
+  legacyId        String?    // phonelist CognitoID, e.g. "827.1"
+  googleContactId String?    // "people/c<hex>"
+  googleSyncHash  String?    // hash of synced fields at last successful sync
+  googleSyncedAt  DateTime?
+  googleSyncError String?    @db.NVarChar(1000)
+
   // Contact
   phone1            String?
   phone2            String?
@@ -362,6 +370,7 @@ model DirectoryMember {
   @@index([district])
   @@index([status])
   @@index([lastName])
+  @@index([phone1])
 }
 
 model DirectoryAuditLog {
@@ -379,13 +388,13 @@ model DirectoryAuditLog {
 
 // Saint-facing sign-in — intentionally separate from the Hub User table so
 // directory sessions can never become Hub sessions. Email is the login
-// identifier and must be unique across accounts; members without email simply
-// cannot sign in (helpers manage them).
+// identifier and stays unique across accounts via a filtered unique index
+// (WHERE email IS NOT NULL — members without email sign in by SMS link).
 model DirectoryAccount {
   id             String   @id @default(uuid())
   memberId       String   @unique
   member         DirectoryMember @relation(fields: [memberId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  email          String   @unique                // normalized (lowercase) login email
+  email          String?                          // normalized (lowercase) login email; filtered unique
   passwordHash   String?                          // null = magic-link only
   sessionVersion Int      @default(1)             // bump revokes every issued session
   passwordSetAt  DateTime?
@@ -407,4 +416,56 @@ model DirectoryLoginToken {
   member    DirectoryMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId])
+}
+
+// Per-phone-number SMS state — keyed on the number, not the member, so
+// shared phones keep their own STOP/welcome/pending state.
+model DirectorySmsPhone {
+  phone            String    @id @db.NVarChar(32) // E.164, e.g. +17135551234
+  optedOutAt       DateTime?
+  welcomedAt       DateTime?
+  pendingCommand   String?   @db.NVarChar(Max) // JSON: { cmd, choices, ... }
+  pendingExpiresAt DateTime?
+  lastInboundAt    DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+// Private SMS activity log — directory-admin visibility only, purge job
+// enforces sms.logRetentionDays.
+model DirectorySmsLog {
+  id                String   @id @default(uuid())
+  direction         String   // "in" | "out" | "simulated"
+  phone             String
+  memberId          String?
+  command           String?
+  body              String   @db.NVarChar(Max)
+  providerMessageId String?
+  status            String?
+  createdAt         DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([phone])
+}
+
+// Typed, admin-editable settings (SMS messages, keywords, district maps).
+model DirectorySetting {
+  key           String   @id @db.NVarChar(200)
+  value         String   @db.NVarChar(Max) // JSON
+  updatedAt     DateTime @updatedAt
+  updatedByName String?
+}
+
+// Job lease — the unique (job, periodKey) pair guarantees one run per period
+// even across restarts and slot swaps.
+model DirectoryJobRun {
+  id         String    @id @default(uuid())
+  job        String    @db.NVarChar(100)
+  periodKey  String    @db.NVarChar(100)
+  status     String    // "running" | "ok" | "failed" | "dry-run"
+  summary    String?   @db.NVarChar(Max)
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@unique([job, periodKey])
 }
