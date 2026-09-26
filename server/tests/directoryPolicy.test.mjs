@@ -84,6 +84,44 @@ test('privacy flags hide fields and expose visibility hints', () => {
   assert.equal(shown.addressVisible, false);
 });
 
+test('address is shown when the member opted to share it', () => {
+  const out = serializeMember({ ...base, addressPrivacy: true }, saintCtx);
+  assert.equal(out.address, '1 Main St');
+  assert.equal(out.addressVisible, true);
+});
+
+// ── Linked-spouse visibility ────────────────────────────────────────────────
+
+const spouseOf = (over = {}) => ({
+  id: 'sp-1', firstName: 'John', lastName: 'Doe', status: 'active',
+  district: 'Central 1', optedIn: true, ...over,
+});
+
+test('saints see a linked spouse only when that spouse is publicly visible', () => {
+  const withSpouse = { ...base, spouse: spouseOf() };
+  assert.equal(serializeMember(withSpouse, saintCtx).spouse.firstName, 'John');
+  assert.equal(serializeMember({ ...base, spouse: spouseOf({ status: 'moved' }) }, saintCtx).spouse, null);
+  assert.equal(serializeMember({ ...base, spouse: spouseOf({ optedIn: false }) }, saintCtx).spouse, null);
+});
+
+test('an opted-out spouse is hidden even on the member\'s own record', () => {
+  const selfCtx = { ...saintCtx, member: { id: 'm-1' } };
+  const out = serializeMember({ ...base, spouseFirstName: 'Johnny', spouse: spouseOf({ optedIn: false }) }, selfCtx);
+  assert.equal(out.spouse, null);
+  // Free-text spouse fields stay available on the member's own record
+  assert.equal(out.spouseFirstName, 'Johnny');
+});
+
+test('staff see a linked spouse only within their own visibility scope', () => {
+  const removed = spouseOf({ status: 'moved' });
+  // Approver in the spouse's district may see removed records → shown
+  assert.equal(serializeMember({ ...base, spouse: removed }, approverCtx).spouse.firstName, 'John');
+  // Helper never sees removed records → hidden
+  assert.equal(serializeMember({ ...base, spouse: removed }, helperCtx).spouse, null);
+  // Approver from another district cannot see a removed spouse either
+  assert.equal(serializeMember({ ...base, spouse: removed }, { ...approverCtx, district: 'Katy' }).spouse, null);
+});
+
 test('self and same-district staff get the full record', () => {
   const selfCtx = { ...saintCtx, member: { id: 'm-1' } };
   const out = serializeMember(base, selfCtx);
