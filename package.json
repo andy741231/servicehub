@@ -16,6 +16,8 @@
     "start": "node server/src/index.js",
     "postinstall": "npx prisma generate",
     "seed:users": "node prisma/seed-users.js",
+    "db:usage": "node server/scripts/db-usage.mjs",
+    "db:refresh": "node server/scripts/db-refresh.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

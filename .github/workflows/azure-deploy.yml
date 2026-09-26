@@ -162,6 +162,31 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
+      # Keep the second free DB schema-current too. Whichever free DB backs the
+      # staging slot, the other one gets migrated here — so swapping DBs never
+      # hits a stale schema. Non-blocking: a paused/exhausted free DB only
+      # warns (retry covers auto-pause wake-up).
+      - name: Sync dev database (non-blocking)
+        run: |
+          for M in 0_init \
+            20260625_add_web_section_and_draft_templates \
+            20260629_cleanupmigrations_remove_redundant_manual_migratio \
+            20260630_feat_form_version_history \
+            20260630_fixdb_guard_updatedat_column_add_and_resolve_faile \
+            20260707_add_user_preferences \
+            20260711_add_form_folder_table; do
+            npx prisma migrate resolve --applied "$M" || true
+          done
+          npx prisma migrate resolve --rolled-back "20260925_directory_sms_and_sync" || true
+          if ! npx prisma migrate deploy; then
+            echo "First attempt failed — the free DB may be auto-paused. Retrying in 30s..."
+            sleep 30
+            npx prisma migrate deploy \
+              || echo "::warning::Dev DB sync failed (paused or out of free hours?). Run 'npx prisma migrate deploy' against it before use."
+          fi
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DEV }}
+
       - name: Download deployment artifact
         uses: actions/download-artifact@v4
         with:
