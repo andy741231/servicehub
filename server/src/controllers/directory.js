@@ -123,11 +123,20 @@ const PUBLIC_MEMBER_FIELDS = [
 ];
 const INTERNAL_FIELDS = ['userId', 'coupleId', 'account', 'auditLogs', 'loginTokens'];
 
+// Spouse shape fetched with every member row. `district`/`optedIn` are needed
+// by the canSeeMember() check inside serializeMember — they never reach the
+// response (the serialized spouse only carries id/name/status).
+const SPOUSE_SELECT = { id: true, firstName: true, lastName: true, status: true, district: true, optedIn: true };
+
 // Serialize for the requester: full record for authorized staff/self;
 // masked allowlist for everyone else. `phoneVisible`/`addressVisible` let the
 // UI distinguish "member chose to hide" from "never provided".
 export function serializeMember(member, ctx) {
-  const spouse = member.spouse
+  // A linked spouse is only attached when the requester could see that
+  // spouse's own record — otherwise a removed/opted-out spouse's id and
+  // status would leak to any saint. (Free-text spouseFirstName/LastName
+  // remain public by design.)
+  const spouse = member.spouse && canSeeMember(ctx, member.spouse)
     ? { id: member.spouse.id, firstName: member.spouse.firstName, lastName: member.spouse.lastName, status: member.spouse.status }
     : null;
   if (canSeeFullRecord(ctx, member)) {
@@ -141,7 +150,7 @@ export function serializeMember(member, ctx) {
   out.phoneVisible = Boolean(member.phonePrivacy);
   out.addressVisible = Boolean(member.addressPrivacy);
   if (!member.phonePrivacy) { out.phone1 = null; out.phone2 = null; }
-  if (!member.addressVisible) {
+  if (!member.addressPrivacy) {
     out.address = null; out.apartment = null; out.city = null; out.state = null; out.zip = null;
   }
   return out;
@@ -275,7 +284,7 @@ export const getStats = async (req, res) => {
         orderBy: { addedAt: 'desc' },
         take: 5,
         include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
       }),
@@ -387,7 +396,7 @@ export const listMembers = async (req, res) => {
         take,
         skip,
         include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
       }),
@@ -413,7 +422,7 @@ export const getMember = async (req, res) => {
     const member = await prisma.directoryMember.findUnique({
       where: { id: req.params.id },
       include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
     });
@@ -479,7 +488,7 @@ export const createMember = async (req, res) => {
     const full = await prisma.directoryMember.findUnique({
       where: { id: member.id },
       include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
     });
@@ -565,7 +574,7 @@ export const updateMember = async (req, res) => {
       where: { id: member.id },
       data: stampChange(data, ctx, changeType),
       include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
     });
@@ -615,7 +624,7 @@ export const updateMemberStatus = async (req, res) => {
         where: { id: member.id },
         data: stampChange({ status }, ctx, changeType),
         include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
       }),
@@ -682,7 +691,7 @@ export const updateMemberRole = async (req, res) => {
       where: { id: member.id },
       data: stampChange({ role }, ctx, 'role_changed'),
       include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
     });
@@ -742,7 +751,7 @@ export const getMe = async (req, res) => {
     const member = await prisma.directoryMember.findUnique({
       where: { id: ctx.member.id },
       include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
     });
@@ -782,7 +791,7 @@ export const updateMe = async (req, res) => {
       where: { id: member.id },
       data: stampChange(data, ctx, 'updated'),
       include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
     });
@@ -898,7 +907,7 @@ export const uploadPhoto = async (req, res) => {
       where: { id: member.id },
       data: stampChange({ photoUrl }, ctx, 'updated'),
       include: {
-        spouse: { select: { id: true, firstName: true, lastName: true, status: true } },
+        spouse: { select: SPOUSE_SELECT },
         account: { select: { id: true } },
       },
     });
