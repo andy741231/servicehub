@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch-path=src src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test tests/"
   },
   "dependencies": {
     "@azure/communication-email": "^1.1.0",

@@ -92,7 +92,8 @@ service-hub/
 │   │   │   ├── web.js
 │   │   │   ├── email.js
 │   │   │   ├── forms.js
-│   │   │   └── hub-admin.js        # directory/portal handled here (placeholder — frontend-only for now)
+│   │   │   ├── directory.js        # App 4 - Directory (church phone list)
+│   │   │   └── hub-admin.js        # portal placeholder (frontend-only for now)
 │   │   ├── middleware/
 │   │   │   ├── auth.js             # JWT verify
 │   │   │   └── permissions.js      # App-level access guard

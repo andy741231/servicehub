@@ -1,17 +1,28 @@
 # Directory App
 
 ## Status
-**In Progress — Frontend UI complete (mock data), backend pending.**
+**Full stack implemented** — church phone list per `directory-startup.md`.
 
-What's built (frontend, all using mock data):
-- `DirectoryDashboard.jsx` — bento-style dashboard with stats, recent members, and a departments chart
-- `index.jsx` — browse page with full-text search and department filter
-- `DirectoryShell.jsx` — pass-through shell for nested routes (Dashboard and Browse are sidebar drill-down children of the Directory parent)
+- `server/src/routes/directory.js` + `controllers/directory.js` — CRUD, status lifecycle, role matrix, district scoping, privacy masking, audit log, photo upload, duplicate check
+- `DirectoryMember` + `DirectoryAuditLog` Prisma models (filtered unique indexes on userId/spouseMemberId — see schema comment)
+- `DirectoryDashboard.jsx` — real stats (active saints, districts, pending queue), by-district chart
+- `index.jsx` — merged Browse+Members: masked card grid for all; staff get Cards/Table toggle, status filter, Add Member (`/hub-admin/directory/members` redirects here with `?view=table`)
+- `Members.jsx` — `MembersTable` component (activate, status/role changes, hard-delete duplicates, portaled row menu)
+- `MemberFormDialog.jsx` — add with duplicate-check step / edit
+- `MemberDetailDialog.jsx` — member details + audit history (staff)
+- `MyProfile.jsx` — saint self-service (contact info, privacy toggles, photo, set-password card)
+- `DirectoryShell.jsx` — pass-through shell
 
-What's still pending:
-- No `server/src/routes/directory.js` backend route
-- No Prisma models for directory entries in `prisma/schema.prisma`
-- No API integration — all data is hardcoded mock data
+### Saint-facing auth (`/directory`, outside hub-admin)
+- `controllers/directoryAuth.js` — magic link (request/verify, 30-min one-time hashed tokens in `DirectoryLoginToken`, 60s request cooldown, atomic consume, IP rate limits), password login, set-password endpoint
+- `middleware/directoryAuth.js` — `verifyDirectoryAccess`: accepts `directoryToken` (directory sessions) or `token` (Hub sessions); resolves `req.directoryCtx`; rejects inactive members
+- `DirectoryAccount` model — dedicated directory identity (memberId, email, optional passwordHash, sessionVersion). Status changes bump sessionVersion → instant revocation. Directory JWTs never authorize Hub routes
+- `DirectoryLogin.jsx` — `/directory/login`, magic link primary + password toggle
+- `DirectoryVerify.jsx` — `/directory/verify?token=` consumes links
+- `SaintLayout.jsx` — minimal shell (Browse / My Profile / sign out; staff manage via the in-page Cards/Table toggle)
+- Member `email` doubles as login email — staff/self email edits sync `DirectoryAccount.email`
+
+Still pending: CSV import/export, public renderer (intentionally none), Azure Blob photo storage.
 
 ## Overview
 The Directory sub-app will provide a searchable, filterable directory of items, people, or resources. It will feature:

@@ -14,6 +14,12 @@ const app = express();
 const port = process.env.PORT || 4000;
 const isProd = process.env.NODE_ENV === 'production';
 
+// Behind iisnode on App Service there is exactly one trusted proxy hop, so
+// the rightmost X-Forwarded-For entry is the real client IP. Without this,
+// req.ip is always the loopback proxy address and every client shares one
+// rate-limit bucket on the public auth endpoints.
+app.set('trust proxy', 1);
+
 // In production the client is built and served by this server
 // In dev, Vite runs separately on port 3000
 if (!isProd) {

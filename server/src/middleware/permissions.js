@@ -4,7 +4,7 @@ import prisma from '../db/client.js';
 // super_admin satisfies any role requirement, including 'admin'.
 const ROLE_HIERARCHY = ['super_admin', 'admin', 'editor', 'viewer'];
 
-async function userHasRole(userId, roleName) {
+export async function userHasRole(userId, roleName) {
   const requiredLevel = ROLE_HIERARCHY.indexOf(roleName);
   if (requiredLevel === -1) return false;
 

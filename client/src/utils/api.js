@@ -13,7 +13,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const isLoginRequest = originalRequest.url?.includes('/auth/login');
-    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
+    // Only attempt a Hub token refresh when a Hub session is believed active —
+    // a directory-only saint's 401s must not churn the Hub refresh endpoint.
+    const { isAuthenticated } = useAuthStore.getState();
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest && isAuthenticated) {
       originalRequest._retry = true;
 
       // Share a single in-flight refresh so simultaneous 401s don't race and
@@ -29,7 +32,6 @@ api.interceptors.response.use(
         await refreshPromise;
         return api(originalRequest);
       } catch (refreshError) {
-        const { isAuthenticated } = useAuthStore.getState();
         if (isAuthenticated) {
           useAuthStore.getState().setState({
             wasLoggedIn: true,
