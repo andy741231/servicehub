@@ -685,6 +685,20 @@ safe substitute for any step.
   diff the results.
 - Document the expected differences: privacy masking, district names, and the trailer.
 
+**Differential oracle (S10, done):** `server/scripts/gen-lookup-golden.mjs`
+loads the real V151 `.gs` files into `node:vm` and runs the same query through
+GAS and through `directorySms/lookup.js`. The synthetic suite
+(`server/tests/fixtures/smsLookupGolden.json`, 59 cases) is committed and runs in
+`smsLookup.test.mjs`; every case where the port differs from GAS must carry a
+note. On the 2026-09-25 export: 991 generated queries, **960 exact**; the 31
+others are all intended: 30 are the no-phone rendering (GAS printed `-- (h)`,
+the port omits the segment) and 2 are the legacyId 51⇄52 cross-referenced
+couple (unlinked by the importer, a GAS couple). The two causes overlap in one
+query. Expected differences: opted-out members are hidden, `phonePrivacy=false`
+hides the phone, households follow `spouseMemberId` (so a head-of-household
+sister's couple links), ties among identical first names follow `legacyId`
+order, leading blank lines are trimmed, and helpers get the saint view.
+
 **Staging E2E:** point +1 832-924-5571 at the staging slot's `/api/directory/sms`
 (POST) and cover these scenarios:
 - an unknown number

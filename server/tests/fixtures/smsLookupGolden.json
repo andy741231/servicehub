@@ -1,0 +1,415 @@
+[
+  {
+    "query": "sam",
+    "showSearchHint": true,
+    "gas": "Sam Ashford, 281-555-0101, C1\n\nSam Billington, 281-555-0102, C2\n\nSam Colby, 281-555-0103, C3\n\nSam Draper, 281-555-0104, CL1\n\nSam Ellery, 281-555-0105, CL2\n\nSam Ferris, 281-555-0106, CL3\n\nSam Givens, 281-555-0107, SL\n\nSam Holloway, 281-555-0108, SW\n\nSam Ingram, 281-555-0109, S\n\nSam Judd, 281-555-0110, SE\n\nSam Keene, 281-555-0111, N\n\nSam Larkin, 281-555-0112, W\n\n--- results limited to 12",
+    "expected": "Sam Ashford, 281-555-0101, C1\n\nSam Billington, 281-555-0102, C2\n\nSam Colby, 281-555-0103, C3\n\nSam Draper, 281-555-0104, CL1\n\nSam Ellery, 281-555-0105, CL2\n\nSam Ferris, 281-555-0106, CL3\n\nSam Givens, 281-555-0107, SL\n\nSam Holloway, 281-555-0108, SW\n\nSam Ingram, 281-555-0109, S\n\nSam Judd, 281-555-0110, SE\n\nSam Keene, 281-555-0111, N\n\nSam Larkin, 281-555-0112, W\n\n--- results limited to 12",
+    "note": ""
+  },
+  {
+    "query": "marcus",
+    "showSearchHint": true,
+    "gas": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "expected": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "note": ""
+  },
+  {
+    "query": "elaine",
+    "showSearchHint": true,
+    "gas": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "expected": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "note": ""
+  },
+  {
+    "query": "priscilla",
+    "showSearchHint": true,
+    "gas": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "expected": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "note": ""
+  },
+  {
+    "query": "vera",
+    "showSearchHint": true,
+    "gas": "Hugh Marlowe & Vera Okafor, C3\n   Hugh,  281-555-0131\n   Vera,  281-555-0132",
+    "expected": "Hugh Marlowe & Vera Okafor, C3\n   Hugh,  281-555-0131\n   Vera,  281-555-0132",
+    "note": ""
+  },
+  {
+    "query": "hugh",
+    "showSearchHint": true,
+    "gas": "Hugh Marlowe & Vera Okafor, C3\n   Hugh,  281-555-0131\n   Vera,  281-555-0132",
+    "expected": "Hugh Marlowe & Vera Okafor, C3\n   Hugh,  281-555-0131\n   Vera,  281-555-0132",
+    "note": ""
+  },
+  {
+    "query": "perry",
+    "showSearchHint": true,
+    "gas": "Perry & Sadie Noland, CL3\n   Perry,  281-555-0137\n   Sadie,  281-555-0138",
+    "expected": "Perry & Sadie Noland, CL3\n   Perry,  281-555-0137\n   Sadie,  281-555-0138",
+    "note": ""
+  },
+  {
+    "query": "sadie",
+    "showSearchHint": true,
+    "gas": "Perry & Sadie Noland, CL3\n   Perry,  281-555-0137\n   Sadie,  281-555-0138",
+    "expected": "Perry & Sadie Noland, CL3\n   Perry,  281-555-0137\n   Sadie,  281-555-0138",
+    "note": ""
+  },
+  {
+    "query": "rosalind",
+    "showSearchHint": true,
+    "gas": "Gilbert & Rosalind Ames, SL\n   Gilbert,  281-555-0139\n   Rosalind,  281-555-0140",
+    "expected": "Gilbert & Rosalind Ames, SL\n   Gilbert,  281-555-0139\n   Rosalind,  281-555-0140",
+    "note": ""
+  },
+  {
+    "query": "gilbert",
+    "showSearchHint": true,
+    "gas": "Gilbert & Rosalind Ames, SL\n   Gilbert,  281-555-0139\n   Rosalind,  281-555-0140",
+    "expected": "Gilbert & Rosalind Ames, SL\n   Gilbert,  281-555-0139\n   Rosalind,  281-555-0140",
+    "note": ""
+  },
+  {
+    "query": "iris",
+    "showSearchHint": true,
+    "gas": "Felix & Iris Ortega, SW\n   Felix,  281-555-0141\n   Iris,  281-555-0142",
+    "expected": "Felix & Iris Ortega, SW\n   Felix,  281-555-0141\n   Iris,  281-555-0142",
+    "note": ""
+  },
+  {
+    "query": "celeste",
+    "showSearchHint": true,
+    "gas": "Nathaniel (Nate) & Celeste Bourne, CL1\n   Nathaniel (Nate),  281-555-0133\n   Celeste,  281-555-0134",
+    "expected": "Nathaniel (Nate) & Celeste Bourne, CL1\n   Nathaniel (Nate),  281-555-0133\n   Celeste,  281-555-0134",
+    "note": ""
+  },
+  {
+    "query": "last ortega",
+    "showSearchHint": true,
+    "gas": "Felix & Iris Ortega, SW\n   Felix,  281-555-0141\n   Iris,  281-555-0142",
+    "expected": "Felix & Iris Ortega, SW\n   Felix,  281-555-0141\n   Iris,  281-555-0142",
+    "note": ""
+  },
+  {
+    "query": "last vega",
+    "showSearchHint": true,
+    "gas": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "expected": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "note": ""
+  },
+  {
+    "query": "dana",
+    "showSearchHint": true,
+    "gas": "Dana Reyes, 281-555-0135, CL2",
+    "expected": "Wade & Dana Reyes, CL2\n   Wade,  281-555-0136\n   Dana,  281-555-0135",
+    "note": "directory spouseMemberId links the head-of-household sister as a couple; GAS leaves her single (headHH gate) and slack-notifies instead"
+  },
+  {
+    "query": "wade",
+    "showSearchHint": true,
+    "gas": "Wade Reyes, 281-555-0136, CL2",
+    "expected": "Wade & Dana Reyes, CL2\n   Wade,  281-555-0136\n   Dana,  281-555-0135",
+    "note": "same couple — GAS never links a brother whose Couple ID points at a head sister, so he stays single"
+  },
+  {
+    "query": "nate",
+    "showSearchHint": true,
+    "gas": "Nathaniel (Nate) & Celeste Bourne, CL1\n   Nathaniel (Nate),  281-555-0133\n   Celeste,  281-555-0134",
+    "expected": "Nathaniel (Nate) & Celeste Bourne, CL1\n   Nathaniel (Nate),  281-555-0133\n   Celeste,  281-555-0134",
+    "note": ""
+  },
+  {
+    "query": "nathaniel",
+    "showSearchHint": true,
+    "gas": "Nathaniel (Nate) & Celeste Bourne, CL1\n   Nathaniel (Nate),  281-555-0133\n   Celeste,  281-555-0134",
+    "expected": "Nathaniel (Nate) & Celeste Bourne, CL1\n   Nathaniel (Nate),  281-555-0133\n   Celeste,  281-555-0134",
+    "note": ""
+  },
+  {
+    "query": "chip",
+    "showSearchHint": true,
+    "gas": "Christopher (Chip) Nolan, 281-555-0143, C2",
+    "expected": "Christopher (Chip) Nolan, 281-555-0143, C2",
+    "note": ""
+  },
+  {
+    "query": "billie",
+    "showSearchHint": true,
+    "gas": "Wilhelmina (Billie) Stokes, 281-555-0144, C3",
+    "expected": "Wilhelmina (Billie) Stokes, 281-555-0144, C3",
+    "note": ""
+  },
+  {
+    "query": "wilhelmina",
+    "showSearchHint": true,
+    "gas": "Wilhelmina (Billie) Stokes, 281-555-0144, C3",
+    "expected": "Wilhelmina (Billie) Stokes, 281-555-0144, C3",
+    "note": ""
+  },
+  {
+    "query": "chris",
+    "showSearchHint": true,
+    "gas": "chris was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "expected": "chris was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "note": ""
+  },
+  {
+    "query": "maryann",
+    "showSearchHint": true,
+    "gas": "Mary Ann Fielding, 281-555-0114, C1",
+    "expected": "Mary Ann Fielding, 281-555-0114, C1",
+    "note": ""
+  },
+  {
+    "query": "mary ann",
+    "showSearchHint": true,
+    "gas": "Mary Ann Fielding, 281-555-0114, C1",
+    "expected": "Mary Ann Fielding, 281-555-0114, C1",
+    "note": ""
+  },
+  {
+    "query": "mary ann fielding",
+    "showSearchHint": true,
+    "gas": "Mary Ann Fielding, 281-555-0114, C1",
+    "expected": "Mary Ann Fielding, 281-555-0114, C1",
+    "note": ""
+  },
+  {
+    "query": "yukilin",
+    "showSearchHint": true,
+    "gas": "Yuki Lin Tanaka, 281-555-0145, CL1",
+    "expected": "Yuki Lin Tanaka, 281-555-0145, CL1",
+    "note": ""
+  },
+  {
+    "query": "yuki",
+    "showSearchHint": true,
+    "gas": "yuki was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "expected": "yuki was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "note": ""
+  },
+  {
+    "query": "al",
+    "showSearchHint": true,
+    "gas": "Al Yost, 281-555-0116, C2",
+    "expected": "Al Yost, 281-555-0116, C2",
+    "note": ""
+  },
+  {
+    "query": "ed",
+    "showSearchHint": true,
+    "gas": "Ed Oates, 281-555-0117, C3",
+    "expected": "Ed Oates, 281-555-0117, C3",
+    "note": ""
+  },
+  {
+    "query": "zz",
+    "showSearchHint": true,
+    "gas": "First name 'zz' was not found",
+    "expected": "First name 'zz' was not found",
+    "note": ""
+  },
+  {
+    "query": "bob",
+    "showSearchHint": true,
+    "gas": "First name 'bob' was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "expected": "First name 'bob' was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "note": ""
+  },
+  {
+    "query": "theo",
+    "showSearchHint": true,
+    "gas": "theo was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "expected": "theo was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "note": ""
+  },
+  {
+    "query": "theo quill",
+    "showSearchHint": true,
+    "gas": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "expected": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "note": ""
+  },
+  {
+    "query": "theodore quill",
+    "showSearchHint": true,
+    "gas": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "expected": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "note": ""
+  },
+  {
+    "query": "quill",
+    "showSearchHint": true,
+    "gas": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "expected": "Theodore & Priscilla Quill, C2\n   Theodore,  281-555-0129\n   Priscilla,  281-555-0130",
+    "note": ""
+  },
+  {
+    "query": "marlowes",
+    "showSearchHint": true,
+    "gas": "Hugh Marlowe & Vera Okafor, C3\n   Hugh,  281-555-0131\n   Vera,  281-555-0132",
+    "expected": "Hugh Marlowe & Vera Okafor, C3\n   Hugh,  281-555-0131\n   Vera,  281-555-0132",
+    "note": ""
+  },
+  {
+    "query": "last sam vega",
+    "showSearchHint": true,
+    "gas": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128\n\nVernon Vestal, 281-555-0146, SE",
+    "expected": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128\n\nVernon Vestal, 281-555-0146, SE",
+    "note": ""
+  },
+  {
+    "query": "john last kim",
+    "showSearchHint": true,
+    "gas": "Gordon Kingsley, 281-555-0125, N",
+    "expected": "Gordon Kingsley, 281-555-0125, N",
+    "note": ""
+  },
+  {
+    "query": "last kingsley",
+    "showSearchHint": true,
+    "gas": "Gordon Kingsley, 281-555-0125, N",
+    "expected": "Gordon Kingsley, 281-555-0125, N",
+    "note": ""
+  },
+  {
+    "query": "mildred",
+    "showSearchHint": true,
+    "gas": "mildred was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "expected": "mildred was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "note": ""
+  },
+  {
+    "query": "oswald",
+    "showSearchHint": true,
+    "gas": "Oswald Quimby, 281-555-0123, C2",
+    "expected": "oswald was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "note": "_optedIn=false — hidden from the saints' lookup; GAS has no opt-out concept so it still prints him"
+  },
+  {
+    "query": "priya",
+    "showSearchHint": true,
+    "gas": "Priya Tandon, 281-555-0121, SE",
+    "expected": "Priya Tandon, SE",
+    "note": "_phonePrivacy=false — port omits the phone segment; the sheet printed it"
+  },
+  {
+    "query": "owen",
+    "showSearchHint": true,
+    "gas": "Owen Redding, -- (h), N",
+    "expected": "Owen Redding, N",
+    "note": "no usable phone — GAS prints '-- (h)'; the port omits the phone segment"
+  },
+  {
+    "query": "harriet",
+    "showSearchHint": true,
+    "gas": "Harriet Sloan, 713-555-0188 (h), S",
+    "expected": "Harriet Sloan, 713-555-0188 (h), S",
+    "note": ""
+  },
+  {
+    "query": "j.r.",
+    "showSearchHint": true,
+    "gas": "Sam Judd, 281-555-0110, SE",
+    "expected": "Sam Judd, 281-555-0110, SE",
+    "note": ""
+  },
+  {
+    "query": "tom",
+    "showSearchHint": true,
+    "gas": "Tom Vickers, 281-555-0115, C1",
+    "expected": "Tom Vickers, 281-555-0115, C1",
+    "note": ""
+  },
+  {
+    "query": "sam vega",
+    "showSearchHint": true,
+    "gas": "'sam vega' was not found",
+    "expected": "'sam vega' was not found",
+    "note": ""
+  },
+  {
+    "query": "lookup marcus",
+    "showSearchHint": true,
+    "gas": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128\n\n'Lookup' no longer needed-- just type the name... also, you may search by last name... type 'last' name",
+    "expected": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128\n\n'Lookup' no longer needed-- just type the name... also, you may search by last name... type 'last' name",
+    "note": ""
+  },
+  {
+    "query": "find elaine",
+    "showSearchHint": true,
+    "gas": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "expected": "Marcus & Elaine Vega, C1\n   Marcus,  281-555-0127\n   Elaine,  281-555-0128",
+    "note": ""
+  },
+  {
+    "query": "look up marcus",
+    "showSearchHint": true,
+    "gas": "Louise Marsh, 281-555-0126, SE\n\n'Lookup' no longer needed-- just type the name... also, you may search by last name... type 'last' name",
+    "expected": "Louise Marsh, 281-555-0126, SE\n\n'Lookup' no longer needed-- just type the name... also, you may search by last name... type 'last' name",
+    "note": ""
+  },
+  {
+    "query": "\"louise\"  marsh",
+    "showSearchHint": true,
+    "gas": "Louise Marsh, 281-555-0126, SE",
+    "expected": "Louise Marsh, 281-555-0126, SE",
+    "note": ""
+  },
+  {
+    "query": "#sam",
+    "showSearchHint": true,
+    "gas": "Sam Ashford, 281-555-0101, C1\n\nSam Billington, 281-555-0102, C2\n\nSam Colby, 281-555-0103, C3\n\nSam Draper, 281-555-0104, CL1\n\nSam Ellery, 281-555-0105, CL2\n\nSam Ferris, 281-555-0106, CL3\n\nSam Givens, 281-555-0107, SL\n\nSam Holloway, 281-555-0108, SW\n\nSam Ingram, 281-555-0109, S\n\nSam Judd, 281-555-0110, SE\n\nSam Keene, 281-555-0111, N\n\nSam Larkin, 281-555-0112, W\n\n--- results limited to 12",
+    "expected": "Sam Ashford, 281-555-0101, C1\n\nSam Billington, 281-555-0102, C2\n\nSam Colby, 281-555-0103, C3\n\nSam Draper, 281-555-0104, CL1\n\nSam Ellery, 281-555-0105, CL2\n\nSam Ferris, 281-555-0106, CL3\n\nSam Givens, 281-555-0107, SL\n\nSam Holloway, 281-555-0108, SW\n\nSam Ingram, 281-555-0109, S\n\nSam Judd, 281-555-0110, SE\n\nSam Keene, 281-555-0111, N\n\nSam Larkin, 281-555-0112, W\n\n--- results limited to 12",
+    "note": ""
+  },
+  {
+    "query": "lookup# tom",
+    "showSearchHint": true,
+    "gas": "Tom Vickers, 281-555-0115, C1\n\n'Lookup' no longer needed-- just type the name... also, you may search by last name... type 'last' name",
+    "expected": "Tom Vickers, 281-555-0115, C1\n\n'Lookup' no longer needed-- just type the name... also, you may search by last name... type 'last' name",
+    "note": ""
+  },
+  {
+    "query": "quentin",
+    "showSearchHint": true,
+    "gas": "quentin was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "expected": "quentin was not found\n\nHow to search\n - By first name -- john\n - By last name -- last smith\n - By full name -- john smith",
+    "note": ""
+  },
+  {
+    "query": "felix ortega",
+    "showSearchHint": true,
+    "gas": "Felix & Iris Ortega, SW\n   Felix,  281-555-0141\n   Iris,  281-555-0142",
+    "expected": "Felix & Iris Ortega, SW\n   Felix,  281-555-0141\n   Iris,  281-555-0142",
+    "note": ""
+  },
+  {
+    "query": "sam last",
+    "showSearchHint": true,
+    "gas": "Sam Larkin, 281-555-0112, W",
+    "expected": "Sam Larkin, 281-555-0112, W",
+    "note": ""
+  },
+  {
+    "query": "zztop",
+    "showSearchHint": false,
+    "gas": "zztop was not found",
+    "expected": "zztop was not found",
+    "note": ""
+  },
+  {
+    "query": "a b c d e f g h",
+    "showSearchHint": true,
+    "gas": "Not found",
+    "expected": "Not found",
+    "note": ""
+  },
+  {
+    "query": "last ashford",
+    "showSearchHint": true,
+    "gas": "Sam Ashford, 281-555-0101, C1",
+    "expected": "Sam Ashford, 281-555-0101, C1",
+    "note": ""
+  }
+]
