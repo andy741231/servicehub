@@ -80,11 +80,21 @@ export function mapRole(raw) {
 }
 
 // District is matched after whitespace normalization, case-insensitively.
+// Canonical names are the sheet's own (they are DIRECTORY_DISTRICTS); the
+// 2024-PDF labels and worksheet shortnames are accepted as aliases.
 const DISTRICT_MAP = new Map(Object.entries({
   'Central 1': 'Central 1', 'Central 2': 'Central 2', 'Central 3': 'Central 3',
-  'C - Sugar Land': 'Chinese 1', 'C - Diho': 'Chinese 2', 'C - Medical Ctr': 'Chinese 3',
-  'S - Spanish Lang': 'Spanish', 'Southwest': 'Southwest', 'South': 'South',
-  'Southeast': 'Southeast', 'North': 'North', 'West': 'Katy',
+  'C - Sugar Land': 'C - Sugar Land', 'C - Diho': 'C - Diho',
+  'C - Medical Ctr': 'C - Medical Ctr', 'S - Spanish Lang': 'S - Spanish Lang',
+  'Southwest': 'Southwest', 'South': 'South', 'Southeast': 'Southeast',
+  'North': 'North', 'West': 'West',
+  // Aliases: 2024 PDF labels and wk_DistrictsTable shortnames.
+  'Chinese 1': 'C - Sugar Land', 'Chinese 2': 'C - Diho', 'Chinese 3': 'C - Medical Ctr',
+  'Katy': 'West', 'Spanish': 'S - Spanish Lang',
+  'CL1': 'C - Sugar Land', 'CL2': 'C - Diho', 'CL3': 'C - Medical Ctr',
+  'SL': 'S - Spanish Lang', 'W': 'West',
+  'C1': 'Central 1', 'C2': 'Central 2', 'C3': 'Central 3',
+  'N': 'North', 'S': 'South', 'SE': 'Southeast', 'SW': 'Southwest',
 }).map(([k, v]) => [k.toLowerCase(), v]));
 
 export function mapDistrict(raw) {
@@ -376,10 +386,13 @@ export function analyzeSheet({ headers = [], records = [] }, { asOf, tz = 'Ameri
   const known = new Set([...REQUIRED_COLUMNS, ...DROPPED_COLUMNS]);
   const ignoredColumns = [...present].filter((h) => !known.has(h));
 
-  // Row filter, in order: blank cott → TST → duplicate legacyId.
+  // Row filter, in order: blank cott → skipped statuses (TST/MOV/DEL) →
+  // duplicate legacyId.
   const dataLines = records.length;
   let blankCount = 0;
   const tstSkipped = [];
+  const statusSkipped = [];
+  const skippedSms = [];
   const kept = [];
   for (let i = 0; i < records.length; i++) {
     const rec = records[i];
@@ -393,9 +406,25 @@ export function analyzeSheet({ headers = [], records = [] }, { asOf, tz = 'Ameri
       firstNameRaw: String(rec.First ?? '').replace(/\s+/g, ' ').trim(),
       lastNameRaw: String(rec.Last ?? '').replace(/\s+/g, ' ').trim(),
     };
-    if (ctx.statusRaw.toUpperCase() === 'TST') {
+    const statusUp = ctx.statusRaw.toUpperCase();
+    if (statusUp === 'TST') {
       tstSkipped.push({ sheetRow, legacyId: cott });
       push('info', 'TST_SKIPPED', ctx, 'Active', rec.Active, 'TST row skipped');
+      continue;
+    }
+    // MOV/DEL people aren't migrated — they're off the list and their sheet
+    // rows stay (sync-back preserves them). Their SMS state is still seeded
+    // so a returning texter keeps STOP/welcomed flags.
+    if (statusUp === 'MOV' || statusUp === 'DEL') {
+      statusSkipped.push({ sheetRow, legacyId: cott, status: statusUp });
+      push('info', 'STATUS_SKIPPED', ctx, 'Active', rec.Active,
+        `${statusUp} row not imported — kept in the sheet`);
+      const cell = canonicalPhone(rec.Cell);
+      if (cell !== null) {
+        const s = parseSmsState(rec['Request by USER'], asOf);
+        const welcomed = String(rec['User Settings'] ?? '').trim() !== '';
+        if (s.stopped || welcomed) skippedSms.push({ cell, stopped: s.stopped, stoppedAt: s.stoppedAt, welcomed });
+      }
       continue;
     }
     kept.push({ rec, ctx });
@@ -548,6 +577,17 @@ export function analyzeSheet({ headers = [], records = [] }, { asOf, tz = 'Ameri
     if (welcomed) seed.welcomedAt = asOf;
     smsPhones.set(e164, seed);
   }
+  // MOV/DEL rows aren't imported, but their numbers' SMS state still seeds so
+  // a re-added member (or a shared household line) keeps opt-out flags.
+  for (const { cell, stopped, stoppedAt, welcomed } of skippedSms) {
+    const e164 = `+1${cell.replace(/\D/g, '')}`;
+    const seed = smsPhones.get(e164) ?? { optedOutAt: null, welcomedAt: null };
+    if (stopped && (seed.optedOutAt === null || stoppedAt < seed.optedOutAt)) {
+      seed.optedOutAt = stoppedAt;
+    }
+    if (welcomed) seed.welcomedAt = asOf;
+    smsPhones.set(e164, seed);
+  }
 
   // ── Stats for the report ──
   const matrix = (keyOf) => {
@@ -592,6 +632,7 @@ export function analyzeSheet({ headers = [], records = [] }, { asOf, tz = 'Ameri
     blankCount,
     cottCount: dataLines - blankCount,
     tstSkipped,
+    statusSkipped,
     imported: rows.length,
     fatalCount: 0, // filled below
     districtStatus: matrix((r) => r.data.district),
@@ -803,9 +844,14 @@ export function buildDbPlan(analysis, db) {
   const sms = { create: [], fill: [], unchanged: [] };
   for (const [phone, seed] of analysis.smsPhones) {
     const ex = existingPhones.get(phone);
-    if (!ex) sms.create.push(phone);
-    else if ((ex.optedOutAt === null && seed.optedOutAt !== null)
-      || (ex.welcomedAt === null && seed.welcomedAt !== null)) sms.fill.push(phone);
+    if (!ex) {
+      sms.create.push({ phone, optedOutAt: seed.optedOutAt, welcomedAt: seed.welcomedAt });
+      continue;
+    }
+    const data = {};
+    if (ex.optedOutAt === null && seed.optedOutAt !== null) data.optedOutAt = seed.optedOutAt;
+    if (ex.welcomedAt === null && seed.welcomedAt !== null) data.welcomedAt = seed.welcomedAt;
+    if (Object.keys(data).length) sms.fill.push({ phone, data });
     else sms.unchanged.push(phone);
   }
 
@@ -909,6 +955,11 @@ export function formatReport(analysis, {
   const tst = s.tstSkipped;
   L.push(`  TST skipped:   ${tst.length}${tst.length
     ? ` (sheet rows ${tst.map((t) => t.sheetRow).join(', ')}; legacyIds ${tst.map((t) => t.legacyId).join(', ')})` : ''}`);
+  const sk = s.statusSkipped;
+  const skBy = new Map();
+  for (const r of sk) skBy.set(r.status, (skBy.get(r.status) ?? 0) + 1);
+  L.push(`  MOV/DEL skipped: ${sk.length}${sk.length
+    ? ` (${[...skBy].map(([k, v]) => `${k} ${v}`).join(', ')})` : ''}`);
   L.push(`  Fatal problems: ${s.fatalCount}`);
   L.push('');
   L.push(...renderMatrix(s.districtStatus, DIRECTORY_DISTRICTS, 'District × status'));

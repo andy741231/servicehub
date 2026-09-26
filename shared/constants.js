@@ -8,11 +8,14 @@ export const APP_IDS = {
 
 // ── Directory sub-app ─────────────────────────────────────────────────────
 
+// Canonical district names come straight from the phonelist sheet (the
+// worksheet tab's wk_DistrictsTable). The 2024 PDF batch used other labels
+// (Chinese 1-3, Katy, Spanish); migration 20260926 renames those rows.
 export const DIRECTORY_DISTRICTS = [
   'Central 1', 'Central 2', 'Central 3',
-  'Chinese 1', 'Chinese 2', 'Chinese 3',
-  'Spanish', 'Southwest', 'South', 'Southeast',
-  'North', 'Katy',
+  'C - Sugar Land', 'C - Diho', 'C - Medical Ctr',
+  'S - Spanish Lang', 'Southwest', 'South', 'Southeast',
+  'North', 'West',
 ];
 
 export const DIRECTORY_ROLES = {

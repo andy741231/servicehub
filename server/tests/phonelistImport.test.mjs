@@ -5,7 +5,7 @@ import {
   normalizeHeader, cleanText, spouseText, mapStatus, mapRole, mapDistrict,
   mapLocality, mapGender, mapHead, mapEmail, mapContactId, parseLastChange,
   parseSmsState, analyzeSheet, batchIdForAsOf, purgeRefusal, formatWarningsCsv,
-  Fatal, REQUIRED_COLUMNS,
+  buildDbPlan, Fatal, REQUIRED_COLUMNS,
 } from '../scripts/lib/phonelistTransform.mjs';
 import { DIRECTORY_DISTRICTS } from 'shared';
 import { parsePhonelistCsv, parseArgs, UsageError } from '../scripts/import-phonelist.mjs';
@@ -88,15 +88,18 @@ test('role mapper: blank is saint, codes are case-insensitive', () => {
   assert.throws(() => mapRole('X'), (e) => e.code === 'UNMAPPED_ROLE');
 });
 
-test('district mapper covers every sheet name and lands in DIRECTORY_DISTRICTS', () => {
-  const pairs = {
-    'Central 1': 'Central 1', 'Central 2': 'Central 2', 'Central 3': 'Central 3',
-    'C - Sugar Land': 'Chinese 1', 'C - Diho': 'Chinese 2', 'C - Medical Ctr': 'Chinese 3',
-    'S - Spanish Lang': 'Spanish', 'Southwest': 'Southwest', 'South': 'South',
-    'Southeast': 'Southeast', 'North': 'North', 'West': 'Katy',
+test('district mapper: sheet names are canonical; PDF labels and shortnames alias', () => {
+  for (const sheet of DIRECTORY_DISTRICTS) {
+    assert.equal(mapDistrict(sheet), sheet);
+  }
+  const aliases = {
+    'Chinese 1': 'C - Sugar Land', 'Chinese 2': 'C - Diho', 'Chinese 3': 'C - Medical Ctr',
+    'Katy': 'West', 'Spanish': 'S - Spanish Lang',
+    'CL1': 'C - Sugar Land', 'CL2': 'C - Diho', 'CL3': 'C - Medical Ctr',
+    'W': 'West', 'SL': 'S - Spanish Lang', 'N': 'North',
   };
-  for (const [sheet, dir] of Object.entries(pairs)) {
-    assert.equal(mapDistrict(sheet), dir);
+  for (const [legacy, dir] of Object.entries(aliases)) {
+    assert.equal(mapDistrict(legacy), dir);
     assert.ok(DIRECTORY_DISTRICTS.includes(dir), `${dir} not in DIRECTORY_DISTRICTS`);
   }
   assert.equal(mapDistrict('  central\n1  '), 'Central 1'); // whitespace + case
@@ -234,10 +237,10 @@ test('exactly-one-active B+S pair is not linked; active keeps typed spouse name'
   assert.equal(m.data.maritalStatus, 'married');
 });
 
-test('non-active B+S pairs (inactive+moved) still link', () => {
+test('non-active B+S pairs (inactive+pending) still link', () => {
   const a = analyze([
     mkRec({ cott: '800', 'Couple ID': '800', 'B/S': 'B', Active: 'NA' }),
-    mkRec({ cott: '801', 'Couple ID': '800', 'B/S': 'S', Active: 'MOV' }),
+    mkRec({ cott: '801', 'Couple ID': '800', 'B/S': 'S', Active: 'NR' }),
   ]);
   assert.equal(rowFor(a, '800').linked, true);
   assert.equal(rowFor(a, '800').data.coupleId, 'pl-800');
@@ -324,6 +327,21 @@ test('TST rows are skipped before validation; blank rows counted', () => {
   assert.deepEqual(a.stats.tstSkipped, [{ sheetRow: 2, legacyId: '1' }]);
   assert.equal(warns(a, 'TST_SKIPPED').length, 1);
   assert.equal(a.stats.fatalCount, 0);
+});
+
+test('MOV/DEL rows are not imported but still seed SMS state', () => {
+  const a = analyze([
+    mkRec({ cott: '60', Active: 'MOV' }),
+    mkRec({ cott: '61', Active: 'DEL', 'Request by USER': '{"status":"STOPPED","time":"September 1, 2026 3:00:00 PM CDT"}' }),
+    mkRec({ cott: '62' }),
+  ]);
+  assert.equal(a.stats.imported, 1);
+  assert.equal(a.stats.statusSkipped.length, 2);
+  assert.equal(warns(a, 'STATUS_SKIPPED').length, 2);
+  assert.equal(rowFor(a, '60'), undefined);
+  // The DEL row's STOP state seeds the shared cell number.
+  const seed = a.smsPhones.get('+17135550100');
+  assert.ok(seed && seed.optedOutAt instanceof Date);
 });
 
 test('duplicate legacyId among imported rows is fatal', () => {
@@ -438,4 +456,39 @@ test('formatWarningsCsv: BOM, formula neutralization, quoting', () => {
   // The quoted newline cell legitimately spans two physical lines.
   assert.ok(body.includes('"line1\nline2"'), 'newline value not quoted');
   assert.ok(body.includes("'=SUM(1)"), 'formula value not neutralized');
+});
+
+// ── buildDbPlan — sms seed payloads consumed by applyImport ─────────────────
+
+test('buildDbPlan sms plan carries create/fill payloads', () => {
+  const analysis = analyze([
+    mkRec({
+      cott: '2001',
+      'User Settings': '{"welcomeMsg":""}',
+      'Request by USER': '{"status":"STOPPED","time":"September 1, 2026 3:00:00 PM CDT"}',
+    }),
+  ]);
+  const phone = '+17135550100';
+  const seed = analysis.smsPhones.get(phone);
+  assert.ok(seed?.optedOutAt && seed?.welcomedAt, 'fixture seed incomplete');
+  const db = (smsPhones) => ({
+    members: [], accounts: [], legacyRows: [], nullLegacyRows: [],
+    spousePointers: [], smsPhones,
+  });
+
+  const plan = buildDbPlan(analysis, db([]));
+  assert.deepEqual(plan.sms.create, [
+    { phone, optedOutAt: seed.optedOutAt, welcomedAt: seed.welcomedAt },
+  ]);
+  assert.equal(plan.sms.fill.length, 0);
+  assert.equal(plan.sms.unchanged.length, 0);
+
+  const fillPlan = buildDbPlan(analysis, db([{ phone, optedOutAt: seed.optedOutAt, welcomedAt: null }]));
+  assert.equal(fillPlan.sms.create.length, 0);
+  assert.deepEqual(fillPlan.sms.fill, [{ phone, data: { welcomedAt: seed.welcomedAt } }]);
+
+  const donePlan = buildDbPlan(analysis, db([{ phone, optedOutAt: seed.optedOutAt, welcomedAt: seed.welcomedAt }]));
+  assert.equal(donePlan.sms.create.length, 0);
+  assert.equal(donePlan.sms.fill.length, 0);
+  assert.deepEqual(donePlan.sms.unchanged, [phone]);
 });

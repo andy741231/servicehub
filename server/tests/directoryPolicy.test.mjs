@@ -44,21 +44,21 @@ test('helper sees own-district non-removed records, never removed', () => {
   assert.equal(canSeeMember(helperCtx, { ...base, status: 'pending' }), true);
   assert.equal(canSeeMember(helperCtx, { ...base, status: 'moved' }), false);
   // Other districts: public rows only
-  assert.equal(canSeeMember(helperCtx, { ...base, district: 'Katy', status: 'inactive' }), false);
-  assert.equal(canSeeMember(helperCtx, { ...base, district: 'Katy' }), true);
+  assert.equal(canSeeMember(helperCtx, { ...base, district: 'West', status: 'inactive' }), false);
+  assert.equal(canSeeMember(helperCtx, { ...base, district: 'West' }), true);
 });
 
 test('approver sees all records in own district incl. removed', () => {
   assert.equal(canSeeMember(approverCtx, { ...base, status: 'moved' }), true);
   assert.equal(canSeeMember(approverCtx, { ...base, status: 'deceased' }), true);
   // Other districts: still bounded to public rows
-  assert.equal(canSeeMember(approverCtx, { ...base, district: 'Katy', status: 'moved' }), false);
+  assert.equal(canSeeMember(approverCtx, { ...base, district: 'West', status: 'moved' }), false);
 });
 
 test('helper cannot manage removed records; approver can', () => {
   assert.equal(canManageMember(helperCtx, { ...base, status: 'moved' }), false);
   assert.equal(canManageMember(approverCtx, { ...base, status: 'moved' }), true);
-  assert.equal(canManageMember(adminCtx, { ...base, status: 'delete', district: 'Katy' }), true);
+  assert.equal(canManageMember(adminCtx, { ...base, status: 'delete', district: 'West' }), true);
 });
 
 // ── Serialization ───────────────────────────────────────────────────────────

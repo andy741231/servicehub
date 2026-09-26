@@ -290,34 +290,21 @@ async function applyImport(prisma, analysis, plan) {
     counts.auditRows += res.count;
   }
 
-  // SMS phones — create missing; fill only currently-null fields.
-  const existingPhones = new Map(plan.smsPhones.map((p) => [p.phone, p]));
-  const creates = [];
-  const fills = [];
-  for (const [phone, seed] of analysis.smsPhones) {
-    const ex = existingPhones.get(phone);
-    if (!ex) {
-      creates.push({ phone, optedOutAt: seed.optedOutAt, welcomedAt: seed.welcomedAt });
-    } else {
-      const data = {};
-      if (ex.optedOutAt === null && seed.optedOutAt !== null) data.optedOutAt = seed.optedOutAt;
-      if (ex.welcomedAt === null && seed.welcomedAt !== null) data.welcomedAt = seed.welcomedAt;
-      if (Object.keys(data).length) fills.push({ phone, data });
-    }
-  }
-  for (let i = 0; i < creates.length; i += 300) {
-    const res = await prisma.directorySmsPhone.createMany({ data: creates.slice(i, i + 300) });
+  // SMS phones — create missing; fill only currently-null fields. The create
+  // and fill payloads are already computed in plan.sms by buildDbPlan.
+  for (let i = 0; i < plan.sms.create.length; i += 300) {
+    const res = await prisma.directorySmsPhone.createMany({ data: plan.sms.create.slice(i, i + 300) });
     counts.smsCreated += res.count;
   }
-  for (let i = 0; i < fills.length; i += 100) {
-    const chunk = fills.slice(i, i + 100);
+  for (let i = 0; i < plan.sms.fill.length; i += 100) {
+    const chunk = plan.sms.fill.slice(i, i + 100);
     await prisma.$transaction(async (tx) => {
       for (const f of chunk) {
         await tx.directorySmsPhone.update({ where: { phone: f.phone }, data: f.data });
       }
     }, TX_OPTS);
   }
-  counts.smsFilled = fills.length;
+  counts.smsFilled = plan.sms.fill.length;
   return counts;
 }
 
