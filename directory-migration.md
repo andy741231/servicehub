@@ -714,6 +714,12 @@ capture-found gaps (`myinfo`, bare-`lookup`/`last` early errors, real keyword
 and HELP-topic seeds) raised exact matches 6 → 14; the remaining diffs are
 the five categories above, verified line-by-line.
 
+**Security review (S14, done 2026-09-27):**
+- **Signature verification:** HMAC-SHA1 computed against exact `SMS_WEBHOOK_URL` (slot-sticky, never reconstructed from headers). `crypto.timingSafeEqual` prevents timing attacks; missing headers or env fail closed.
+- **Rate limiting:** 30 inbound msgs/10 min per phone number evaluated *after* signature verification, preventing unauthenticated denial-of-service against member buckets. Added periodic memory sweep of expired buckets.
+- **Log privacy:** Unverified requests log empty body (`body: ''`) with status `rejected`; console logs contain no SMS bodies or magic tokens; raw tokens are hashed (SHA-256) with 30-min expiry and atomic single-use consume.
+- **Injection & output encoding:** XML delimiters and invalid XML 1.0 control characters (`[\x00-\x08\x0B\x0C\x0E-\x1F]`) stripped/escaped in `renderReply` to prevent Twilio 12200 schema validation errors. All DB access uses Prisma parameterized queries with strict field allowlists in `loadLookupMembers`. Phone numbers capped to 32 chars to prevent column overflow.
+
 **Staging E2E:** point +1 832-924-5571 at the staging slot's `/api/directory/sms`
 (POST) and cover these scenarios:
 - an unknown number
