@@ -424,6 +424,7 @@ model DirectorySmsPhone {
   phone            String    @id @db.NVarChar(32) // E.164, e.g. +17135551234
   optedOutAt       DateTime?
   welcomedAt       DateTime?
+  searchHintAt     DateTime?                     // "how to search" hint already shown (legacy srchSuggest)
   pendingCommand   String?   @db.NVarChar(Max) // JSON: { cmd, choices, ... }
   pendingExpiresAt DateTime?
   lastInboundAt    DateTime?

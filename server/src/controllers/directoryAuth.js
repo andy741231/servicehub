@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import prisma from '../db/client.js';
 import { sendEmail } from '../services/emailService.js';
+import { issueLoginLink, revokeLoginToken } from '../services/directoryLoginLinks.js';
 import { DIRECTORY_STATUSES, DIRECTORY_ROLES } from 'shared';
 import {
   signDirectorySession,
@@ -9,6 +10,10 @@ import {
 } from '../middleware/directoryAuth.js';
 
 const normalizeEmail = (email) => (email || '').trim().toLowerCase();
+
+// Test seam — unit tests stub these two without touching the real DB or
+// Azure Email. Route code always goes through `deps`, never the bare imports.
+export const deps = { prisma, sendEmail };
 
 // Every saint who can sign in has a DirectoryAccount keyed to their member
 // record. Accounts are created lazily on first successful magic-link verify —
@@ -64,16 +69,12 @@ export const listHelpers = async (req, res) => {
 
 // ── Magic link: request ────────────────────────────────────────────────────
 
-const LINK_TTL_MS = 30 * 60 * 1000;          // link valid for 30 minutes
-const REQUEST_COOLDOWN_MS = 60 * 1000;       // at most one email per member per minute
-const IS_PROD = process.env.NODE_ENV === 'production';
-
 export const requestMagicLink = async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const member = await prisma.directoryMember.findFirst({
+    const member = await deps.prisma.directoryMember.findFirst({
       where: { email },
       include: { account: true },
     });
@@ -95,27 +96,15 @@ export const requestMagicLink = async (req, res) => {
       });
     }
 
-    const recent = await prisma.directoryLoginToken.findFirst({
-      where: { memberId: member.id, createdAt: { gt: new Date(Date.now() - REQUEST_COOLDOWN_MS) } },
-    });
-    if (recent) {
+    const issued = await issueLoginLink(member, deps.prisma);
+    if (issued.cooldown) {
       return res.json({ message: 'A link was just sent — check your inbox. You can request another in a minute.' });
     }
-
-    const raw = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
-    const base = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
-    const link = `${base}/directory/verify?token=${raw}`;
-    // Raw tokens only ever surface in local dev logs — never in production.
-    if (!IS_PROD) console.log(`[directory] magic link for ${member.email}: ${link}`);
-
-    const token = await prisma.directoryLoginToken.create({
-      data: { memberId: member.id, tokenHash, expiresAt: new Date(Date.now() + LINK_TTL_MS) },
-    });
+    const { link, tokenId } = issued;
 
     try {
       const name = [member.firstName, member.lastName].filter(Boolean).join(' ') || 'there';
-      await sendEmail(
+      await deps.sendEmail(
         member.email,
         'Your church directory sign-in link',
         `<p>Hi ${name},</p>
@@ -126,16 +115,10 @@ export const requestMagicLink = async (req, res) => {
       );
     } catch (err) {
       // Delivery failed — remove the unusable token and tell the truth.
-      await prisma.directoryLoginToken.delete({ where: { id: token.id } }).catch(() => {});
+      await revokeLoginToken(tokenId, deps.prisma);
       console.error('[directory] magic-link email failed:', err.message);
       return res.status(502).json({ error: "We couldn't send the email right now. Please try again in a few minutes." });
     }
-
-    // A fresh link supersedes any earlier outstanding ones for this member.
-    await prisma.directoryLoginToken.updateMany({
-      where: { memberId: member.id, usedAt: null, id: { not: token.id } },
-      data: { usedAt: new Date() },
-    });
 
     res.json({ message: `We sent a sign-in link to ${email}. It expires in 30 minutes and can be used once.` });
   } catch (error) {
