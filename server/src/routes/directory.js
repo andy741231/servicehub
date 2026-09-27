@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import {
   getMeta,
   getStats,
@@ -25,7 +25,9 @@ import {
   setDirectoryPassword,
   listHelpers,
 } from '../controllers/directoryAuth.js';
+import { receiveTwilioSms, simulateSms } from '../controllers/directorySms.js';
 import { verifyDirectoryAccess, rateLimit } from '../middleware/directoryAuth.js';
+import { requireRole } from '../middleware/permissions.js';
 
 const router = Router();
 const protect = [verifyDirectoryAccess];
@@ -34,12 +36,25 @@ const directoryOnly = (req, res, next) =>
   req.authKind === 'directory'
     ? next()
     : res.status(403).json({ error: 'Requires a directory sign-in' });
+// Hub session + admin role — the SMS simulate endpoint is staff tooling for
+// replaying golden replies (§9/S13), not something saints should reach.
+export const hubAdminOnly = (req, res, next) =>
+  req.authKind === 'hub'
+    ? requireRole('admin')(req, res, next)
+    : res.status(403).json({ error: 'Requires a Hub admin session' });
 
 // ── Saint-facing auth (public — rate-limited) ──
 router.post('/auth/request-link', rateLimit({ windowMs: 5 * 60 * 1000, max: 10 }), requestMagicLink);
 router.post('/auth/verify', rateLimit({ windowMs: 5 * 60 * 1000, max: 20 }), verifyMagicLink);
 router.post('/auth/login', rateLimit({ windowMs: 5 * 60 * 1000, max: 10 }), directoryLogin);
 router.get('/auth/helpers', listHelpers);
+
+// ── SMS (public webhook + Hub-admin simulate) ─────────────────────────────
+// Twilio posts application/x-www-form-urlencoded; index.js only mounts
+// express.json() globally, so the form parser is attached to this route.
+// The Twilio signature check happens inside the controller.
+router.post('/sms', express.urlencoded({ extended: false }), receiveTwilioSms);
+router.post('/sms/simulate', ...protect, hubAdminOnly, simulateSms);
 
 // Directory session lifecycle (directory cookie only)
 router.get('/auth/me', verifyDirectoryAccess, directoryOnly, getDirectoryMe);
