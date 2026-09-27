@@ -22,7 +22,8 @@ test('defaults load when the table is empty', async () => {
   assert.match(s['sms.messages.welcome'], /^Welcome to the secure, online phone list!/);
   assert.equal(s['sms.keywords'][0].word, 'lockup');
   assert.ok(s['sms.helpTopics'].saint.intro.length > 0);
-  assert.ok(s['sms.helpTopics'].approver.topics[0].text.includes('###srv_offc###'));
+  // the ###srv_offc### placeholder lives in the "helpers in your district" topic
+  assert.ok(s['sms.helpTopics'].approver.topics.some((t) => t.text.includes('###srv_offc###')));
 });
 
 test('stored rows overlay the defaults', async () => {

@@ -20,6 +20,16 @@ import { DIRECTORY_DISTRICT_SHORTNAMES } from 'shared';
 export const LOOKUP_MSG =
   "'Lookup' no longer needed-- just type the name... also, you may search by last name... type 'last' name";
 
+// parse cmds.gs ~line 430: a bare 'lookup'/'find'/'look up' — nothing to
+// search — gets a DIFFERENT message from the LOOKUP_MSG trailer. No
+// 'Not found' prefix, no SEARCH_HINT.
+export const LOOKUP_ALONE_MSG =
+  "'Lookup' no longer needed-- just type the name... to search by last name, type 'last' name";
+
+// 'last' (or 'lookup last'/'find last'/'look up last') with nothing after
+// it — likewise no hint.
+export const LAST_NEEDS_MSG = "'last' needs a name to search for";
+
 // Suggestion appended (once) to failed searches — suppressed when the user
 // already typed 'last' or has seen it before (showSearchHint: false).
 export const SEARCH_HINT =
@@ -39,21 +49,35 @@ export function tokenize(body) {
     .filter((w) => w.length > 0);
 }
 
-// { names, last, explicitLookup }
+// { names, last, explicitLookup, hadLast, keywordsOnly }
 //   names          = tokens after the keyword count (1, or 2 when ' last ' is
 //                    present) — so 'john last kim' yields ['last','kim'],
 //                    exactly as the sheet did.
 //   last           = the lowercased text (after the 'lookup' prefix is forced)
 //                    contains ' last ' with spaces on both sides.
 //   explicitLookup = the user typed 'lookup' or 'look up' as the first word(s).
+//   hadLast        = a standalone 'last' token was typed after the leading
+//                    keyword — the ' last ' substring check can't see a
+//                    trailing/bare 'last' ('last', 'lookup last').
+//   keywordsOnly   = nothing to search — every token after the leading
+//                    keyword is 'last' ('lookup', 'look up', 'last',
+//                    'find last', 'look up last'). 'look up' counts as a
+//                    2-word keyword here even though it stays inside `names`
+//                    for the search itself (golden proved GAS keeps 'look up'
+//                    literal — 'look up john' searches for 'look up john').
 export function parseLookupArgs(body) {
   const words = tokenize(body);
   const explicitLookup =
     (words[0] === 'look' && words[1] === 'up')
     || (words[0] === 'lookup' && words[1] !== 'myinfo');
+  const rest = words.slice(
+    (words[0] === 'lookup' || words[0] === 'find') ? 1
+      : (words[0] === 'look' && words[1] === 'up') ? 2 : 0);
   if (words[0] !== 'lookup' && words[0] !== 'find') words.unshift('lookup');
   const last = words.join(' ').indexOf(' last ') > -1;
-  return { names: words.slice(last ? 2 : 1), last, explicitLookup };
+  const hadLast = last || rest.includes('last');
+  const keywordsOnly = rest.every((w) => w === 'last');
+  return { names: words.slice(last ? 2 : 1), last, explicitLookup, hadLast, keywordsOnly };
 }
 
 // ── Phone formatting (some functions.gs: formatPhoneNo) ─────────────────────
@@ -279,7 +303,26 @@ function searchCompoundFirstNames(names, compound, full, state) {
 //            showSearchHint = true }
 // Returns { text, hits, memberIds, searchHintShown }.
 export function lookup(members, args = {}, opts = {}) {
-  const { names = [], last = false, explicitLookup = false } = args ?? {};
+  const {
+    names = [], last = false, explicitLookup = false,
+    hadLast = false, keywordsOnly,
+  } = args ?? {};
+
+  // parse cmds.gs ~line 430: nothing to search. Bare 'lookup'/'find'/'look up'
+  // gets LOOKUP_ALONE_MSG; a standalone 'last' token ('last', 'lookup last',
+  // 'look up last') gets LAST_NEEDS_MSG. Neither carries 'Not found' or the
+  // search hint.
+  const nothingToSearch = keywordsOnly
+    ?? (names.length === 0 || (hadLast && names.every((w) => w === 'last')));
+  if (nothingToSearch) {
+    return {
+      text: hadLast ? LAST_NEEDS_MSG : LOOKUP_ALONE_MSG,
+      hits: 0,
+      memberIds: [],
+      searchHintShown: false,
+    };
+  }
+
   const {
     maxResults = 12,
     districtShort = DIRECTORY_DISTRICT_SHORTNAMES,

@@ -160,12 +160,13 @@ export function createEngine({ prisma, getSettings, issueLoginLink, clientUrl })
       const words = tokenize(text);
       const w0 = words[0];
 
-      // 'my info' (two words) is the retired spelling of 'me'.
-      if (w0 === 'my' && words[1] === 'info') {
+      // 'my info' (two words) and 'myinfo' (one word) are retired spellings
+      // of 'me' — V151 replies "Use 'Me' instead" to both.
+      if ((w0 === 'my' && words[1] === 'info') || w0 === 'myinfo') {
         return finish([`Use 'Me' instead`], 'me');
       }
 
-      if (w0 === 'me' || w0 === 'myinfo') {
+      if (w0 === 'me') {
         if (members.length === 1) return finish([await linkReply(members[0])], 'me', [members[0].id]);
         // Shared phone — ask which record (head of household first, then name).
         const choices = [...members].sort((a, b) =>

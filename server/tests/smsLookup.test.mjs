@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   tokenize, parseLookupArgs, formatPhone, lookup, loadLookupMembers,
-  LOOKUP_MSG, SEARCH_HINT,
+  LOOKUP_MSG, LOOKUP_ALONE_MSG, LAST_NEEDS_MSG, SEARCH_HINT,
 } from '../src/services/directorySms/lookup.js';
 import { analyzeSheet } from '../scripts/lib/phonelistTransform.mjs';
 import { buildLookupMembers } from '../scripts/gen-lookup-golden.mjs';
@@ -42,32 +42,57 @@ test('tokenize: trim, first-# removed, lowercase, quotes stripped, empties dropp
 
 test('parseLookupArgs: bare text is prefixed with lookup', () => {
   assert.deepEqual(parseLookupArgs('Marcus'),
-    { names: ['marcus'], last: false, explicitLookup: false });
+    { names: ['marcus'], last: false, explicitLookup: false, hadLast: false, keywordsOnly: false });
 });
 
 test('parseLookupArgs: lookup/find kept as command; look up is explicitLookup', () => {
   assert.deepEqual(parseLookupArgs('lookup marcus'),
-    { names: ['marcus'], last: false, explicitLookup: true });
+    { names: ['marcus'], last: false, explicitLookup: true, hadLast: false, keywordsOnly: false });
   assert.deepEqual(parseLookupArgs('find elaine'),
-    { names: ['elaine'], last: false, explicitLookup: false });
+    { names: ['elaine'], last: false, explicitLookup: false, hadLast: false, keywordsOnly: false });
   // 'look up' sets the explicitLookup flag but 'look'/'up' stay in the names,
   // exactly as the sheet did.
   assert.deepEqual(parseLookupArgs('look up marcus'),
-    { names: ['look', 'up', 'marcus'], last: false, explicitLookup: true });
+    { names: ['look', 'up', 'marcus'], last: false, explicitLookup: true, hadLast: false, keywordsOnly: false });
 });
 
 test('parseLookupArgs: " last " needs spaces on both sides', () => {
   assert.deepEqual(parseLookupArgs('last smith'),
-    { names: ['smith'], last: true, explicitLookup: false });
+    { names: ['smith'], last: true, explicitLookup: false, hadLast: true, keywordsOnly: false });
   // trailing 'last' has no following space -> stays a name
   assert.deepEqual(parseLookupArgs('sam last').last, false);
   assert.deepEqual(parseLookupArgs('sam last').names, ['sam', 'last']);
+  // ...but it is still a standalone 'last' token for the keywordsOnly check
+  assert.deepEqual(parseLookupArgs('sam last').hadLast, true);
+  assert.deepEqual(parseLookupArgs('sam last').keywordsOnly, false);
 });
 
 test('parseLookupArgs: "john last kim" quirk — names after the keyword count', () => {
   // 'lookup' + 'last' = 2 keywords, so names start at the 3rd token.
   assert.deepEqual(parseLookupArgs('john last kim').names, ['last', 'kim']);
   assert.equal(parseLookupArgs('john last kim').last, true);
+  assert.equal(parseLookupArgs('john last kim').hadLast, true);
+  assert.equal(parseLookupArgs('john last kim').keywordsOnly, false);
+});
+
+test('parseLookupArgs: keywords-only inputs (nothing to search)', () => {
+  assert.deepEqual(parseLookupArgs('lookup'),
+    { names: [], last: false, explicitLookup: true, hadLast: false, keywordsOnly: true });
+  assert.deepEqual(parseLookupArgs('find'),
+    { names: [], last: false, explicitLookup: false, hadLast: false, keywordsOnly: true });
+  assert.deepEqual(parseLookupArgs('look up'),
+    { names: ['look', 'up'], last: false, explicitLookup: true, hadLast: false, keywordsOnly: true });
+  assert.deepEqual(parseLookupArgs('last'),
+    { names: ['last'], last: false, explicitLookup: false, hadLast: true, keywordsOnly: true });
+  assert.deepEqual(parseLookupArgs('lookup last'),
+    { names: ['last'], last: false, explicitLookup: true, hadLast: true, keywordsOnly: true });
+  assert.deepEqual(parseLookupArgs('find last'),
+    { names: ['last'], last: false, explicitLookup: false, hadLast: true, keywordsOnly: true });
+  assert.deepEqual(parseLookupArgs('look up last'),
+    { names: ['look', 'up', 'last'], last: false, explicitLookup: true, hadLast: true, keywordsOnly: true });
+  // a name after 'last' is a real search, not keywords-only
+  assert.equal(parseLookupArgs('last chen').keywordsOnly, false);
+  assert.equal(parseLookupArgs('look up john').keywordsOnly, false);
 });
 
 // ── formatPhone (GAS formatPhoneNo) ─────────────────────────────────────────
@@ -192,6 +217,29 @@ test('loadLookupMembers issues the exact where/select and sorts to base order', 
 });
 
 // ── explicitLookup trailer / search hint ────────────────────────────────────
+
+test('keywords-only inputs return the parse cmds.gs early errors, no hint', () => {
+  for (const q of ['lookup', 'find', 'look up']) {
+    const r = lookup(members, parseLookupArgs(q));
+    assert.equal(r.text, LOOKUP_ALONE_MSG, q);
+    assert.equal(r.hits, 0);
+    assert.deepEqual(r.memberIds, []);
+    assert.equal(r.searchHintShown, false);
+    assert.ok(!r.text.includes('Not found'));
+    assert.ok(!r.text.includes(SEARCH_HINT));
+  }
+  for (const q of ['last', 'lookup last', 'find last', 'look up last']) {
+    const r = lookup(members, parseLookupArgs(q));
+    assert.equal(r.text, LAST_NEEDS_MSG, q);
+    assert.equal(r.hits, 0);
+    assert.deepEqual(r.memberIds, []);
+    assert.equal(r.searchHintShown, false);
+  }
+  // 'look up <name>' still searches literally — 'look up' stays in names
+  const literal = lookup(members, parseLookupArgs('look up john'));
+  assert.match(literal.text, /^'look up john' was not found/);
+  assert.ok(literal.text.includes(LOOKUP_MSG));
+});
 
 test('explicit lookup appends LOOKUP_MSG; bare name does not', () => {
   const args = parseLookupArgs('lookup test');
