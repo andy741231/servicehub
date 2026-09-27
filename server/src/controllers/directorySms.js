@@ -75,6 +75,17 @@ export function createSmsController(deps = {}) {
   };
   const resetRateLimits = () => inboundHits.clear();
 
+  // Periodic eviction so inactive phone entries do not accumulate indefinitely.
+  const sweepInterval = setInterval(() => {
+    const cutoff = Date.now() - rateLimit.windowMs;
+    for (const [k, timestamps] of inboundHits) {
+      const active = timestamps.filter((ts) => ts > cutoff);
+      if (active.length === 0) inboundHits.delete(k);
+      else inboundHits.set(k, active);
+    }
+  }, rateLimit.windowMs);
+  sweepInterval.unref?.();
+
   // A failed log write must never break the webhook or skip the TwiML reply.
   const logSms = async (row) => {
     try {

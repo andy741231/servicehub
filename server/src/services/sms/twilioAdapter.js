@@ -49,7 +49,12 @@ export function parseInbound(req) {
 }
 
 const XML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
-const xmlEscape = (s) => String(s).replace(/[&<>"']/g, (c) => XML_ESCAPES[c]);
+// Strips invalid XML 1.0 control characters [\x00-\x08\x0B\x0C\x0E-\x1F] to prevent
+// Twilio 12200 schema validation errors, then escapes XML markup delimiters.
+const xmlEscape = (s) =>
+  String(s)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/[&<>"']/g, (c) => XML_ESCAPES[c]);
 
 // TwiML reply: one <Message> per non-empty text; an empty list is a valid
 // <Response/> meaning "send nothing" (used for STOP replies — Twilio itself
