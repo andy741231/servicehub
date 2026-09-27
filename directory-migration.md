@@ -699,6 +699,21 @@ hides the phone, households follow `spouseMemberId` (so a head-of-household
 sister's couple links), ties among identical first names follow `legacyId`
 order, leading blank lines are trimmed, and helpers get the saint view.
 
+**Live capture/replay (S13, done 2026-09-27):** `scratch/capture-sms-golden.py`
+hit the real V151 `/exec` with 58 queries from a listed approver phone;
+`scratch/replay-sms-golden.mjs` replayed them through `/sms/simulate` on the
+stage DB (both gitignored — they carry member data). Result: **every
+non-lookup command matched byte-for-byte** (`get help` incl. all seeded HELP
+topics, `myinfo`/`my info`, bare `lookup`/`last`, `lockup`/`xxxpayments`,
+`0` cancels, no-match). `me` differs by design (magic link vs Cognito URL).
+All 41 lookup diffs are intended and only these: legacy `(id)`s dropped,
+inactive members excluded (freed slots pull in the next actives), `-- (h)`
+junk-phone rendering, a couple shown as a single when its spouse is inactive
+or unlinked (incl. the 51⇄52 pair), trimmed leading blanks. Fixing the
+capture-found gaps (`myinfo`, bare-`lookup`/`last` early errors, real keyword
+and HELP-topic seeds) raised exact matches 6 → 14; the remaining diffs are
+the five categories above, verified line-by-line.
+
 **Staging E2E:** point +1 832-924-5571 at the staging slot's `/api/directory/sms`
 (POST) and cover these scenarios:
 - an unknown number

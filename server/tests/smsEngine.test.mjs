@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createEngine } from '../src/services/directorySms/engine.js';
 import { DEFAULT_SETTINGS } from '../src/services/directorySms/settings.js';
+import { LOOKUP_ALONE_MSG, LAST_NEEDS_MSG, LOOKUP_MSG }
+  from '../src/services/directorySms/lookup.js';
 
 // ── stub plumbing ───────────────────────────────────────────────────────────
 
@@ -188,12 +190,14 @@ test('me: issueLoginLink cooldown reply', async () => {
   assert.match(r.replies[0], /A sign-in link was just sent/);
 });
 
-test("me: 'my info' spelling is redirected, 'myinfo' works as me", async () => {
+test("me: 'my info' and 'myinfo' are retired spellings; 'me' issues the link", async () => {
   const { eng } = engine({ members: [saint()] });
   const r1 = await call(eng, 'my info');
   assert.equal(r1.replies[0].includes(`Use 'Me' instead`), true);
   const r2 = await call(eng, 'myinfo');
-  assert.match(r2.replies[0], /HI JOHN, use this link/);
+  assert.equal(r2.replies[0].includes(`Use 'Me' instead`), true);
+  const r3 = await call(eng, 'me');
+  assert.match(r3.replies[0], /HI JOHN, use this link/);
 });
 
 test('me: shared phone → choice menu, then pick/cancel/invalid/expired', async () => {
@@ -268,18 +272,19 @@ test('gethelp: intro sets pending; topic expands ###srv_offc###; pending stays',
 
   const intro = await call(eng, 'get help');
   assert.equal(intro.command, 'gethelp');
-  assert.match(intro.replies[0], /GET HELP — reply with a number:/);
+  assert.match(intro.replies[0], /Text a number to choose a topic/);
   assert.ok(phoneRows.get(FROM).pendingCommand);
 
-  const topic = await call(eng, '1');
+  // saint topic 4 is the one embedding ###srv_offc###
+  const topic = await call(eng, '4');
   assert.equal(topic.command, 'gethelp');
   assert.match(topic.replies[0],
-    /Helpers for C1:\nHank Hill, 281-555-0101\nApril Chen\*, 281-555-0102/);
+    /HELPERS \(C1\)\nHank Hill, 281-555-0101\nApril Chen\*, 281-555-0102/);
   // pending still open for browsing
   assert.ok(phoneRows.get(FROM).pendingCommand);
 
   const bad = await call(eng, '9');
-  assert.match(bad.replies[0], /Expecting 1-1, try again/);
+  assert.match(bad.replies[0], /Expecting 1-5, try again/);
 
   const cancel = await call(eng, '0');
   assert.match(cancel.replies[0], /'gethelp' cancelled/);
@@ -289,7 +294,7 @@ test('gethelp: intro sets pending; topic expands ###srv_offc###; pending stays',
 test('gethelp: no helpers → the no-helpers text; admin uses approver topics', async () => {
   const { eng } = engine({ members: [saint()] });
   await call(eng, 'gethelp');
-  const r = await call(eng, '1');
+  const r = await call(eng, '4'); // saint topic 4 embeds ###srv_offc###
   assert.match(r.replies[0], /<No phonelist helpers yet for your district>/);
 
   const admin = engine({ members: [saint({ role: 'admin' })] });
@@ -336,7 +341,48 @@ test('keyword: role column URL, admin→approver, empty column', async () => {
   assert.match(r3.replies[0], /This command is for service office saints only/);
 });
 
+test('keyword: staff-only xxx* rows — staff get the URL, saints the office-only line', async () => {
+  // default keywords table (the xxx* rows have saint: null)
+  const staff = engine({ members: [saint({ role: 'helper' })] });
+  const r1 = await call(staff.eng, 'xxxpayments');
+  assert.equal(r1.command, 'keyword');
+  assert.match(r1.replies[0],
+    /XXXPAYMENTS --- https:\/\/docs\.google\.com\/spreadsheets\/d\/1s_ezlAqXoqeQuE35eUDTCJyrtciwirKYoqmtncUBmqQ\/edit#gid=939698078/);
+
+  const lay = engine({ members: [saint()] });
+  const r2 = await call(lay.eng, 'xxxpayments');
+  assert.equal(r2.command, 'keyword');
+  assert.match(r2.replies[0], /This command is for service office saints only/);
+});
+
 // ── lookup path / welcome / trailer / hint / split ──────────────────────────
+
+test('bare lookup/find/look up → LOOKUP_ALONE_MSG; bare last forms → LAST_NEEDS', async () => {
+  const { eng } = engine({ members: [saint()] });
+  for (const q of ['lookup', 'find', 'look up']) {
+    const r = await call(eng, q);
+    assert.equal(r.command, 'lookup', q);
+    assert.ok(r.replies[0].includes(LOOKUP_ALONE_MSG), `${q}: ${r.replies[0]}`);
+    assert.ok(!r.replies[0].includes('Not found'));
+    assert.ok(!r.replies[0].includes('also, you may search')); // no LOOKUP_MSG trailer
+    assert.ok(!r.replies[0].includes('How to search'));        // no SEARCH_HINT
+    assert.deepEqual(r.memberIds, []);
+  }
+  for (const q of ['last', 'lookup last', 'find last', 'look up last']) {
+    const r = await call(eng, q);
+    assert.equal(r.command, 'lookup', q);
+    assert.ok(r.replies[0].includes(LAST_NEEDS_MSG), `${q}: ${r.replies[0]}`);
+    assert.deepEqual(r.memberIds, []);
+  }
+});
+
+test("'look up john' still searches literally for 'look up john'", async () => {
+  const { eng } = engine({ members: [saint()] });
+  const r = await call(eng, 'look up john');
+  assert.equal(r.command, 'lookup');
+  assert.match(r.replies[0], /'look up john' was not found/);
+  assert.ok(r.replies[0].includes(LOOKUP_MSG));
+});
 
 test('lookup dispatch + welcome prefix once + trailer + searchHintAt once', async () => {
   const { eng, phoneRows } = engine({ members: [saint()] });

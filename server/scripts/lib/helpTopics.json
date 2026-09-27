@@ -1,0 +1,117 @@
+{
+ "saint": {
+  "intro": "Text a number to choose a topic\n\n             SEARCH\n1   Show example of how to search\n\n           YOUR INFO\n2   How to update your email addr, street addr, district, etc.\n\n3   If CELL phone number changes\n\n              OTHER\n4   List the phonelist helpers (your district)\n\n",
+  "topics": [
+   {
+    "n": "1",
+    "title": "Show example of how to search",
+    "text": ".      HOW TO SEARCH\n - By first name -- John\n - By last name -- LAST Smith\n - By full name -- John Smith\n\n.      REVERSE SEARCH\n - By phone number -- 8326810646\n   (832)-681-0646, +18326810646"
+   },
+   {
+    "n": "2",
+    "title": "How to update your email addr, street addr, district, etc.",
+    "text": ".     CHANGE YOUR INFO\nText ME to receive a link to your information"
+   },
+   {
+    "n": "3",
+    "title": "If CELL phone number changes",
+    "text": ".   YOUR CELL NO. CHANGED\nAsk a service office helper to help you"
+   },
+   {
+    "n": "4",
+    "title": "List the phonelist helpers (your district)",
+    "text": ".     HELPERS (your district)\n###srv_offc###"
+   },
+   {
+    "n": "5",
+    "title": "Goals of phone list & how it is maintained",
+    "text": ".                GOALS \n- Facilitate fellowship\n- Data accuracy\n- Eliminate middleman (Service Office) for data maintenance\n- Store saint's information securely (SSL)\n- No login or password needed\n\n      RELIABLE, AVAILABLE \n- Successful trial 1+ year\n- 100% avail. - Websites: google.com, twilio.com, zapier.com, cognitoforms.com, slack.com\n\n            WHAT, WHO  \n- ADD -- Service Office\n- CHANGE -- Saints\n- REMOVE -- Service Office"
+   }
+  ]
+ },
+ "helper": {
+  "intro": "Text a number to choose a topic\n\n              PHONELIST\n             ** HELPER **\n\n         ADDING SOMEONE \n1   Step by step, how to add a new saint\n\n     PHONE NOT RECOGNIZED  \n2   When a saint gets a new CELL number\n\n                MORE\n3   More phonelist helper topics \n",
+  "topics": [
+   {
+    "n": "1",
+    "title": "Step by step, how to add a new saint",
+    "text": ".         ADD A PERSON \n  a)  Saint fills in form\n  b)  Phonelist helper makes Active\n------------------------\n\n  -- Step by step --\n  a) Phonelist helper\n       texts ADD (get link to form)\n  b) Form can be filled in by saint\n  c) Phonelist  approver activates"
+   },
+   {
+    "n": "2",
+    "title": "When a saint gets a new CELL number",
+    "text": ".         SAINTS GETS\n         NEW CELL NO. \n  -  search 'saint's name' (gets id) \n  -  use HIM/HER id to get Edit link\n  -  forward link to the saint, or you can make the change"
+   },
+   {
+    "n": "3",
+    "title": "More phonelist helper topics",
+    "text": "Text a number to choose a topic\n\n    SAINTS HAVE A BIG ROLE \n4   Data is NOT maintained by YOU... see how the saints do this\n\n      DO UPDATE FOR A SAINT \n5   How to use HIM/HER to get link\n\n     LIST THE HELPERS \n6   See the phonelist helpers (your district)"
+   },
+   {
+    "n": "4",
+    "title": "Data is NOT maintained by YOU... see how the saints do this",
+    "text": ".              SAINTS MAKE\n        THEIR OWN CHANGES \n  a) Saint texts ME (get link to form)\n  b) Make changes and submit\n------------------------\n\n  - Can ONLY change THEIR data\n  - Changes: phone, address, email, etc.\n  - District (they change this too)"
+   },
+   {
+    "n": "5",
+    "title": "Get a Edit link for a saint (HIM/HER)",
+    "text": ".   GET SAINT'S EDIT LINK \n  -  search 'saint's name' (gets id) \n  -  use HIM/HER id to get Edit link\n  -  forward link to the saint, or you can make the change"
+   },
+   {
+    "n": "6",
+    "title": "See the phonelist helpers (your district)",
+    "text": ".     HELPERS (your district)\n###srv_offc###"
+   }
+  ]
+ },
+ "approver": {
+  "intro": "Text a number to choose a topic\n\n             PHONELIST\n         ** APPROVER **\n\n         ADDING SOMEONE \n1   Step by step, how to add a new saint\n\n     PHONE NOT RECOGNIZED  \n2   When a saint gets a new CELL number\n\n                MORE\n3   More phonelist approver topics \n\n      QUICK REFERENCE \n4   See list of commands \n\n      SETSRV COMMANDS \n5   Add/remove helpers/approvers\n",
+  "topics": [
+   {
+    "n": "1",
+    "title": "Step by step, how to add a new saint",
+    "text": ".         ADD A PERSON \n  a)  Saint fills in form\n  b)  Phonelist approver makes Active\n------------------------\n\n  -- Step by step --\n  a) Initiated by phonelist helper\n       text ADD (get link to form)\n  b) Form can be filled in by saint\n  c) Phonelist approver must activate\n       text name (shows id)\n       text SET ACTIVE id\n  *Adding a couple\n       add 2 saints\n       make both saints active\n       text SET COUPLE  id1 id2"
+   },
+   {
+    "n": "2",
+    "title": "When a saint gets a new CELL number",
+    "text": ".         SAINTS GETS\n         NEW CELL NO. \n  -  search 'saint's name' (gets id) \n  -  use HIM/HER id to get Edit link\n  -  forward link to the saint, or you can make the change"
+   },
+   {
+    "n": "3",
+    "title": "More phonelist approver topics",
+    "text": "Text a number to choose a topic\n\n    SAINTS HAVE A BIG ROLE \n6   Data is NOT maintained by YOU... see how the saints do this\n\n     DO UPDATE FOR A SAINT \n7   How to use HIM/HER to get link\n\n     LIST THE HELPERS \n8   See the phonelist helpers (your district)"
+   },
+   {
+    "n": "4",
+    "title": "See list of commands",
+    "text": ".     COMMANDS & USAGE \n\n*  Before you do the SET, \nsearch for their name to get id\n\n     SAINT IS BEING ADDED\n    -  ADD\n    -  SET ACTIVE  *id\n --------------\n          ADDING A COUPLE\n    -  ADD two saints\n    -  SET ACTIVE  *id1\n    -  SET ACTIVE  *id2\n    -  SET COUPLE  *id1  *id2\n\n     SAINT BECOMES DORMANT\n    -  SET NOT ACTIVE  *id\n\n        SAINT MOVES AWAY\n    -  SET MOVED  *id\n\n   SAINT GOES TO THE LORD\n         (OR BECOMES NEGATIVE)\n    -  SET DELETED  *id\n\n       DUPLICATE FOUND\n    -  SET DUPLICATE  *id"
+   },
+   {
+    "n": "5",
+    "title": "Step by step, adding/removing Approvers & Helpers",
+    "text": ".     SETSRV COMMANDS & USAGE \n\n*  Before you do the SETSRV, \nsearch for their name to get id\n\n     ADD HELPER or APPROVER\n    -  SETSRV HELPER  *id\n    -  SETSRV APPROVER *id\n\n     REMOVE HELPER or APPROVER\n    -  SETSRV NOT HELPER  *id\n    -  SETSRV NOT APPROVER *id\n --------------\n    - Approvers may add or remove Helpers or Approvers\n    - Helpers may only add or remove Helpers "
+   },
+   {
+    "n": "6",
+    "title": "Data is NOT maintained by YOU... see how the saints do this",
+    "text": ".              SAINTS MAKE\n        THEIR OWN CHANGES \n  a) Saint texts ME (get link to form)\n  b) Make changes and submit\n------------------------\n\n  - Can ONLY change THEIR data\n  - Changes: phone, address, email, etc.\n  - District (they change this too)"
+   },
+   {
+    "n": "7",
+    "title": "Get a Edit link for a saint (HIM/HER)",
+    "text": ".   GET SAINT'S EDIT LINK \n  -  search 'saint's name' (gets id) \n  -  use HIM/HER id to get Edit link\n  -  forward link to the saint, or you can make the change"
+   },
+   {
+    "n": "8",
+    "title": "See the phonelist helpers (your district)",
+    "text": ".     HELPERS (your district)\n###srv_offc###"
+   },
+   {
+    "n": "99",
+    "title": "Goals of phone list & how it is maintained",
+    "text": ".                GOALS \n- Facilitate fellowship\n- Data accuracy\n- Eliminate middleman (Service Office) for data maintenance\n- Store saint's information securely (SSL)\n- No login or password needed\n\n      RELIABLE, AVAILABLE \n- Successful trial 1+ year\n- 100% avail. - Websites: google.com, twilio.com, zapier.com, cognitoforms.com, slack.com\n\n            WHAT, WHO  \n- ADD -- Service Office\n- CHANGE -- Saints\n- REMOVE -- Service Office"
+   }
+  ]
+ }
+}
