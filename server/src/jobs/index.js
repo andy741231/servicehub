@@ -1,14 +1,19 @@
-// Directory background jobs (§6.4). Registered jobs land here — S18 adds
-// district-digest and maintenance. The scheduler only ticks when
+// Directory background jobs (§6.4). The scheduler only ticks when
 // DIRECTORY_JOBS_ENABLED=true (production slot only); DIRECTORY_JOBS_DRY_RUN
 // holds a comma-separated list of job names that must never write.
 
 import prisma from '../db/client.js';
 import { createScheduler } from './scheduler.js';
+import { maintenanceJob } from './maintenance.js';
+import { districtDigestJob } from './districtDigest.js';
 
-// S18: { name: 'district-digest', schedule: { dailyAt: '06:00' }, run }
-//      { name: 'maintenance',     schedule: { dailyAt: '03:30' }, run }
-export const JOBS = [];
+// Registered in run-time order: maintenance 03:30 CT, district-digest 06:00 CT.
+// New jobs start in dry run (§6.4): production should list BOTH in
+// DIRECTORY_JOBS_DRY_RUN ('maintenance,district-digest') until their dry-run
+// summaries have been reviewed via GET /api/directory/jobs, then remove each
+// name to take it live. Staging never schedules — manual runs there are
+// always dry-run, so no extra code is needed here.
+export const JOBS = [maintenanceJob, districtDigestJob];
 
 export const JOBS_ENABLED = process.env.DIRECTORY_JOBS_ENABLED === 'true';
 export const JOBS_DRY_RUN = (process.env.DIRECTORY_JOBS_DRY_RUN ?? '')
