@@ -11,6 +11,7 @@ import {
   deleteMember,
   getMe,
   updateMe,
+  updateHouseholdMember,
   checkDuplicates,
   photoUpload,
   uploadPhoto,
@@ -26,6 +27,7 @@ import {
   listHelpers,
 } from '../controllers/directoryAuth.js';
 import { receiveTwilioSms, simulateSms } from '../controllers/directorySms.js';
+import { listJobs, runJob } from '../controllers/directoryJobs.js';
 import { verifyDirectoryAccess, rateLimit } from '../middleware/directoryAuth.js';
 import { requireRole } from '../middleware/permissions.js';
 
@@ -68,6 +70,11 @@ router.get('/stats', ...protect, getStats);
 // Self-service (saint's own record) — must be before /members/:id
 router.get('/me', ...protect, getMe);
 router.put('/me', ...protect, updateMe);
+router.put('/me/household/:memberId', ...protect, updateHouseholdMember);
+
+// Background jobs (§6.4) — Hub admin only
+router.get('/jobs', ...protect, hubAdminOnly, listJobs);
+router.post('/jobs/:name/run', ...protect, hubAdminOnly, runJob);
 
 // Pre-add duplicate check (church-wide)
 router.get('/check-duplicates', ...protect, checkDuplicates);

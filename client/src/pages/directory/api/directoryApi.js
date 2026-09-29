@@ -41,5 +41,9 @@ export const uploadMemberPhoto = (id, file) => {
 };
 
 // ── Self-service (My Profile) ──
-export const fetchMyProfile = () => api.get('/directory/me').then((res) => res.data.member);
+// /me returns { member, household } — household is the mutual, active linked
+// spouse ([] when there isn't one).
+export const fetchMyProfile = () => api.get('/directory/me').then((res) => res.data);
 export const updateMyProfile = (data) => api.put('/directory/me', data).then((res) => res.data.member);
+export const updateHouseholdMember = (id, data) =>
+  api.put(`/directory/me/household/${id}`, data).then((res) => res.data.member);
