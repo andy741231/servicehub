@@ -19,12 +19,32 @@ export const deps = { prisma, sendEmail };
 // record. Accounts are created lazily on first successful magic-link verify —
 // being listed in the directory never requires one. The login email starts as
 // the member's contact email and stays in sync when staff/self update it.
-async function findOrCreateAccountForMember(member) {
-  const existing = await prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
+// The member keeps the contact email, but a sign-in email must be unique —
+// when another account already owns it this account starts with email null
+// and its owner signs in by SMS link instead.
+export async function findOrCreateAccountForMember(member) {
+  const existing = await deps.prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
   if (existing) return existing;
-  return prisma.directoryAccount.create({
-    data: { memberId: member.id, email: normalizeEmail(member.email) || null },
-  });
+  const email = normalizeEmail(member.email) || null;
+  const clash = email
+    ? await deps.prisma.directoryAccount.findFirst({ where: { email } })
+    : null;
+  try {
+    return await deps.prisma.directoryAccount.create({
+      data: { memberId: member.id, email: clash ? null : email },
+    });
+  } catch (err) {
+    // Lost a create race: on the memberId unique the account already exists
+    // (re-read it); on the filtered email unique retry once with email null.
+    if (err?.code === 'P2002') {
+      const again = await deps.prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
+      if (again) return again;
+      return deps.prisma.directoryAccount.create({
+        data: { memberId: member.id, email: null },
+      });
+    }
+    throw err;
+  }
 }
 
 const shapeSession = (account, member) => ({
@@ -69,23 +89,49 @@ export const listHelpers = async (req, res) => {
 
 // ── Magic link: request ────────────────────────────────────────────────────
 
+// Several members can share a contact email (spouses often do). Pick the
+// owner of the sign-in email first, then the head of household, then the
+// earliest record — deterministic down to the id tie-break. Returns null
+// when candidates exist but none are active.
+export function pickLoginMember(candidates, email) {
+  const norm = normalizeEmail(email);
+  const active = candidates.filter((m) => m.status === DIRECTORY_STATUSES.ACTIVE);
+  if (!active.length) return null;
+  const key = (m) => [
+    m.account?.email === norm ? 0 : 1,                    // owns the sign-in email
+    m.isHeadOfHousehold ? 0 : 1,
+    m.addedAt ? new Date(m.addedAt).getTime() : Number.MAX_SAFE_INTEGER,
+    m.id,                                                 // stable final tie-break
+  ];
+  return active
+    .map((m) => [key(m), m])
+    .sort(([a], [b]) => {
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] < b[i]) return -1;
+        if (a[i] > b[i]) return 1;
+      }
+      return 0;
+    })[0][1];
+}
+
 export const requestMagicLink = async (req, res) => {
   try {
     const email = normalizeEmail(req.body.email);
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const member = await deps.prisma.directoryMember.findFirst({
+    const candidates = await deps.prisma.directoryMember.findMany({
       where: { email },
       include: { account: true },
     });
     // Honest failures — a lost saint needs actionable feedback, and the
     // request cooldown + per-IP rate limiting blunt enumeration probing.
-    if (!member) {
+    if (!candidates.length) {
       return res.status(404).json({
         error: "We couldn't find a directory record for that email. Check the spelling or contact a directory helper.",
       });
     }
-    if (member.status !== DIRECTORY_STATUSES.ACTIVE) {
+    const member = pickLoginMember(candidates, email);
+    if (!member) {
       return res.status(403).json({
         error: 'This directory record is not currently active. Contact a helper or approver in your district.',
       });

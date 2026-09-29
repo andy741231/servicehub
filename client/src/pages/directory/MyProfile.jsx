@@ -6,7 +6,7 @@ import { Camera, IdCard, MapPin, KeyRound, Mail } from 'lucide-react';
 import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
 import api from '../../utils/api';
-import { fetchMyProfile, updateMyProfile, uploadMemberPhoto } from './api/directoryApi';
+import { fetchMyProfile, updateMyProfile, updateHouseholdMember, uploadMemberPhoto } from './api/directoryApi';
 import useDirectoryStore from './store/directoryStore';
 import { fullName, initials, statusLabel, statusChipCls, roleLabel } from './utils/memberUtils';
 
@@ -61,6 +61,7 @@ const toFormValues = (m) => ({
 export default function MyProfile() {
   const { meta, loadMeta } = useDirectoryStore();
   const [member, setMember] = useState(null);
+  const [household, setHousehold] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notLinked, setNotLinked] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -71,7 +72,11 @@ export default function MyProfile() {
 
   useEffect(() => {
     fetchMyProfile()
-      .then((m) => { setMember(m); setLoading(false); })
+      .then((data) => {
+        setMember(data.member);
+        setHousehold(data.household ?? []);
+        setLoading(false);
+      })
       .catch((err) => {
         if (err.response?.status === 404) setNotLinked(true);
         else setSubmitError(err.response?.data?.error || 'Failed to load your record');
@@ -311,6 +316,13 @@ export default function MyProfile() {
         </div>
       </form>
 
+      {household.length > 0 && (
+        <HouseholdCard
+          spouse={household[0]}
+          onSaved={(updated) => setHousehold([updated])}
+        />
+      )}
+
       <SignInCard email={member.email} />
     </div>
   );
@@ -377,6 +389,191 @@ function SignInCard({ email }) {
         >
           {busy ? 'Setting…' : 'Set password'}
         </button>
+      </form>
+    </div>
+  );
+}
+
+// Household section — the linked spouse's self-editable fields (§6.3.4).
+// Email is intentionally absent (it's the spouse's sign-in identity); so is
+// optedIn (their personal listing consent). Status/role/district stay
+// staff-maintained and are shown read-only in the header.
+const householdSchema = z.object({
+  phone1: z.string().optional(),
+  phone2: z.string().optional(),
+  phonePrivacy: z.boolean(),
+  address: z.string().optional(),
+  apartment: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  addressPrivacy: z.boolean(),
+  smallGroup: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  otherName: z.string().optional(),
+  maritalStatus: z.string().optional(),
+  spouseFirstName: z.string().optional(),
+  spouseLastName: z.string().optional(),
+});
+
+const toHouseholdValues = (m) => ({
+  phone1: m?.phone1 ?? '',
+  phone2: m?.phone2 ?? '',
+  phonePrivacy: m?.phonePrivacy ?? true,
+  address: m?.address ?? '',
+  apartment: m?.apartment ?? '',
+  city: m?.city ?? '',
+  state: m?.state ?? '',
+  zip: m?.zip ?? '',
+  addressPrivacy: m?.addressPrivacy ?? false,
+  smallGroup: m?.smallGroup ?? '',
+  dateOfBirth: m?.dateOfBirth ? new Date(m.dateOfBirth).toISOString().slice(0, 10) : '',
+  otherName: m?.otherName ?? '',
+  maritalStatus: m?.maritalStatus ?? '',
+  spouseFirstName: m?.spouseFirstName ?? '',
+  spouseLastName: m?.spouseLastName ?? '',
+});
+
+function HouseholdCard({ spouse, onSaved }) {
+  const { meta, loadMeta } = useDirectoryStore();
+  const [saved, setSaved] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  useEffect(() => { loadMeta(); }, [loadMeta]);
+
+  const defaultValues = useMemo(() => toHouseholdValues(spouse), [spouse]);
+  const {
+    register, handleSubmit, reset,
+    formState: { isSubmitting, isDirty },
+  } = useForm({ resolver: zodResolver(householdSchema), defaultValues });
+  useEffect(() => { reset(defaultValues); }, [defaultValues, reset]);
+
+  const onSubmit = async (values) => {
+    setSubmitError(null);
+    setSaved(false);
+    try {
+      const updated = await updateHouseholdMember(spouse.id, values);
+      onSaved(updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setSubmitError(err.response?.data?.error || 'Failed to save');
+    }
+  };
+
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-semibold text-text-base mb-1">Household</h3>
+      <p className="text-xs text-muted mb-3">
+        Keep your spouse's record up to date too — their name, district, status,
+        and sign-in email are maintained by helpers and approvers.
+      </p>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="p-6 rounded-2xl bg-surface border border-border-soft shadow-card-sm space-y-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-base font-semibold text-text-base">{fullName(spouse)}</h4>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusChipCls(spouse.status)}`}>
+              {statusLabel(spouse.status)}
+            </span>
+            <span className="text-xs text-muted flex items-center gap-1">
+              <MapPin className="h-3 w-3" aria-hidden="true" /> {spouse.district}
+            </span>
+          </div>
+
+          <div aria-live="polite">
+            {submitError && <div role="alert" className="p-3 rounded-lg bg-danger-light text-danger text-sm">{submitError}</div>}
+            {saved && <div className="p-3 rounded-lg bg-success-light text-success text-sm">Saved — your spouse's info is up to date.</div>}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Phone 1</span>
+              <input {...register('phone1')} className={inputCls} inputMode="tel" />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Phone 2</span>
+              <input {...register('phone2')} className={inputCls} inputMode="tel" />
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-text-base cursor-pointer -mt-1">
+            <input type="checkbox" {...register('phonePrivacy')} />
+            Show their phone number to other saints
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="block sm:col-span-2">
+              <span className={labelCls}>Street address</span>
+              <input {...register('address')} className={inputCls} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Apt #</span>
+              <input {...register('apartment')} className={inputCls} />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <label className="block col-span-2">
+              <span className={labelCls}>City</span>
+              <input {...register('city')} className={inputCls} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>State</span>
+              <input {...register('state')} className={inputCls} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>ZIP</span>
+              <input {...register('zip')} className={inputCls} inputMode="numeric" />
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-text-base cursor-pointer -mt-1">
+            <input type="checkbox" {...register('addressPrivacy')} />
+            Show their address to other saints
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="block">
+              <span className={labelCls}>Marital status</span>
+              <select {...register('maritalStatus')} className={inputCls}>
+                <option value="">—</option>
+                {(meta?.maritalStatuses ?? []).map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Date of birth</span>
+              <input type="date" {...register('dateOfBirth')} className={inputCls} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Small group</span>
+              <input {...register('smallGroup')} className={inputCls} />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Other name (maiden / non-English)</span>
+              <input {...register('otherName')} className={inputCls} />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Spouse first name</span>
+              <input {...register('spouseFirstName')} className={inputCls} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Spouse last name</span>
+              <input {...register('spouseLastName')} className={inputCls} />
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="submit"
+            disabled={isSubmitting || !isDirty}
+            className="px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-base hover:bg-primary-hover disabled:opacity-50 min-h-[44px]"
+          >
+            {isSubmitting ? 'Saving…' : 'Save spouse changes'}
+          </button>
+        </div>
       </form>
     </div>
   );

@@ -351,7 +351,9 @@ On day one, settings are edited through the seed script. A settings admin UI com
    - Spouses are two **active** members whose `spouseMemberId` points at each other.
    - `GET /api/directory/me` adds `household: [spouse]`, serialized with the full self view.
    - `PUT /api/directory/me/household/:memberId` updates the spouse's
-     self-editable fields, using the same allowlist and validation as `updateMe`.
+     self-editable fields with the same validation as `updateMe`, **minus
+     `email`** (the spouse's sign-in identity; editing it would allow account
+     takeover) **and `optedIn`** (the spouse's own listing consent).
      The audit actor is the signed-in member, with a summary noting a household edit.
    - MyProfile gets a spouse section. Status, role, and district stay staff-only.
 
@@ -647,10 +649,10 @@ ServiceHub-side work, and ask for the step by ID ("do S7").
 | S12 | P3 | `controllers/directorySms.js`, routes, `simulate` endpoint | `swe` | Wiring on top of S10/S11 |
 | S13 | P3 | Capture ~50 golden replies from V151; replay through `/sms/simulate` and diff | `swe` capture · `fusion` triage | Explaining diffs takes judgment |
 | S14 | P3 | Security review: signature validation, per-phone rate limit, log privacy | `codex` or `gemini` | Second-vendor review of S10–S12 |
-| S15 | P4 | `issueLoginLink(member)` refactor, nullable-email accounts, shared-email rules (§6.3.1–3) | `fusion` | Auth-adjacent conflict rules |
-| S16 | P4 | Household editing: `household` in `/me`, `PUT /me/household/:memberId`, MyProfile spouse section | `fusion` | New endpoint + UI; permission edge cases |
+| S15 | P4 | `issueLoginLink(member)` refactor, nullable-email accounts, shared-email rules (§6.3.1–3) | `fusion` | Auth-adjacent conflict rules. **Done 2026-09-28:** `pickLoginMember` (sign-in owner > head of household > earliest > id), `decideAccountEmail` (linked-spouse clash → account email null; clearing email now clears the sign-in email) |
+| S16 | P4 | Household editing: `household` in `/me`, `PUT /me/household/:memberId`, MyProfile spouse section | `fusion` | New endpoint + UI; permission edge cases. **Done 2026-09-28** (mutual + active links only; email/optedIn excluded) |
 | S26 | P4 | Staff data-review view: unlinked-couple hints, shared contacts, missing cells (§7.6) + district reference table (§7.1) | `fusion` | New scoped queries + UI; feeds S8/S9 cleanup |
-| S17 | P5 | In-process scheduler + `DirectoryJobRun` lease + manual-run endpoint | `fusion` | Idempotency across restarts and slot swaps |
+| S17 | P5 | In-process scheduler + `DirectoryJobRun` lease + manual-run endpoint | `fusion` | Idempotency across restarts and slot swaps. **Done 2026-09-28:** `server/src/jobs/`; `GET /jobs`, `POST /jobs/:name/run`; manual runs are forced dry-run unless `DIRECTORY_JOBS_ENABLED=true`. A daily job missed while the app was down runs on the first tick after its time that day |
 | S18 | P5 | `district-digest` and `maintenance` jobs | `swe` | Well-specified once S17 lands |
 | S19 | P6 | Google credentials: DWD service account or OAuth consent (§6.7, §15.2) | `human` | Workspace admin console |
 | S20 | P6 | Port `performContactsHousekeeping` → `googleContacts.js` (§6.5) | `fusion` | Deletes real contacts; get a `codex`/`gemini` review of the delete paths before the first live run |
