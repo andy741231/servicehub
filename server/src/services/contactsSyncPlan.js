@@ -90,6 +90,96 @@ const mobilePhone = (person) =>
   (person.phoneNumbers ?? []).find((p) => (p.type ?? 'mobile') === 'mobile');
 const distField = (person) =>
   (person.userDefined ?? []).find((u) => u.key === 'dist');
+
+// Contact-source scoping: only entries owned by the CONTACT source — or
+// carrying no source metadata at all — are compared or echoed into write
+// bodies. PROFILE/DOMAIN-source values belong to Google's side of the
+// record; they are never matched against member data and never written.
+const isContactSource = (e) =>
+  !e?.metadata?.source?.type || e.metadata.source.type === 'CONTACT';
+
+// Field reconciliation for an existing contact, pure and side-effect-free.
+// Used at plan time AND re-run inside updateContact's etag window so the
+// PATCH payload is computed against the freshest Google state — an office
+// edit made after planning is preserved, not replaced by a stale array.
+export function planFieldChanges(m, contact, shortnames) {
+  const scoped = (arr) =>
+    (arr ?? []).filter(isContactSource).map((x) => ({ ...x }));
+  const person = {
+    resourceName: contact.resourceName,
+    etag: contact.etag,
+    names: scoped(contact.names),
+    emailAddresses: scoped(contact.emailAddresses),
+    phoneNumbers: scoped(contact.phoneNumbers),
+    userDefined: scoped(contact.userDefined),
+  };
+  if (person.names.length === 0) person.names.push({});
+  const changes = [];
+  const fields = new Set();
+
+  const n0 = person.names[0]; // first CONTACT-source name — never PROFILE
+  if (norm(n0.givenName) !== norm(m.firstName)) {
+    person.names[0].givenName = m.firstName ?? '';
+    changes.push({ field: 'givenName', from: n0.givenName ?? '', to: m.firstName ?? '' });
+    fields.add('names');
+  }
+  if (norm(n0.familyName) !== norm(m.lastName)) {
+    person.names[0].familyName = m.lastName ?? '';
+    changes.push({ field: 'familyName', from: n0.familyName ?? '', to: m.lastName ?? '' });
+    fields.add('names');
+  }
+
+  const oldEmail = homeEmail(person)?.value ?? '';
+  if (norm(oldEmail) !== norm(m.email)) {
+    const idx = person.emailAddresses
+      .findIndex((e) => (e.type ?? 'home') === 'home');
+    if (m.email) {
+      if (idx >= 0) person.emailAddresses[idx].value = m.email;
+      else person.emailAddresses.push({ value: m.email, type: 'home' });
+      changes.push({ field: 'email', from: oldEmail, to: m.email });
+    } else {
+      if (idx >= 0) person.emailAddresses.splice(idx, 1); // first home only
+      changes.push({ field: 'email', from: oldEmail, to: '' });
+    }
+    fields.add('emailAddresses');
+  }
+
+  // Legacy never deleted a contact phone — only writes when the member
+  // has a usable number and it differs.
+  const oldMobile = mobilePhone(person)?.value ?? '';
+  const oldDigits = phoneDigits(oldMobile);
+  const memberDigits = phoneDigits(m.phone1);
+  const contactDigits = oldDigits.length >= 10 ? oldDigits : '';
+  if (memberDigits.length === 10 && memberDigits !== contactDigits) {
+    const e164 = `+1${memberDigits}`;
+    const idx = person.phoneNumbers
+      .findIndex((p) => (p.type ?? 'mobile') === 'mobile');
+    if (idx >= 0) person.phoneNumbers[idx].value = e164;
+    else person.phoneNumbers.push({ value: e164, type: 'mobile' });
+    changes.push({ field: 'phone', from: oldMobile, to: e164 });
+    fields.add('phoneNumbers');
+  }
+
+  const short = shortnames[m.district];
+  const oldDist = distField(person)?.value ?? '';
+  if (short && oldDist !== short) {
+    const idx = person.userDefined.findIndex((u) => u.key === 'dist');
+    if (idx >= 0) person.userDefined[idx].value = short;
+    else person.userDefined.push({ key: 'dist', value: short });
+    changes.push({ field: 'dist', from: oldDist, to: short });
+    fields.add('userDefined');
+  }
+
+  // A stale free-form name sent alongside new structured parts can win on
+  // write, so drop the derived/free-form variants and let Google rebuild them.
+  if (fields.has('names')) {
+    for (const k of ['unstructuredName', 'displayName', 'displayNameLastFirst']) {
+      delete person.names[0][k];
+    }
+  }
+
+  return { person, changes, fields: [...fields] };
+}
 const memberGroupNames = (person, groupByRn) =>
   (person.memberships ?? [])
     .map((x) => x.contactGroupMembership?.contactGroupResourceName)
@@ -242,84 +332,14 @@ export function planContactsSync({ members, connections, groups, districtGroups,
   }
 
   // Field reconciliation for an existing contact — shared by 'update'
-  // (stored id) and 'link' (identity match).
+  // (stored id) and 'link' (identity match). The pure work lives in the
+  // exported planFieldChanges; here we only fold changes into stats.
   function planFields(m, contact) {
-    const person = {
-      resourceName: contact.resourceName,
-      etag: contact.etag,
-      names: (contact.names ?? [{}]).map((x) => ({ ...x })),
-      emailAddresses: (contact.emailAddresses ?? []).map((x) => ({ ...x })),
-      phoneNumbers: (contact.phoneNumbers ?? []).map((x) => ({ ...x })),
-      userDefined: (contact.userDefined ?? []).map((x) => ({ ...x })),
-    };
-    if (person.names.length === 0) person.names.push({});
-    const changes = [];
-    const fields = new Set();
-
-    const n0 = contact.names?.[0] ?? {};
-    if (norm(n0.givenName) !== norm(m.firstName)) {
-      person.names[0].givenName = m.firstName ?? '';
-      changes.push({ field: 'givenName', from: n0.givenName ?? '', to: m.firstName ?? '' });
-      stats.fields.givenName += 1; fields.add('names');
+    const r = planFieldChanges(m, contact, shortnames);
+    for (const c of r.changes) {
+      if (c.field in stats.fields) stats.fields[c.field] += 1;
     }
-    if (norm(n0.familyName) !== norm(m.lastName)) {
-      person.names[0].familyName = m.lastName ?? '';
-      changes.push({ field: 'familyName', from: n0.familyName ?? '', to: m.lastName ?? '' });
-      stats.fields.familyName += 1; fields.add('names');
-    }
-
-    const oldEmail = homeEmail(contact)?.value ?? '';
-    if (norm(oldEmail) !== norm(m.email)) {
-      if (m.email) {
-        const idx = person.emailAddresses
-          .findIndex((e) => (e.type ?? 'home') === 'home');
-        if (idx >= 0) person.emailAddresses[idx].value = m.email;
-        else person.emailAddresses.push({ value: m.email, type: 'home' });
-        changes.push({ field: 'email', from: oldEmail, to: m.email });
-      } else {
-        const idx = person.emailAddresses
-          .findIndex((e) => (e.type ?? 'home') === 'home');
-        if (idx >= 0) person.emailAddresses.splice(idx, 1); // first home only
-        changes.push({ field: 'email', from: oldEmail, to: '' });
-      }
-      stats.fields.email += 1; fields.add('emailAddresses');
-    }
-
-    // Legacy never deleted a contact phone — only writes when the member
-    // has a usable number and it differs.
-    const oldMobile = mobilePhone(contact)?.value ?? '';
-    const oldDigits = phoneDigits(oldMobile);
-    const memberDigits = phoneDigits(m.phone1);
-    const contactDigits = oldDigits.length >= 10 ? oldDigits : '';
-    if (memberDigits.length === 10 && memberDigits !== contactDigits) {
-      const e164 = `+1${memberDigits}`;
-      const idx = person.phoneNumbers
-        .findIndex((p) => (p.type ?? 'mobile') === 'mobile');
-      if (idx >= 0) person.phoneNumbers[idx].value = e164;
-      else person.phoneNumbers.push({ value: e164, type: 'mobile' });
-      changes.push({ field: 'phone', from: oldMobile, to: e164 });
-      stats.fields.phone += 1; fields.add('phoneNumbers');
-    }
-
-    const short = shortnames[m.district];
-    const oldDist = distField(contact)?.value ?? '';
-    if (short && oldDist !== short) {
-      const idx = person.userDefined.findIndex((u) => u.key === 'dist');
-      if (idx >= 0) person.userDefined[idx].value = short;
-      else person.userDefined.push({ key: 'dist', value: short });
-      changes.push({ field: 'dist', from: oldDist, to: short });
-      stats.fields.dist += 1; fields.add('userDefined');
-    }
-
-    // A stale free-form name sent alongside new structured parts can win on
-    // write, so drop the derived/free-form variants and let Google rebuild them.
-    if (fields.has('names')) {
-      for (const k of ['unstructuredName', 'displayName', 'displayNameLastFirst']) {
-        delete person.names[0][k];
-      }
-    }
-
-    return { person, changes, fields: [...fields] };
+    return r;
   }
 
   const reconcile = (m, contact) => {

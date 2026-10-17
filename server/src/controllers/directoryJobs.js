@@ -3,6 +3,7 @@
 
 import defaultPrisma from '../db/client.js';
 import { scheduler } from '../jobs/index.js';
+import { LOCK_PERIOD } from '../jobs/jobLock.js';
 
 // Test seam — same pattern as directoryAuth.js's deps.
 export const deps = { scheduler, prisma: defaultPrisma };
@@ -10,7 +11,9 @@ export const deps = { scheduler, prisma: defaultPrisma };
 export const listJobs = async (req, res) => {
   try {
     const jobs = deps.scheduler.describeJobs();
+    // periodKey 'lock' rows are cross-process mutex state, not job history.
     const runs = await deps.prisma.directoryJobRun.findMany({
+      where: { periodKey: { not: LOCK_PERIOD } },
       orderBy: { startedAt: 'desc' },
       take: 20,
     });

@@ -39,6 +39,7 @@ import { planContactsSync } from '../src/services/contactsSyncPlan.js';
 import {
   applyContactsSync, breakerMessage,
 } from '../src/jobs/contactsSync.js';
+import { withJobLock } from '../src/jobs/jobLock.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -209,92 +210,109 @@ async function main() {
     });
     const client = createPeopleClient({ getToken: tokens.getToken });
 
-    const settings = await getSettings(prisma);
-    const members = await prisma.directoryMember.findMany({
-      where: {
-        OR: [{ status: 'active' }, { googleContactId: { not: null } }],
-      },
-      select: {
-        id: true, firstName: true, lastName: true, email: true, phone1: true,
-        district: true, status: true, googleContactId: true,
-        googleSyncHash: true,
-      },
-    });
+    // The whole load→plan→(backup)→confirm→apply pipeline. For --apply it
+    // runs under the cross-process job lock — a concurrent scheduled run or
+    // second CLI can't plan against a half-applied state (the classic
+    // duplicate-contact window). Dry runs don't lock (they write nothing).
+    const planAndApply = async () => {
+      const settings = await getSettings(prisma);
+      const members = await prisma.directoryMember.findMany({
+        where: {
+          OR: [{ status: 'active' }, { googleContactId: { not: null } }],
+        },
+        select: {
+          id: true, firstName: true, lastName: true, email: true,
+          phone1: true, district: true, status: true,
+          googleContactId: true, googleSyncHash: true,
+        },
+      });
 
-    let backupPath = null;
-    let connections;
-    if (args.backup) {
-      // Export BEFORE any apply — if the apply ever misbehaves this is the
-      // restore source, so it must not share the trimmed sync field list.
-      console.log('writing connection backup…');
-      connections = await client.listConnections(BACKUP_FIELDS);
-      backupPath = path.join(ROOT, 'scratch', `contacts-backup-${STAMP}.json`);
-      fs.mkdirSync(path.dirname(backupPath), { recursive: true });
-      fs.writeFileSync(backupPath, JSON.stringify(connections, null, 2));
-      console.log(`backup: ${path.relative(ROOT, backupPath)} ` +
-        `(${connections.length} connections)`);
-      const groupsPath = path.join(ROOT, 'scratch',
-        `contacts-groups-backup-${STAMP}.json`);
-      fs.writeFileSync(groupsPath, JSON.stringify(
-        await client.listGroups(), null, 2));
-      console.log(`backup: ${path.relative(ROOT, groupsPath)} (groups)`);
-    } else {
-      connections = await client.listConnections();
-    }
-    const groups = await client.listGroups();
+      let backupPath = null;
+      let connections;
+      if (args.backup) {
+        // Export BEFORE any apply — if the apply ever misbehaves this is the
+        // restore source, so it must not share the trimmed sync field list.
+        console.log('writing connection backup…');
+        connections = await client.listConnections(BACKUP_FIELDS);
+        backupPath = path.join(ROOT, 'scratch', `contacts-backup-${STAMP}.json`);
+        fs.mkdirSync(path.dirname(backupPath), { recursive: true });
+        fs.writeFileSync(backupPath, JSON.stringify(connections, null, 2));
+        console.log(`backup: ${path.relative(ROOT, backupPath)} ` +
+          `(${connections.length} connections)`);
+        const groupsPath = path.join(ROOT, 'scratch',
+          `contacts-groups-backup-${STAMP}.json`);
+        fs.writeFileSync(groupsPath, JSON.stringify(
+          await client.listGroups(), null, 2));
+        console.log(`backup: ${path.relative(ROOT, groupsPath)} (groups)`);
+      } else {
+        connections = await client.listConnections();
+      }
+      const groups = await client.listGroups();
 
-    const plan = planContactsSync({
-      members,
-      connections,
-      groups,
-      districtGroups: settings['districts.contactGroups'] ?? {},
-      shortnames: DIRECTORY_DISTRICT_SHORTNAMES,
-    });
+      const plan = planContactsSync({
+        members,
+        connections,
+        groups,
+        districtGroups: settings['districts.contactGroups'] ?? {},
+        shortnames: DIRECTORY_DISTRICT_SHORTNAMES,
+      });
 
-    const csvPath = path.join(
-      ROOT, 'scratch', `contacts-sync-plan-${STAMP}.csv`);
-    fs.mkdirSync(path.dirname(csvPath), { recursive: true });
-    fs.writeFileSync(csvPath,
-      'op,memberId,member,contactId,details\n'
-      + plan.ops.map((o) => [
-        o.type, o.memberId ?? '', memberLabel(o.member), o.contactId ?? '',
-        o.type === 'error' ? o.error
-          : o.type === 'create-group' ? o.name : describe(o),
-      ].map(csvCell).join(',')).join('\n') + '\n');
-    console.log(`plan written: ${path.relative(ROOT, csvPath)}\n`);
+      const csvPath = path.join(
+        ROOT, 'scratch', `contacts-sync-plan-${STAMP}.csv`);
+      fs.mkdirSync(path.dirname(csvPath), { recursive: true });
+      fs.writeFileSync(csvPath,
+        'op,memberId,member,contactId,details\n'
+        + plan.ops.map((o) => [
+          o.type, o.memberId ?? '', memberLabel(o.member), o.contactId ?? '',
+          o.type === 'error' ? o.error
+            : o.type === 'create-group' ? o.name : describe(o),
+        ].map(csvCell).join(',')).join('\n') + '\n');
+      console.log(`plan written: ${path.relative(ROOT, csvPath)}\n`);
 
-    for (const op of plan.ops) console.log(describe(op));
-    console.log('\nsummary:', JSON.stringify(plan.stats));
+      for (const op of plan.ops) console.log(describe(op));
+      console.log('\nsummary:', JSON.stringify(plan.stats));
 
-    const breaker = breakerMessage(plan.stats);
-    if (breaker) {
-      const msg = `${breaker} — use --force only after reviewing the plan`;
-      if (args.apply && !args.force) {
-        console.error(msg);
+      const breaker = breakerMessage(plan.stats);
+      if (breaker) {
+        const msg = `${breaker} — use --force only after reviewing the plan`;
+        if (args.apply && !args.force) {
+          console.error(msg);
+          process.exitCode = 3;
+          return;
+        }
+        console.warn(
+          `${msg} (bypassed${args.apply ? ' by --force' : ' — dry run'})`);
+      }
+
+      if (!args.apply) {
+        console.log('\ndry run — nothing written. Re-run with --backup --apply' +
+          ' (and --force if the breaker tripped) on production to execute.');
+        return;
+      }
+
+      const typed = await promptLine(`Type the database name '${target}' to apply: `);
+      if (typed.trim() !== target) {
+        console.error('confirmation mismatch — aborting');
         process.exitCode = 3;
         return;
       }
-      console.warn(
-        `${msg} (bypassed${args.apply ? ' by --force' : ' — dry run'})`);
-    }
+
+      const applied = await applyContactsSync({
+        prisma, client, plan, groups, now: new Date(),
+      });
+      console.log('\napplied:', JSON.stringify(applied));
+    };
 
     if (!args.apply) {
-      console.log('\ndry run — nothing written. Re-run with --backup --apply' +
-        ' (and --force if the breaker tripped) on production to execute.');
+      await planAndApply();
       return;
     }
-
-    const typed = await promptLine(`Type the database name '${target}' to apply: `);
-    if (typed.trim() !== target) {
-      console.error('confirmation mismatch — aborting');
-      process.exitCode = 3;
+    const locked = await withJobLock(prisma, 'contacts-sync', planAndApply);
+    if (!locked.locked) {
+      console.error('contacts-sync already running — apply skipped');
+      process.exitCode = 4;
       return;
     }
-
-    const applied = await applyContactsSync({
-      prisma, client, plan, groups, now: new Date(),
-    });
-    console.log('\napplied:', JSON.stringify(applied));
   } finally {
     if (prisma) await prisma.$disconnect().catch(() => {});
   }

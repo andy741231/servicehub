@@ -69,7 +69,10 @@ function fakePrisma(rows = [], { failOnCreate = null } = {}) {
         Object.assign(row, data);
         return row;
       },
-      findMany: async () => rows.slice(-20).reverse(),
+      findMany: async ({ where } = {}) => rows
+        .filter((r) => where?.periodKey?.not === undefined
+          || r.periodKey !== where.periodKey.not)
+        .slice(-20).reverse(),
     },
   };
 }
@@ -193,6 +196,66 @@ test('in-flight overlap is skipped', async () => {
   assert.equal(second.skipped, true);
   release();
   await p1;
+});
+
+test('in-flight claim is atomic — overlap during the lease create skips', async () => {
+  // Regression: the inFlight check used to sit before the lease create's
+  // await but the add landed after it — a second runJob inside that gap
+  // would run the job twice (ports the scratch overlap repro).
+  let releaseCreate;
+  const prisma = fakePrisma();
+  const origCreate = prisma.directoryJobRun.create;
+  prisma.directoryJobRun.create = async (args) => {
+    await new Promise((r) => { releaseCreate = r; });
+    return origCreate(args);
+  };
+  let runs = 0;
+  const jobs = [{
+    name: 'dup', schedule: { everyMinutes: 30 },
+    run: async () => { runs += 1; return {}; },
+  }];
+  const scheduler = createScheduler({
+    prisma, jobs, enabled: true, now: () => NOW,
+    log: { error: () => {}, log: () => {} },
+  });
+  const p1 = scheduler.runJob('dup', { manual: true });  // parks inside create
+  const p2 = scheduler.runJob('dup');                    // scheduled periodKey
+  const second = await p2;                               // must skip, not lease
+  assert.equal(second.skipped, true);
+  releaseCreate();
+  const first = await p1;
+  assert.equal(first.status, 'ok');
+  assert.equal(runs, 1);              // job ran exactly once
+  assert.equal(prisma.rows.length, 1); // and wrote exactly one run row
+});
+
+test('listJobs filters out cross-process lock rows', async () => {
+  const prisma = fakePrisma([
+    { id: 'l1', job: 'contacts-sync', periodKey: 'lock',
+      status: 'locked', summary: 'tok', startedAt: NOW },
+    { id: 'r1', job: 'contacts-sync', periodKey: '2026-09-27T09:30',
+      status: 'ok', summary: '{}', startedAt: NOW },
+  ]);
+  const scheduler = createScheduler({
+    prisma, jobs: [{ name: 'contacts-sync', schedule: { everyMinutes: 30 }, run: async () => ({}) }],
+    enabled: false, now: () => NOW,
+    log: { error: () => {}, log: () => {} },
+  });
+  const saved = { ...deps };
+  try {
+    deps.scheduler = scheduler;
+    deps.prisma = prisma;
+    const res = { statusCode: 200, body: undefined,
+      status(c) { this.statusCode = c; return this; },
+      json(b) { this.body = b; return this; } };
+    await listJobs({}, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.runs.length, 1);
+    assert.equal(res.body.runs[0].periodKey, '2026-09-27T09:30');
+  } finally {
+    deps.scheduler = saved.scheduler;
+    deps.prisma = saved.prisma;
+  }
 });
 
 test('unknown job → controller 404; listJobs returns jobs + runs', async () => {

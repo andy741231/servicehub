@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DIRECTORY_DISTRICT_SHORTNAMES } from 'shared';
 import { DEFAULT_SETTINGS } from '../src/services/directorySms/settings.js';
 import {
-  normalizeContactId, planContactsSync, syncHashFor,
+  normalizeContactId, planContactsSync, planFieldChanges, syncHashFor,
 } from '../src/services/contactsSyncPlan.js';
 
 // ── fixtures ────────────────────────────────────────────────────────────────
@@ -500,4 +500,61 @@ test('unreferenced connections are never touched', () => {
   });
   const r = plan({ members: [m], connections: [c1, orphan] });
   assert.ok(!JSON.stringify(r.ops).includes('people/c9999'));
+});
+
+// ── CONTACT-source scoping (ports scratch repro #3) ─────────────────────────
+
+const src = (type) => ({ metadata: { source: { type, id: 'x' } } });
+
+test('planFieldChanges: PROFILE/DOMAIN entries are neither matched nor echoed', () => {
+  const member = M({ email: 'new-home@x.test' });
+  const contact = {
+    resourceName: 'people/c500', etag: 'e9',
+    names: [
+      // PROFILE name sits at index 0 — it must NOT be treated as n0
+      { givenName: 'Prof', familyName: 'Ile', ...src('PROFILE') },
+      { givenName: 'John', familyName: 'Doe', ...src('CONTACT') },
+    ],
+    emailAddresses: [
+      // a PROFILE email that coincidentally equals the member's is not a
+      // home-email match — the change is still planned against CONTACT data
+      { value: 'new-home@x.test', ...src('DOMAIN_PROFILE') },
+      { value: 'old-home@x.test', type: 'home' }, // no metadata → CONTACT scope
+    ],
+    phoneNumbers: [
+      { value: '+19990001111', type: 'mobile', ...src('PROFILE') },
+      { value: '+12815550100', type: 'mobile', ...src('CONTACT') },
+    ],
+    userDefined: [
+      { key: 'dist', value: 'ZZ', ...src('DOMAIN_PROFILE') },
+      { key: 'dist', value: 'C1' },
+    ],
+  };
+  const r = planFieldChanges(member, contact, SHORTNAMES);
+  // only CONTACT / metadata-free entries survive into the write body
+  assert.equal(r.person.names.length, 1);
+  assert.equal(r.person.names[0].metadata.source.type, 'CONTACT');
+  assert.equal(r.person.emailAddresses.length, 1);
+  assert.equal(r.person.emailAddresses[0].value, 'new-home@x.test');
+  assert.equal(r.person.emailAddresses[0].metadata, undefined);
+  assert.equal(r.person.phoneNumbers.length, 1);
+  assert.equal(r.person.phoneNumbers[0].value, '+12815550100');
+  assert.equal(r.person.userDefined.length, 1);
+  assert.equal(r.person.userDefined[0].value, 'C1');
+  // and the planned diff ran against CONTACT data, not the PROFILE shadow
+  assert.ok(r.changes.some((c) => c.field === 'email'
+    && c.from === 'old-home@x.test' && c.to === 'new-home@x.test'));
+  assert.ok(!r.changes.some((c) => c.field === 'givenName'
+    && c.from === 'Prof'));
+});
+
+test('planFieldChanges: an all-PROFILE name means no CONTACT name — change planned', () => {
+  const member = M();
+  const contact = {
+    resourceName: 'people/c501', etag: 'e9',
+    names: [{ givenName: 'X', familyName: 'Y', ...src('PROFILE') }],
+  };
+  const r = planFieldChanges(member, contact, SHORTNAMES);
+  assert.ok(r.fields.includes('names'));
+  assert.equal(r.person.names[0].givenName, 'John');
 });

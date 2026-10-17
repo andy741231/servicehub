@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPeopleClient } from '../src/services/googleContacts.js';
+import { planFieldChanges } from '../src/services/contactsSyncPlan.js';
+import { DIRECTORY_DISTRICT_SHORTNAMES } from 'shared';
 
 // ── fake fetch ──────────────────────────────────────────────────────────────
 
@@ -34,12 +36,16 @@ const clientFor = (fetch) => createPeopleClient({
 
 // ── updateContact ───────────────────────────────────────────────────────────
 
-test('updateContact refreshes the etag and PATCHes only masked fields + CONTACT sources', async () => {
+test('updateContact refreshes the etag, runs mutate on fresh data, PATCHes only changed fields + CONTACT sources', async () => {
   const fetch = fakeFetch((url, init) => {
-    if (init.method === 'GET' && url.includes('peopleFields') === false
-        && url.includes('personFields=metadata')) {
+    if (init.method === 'GET') {
+      assert.ok(url.includes(
+        'personFields=names%2CemailAddresses%2Cmetadata')
+        || url.includes('personFields=names,emailAddresses,metadata'));
       return res(200, {
         etag: 'fresh-etag-2',
+        names: [{ givenName: 'A' }],
+        emailAddresses: [{ value: 'a@x.test' }],
         metadata: {
           sources: [
             { type: 'CONTACT', id: 'src-contact', etag: 'src-etag' },
@@ -58,7 +64,11 @@ test('updateContact refreshes the etag and PATCHes only masked fields + CONTACT 
     emailAddresses: [{ value: 'a@x.test' }],
     phoneNumbers: [{ value: '+12815550100' }],
   };
-  const out = await c.updateContact('people/c1', person, 'phoneNumbers');
+  const out = await c.updateContact('people/c1', 'names,emailAddresses',
+    (fresh) => {
+      assert.equal(fresh.etag, 'fresh-etag-2'); // mutate sees the fresh read
+      return { person, fields: ['phoneNumbers'] };
+    });
   assert.equal(out.etag, 'rotated');
 
   const patch = fetch.calls.find((x) => x.method === 'PATCH');
@@ -69,10 +79,23 @@ test('updateContact refreshes the etag and PATCHes only masked fields + CONTACT 
   // only the CONTACT source survives — DOMAIN_PROFILE must not be echoed
   assert.deepEqual(patch.body.metadata.sources,
     [{ type: 'CONTACT', id: 'src-contact', etag: 'src-etag' }]);
-  // masked field present, unmasked fields absent
+  // changed field present, unchanged fields absent
   assert.ok(patch.body.phoneNumbers);
   assert.equal(patch.body.emailAddresses, undefined);
   assert.equal(patch.body.names, undefined);
+});
+
+test('updateContact: empty diff from mutate → skipped, no PATCH', async () => {
+  const fetch = fakeFetch((url, init) => {
+    if (init.method === 'GET') return res(200, { etag: 'e', names: [] });
+    if (init.method === 'PATCH') return res(200, {});
+    return res(500, {});
+  });
+  const c = clientFor(fetch);
+  const out = await c.updateContact('people/c1', 'names',
+    () => ({ person: { names: [] }, fields: [] }));
+  assert.equal(out.skipped, true);
+  assert.ok(!fetch.calls.some((x) => x.method === 'PATCH'));
 });
 
 test('updateContact on a missing contact throws before any PATCH', async () => {
@@ -81,9 +104,59 @@ test('updateContact on a missing contact throws before any PATCH', async () => {
     return res(200, {});
   });
   const c = clientFor(fetch);
-  await assert.rejects(c.updateContact('people/c1', { names: [] }, 'names'),
+  await assert.rejects(
+    c.updateContact('people/c1', 'names', () => ({ fields: ['names'] })),
     /contact not found/);
   assert.ok(!fetch.calls.some((x) => x.method === 'PATCH'));
+});
+
+test('updateContact PATCH 412 etag conflict → throws, no blind retry', async () => {
+  let patchCalls = 0;
+  const fetch = fakeFetch((url, init) => {
+    if (init.method === 'GET') return res(200, { etag: 'e1' });
+    if (init.method === 'PATCH') { patchCalls += 1; return res(412, {}); }
+    return res(500, {});
+  });
+  const c = clientFor(fetch);
+  await assert.rejects(
+    c.updateContact('people/c1', 'names',
+      () => ({ person: { names: [{}] }, fields: ['names'] })),
+    /updateContact failed/);
+});
+
+// Recompute against fresh Google state — the office-added work email the
+// stale plan never saw must survive the PATCH (ports scratch repro #2).
+test('updateContact + planFieldChanges: fresh office edit survives', async () => {
+  const member = {
+    id: 'm1', firstName: 'John', lastName: 'Doe', email: 'new-home@x.test',
+    phone1: '281-555-0100', district: 'Central 1', status: 'active',
+  };
+  const fresh = {
+    resourceName: 'people/c500', etag: 'e9',
+    names: [{ givenName: 'John', familyName: 'Doe' }],
+    emailAddresses: [
+      { value: 'old-home@x.test', type: 'home' },
+      { value: 'office-work@x.test', type: 'work' }, // added after planning
+    ],
+    phoneNumbers: [{ value: '+12815550100', type: 'mobile' }],
+    userDefined: [{ key: 'dist', value: 'C1' }],
+    metadata: { sources: [{ type: 'CONTACT', id: 's' }] },
+  };
+  const fetch = fakeFetch((url, init) => {
+    if (init.method === 'GET') return res(200, fresh);
+    if (init.method === 'PATCH') return res(200, { etag: 'e10' });
+    return res(500, {});
+  });
+  const c = clientFor(fetch);
+  await c.updateContact('people/c500',
+    'names,emailAddresses,phoneNumbers,userDefined',
+    (f) => planFieldChanges(member, f, DIRECTORY_DISTRICT_SHORTNAMES));
+  const patch = fetch.calls.find((x) => x.method === 'PATCH');
+  const values = patch.body.emailAddresses.map((e) => e.value);
+  assert.ok(values.includes('office-work@x.test')); // office edit kept
+  assert.ok(values.includes('new-home@x.test'));    // home corrected
+  assert.ok(!values.includes('old-home@x.test'));
+  assert.ok(patch.url.includes('updatePersonFields=emailAddresses'));
 });
 
 // ── modifyGroupMembers partial failures ─────────────────────────────────────

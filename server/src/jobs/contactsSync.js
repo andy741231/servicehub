@@ -27,9 +27,10 @@ import {
 } from '../services/googleAuth.js';
 import { createPeopleClient } from '../services/googleContacts.js';
 import {
-  normalizeContactId, planContactsSync, syncHashFor,
+  normalizeContactId, planContactsSync, planFieldChanges, syncHashFor,
 } from '../services/contactsSyncPlan.js';
 import { getSettings } from '../services/directorySms/settings.js';
+import { withJobLock } from './jobLock.js';
 
 const CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts';
 
@@ -80,7 +81,10 @@ class AbortApply extends Error {}
 // membership changes are batched per group afterwards. Returns counts —
 // failures land on the member's googleSyncError. The one exception is the
 // post-create identity persist: a failure there throws and aborts the run.
-export async function applyContactsSync({ prisma, client, plan, groups, now }) {
+export async function applyContactsSync({
+  prisma, client, plan, groups, now,
+  shortnames = DIRECTORY_DISTRICT_SHORTNAMES,
+}) {
   const counts = { synced: 0, syncErrors: 0, groupsModified: 0, groupsFailed: 0 };
   const groupByName = new Map(groups.map((g) => [g.name, g]));
   const memberUpdate = (id, data) =>
@@ -200,7 +204,13 @@ export async function applyContactsSync({ prisma, client, plan, groups, now }) {
             });
           }
           if (op.fields?.length) {
-            await client.updateContact(op.contactId, op.person, op.fields.join(','));
+            // Recompute the field diff against the FRESH contact inside
+            // updateContact's etag window — the plan-time arrays may be
+            // stale (an office edit since planning must be preserved).
+            await client.updateContact(
+              op.contactId,
+              'names,emailAddresses,phoneNumbers,userDefined',
+              (fresh) => planFieldChanges(m, fresh, shortnames));
           }
           touch(m.id, [...(op.adds ?? []), ...(op.removes ?? [])]);
           for (const n of op.adds ?? []) groupBy(n).add.add(op.contactId);
@@ -378,47 +388,60 @@ async function run({ prisma, now, dryRun, force }) {
   });
   const client = deps.createPeopleClient({ getToken: tokens.getToken });
 
-  const members = await prisma.directoryMember.findMany({
-    where: {
-      OR: [{ status: 'active' }, { googleContactId: { not: null } }],
-    },
-    select: MEMBER_SELECT,
-  });
-  const [connections, groups] = await Promise.all([
-    client.listConnections(),
-    client.listGroups(),
-  ]);
-  const plan = planContactsSync({
-    members,
-    connections,
-    groups,
-    districtGroups: settings['districts.contactGroups'] ?? {},
-    shortnames: DIRECTORY_DISTRICT_SHORTNAMES,
-  });
+  // Everything after this point reads member + Google state. A live run
+  // does it under the cross-process job lock, so an overlapping scheduler
+  // instance or CLI --apply can't plan against a half-applied previous
+  // run (the classic duplicate-contact window).
+  const body = async () => {
+    const members = await prisma.directoryMember.findMany({
+      where: {
+        OR: [{ status: 'active' }, { googleContactId: { not: null } }],
+      },
+      select: MEMBER_SELECT,
+    });
+    const [connections, groups] = await Promise.all([
+      client.listConnections(),
+      client.listGroups(),
+    ]);
+    const plan = planContactsSync({
+      members,
+      connections,
+      groups,
+      districtGroups: settings['districts.contactGroups'] ?? {},
+      shortnames: DIRECTORY_DISTRICT_SHORTNAMES,
+    });
 
-  const breaker = breakerMessage(plan.stats);
-  if (breaker && !dryRun && !force) throw new Error(breaker);
+    const breaker = breakerMessage(plan.stats);
+    if (breaker && !dryRun && !force) throw new Error(breaker);
 
-  const summary = {
-    compared: plan.stats.compared,
-    unchanged: plan.stats.unchanged,
-    ops: plan.stats.ops,
-    fields: plan.stats.fields,
-    groups: plan.stats.groups,
-    breakerTripped: Boolean(breaker),
-    dryRun: Boolean(dryRun),
-    sample: plan.ops.slice(0, 20).map((o) => ({
-      op: o.type,
-      memberId: o.memberId ?? null,
-      fields: (o.changes ?? []).map((c) => c.field),
-    })),
+    const summary = {
+      compared: plan.stats.compared,
+      unchanged: plan.stats.unchanged,
+      ops: plan.stats.ops,
+      fields: plan.stats.fields,
+      groups: plan.stats.groups,
+      breakerTripped: Boolean(breaker),
+      dryRun: Boolean(dryRun),
+      sample: plan.ops.slice(0, 20).map((o) => ({
+        op: o.type,
+        memberId: o.memberId ?? null,
+        fields: (o.changes ?? []).map((c) => c.field),
+      })),
+    };
+    if (dryRun) return summary;
+
+    const applied = await applyContactsSync({
+      prisma, client, plan, groups, now: at,
+    });
+    return { ...summary, applied };
   };
-  if (dryRun) return summary;
 
-  const applied = await applyContactsSync({
-    prisma, client, plan, groups, now: at,
-  });
-  return { ...summary, applied };
+  if (dryRun) return body(); // dry runs write nothing — no lock needed
+  const locked = await withJobLock(prisma, 'contacts-sync', body);
+  if (!locked.locked) {
+    return { skipped: true, reason: 'contacts-sync already running' };
+  }
+  return locked.result;
 }
 
 export const contactsSyncJob = {

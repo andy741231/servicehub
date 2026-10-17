@@ -132,24 +132,31 @@ export function createPeopleClient({
     },
 
     // Connections-list etags go stale and every update rotates them —
-    // always GET fresh metadata first, and PATCH only the masked fields
-    // plus the CONTACT source entry Google requires for the write.
-    async updateContact(resourceName, person, updatePersonFields) {
+    // always GET first. The read includes the field data (readMask) so the
+    // caller's `mutate` recomputes its changes against the FRESH contact
+    // inside the etag window: an office edit made since planning is kept,
+    // not overwritten by a stale array. mutate returns
+    // { person, fields } — nothing PATCHed when fields is empty — or null.
+    async updateContact(resourceName, readMask, mutate) {
       const fresh = await request('getPerson', 'GET',
-        `${resourceName}?${qs({ personFields: 'metadata' })}`);
+        `${resourceName}?${qs({ personFields: `${readMask},metadata` })}`);
       if (!fresh) {
         // The contact vanished between list and write — don't PATCH a
         // stale etag into a 4xx; fail as a not-found instead.
         throw new Error('People API updateContact aborted: contact not found');
       }
+      const next = mutate(fresh);
+      if (!next?.fields?.length) return { skipped: true };
       const sources = (fresh.metadata?.sources ?? [])
         .filter((s) => s.type === 'CONTACT');
       const body = { resourceName, etag: fresh.etag };
       if (sources.length) body.metadata = { sources };
-      for (const f of String(updatePersonFields).split(',')) {
-        const key = f.trim();
-        if (person[key] !== undefined) body[key] = person[key];
+      for (const f of next.fields) {
+        if (next.person[f] !== undefined) body[f] = next.person[f];
       }
+      const updatePersonFields = next.fields.join(',');
+      // A 400/412 (rotated etag) throws rather than retrying blindly — the
+      // member is flagged and replanned on the next run.
       return request('updateContact', 'PATCH',
         `${resourceName}:updateContact?${qs({ updatePersonFields })}`, body);
     },

@@ -70,21 +70,24 @@ export function createScheduler({
       ? `manual:${now().toISOString()}`
       : periodKeyFor(job.schedule, now());
     if (periodKey == null) return null; // not due this period
+    // Claim the in-flight slot synchronously — the check and the add are a
+    // single non-awaiting step, so a concurrent runJob cannot slip between
+    // them while the lease create is in flight.
     if (inFlight.has(name)) return { skipped: true, job: name, periodKey };
-
-    let run;
-    try {
-      run = await prisma.directoryJobRun.create({
-        data: { job: name, periodKey, status: 'running' },
-      });
-    } catch (err) {
-      // P2002: another tick/instance already claimed this period — skip.
-      if (err?.code === 'P2002') return { skipped: true, job: name, periodKey };
-      throw err;
-    }
-
     inFlight.add(name);
+
     try {
+      let run;
+      try {
+        run = await prisma.directoryJobRun.create({
+          data: { job: name, periodKey, status: 'running' },
+        });
+      } catch (err) {
+        // P2002: another tick/instance already claimed this period — skip.
+        if (err?.code === 'P2002') return { skipped: true, job: name, periodKey };
+        throw err;
+      }
+
       const isDry = effectiveDryRun(name, manual ? dryRun : false);
       try {
         // force is honoured on manual runs only — a scheduled tick can

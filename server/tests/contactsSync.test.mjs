@@ -44,7 +44,10 @@ const matching = (m, rn, over = {}) => conn(rn, {
 
 // hooks: { update(rn), delete(rn), create(body), modify(rn) } — called after
 // recording, lets a test simulate a concurrent writer mid-flight.
-function fakeClient({ connections = [], groups = makeGroups(), fail = {}, hooks = {} } = {}) {
+// freshContacts — rn → contact object returned to updateContact's mutate
+// instead of the plan-time connection (simulates office edits since planning).
+function fakeClient({ connections = [], groups = makeGroups(), fail = {},
+  hooks = {}, freshContacts } = {}) {
   const calls = { update: [], create: [], delete: [], modify: [], createGroup: [] };
   return {
     calls,
@@ -64,11 +67,15 @@ function fakeClient({ connections = [], groups = makeGroups(), fail = {}, hooks 
       }
       return { resourceName: `people/c${9000 + calls.create.length}` };
     },
-    updateContact: async (rn, person, fields) => {
-      calls.update.push({ rn, fields });
+    updateContact: async (rn, readMask, mutate) => {
+      const fresh = freshContacts?.[rn]
+        ?? connections.find((c) => c.resourceName === rn) ?? {};
+      const next = mutate(fresh);
+      calls.update.push({ rn, readMask, fields: next?.fields ?? [],
+        person: next?.person });
       await hooks.update?.(rn);
       if (fail.update?.includes(rn)) throw new Error('write denied');
-      return person;
+      return next?.fields?.length ? next : { skipped: true };
     },
     deleteContact: async (rn) => {
       calls.delete.push(rn);
@@ -100,8 +107,44 @@ function fakePrisma(members, { fresh, extraLinked, failUpdates = 0, onFirstUpdat
   let updateManyCalls = 0;
   const eq = (row, where) => Object.entries(where)
     .every(([k, v]) => (row[k] ?? null) === (v ?? null));
+  // DirectoryJobRun with the real (job, periodKey) unique constraint — the
+  // cross-process job lock lives here.
+  const runRows = [];
   return {
-    updates, store,
+    updates, store, runRows,
+    directoryJobRun: {
+      create: async ({ data }) => {
+        if (runRows.some((r) => r.job === data.job
+            && r.periodKey === data.periodKey)) {
+          const e = new Error('unique violation'); e.code = 'P2002'; throw e;
+        }
+        const row = { id: `run-${runRows.length + 1}`, ...data };
+        runRows.push(row);
+        return row;
+      },
+      updateMany: async ({ where, data }) => {
+        let count = 0;
+        for (const r of runRows) {
+          if (r.job === where.job && r.periodKey === where.periodKey
+              && (where.startedAt?.lt === undefined
+                  || r.startedAt < where.startedAt.lt)) {
+            Object.assign(r, data); count += 1;
+          }
+        }
+        return { count };
+      },
+      deleteMany: async ({ where }) => {
+        let count = 0;
+        for (let i = runRows.length - 1; i >= 0; i--) {
+          const r = runRows[i];
+          if (r.job === where.job && r.periodKey === where.periodKey
+              && (where.summary === undefined || r.summary === where.summary)) {
+            runRows.splice(i, 1); count += 1;
+          }
+        }
+        return { count };
+      },
+    },
     directoryMember: {
       findMany: async ({ where } = {}) => {
         // The delete guard's sole-reference read — live store view.
@@ -531,4 +574,123 @@ test('relink during deleteContact → row keeps new id; remote delete stands', a
   const row = prisma.store.get('m1');
   assert.equal(row.googleContactId, 'people/c888');     // new id NOT cleared
   assert.match(row.googleSyncError, /member changed during sync/);
+});
+
+// ── fresh-data recompute inside the etag window ────────────────────────────
+
+test('office-added work email is preserved — the PATCH is computed fresh', async () => {
+  // Plan-time connection has the old home email only. Since planning, the
+  // office added a work email on the Google side — the write must keep it
+  // and change only the home entry (ports scratch repro #2).
+  const m = M({ email: 'new-home@x.test' });
+  const planConn = matching({ ...m, email: 'old-home@x.test' }, 'people/c1');
+  const freshConn = { ...planConn };
+  freshConn.emailAddresses = [
+    { value: 'old-home@x.test', type: 'home' },
+    { value: 'office-work@x.test', type: 'work' },
+  ];
+  const client = fakeClient({
+    connections: [planConn],
+    freshContacts: { 'people/c1': freshConn },
+  });
+  const { prisma, summary } = await runJob([m], [planConn], { dryRun: false, client });
+  assert.equal(summary.ops.update, 1);
+  const u = client.calls.update[0];
+  const emails = u.person.emailAddresses.map((e) => e.value);
+  assert.ok(emails.includes('office-work@x.test'));  // office edit kept
+  assert.ok(emails.includes('new-home@x.test'));     // home updated
+  assert.ok(!emails.includes('old-home@x.test'));
+  assert.ok(prisma.updates.find((x) => x.id === 'm1').googleSyncHash);
+});
+
+test('fresh contact already matches → no PATCH fields, member still synced', async () => {
+  // Planning saw a stale email; by the time updateContact reads the
+  // contact the value is already right → skipped PATCH, but pass-4 still
+  // writes the sync marker.
+  const m = M({ email: 'new@x.test' });
+  const staleConn = matching({ ...m, email: 'old@x.test' }, 'people/c1');
+  const client = fakeClient({
+    connections: [staleConn],
+    freshContacts: { 'people/c1': matching(m, 'people/c1') },
+  });
+  const { prisma, summary } = await runJob([m], [staleConn], { dryRun: false, client });
+  assert.equal(summary.ops.update, 1);             // planned on stale data
+  assert.equal(client.calls.update.length, 1);
+  assert.deepEqual(client.calls.update[0].fields, []); // nothing PATCHed
+  const u = prisma.updates.find((x) => x.id === 'm1');
+  assert.ok(u.googleSyncHash);                     // synced via pass 4
+  assert.equal(summary.applied.synced, 1);
+});
+
+test('updateContact failure → member error, no hash (retried next run)', async () => {
+  const m = M({ firstName: 'Broke' });
+  const client = fakeClient({
+    connections: [matching({ ...m, firstName: 'John' }, 'people/c1')],
+    fail: { update: ['people/c1'] },
+  });
+  const { prisma, summary } = await runJob([m], [], { dryRun: false, client });
+  const u = prisma.updates.find((x) => x.id === 'm1');
+  assert.match(u.googleSyncError, /write denied/);
+  assert.equal(u.googleSyncHash, undefined);
+  assert.equal(summary.applied.synced, 0);
+});
+
+// ── cross-process job lock ──────────────────────────────────────────────────
+
+test('live run holds the job lock; a concurrent live run skips entirely', async () => {
+  const m = M({ googleContactId: null, email: 'n@x.test' });
+  const prisma = fakePrisma([m]);
+  const client = fakeClient({ connections: [] });
+  deps.createPeopleClient = () => client;
+  const [a, b] = await Promise.all([
+    contactsSyncJob.run({ prisma, now: new Date(), dryRun: false }),
+    contactsSyncJob.run({ prisma, now: new Date(), dryRun: false }),
+  ]);
+  const skipped = [a, b].find((s) => s?.skipped);
+  assert.equal(skipped?.reason, 'contacts-sync already running');
+  assert.equal(client.calls.create.length, 1); // exactly one create total
+  // the lock row was released — nothing left behind
+  assert.equal(prisma.runRows.length, 0);
+});
+
+test('a held lock skips the run before any member read or Google call', async () => {
+  const m = M({ googleContactId: null });
+  const prisma = fakePrisma([m]);
+  // Pre-hold the lock — the run must not touch members or Google at all.
+  prisma.runRows.push({
+    id: 'lock-1', job: 'contacts-sync', periodKey: 'lock',
+    status: 'locked', summary: 'other-token', startedAt: new Date(),
+  });
+  const client = fakeClient({ connections: [] });
+  deps.createPeopleClient = () => client;
+  const summary = await contactsSyncJob.run(
+    { prisma, now: new Date(), dryRun: false });
+  assert.deepEqual(summary,
+    { skipped: true, reason: 'contacts-sync already running' });
+  assert.equal(prisma.runRows.length, 1);       // foreign lock untouched
+  assert.equal(client.calls.create.length, 0);
+});
+
+test('a stale lock is taken over and released; dry runs never lock', async () => {
+  const m = M({ googleContactId: null });
+  const prisma = fakePrisma([m]);
+  const client = fakeClient({ connections: [] });
+  deps.createPeopleClient = () => client;
+  // Abandoned 3h-old lock → the live run takes it over, applies, releases.
+  prisma.runRows.push({
+    id: 'lock-old', job: 'contacts-sync', periodKey: 'lock',
+    status: 'locked', summary: 'dead-token',
+    startedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+  });
+  const summary = await contactsSyncJob.run(
+    { prisma, now: new Date(), dryRun: false });
+  assert.equal(client.calls.create.length, 1); // ran to completion
+  assert.equal(prisma.runRows.length, 0);      // lock released
+  assert.ok(summary.applied.synced >= 0);
+
+  // A dry run performs the whole plan without touching the lock table.
+  const dry = await contactsSyncJob.run(
+    { prisma, now: new Date(), dryRun: true });
+  assert.equal(dry.dryRun, true);
+  assert.equal(prisma.runRows.length, 0);      // still no lock rows
 });
