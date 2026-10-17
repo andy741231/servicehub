@@ -63,7 +63,7 @@ export function createScheduler({
       dryRun: effectiveDryRun(j.name, false),
     }));
 
-  async function runJob(name, { manual = false, dryRun } = {}) {
+  async function runJob(name, { manual = false, dryRun, force } = {}) {
     const job = jobs.find((j) => j.name === name);
     if (!job) return null; // controller maps this to 404
     const periodKey = manual
@@ -87,7 +87,12 @@ export function createScheduler({
     try {
       const isDry = effectiveDryRun(name, manual ? dryRun : false);
       try {
-        const result = await job.run({ prisma, now, periodKey, dryRun: isDry });
+        // force is honoured on manual runs only — a scheduled tick can
+        // never bypass a job's safety gates.
+        const result = await job.run({
+          prisma, now, periodKey, dryRun: isDry,
+          force: manual && force === true,
+        });
         run = await prisma.directoryJobRun.update({
           where: { id: run.id },
           data: {

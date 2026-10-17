@@ -400,7 +400,9 @@ data during E2E, so automatic email or Google writes from staging must never hap
     contact ID:** delete the contact and clear the ID. `pending` members get no
     contact, as with today's `NR`.
 - **Legacy IDs:** the importer converts m8 feed URLs (`…/base/<hex>`) to
-  `people/c<hex>`, following the rule in `Contacts2`.
+  `people/c<decimal-of-hex>`. The sync also normalizes legacy URLs before
+  checking ownership, so two spellings of one contact cannot bypass the
+  shared-contact guard.
 - **Safety:**
   - Before the first live run, export every serviceoffice contact to JSON.
   - The first prod run is a dry run that lists every operation.
@@ -409,6 +411,42 @@ data during E2E, so automatic email or Google writes from staging must never hap
   - Throttle writes to stay within People API per-user quotas.
   - **The expected first-run diff is about 0** (IDs are carried over and the data
     hasn't changed). A large diff means the mapping is wrong; stop and investigate.
+
+**S20 closeout (2026-10-17; no live Google sync applied):**
+- Elizabeth Fuentes (legacy ID 448) now links to her own contact in both the
+  live source sheet and stage; Jose Garcia (450) retains his original contact.
+- The two stage-only test members and their dependent Directory accounts,
+  login tokens and audit entries were removed with user approval and a local
+  backup. Their Hub user accounts were preserved.
+- Read-only capture at **2026-10-17 19:03 UTC**: 848 eligible stage members,
+  1,303 Google connections and 51 user contact groups. The plan contains
+  **20 updates, 8 creates, 7 deletes, 1 clear-id, 811 mark-synced and 1 error**;
+  the circuit breaker is not tripped. All 7 proposed deletions are members
+  currently marked `inactive` on stage; none has been applied.
+- The one error is **Willie Wise: stored contact not found** (Google GET
+  returned 404). The contact was present in the earlier backup; its removal
+  cause is unknown. Do not recreate automatically. Resolve before live use.
+- The 2 extra updates versus the earlier 18-update plan are removal of an
+  additional district-group membership for XingLu Li and Nancy Lee. These are
+  group-only changes, not additional name/email/phone overwrites.
+- The full plan and frozen inputs are gitignored under `scratch/`. The
+  contact backup requested by the user is under `client/src/pages/directory/`,
+  also gitignored. JSON photo fields contain URLs, not downloaded images;
+  backups aid recovery but are not a turnkey restore.
+- Keep automatic jobs disabled before cutover. Initial production settings:
+  `DIRECTORY_JOBS_ENABLED=false` and
+  `DIRECTORY_JOBS_DRY_RUN=maintenance,district-digest,contacts-sync`.
+  Enabling the scheduler affects every registered job; release each from
+  dry-run separately after reviewing its production summary. Dry-run jobs
+  still record scheduler run summaries, but do not change member/Google data.
+- S22 rehearses the fresh import on stage. T0 still requires another fresh
+  production import after freezing legacy intake; S22 does not replace T0.
+- Verification: **248/248 server tests pass**. Review fixes cover HTTP-200
+  group partial failures, non-idempotent creation retries, preserving created
+  IDs after group failures, stale-plan metadata writes, and shared legacy-ID
+  aliases. The Codex independent review was attempted but blocked by an
+  expired login; run `codex login` and review the final code before any live
+  Google apply. This gate is **not complete**.
 
 ### 6.6 Sheet sync-back (P6, D4)
 
@@ -655,7 +693,7 @@ ServiceHub-side work, and ask for the step by ID ("do S7").
 | S17 | P5 | In-process scheduler + `DirectoryJobRun` lease + manual-run endpoint | `fusion` | Idempotency across restarts and slot swaps. **Done 2026-09-28:** `server/src/jobs/`; `GET /jobs`, `POST /jobs/:name/run`; manual runs are forced dry-run unless `DIRECTORY_JOBS_ENABLED=true`. A daily job missed while the app was down runs on the first tick after its time that day |
 | S18 | P5 | `district-digest` and `maintenance` jobs | `swe` | Well-specified once S17 lands |
 | S19 | P6 | Google credentials: DWD service account or OAuth consent (§6.7, §15.2) | `human` | **Done 2026-09-29 (Option A):** SA `servicehub-directory-jobs` on project `project-id-0865232832069440140`; DWD client ID `114874807455729070200` authorized for `contacts` + `spreadsheets`; key JSON stashed gitignored at `scratch/google-sa.json` — paste into prod slot env `GOOGLE_DIRECTORY_SA_KEY` + `GOOGLE_DELEGATED_USER=serviceoffice@churchinhouston.org` at cutover |
-| S20 | P6 | Port `performContactsHousekeeping` → `googleContacts.js` (§6.5) | `fusion` | Deletes real contacts; get a `codex`/`gemini` review of the delete paths before the first live run |
+| S20 | P6 | Port `performContactsHousekeeping` → `googleContacts.js` (§6.5) | `fusion` | **Built and tested 2026-10-17; live apply blocked pending independent review:** SA JWT auth, People client, pure hash-based planner, 30-minute job and guarded CLI. Breaker >25 deletes / >50 creates; manual force only. CLI apply requires production environment/database, enabled job not dry-listed, `--backup` and typed DB name. 248/248 server tests pass. Final stage snapshot: 848 compared, 811 mark-synced, 20 updates, 8 creates, 7 deletes, 1 clear-id, 1 missing-contact error; see §6.5 closeout. Shared Elizabeth/Jose link fixed. Codex review attempted but login expired; re-authenticate and review before live Google writes |
 | S21 | P6 | Satellite `IMPORTRANGE` discovery → sheet sync-back writer (§6.6) | `fusion` | Discovery is read-only (`swe`-able); the writer needs the exact 38-col reverse map |
 | S22 | P7 | Staging E2E checklist (§9) via the test number | `human` + `swe` | Real SMS is manual; the agent can drive `simulate` cases and record evidence |
 | S23 | P8 | Cutover runbook (§10) | `human` | Twilio console, Cognito/Zapier/GAS toggles, announcement |

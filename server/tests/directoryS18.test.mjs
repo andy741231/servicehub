@@ -430,9 +430,11 @@ test('district-digest: HTML escapes member-provided text', async () => {
 
 // ── jobs/index.js registration ────────────────────────────────────────────
 
-test('jobs/index registers maintenance + district-digest in run-time order', () => {
-  assert.deepEqual(JOBS.map((j) => j.name), ['maintenance', 'district-digest']);
+test('jobs/index registers maintenance + district-digest + contacts-sync in run-time order', () => {
+  assert.deepEqual(JOBS.map((j) => j.name),
+    ['maintenance', 'district-digest', 'contacts-sync']);
   assert.deepEqual(JOBS[0].schedule, { dailyAt: '03:30' });
   assert.deepEqual(JOBS[1].schedule, { dailyAt: '06:00' });
+  assert.deepEqual(JOBS[2].schedule, { everyMinutes: 30 });
   assert.ok(JOBS.every((j) => typeof j.run === 'function'));
 });

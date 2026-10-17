@@ -58,3 +58,6 @@ phone_list*.csv
 
 # Importer report/warnings output (member PII — never commit)
 scratch/
+
+# Google Contacts backups (member PII — never commit)
+contacts-backup-*.json

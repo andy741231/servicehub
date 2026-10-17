@@ -24,7 +24,9 @@ export const listJobs = async (req, res) => {
 export const runJob = async (req, res) => {
   try {
     const dryRun = req.body?.dryRun === true;
-    const run = await deps.scheduler.runJob(req.params.name, { manual: true, dryRun });
+    const force = req.body?.force === true;
+    const run = await deps.scheduler.runJob(
+      req.params.name, { manual: true, dryRun, force });
     if (!run) return res.status(404).json({ error: 'Unknown job' });
     res.json({ run });
   } catch (error) {

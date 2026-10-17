@@ -162,6 +162,18 @@ test('manual runs: dry-run rules (disabled / listed / body flag / live)', async 
   assert.match(run.periodKey, /^manual:/);
 });
 
+test('force is honoured on manual runs only', async () => {
+  // manual + force → ctx.force true
+  let h = harness({ enabled: true });
+  await h.scheduler.runJob('contacts-sync', { manual: true, force: true });
+  assert.equal(h.calls[0].force, true);
+
+  // non-manual (scheduled-path) runJob can never force
+  h = harness({ enabled: true });
+  await h.scheduler.runJob('contacts-sync', { manual: false, force: true });
+  assert.equal(h.calls[0].force, false);
+});
+
 test('in-flight overlap is skipped', async () => {
   let release;
   const slow = [{
@@ -213,6 +225,17 @@ test('unknown job → controller 404; listJobs returns jobs + runs', async () =>
     assert.deepEqual(res.body.jobs,
       [{ name: 'maintenance', schedule: { dailyAt: '03:30' }, dryRun: true }]);
     assert.equal(res.body.runs.length, 1);
+
+    // body.force is forwarded through the manual runJob call
+    const seen = [];
+    deps.scheduler = {
+      describeJobs: () => [],
+      runJob: async (name, opts) => { seen.push(opts); return { id: 'r1' }; },
+    };
+    res.statusCode = 200; res.body = undefined;
+    await runJob({ params: { name: 'x' }, body: { force: true } }, res);
+    assert.equal(seen[0].force, true);
+    assert.equal(seen[0].manual, true);
   } finally {
     deps.scheduler = saved.scheduler;
     deps.prisma = saved.prisma;
