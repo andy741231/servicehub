@@ -55,9 +55,10 @@ export function createSmsController(deps = {}) {
   const getEngine = () => (engine ??= engineFactory({
     prisma,
     getSettings: getSettingsFn,
-    // directoryLoginLinks.issueLoginLink takes (member, prisma); the engine's
-    // seam takes just (member).
-    issueLoginLink: (member) => issueLink(member, prisma),
+    // directoryLoginLinks.issueLoginLink takes (member, prisma, next); the
+    // engine's seam takes (member, next) — `next` is the optional post-verify
+    // site path (e.g. the ADD command's '/directory?add=1').
+    issueLoginLink: (member, next) => issueLink(member, prisma, next),
     clientUrl: clientUrl ?? process.env.CLIENT_URL,
   }));
 

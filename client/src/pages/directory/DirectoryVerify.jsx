@@ -5,7 +5,11 @@ import api from '../../utils/api';
 import useDirectoryStore from './store/directoryStore';
 import LoadingScreen from '../../components/LoadingScreen';
 
-// Consumes /directory/verify?token=… from magic-link emails.
+// Consumes /directory/verify?token=… from magic-link emails and SMS links.
+// An optional `next` param deep-links into the directory after sign-in — it
+// must be a site path under /directory (never absolute, never `//`).
+const NEXT_ALLOWED = /^\/directory(\/|\?|$)/;
+
 export default function DirectoryVerify() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -21,9 +25,11 @@ export default function DirectoryVerify() {
       setError('This sign-in link is missing its token. Request a new one.');
       return;
     }
+    const next = searchParams.get('next');
+    const dest = next && NEXT_ALLOWED.test(next) ? next : '/directory';
     api.post('/directory/auth/verify', { token })
       .then((res) => setSession(res.data))
-      .then(() => navigate('/directory', { replace: true }))
+      .then(() => navigate(dest, { replace: true }))
       .catch((err) => setError(err.response?.data?.error || 'That sign-in link is invalid or has expired.'));
   }, [searchParams, setSession, navigate]);
 

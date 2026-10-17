@@ -13,9 +13,16 @@ const LINK_TTL_MS = 30 * 60 * 1000;        // link valid for 30 minutes
 const REQUEST_COOLDOWN_MS = 60 * 1000;     // at most one link per member per minute
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+// `next` may only be a site path under /directory — never an absolute URL and
+// never protocol-relative (`//…`), so a link can only deep-link into the
+// directory, not off-site.
+const NEXT_ALLOWED = /^\/directory(\/|\?|$)/;
+
 // → { link, tokenId } on success, { cooldown: true } when a token for this
 // member was minted within the last 60s.
-export async function issueLoginLink(member, prisma = defaultPrisma) {
+// `next` (optional): a post-verify site path appended as &next=… — e.g. the
+// SMS `ADD` command deep-links to '/directory?add=1'.
+export async function issueLoginLink(member, prisma = defaultPrisma, next = null) {
   const recent = await prisma.directoryLoginToken.findFirst({
     where: { memberId: member.id, createdAt: { gt: new Date(Date.now() - REQUEST_COOLDOWN_MS) } },
   });
@@ -24,7 +31,10 @@ export async function issueLoginLink(member, prisma = defaultPrisma) {
   const raw = crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
   const base = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
-  const link = `${base}/directory/verify?token=${raw}`;
+  let link = `${base}/directory/verify?token=${raw}`;
+  if (typeof next === 'string' && NEXT_ALLOWED.test(next)) {
+    link += `&next=${encodeURIComponent(next)}`;
+  }
   // Raw tokens only ever surface in local dev logs — never in production.
   if (!IS_PROD) console.log(`[directory] magic link for ${member.email ?? member.id}: ${link}`);
 

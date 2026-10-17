@@ -13,8 +13,10 @@ const MAX_REPLY_LEN = 1600;
 
 const STOP_WORDS = new Set(['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT']);
 const START_WORDS = new Set(['START', 'UNSTOP', 'YES']);
+// 'add' is no longer retired — staff texting it get a one-time sign-in link
+// that opens the Add Member dialog (see the dispatch below).
 const RETIRED_COMMANDS = new Set(
-  ['add', 'him', 'her', 'address', 'set', 'setsrv', 'pic', 'attendance', 'send', 'list']);
+  ['him', 'her', 'address', 'set', 'setsrv', 'pic', 'attendance', 'send', 'list']);
 const STAFF_ROLES = new Set(['helper', 'approver', 'admin']);
 const ROLE_RANK = { admin: 3, approver: 2, helper: 1, saint: 0 };
 
@@ -185,6 +187,18 @@ export function createEngine({ prisma, getSettings, issueLoginLink, clientUrl })
         return finish([helpTopics(settings, topicRole).intro], 'gethelp');
       }
 
+      // 'add' lives again for staff: a one-time sign-in link that lands on
+      // /directory?add=1, which opens the Add Member dialog. Saints fall
+      // through to name lookup like any other text.
+      if (w0 === 'add' && STAFF_ROLES.has(role)) {
+        const issued = await issueLoginLink(requester, '/directory?add=1');
+        const reply = issued.cooldown
+          ? 'A sign-in link was just sent. You can request another in a minute.'
+          : `Click this link to input information for a new saint:\n\n${issued.link}`
+            + `\n\nLink works once, expires in 30 minutes.`;
+        return finish([reply], 'add', [requester.id]);
+      }
+
       if (RETIRED_COMMANDS.has(w0) && STAFF_ROLES.has(role)) {
         return finish([`This moved to the web: ${staffUrl}`], 'retired');
       }
@@ -244,7 +258,7 @@ export function createEngine({ prisma, getSettings, issueLoginLink, clientUrl })
 
     // Steps 5–6 replies get the welcome prefix (once per number) and the
     // help/STOP trailer; earlier exits are already complete replies.
-    const postProcessed = ['reply', 'no-command', 'me', 'gethelp', 'retired', 'keyword', 'lookup']
+    const postProcessed = ['reply', 'no-command', 'me', 'add', 'gethelp', 'retired', 'keyword', 'lookup']
       .includes(result.command);
     if (postProcessed) {
       if (!row?.welcomedAt) {
