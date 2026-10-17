@@ -423,9 +423,13 @@ data during E2E, so automatic email or Google writes from staging must never hap
   **20 updates, 8 creates, 7 deletes, 1 clear-id, 811 mark-synced and 1 error**;
   the circuit breaker is not tripped. All 7 proposed deletions are members
   currently marked `inactive` on stage; none has been applied.
-- The one error is **Willie Wise: stored contact not found** (Google GET
-  returned 404). The contact was present in the earlier backup; its removal
-  cause is unknown. Do not recreate automatically. Resolve before live use.
+- The snapshot's one error was **Willie Wise: stored contact not found**
+  (Google GET returned 404). **Resolved later on 2026-10-17:** an existing
+  contact uniquely matched his name, email and phone. His live-sheet and
+  stage references were corrected with a backup and stage audit entry;
+  neither Google contact was changed. A targeted post-fix plan reports
+  `mark-synced`, with no create/delete/update/error. The old ID's removal
+  cause remains unknown; the snapshot counts above are historical.
 - The 2 extra updates versus the earlier 18-update plan are removal of an
   additional district-group membership for XingLu Li and Nancy Lee. These are
   group-only changes, not additional name/email/phone overwrites.
