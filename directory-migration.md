@@ -870,7 +870,13 @@ failed run was a 63-min deploy misread as failure). Missing file was also
 hand-uploaded to both slots. Follow-ups: uptime monitor on `/api/health`;
 gated swap (auto-swap promotes before smoke tests can block — the
 `swap-production` job only waits + verifies; a real gate needs ARM auth in
-CI).
+CI). **Update 2026-10-18:** gated swap is now the operating mode — auto-swap is
+OFF and promotion is a manual slot swap after verification. Both slots run
+`WEBSITE_RUN_FROM_PACKAGE=1` (sticky); deploys dropped from ~60 min to ~5 min.
+Prod app settings for the SMS/Directory stack are in place and slot-sticky;
+`DIRECTORY_JOBS_ENABLED` and `SHEET_SYNC_SPREADSHEET_ID` remain unset until T0.
+PR #12 (S15–S21 + packaging fix) is merged and live in production; FS app
+logging enabled on both slots for stdout capture under RFP.
 
 **Warm up the staging DB first:** `test-servicehub` auto-pauses, and the first
 request after a pause can take longer than Twilio's 15 s timeout.
@@ -884,7 +890,8 @@ one-time token. Only the SPA's POST should consume it.
 
 **Before (T−7 to T−1):**
 - P7 is signed off, the district mapping is confirmed, and helpers are briefed.
-- Deploy the final code to prod with jobs disabled.
+- Deploy the final code to prod with jobs disabled. **Done 2026-10-18:** PR #12
+  merged; prod verified (health/DB page/SMS 403/Directory 401).
 - Configure prod settings: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
   `TWILIO_MESSAGING_SERVICE_SID`, `SMS_WEBHOOK_URL` (sticky), and the Google
   credentials. `SHEET_SYNC_SPREADSHEET_ID` stays **unset** until T0 (the
