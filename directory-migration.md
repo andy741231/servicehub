@@ -477,8 +477,9 @@ data during E2E, so automatic email or Google writes from staging must never hap
 - **Target:** spreadsheet `1KaU6JFCTJb282AxHR-9HOIY7tXfzIO0msNcyd5uJ4zI`, tab
   `saints`. That's what the satellites `IMPORTRANGE` from, so they keep working
   unchanged.
-- **Layout:** write the exact legacy header row and all 38 columns, in the same
-  order, and reverse-map the values:
+- **Layout:** the tab has **33 columns (A–AG)**, not 38 (the grid is 38
+  wide; AH+ are empty). Keep the exact legacy header row and order, and
+  reverse-map the values:
 
   | Directory | Sheet |
   |---|---|
@@ -488,17 +489,37 @@ data during E2E, so automatic email or Google writes from staging must never hap
   | role | `APP` / `HLP` / `ADM` / blank |
   | gender | `B` / `S` |
   | head of household | `H` / blank |
-  | `legacyId` | `cott`; new members get `SH-<shortid>` |
+  | `legacyId` | `cott`; new members get the next number (max of sheet + DB `legacyId` + 1), persisted to the member before the sheet write — keeps GAS's numeric-id commands working on rollback (decided 2026-10-18; replaces the earlier `SH-<shortid>` idea) |
   | `googleContactId` | Contact ID |
 
 - **Preserve GAS-only columns during the rollback window:** Changed, Link,
   Request by USER, User Settings, History, Picture ID, Phone Provider, and the
   formula columns. Keep them for rows matched by `cott`, so GAS picks up cleanly
   if we roll back (§11).
-- **Discovery first:**
-  - Record each satellite's `IMPORTRANGE` range and the columns it references.
-  - Confirm how row 2 is used (phonelist.md calls it a sample/format row).
-  - Check the formula columns after "Insert 'formulas' before this Col".
+- **Discovery (done 2026-10-18, S21):**
+  - Satellites (all via `worksheet!C9` = `url_PhoneList`):
+    - *Create annual phone list* — `saints!A3:AC1200` + `sa_LocalityColumn`
+      + `sa_StatusColumn`, filter HOU and A/MOV. **Hard cap row 1200** —
+      the job warns (`ANNUAL_LIST_CAP`) past row 1150.
+    - *Phonelist by district* — `sa_EntirePhonelist` + the same two
+      columns, filter HOU and A/NR.
+    - *All the saints* — `sa_EntirePhonelist`, sorted; then A only.
+    - All three also pull `wk_DistrictsTable` from the `worksheet` tab.
+  - The satellites FILTER those ranges together, so they must stay equal
+    height: `sa_EntirePhonelist` (A3:AA), `sa_LocalityColumn`,
+    `sa_StatusColumn` all end at the grid's last row. When an append
+    overflows the grid, the job grows the grid and extends every
+    row-scoped `saints` named range in the same batchUpdate.
+  - Row 2 is a TST sample row ("Church in Houston"); never written.
+  - There are **no formula columns** on `saints`. `Southeast saints` and
+    `Sheet6` are static copies with no consumers.
+- **Write rule (semantic diff):** the job runs the importer's own
+  `analyzeSheet()` over the current sheet and writes a cell only when the
+  Directory value differs from what the importer would read. It writes in
+  the sheet's native format (`+1…` cell, numeric zip/apt, serial
+  "Last change", `people/c…` contact id), so `.` placeholders and m8 URLs
+  stay untouched. Appended rows copy the previous row's formatting.
+  Spec: `scratch/s21-sync-back-spec.md`.
 - **Mechanics:** update in place by `cott` and append new Directory members
   after the last used row, with Sheets API `values.batchUpdate` (RAW). Rows
   whose `cott` isn't in Directory — the skipped `MOV`/`DEL` rows (§7.2) and any
@@ -718,7 +739,7 @@ ServiceHub-side work, and ask for the step by ID ("do S7").
 | S18 | P5 | `district-digest` and `maintenance` jobs | `swe` | Well-specified once S17 lands |
 | S19 | P6 | Google credentials: DWD service account or OAuth consent (§6.7, §15.2) | `human` | **Done 2026-09-29 (Option A):** SA `servicehub-directory-jobs` on project `project-id-0865232832069440140`; DWD client ID `114874807455729070200` authorized for `contacts` + `spreadsheets`; key JSON stashed gitignored at `scratch/google-sa.json` — paste into prod slot env `GOOGLE_DIRECTORY_SA_KEY` + `GOOGLE_DELEGATED_USER=serviceoffice@churchinhouston.org` at cutover |
 | S20 | P6 | Port `performContactsHousekeeping` → `googleContacts.js` (§6.5) | `fusion` | **Built and tested 2026-10-17; live apply blocked pending independent review:** SA JWT auth, People client, pure hash-based planner, 30-minute job and guarded CLI. Breaker >25 deletes / >50 creates; manual force only. CLI apply requires production environment/database, enabled job not dry-listed, `--backup` and typed DB name. 248/248 server tests pass. Final stage snapshot: 848 compared, 811 mark-synced, 20 updates, 8 creates, 7 deletes, 1 clear-id, 1 missing-contact error; see §6.5 closeout. Shared Elizabeth/Jose link fixed; Willie's stale ID re-pointed to his existing contact. Independent review done (Sol 6.1): found and fixed a cross-run duplicate-create race (job lock on `DirectoryJobRun`, lock period excluded from job history) and stale-plan array overwrites (fresh in-window recompute, CONTACT-source scoping). 267/267 tests pass. Live apply still awaits a production dry-run review at cutover |
-| S21 | P6 | Satellite `IMPORTRANGE` discovery → sheet sync-back writer (§6.6) | `fusion` | Discovery is read-only (`swe`-able); the writer needs the exact 38-col reverse map |
+| S21 | P6 | Satellite `IMPORTRANGE` discovery → sheet sync-back writer (§6.6) | `fusion` | **Done 2026-10-18.** Discovery recorded in §6.6 (33 cols, 3 satellites, named-range height rule, 1200 cap). `sheet-sync-back` job (02:00, `SHEET_SYNC_SPREADSHEET_ID`, dry-run listed) + CLI. 294/294 tests. Proven on copies (phonelist `1cv26ks9…` + by-district satellite `1-5B-a9jY…` repointed at it): baseline satellite identical; stage-vs-copy dry run = 3 "Last change" cells only (S22 edits); controlled edit + 5 appends incl. grid overflow (grid 1113→1114, 3 named ranges extended) → satellite changed exactly as expected, no errors; re-run = 0 writes. Stage test data reverted |
 | S22 | P7 | Staging E2E checklist (§9) via the test number | `human` + `swe` | **Signed off 2026-10-18.** Every §9 case passed on staging — sim + real phone (see §9 evidence). Side discovery: prod had been down ~3 wks (deploy zip never shipped `server/scripts` → `helpTopics.json` crash); fixed in `a212585` + manual file upload. Auto-swap restored; gated-swap is follow-up |
 | S23 | P8 | Cutover runbook (§10) | `human` | Twilio console, Cognito/Zapier/GAS toggles, announcement |
 | S24 | P9 | Decommission: disable triggers and zaps, archive the form, rotate secrets (§12) | `human` | Secrets + external consoles |
@@ -866,7 +887,10 @@ one-time token. Only the SPA's POST should consume it.
 - Deploy the final code to prod with jobs disabled.
 - Configure prod settings: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
   `TWILIO_MESSAGING_SERVICE_SID`, `SMS_WEBHOOK_URL` (sticky), and the Google
-  credentials.
+  credentials. `SHEET_SYNC_SPREADSHEET_ID` stays **unset** until T0 (the
+  sheet is still the system of record before then), and
+  `DIRECTORY_JOBS_DRY_RUN` lists
+  `maintenance,district-digest,contacts-sync,sheet-sync-back`.
 - Create a fallback **TwiML Bin** in the Twilio Console.
 - Export a backup of the serviceoffice contacts.
 
