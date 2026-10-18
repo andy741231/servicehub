@@ -719,7 +719,7 @@ ServiceHub-side work, and ask for the step by ID ("do S7").
 | S19 | P6 | Google credentials: DWD service account or OAuth consent (§6.7, §15.2) | `human` | **Done 2026-09-29 (Option A):** SA `servicehub-directory-jobs` on project `project-id-0865232832069440140`; DWD client ID `114874807455729070200` authorized for `contacts` + `spreadsheets`; key JSON stashed gitignored at `scratch/google-sa.json` — paste into prod slot env `GOOGLE_DIRECTORY_SA_KEY` + `GOOGLE_DELEGATED_USER=serviceoffice@churchinhouston.org` at cutover |
 | S20 | P6 | Port `performContactsHousekeeping` → `googleContacts.js` (§6.5) | `fusion` | **Built and tested 2026-10-17; live apply blocked pending independent review:** SA JWT auth, People client, pure hash-based planner, 30-minute job and guarded CLI. Breaker >25 deletes / >50 creates; manual force only. CLI apply requires production environment/database, enabled job not dry-listed, `--backup` and typed DB name. 248/248 server tests pass. Final stage snapshot: 848 compared, 811 mark-synced, 20 updates, 8 creates, 7 deletes, 1 clear-id, 1 missing-contact error; see §6.5 closeout. Shared Elizabeth/Jose link fixed; Willie's stale ID re-pointed to his existing contact. Independent review done (Sol 6.1): found and fixed a cross-run duplicate-create race (job lock on `DirectoryJobRun`, lock period excluded from job history) and stale-plan array overwrites (fresh in-window recompute, CONTACT-source scoping). 267/267 tests pass. Live apply still awaits a production dry-run review at cutover |
 | S21 | P6 | Satellite `IMPORTRANGE` discovery → sheet sync-back writer (§6.6) | `fusion` | Discovery is read-only (`swe`-able); the writer needs the exact 38-col reverse map |
-| S22 | P7 | Staging E2E checklist (§9) via the test number | `human` + `swe` | Real SMS is manual; the agent can drive `simulate` cases and record evidence |
+| S22 | P7 | Staging E2E checklist (§9) via the test number | `human` + `swe` | **Signed off 2026-10-18.** Every §9 case passed on staging — sim + real phone (see §9 evidence). Side discovery: prod had been down ~3 wks (deploy zip never shipped `server/scripts` → `helpTopics.json` crash); fixed in `a212585` + manual file upload. Auto-swap restored; gated-swap is follow-up |
 | S23 | P8 | Cutover runbook (§10) | `human` | Twilio console, Cognito/Zapier/GAS toggles, announcement |
 | S24 | P9 | Decommission: disable triggers and zaps, archive the form, rotate secrets (§12) | `human` | Secrets + external consoles |
 | S25 | P9 | Doc updates: `AGENT.md`, directory `SKILL.md`, church-forms docs | `swe` | Straightforward edits |
@@ -795,6 +795,61 @@ the five categories above, verified line-by-line.
 - STOP, then START
 - the test-mode and accept-inbound switches
 - a restart during a deploy, confirming the fallback TwiML is sent
+
+**S22 evidence (simulated, 2026-10-18):** the test number's webhook was
+repointed to staging and the four `TWILIO_*`/`SMS_WEBHOOK_URL` slot-sticky
+settings added. Signed POSTs to `/api/directory/sms` on staging verified
+(raw transcripts in `scratch/s22-sim-evidence-*.txt`):
+
+- unknown number → "Your phone number not recognized…" (200)
+- lookup variants: `lookup chan`, bare `chan`, `lookup andy chan`, not-found,
+  `last garza` — all correct, incl. the legacy search-hint text
+- `me` single-owner → magic link; shared cell → pick-list → `1` → named link
+- `get help` → intro + numbered topics → `1` → topic body
+- keywords: `lockup` resolves for saint/helper/approver; `payments` falls to
+  lookup for everyone (parity: the staff keyword is literally `xxxpayments`)
+- `add` as approver → sign-in link deep-linked to `/directory?add=1`
+  (60 s link cooldown observed first, as designed); `add` as a saint → lookup
+- STOP → silence, inbound while stopped → silence, START → restored
+- `sms.acceptInbound=false` → "System is in test…" (+trailer);
+  `sms.testMode=true` + `devPhones` → dev phone works, others get
+  "System is in test…" (no trailer); both restored
+- sign-in via `me` link → `PUT /me` self-edit → read-back → revert;
+  `PUT /me/household/:id` spouse edit → read-back → revert
+  (audit rows stamped with the actor's name)
+- `lookup <10 digits>` → not found — parity with gas_v151 (name-only
+  matching); help text's "REVERSE SEARCH" claim was never implemented
+  (§19 open item)
+- settings cache is 30 s server-side — switch tests must wait it out
+
+**S22 evidence (real phone, 2026-10-18):** +1 832-924-5571's fallback was
+pointed at the existing "Online directory—working on it…" TwiML Bin
+(`EH6a59c4…`), matching the legacy fallback pattern.
+
+- `me` on Android: link delivered; the in-thread "tap to load preview" does
+  NOT consume the one-time token — link still opened afterward and correctly
+  worked only once. Sign-in → own record → edit → save verified on the phone
+- STOP → carrier unsubscribe ack + silence on further texts → START restores
+- `add` → sign-in link opens the Add Member dialog
+- Restart test: slot restarted; text during the ~2 min outage got the Bin's
+  "Working on it… give us a few seconds" via Twilio's fallback path; normal
+  replies resumed after recovery
+- One transient: the first texts after the deploy hit `stage` mid-wake
+  (60-min auto-pause) — Twilio 11200 timeout + one engine 'error' log.
+  Resolved once warm; only affects paused dev DBs, not prod's always-on
+  Basic tier. If rehearsals stall again, disable `stage` auto-pause for the
+  window
+
+**S22 side discovery — production outage (fixed same day):** the Sep 27
+deploy shipped `settings.js` which `require`s `scripts/lib/helpTopics.json`,
+but the zip never included `server/scripts` → module-load crash → bare 500 on
+every route for ~3 wks, unnoticed. Root-caused to the packaging step; fix
+`a212585` ships `server/scripts` and extends the Kudu poll to 40 min (the
+failed run was a 63-min deploy misread as failure). Missing file was also
+hand-uploaded to both slots. Follow-ups: uptime monitor on `/api/health`;
+gated swap (auto-swap promotes before smoke tests can block — the
+`swap-production` job only waits + verifies; a real gate needs ARM auth in
+CI).
 
 **Warm up the staging DB first:** `test-servicehub` auto-pauses, and the first
 request after a pause can take longer than Twilio's 15 s timeout.
