@@ -77,6 +77,10 @@ jobs:
           mkdir -p deploy/client deploy/node_modules
           # Copy server source and CJS entry-point shim for iisnode
           cp -r server/src deploy/
+          # server/scripts/ ships too — src/services/directorySms/settings.js
+          # requires scripts/lib/helpTopics.json at module load; without it the
+          # server crashes on boot (500 on every route, incl. /api/health).
+          cp -r server/scripts deploy/
           cp server/app.cjs deploy/
           cp server/package.json deploy/
           # Copy built React frontend
@@ -221,7 +225,10 @@ jobs:
           KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD_STAGING }}
         run: |
           echo "Polling Kudu for deployment status..."
-          for i in $(seq 1 30); do
+          # A zipdeploy can take over an hour on a cold SCM sandbox (observed
+          # 63 min on 2026-10-17). Poll for 40 min so we don't report a false
+          # failure while Azure keeps deploying in the background.
+          for i in $(seq 1 120); do
             STATUS=$(curl -s \
               -u "${KUDU_USER}:${KUDU_PWD}" \
               "https://houstonservicehub-staging.scm.azurewebsites.net/api/deployments/latest" \
