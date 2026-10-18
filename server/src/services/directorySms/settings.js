@@ -57,6 +57,22 @@ export const DEFAULT_SETTINGS = {
     'contact a helper in your district.',
   'sms.keywords': DEFAULT_KEYWORDS,
   'sms.helpTopics': HELP_TOPICS,
+  // District name → Google Contacts group (§6.5 / §7.1). The contacts-sync
+  // job reads this so a new district group can be wired up without a deploy.
+  'districts.contactGroups': {
+    'Central 1': '_C1',
+    'Central 2': '_C2',
+    'Central 3': '_C3',
+    'C - Sugar Land': '_CL1 (Sugar Land)',
+    'C - Diho': '_CL2 (Chinatown)',
+    'C - Medical Ctr': '_CL3 (Med Ctr)',
+    'S - Spanish Lang': '_Span lang',
+    'Southwest': '_Southwest',
+    'South': '_South',
+    'Southeast': '_Southeast',
+    'North': '_North',
+    'West': '_West',
+  },
 };
 
 const CACHE_TTL_MS = 30 * 1000;

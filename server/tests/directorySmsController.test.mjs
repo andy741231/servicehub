@@ -223,7 +223,7 @@ test('engine is built lazily, once, with issueLoginLink wrapped with prisma', as
     prisma,
     clientUrl: 'https://hub.test',
     now: () => NOW,
-    issueLoginLink: async (member, p) => { issueCalls.push([member, p]); return { link: 'L', tokenId: 't' }; },
+    issueLoginLink: async (member, p, next) => { issueCalls.push([member, p, next]); return { link: 'L', tokenId: 't' }; },
     engineFactory: (args) => {
       factoryCalls++;
       captured = args;
@@ -239,9 +239,14 @@ test('engine is built lazily, once, with issueLoginLink wrapped with prisma', as
   assert.equal(captured.prisma, prisma);
   assert.equal(captured.clientUrl, 'https://hub.test');
   assert.equal(typeof captured.getSettings, 'function');
-  // The engine calls issueLoginLink(member); our injected fn gets (member, prisma).
+  // The engine calls issueLoginLink(member, next?); our injected fn gets
+  // (member, prisma, next) — `next` is the post-verify site path (ADD command).
   await captured.issueLoginLink({ id: 'm1' });
-  assert.deepEqual(issueCalls, [[{ id: 'm1' }, prisma]]);
+  await captured.issueLoginLink({ id: 'm1' }, '/directory?add=1');
+  assert.deepEqual(issueCalls, [
+    [{ id: 'm1' }, prisma, undefined],
+    [{ id: 'm1' }, prisma, '/directory?add=1'],
+  ]);
 });
 
 // ── simulateSms ─────────────────────────────────────────────────────────────

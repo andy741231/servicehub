@@ -6,6 +6,7 @@ import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import routes from './routes/index.js';
 import prisma from './db/client.js';
+import { startDirectoryJobs } from './jobs/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -105,6 +106,8 @@ const warmUpPrisma = async (attempt = 1) => {
     await prisma.$connect();
     prismaReady = true;
     console.log('Prisma connected');
+    // Directory jobs only tick when DIRECTORY_JOBS_ENABLED=true (prod slot).
+    startDirectoryJobs();
   } catch (err) {
     console.error(`Prisma connect attempt ${attempt} failed: ${err.message}`);
     if (attempt < 10) {

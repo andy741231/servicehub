@@ -92,8 +92,8 @@ function stubDeps({ member, tokens = [], sendEmail } = {}) {
   const store = tokenStore(tokens);
   deps.prisma = {
     directoryMember: {
-      findFirst: async ({ where }) =>
-        member && member.email === where.email ? member : null,
+      findMany: async ({ where }) =>
+        member && member.email === where.email ? [member] : [],
     },
     directoryLoginToken: store,
   };

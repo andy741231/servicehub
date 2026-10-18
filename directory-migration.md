@@ -351,7 +351,9 @@ On day one, settings are edited through the seed script. A settings admin UI com
    - Spouses are two **active** members whose `spouseMemberId` points at each other.
    - `GET /api/directory/me` adds `household: [spouse]`, serialized with the full self view.
    - `PUT /api/directory/me/household/:memberId` updates the spouse's
-     self-editable fields, using the same allowlist and validation as `updateMe`.
+     self-editable fields with the same validation as `updateMe`, **minus
+     `email`** (the spouse's sign-in identity; editing it would allow account
+     takeover) **and `optedIn`** (the spouse's own listing consent).
      The audit actor is the signed-in member, with a summary noting a household edit.
    - MyProfile gets a spouse section. Status, role, and district stay staff-only.
 
@@ -398,7 +400,9 @@ data during E2E, so automatic email or Google writes from staging must never hap
     contact ID:** delete the contact and clear the ID. `pending` members get no
     contact, as with today's `NR`.
 - **Legacy IDs:** the importer converts m8 feed URLs (`…/base/<hex>`) to
-  `people/c<hex>`, following the rule in `Contacts2`.
+  `people/c<decimal-of-hex>`. The sync also normalizes legacy URLs before
+  checking ownership, so two spellings of one contact cannot bypass the
+  shared-contact guard.
 - **Safety:**
   - Before the first live run, export every serviceoffice contact to JSON.
   - The first prod run is a dry run that lists every operation.
@@ -408,13 +412,74 @@ data during E2E, so automatic email or Google writes from staging must never hap
   - **The expected first-run diff is about 0** (IDs are carried over and the data
     hasn't changed). A large diff means the mapping is wrong; stop and investigate.
 
+**S20 closeout (2026-10-17; no live Google sync applied):**
+- Elizabeth Fuentes (legacy ID 448) now links to her own contact in both the
+  live source sheet and stage; Jose Garcia (450) retains his original contact.
+- The two stage-only test members and their dependent Directory accounts,
+  login tokens and audit entries were removed with user approval and a local
+  backup. Their Hub user accounts were preserved.
+- Read-only capture at **2026-10-17 19:03 UTC**: 848 eligible stage members,
+  1,303 Google connections and 51 user contact groups. The plan contains
+  **20 updates, 8 creates, 7 deletes, 1 clear-id, 811 mark-synced and 1 error**;
+  the circuit breaker is not tripped. All 7 proposed deletions are members
+  currently marked `inactive` on stage; none has been applied.
+- The snapshot's one error was **Willie Wise: stored contact not found**
+  (Google GET returned 404). **Resolved later on 2026-10-17:** an existing
+  contact uniquely matched his name, email and phone. His live-sheet and
+  stage references were corrected with a backup and stage audit entry;
+  neither Google contact was changed. A targeted post-fix plan reports
+  `mark-synced`, with no create/delete/update/error. The old ID's removal
+  cause remains unknown; the snapshot counts above are historical.
+- The 2 extra updates versus the earlier 18-update plan are removal of an
+  additional district-group membership for XingLu Li and Nancy Lee. These are
+  group-only changes, not additional name/email/phone overwrites.
+- The full plan and frozen inputs are gitignored under `scratch/`. The
+  contact backup requested by the user is under `client/src/pages/directory/`,
+  also gitignored. JSON photo fields contain URLs, not downloaded images;
+  backups aid recovery but are not a turnkey restore.
+- Keep automatic jobs disabled before cutover. Initial production settings:
+  `DIRECTORY_JOBS_ENABLED=false` and
+  `DIRECTORY_JOBS_DRY_RUN=maintenance,district-digest,contacts-sync`.
+  Enabling the scheduler affects every registered job; release each from
+  dry-run separately after reviewing its production summary. Dry-run jobs
+  still record scheduler run summaries, but do not change member/Google data.
+- S22 rehearses the fresh import on stage. T0 still requires another fresh
+  production import after freezing legacy intake; S22 does not replace T0.
+- Verification: **267/267 server tests pass** after the independent-review
+  fixes. Review fixes cover HTTP-200 group partial failures, non-idempotent
+  creation retries, preserving created IDs after group failures, stale-plan
+  metadata writes, and shared legacy-ID aliases.
+- **Independent review: complete.** Codex was blocked by an expired login, so
+  a second model (Sol 6.1) reviewed the final code instead. It reproduced two
+  high-severity defects locally; both were fixed with regression tests:
+  1. **Overlapping runs could duplicate creates.** `DirectoryJobRun`'s
+     `(job, periodKey)` unique index now also carries a `periodKey='lock'`
+     mutex row (stale after 2 h, owner-token release, dry runs never lock).
+     Scheduler/CLI live runs take the lock before any member or Google read;
+     a concurrent live run skips with `contacts-sync already running`. The
+     scheduler also claims its `inFlight` slot synchronously before the lease
+     `await`, closing the same-process race. Lock rows are hidden from
+     `GET /api/directory/jobs`.
+  2. **Stale plan arrays could erase Google-side edits.** `updateContact`
+     now reads the contact's fields + metadata inside the etag window and
+     re-runs `planFieldChanges` against the fresh object, PATCHing only
+     changed fields — an office email/phone added after planning is kept.
+     Matching and writes are scoped to CONTACT-source entries; PROFILE /
+     DOMAIN_PROFILE values are never compared or echoed. An empty fresh
+     diff skips the PATCH entirely.
+- Residuals noted for ops: a lost create response can still orphan a Google
+  contact (creates are no longer retried, so no double-create from our side);
+  exact-name identity matching of unlinked contacts is inherited legacy risk;
+  group partial failures surface as member errors and retry next run.
+
 ### 6.6 Sheet sync-back (P6, D4)
 
 - **Target:** spreadsheet `1KaU6JFCTJb282AxHR-9HOIY7tXfzIO0msNcyd5uJ4zI`, tab
   `saints`. That's what the satellites `IMPORTRANGE` from, so they keep working
   unchanged.
-- **Layout:** write the exact legacy header row and all 38 columns, in the same
-  order, and reverse-map the values:
+- **Layout:** the tab has **33 columns (A–AG)**, not 38 (the grid is 38
+  wide; AH+ are empty). Keep the exact legacy header row and order, and
+  reverse-map the values:
 
   | Directory | Sheet |
   |---|---|
@@ -424,17 +489,37 @@ data during E2E, so automatic email or Google writes from staging must never hap
   | role | `APP` / `HLP` / `ADM` / blank |
   | gender | `B` / `S` |
   | head of household | `H` / blank |
-  | `legacyId` | `cott`; new members get `SH-<shortid>` |
+  | `legacyId` | `cott`; new members get the next number (max of sheet + DB `legacyId` + 1), persisted to the member before the sheet write — keeps GAS's numeric-id commands working on rollback (decided 2026-10-18; replaces the earlier `SH-<shortid>` idea) |
   | `googleContactId` | Contact ID |
 
 - **Preserve GAS-only columns during the rollback window:** Changed, Link,
   Request by USER, User Settings, History, Picture ID, Phone Provider, and the
   formula columns. Keep them for rows matched by `cott`, so GAS picks up cleanly
   if we roll back (§11).
-- **Discovery first:**
-  - Record each satellite's `IMPORTRANGE` range and the columns it references.
-  - Confirm how row 2 is used (phonelist.md calls it a sample/format row).
-  - Check the formula columns after "Insert 'formulas' before this Col".
+- **Discovery (done 2026-10-18, S21):**
+  - Satellites (all via `worksheet!C9` = `url_PhoneList`):
+    - *Create annual phone list* — `saints!A3:AC1200` + `sa_LocalityColumn`
+      + `sa_StatusColumn`, filter HOU and A/MOV. **Hard cap row 1200** —
+      the job warns (`ANNUAL_LIST_CAP`) past row 1150.
+    - *Phonelist by district* — `sa_EntirePhonelist` + the same two
+      columns, filter HOU and A/NR.
+    - *All the saints* — `sa_EntirePhonelist`, sorted; then A only.
+    - All three also pull `wk_DistrictsTable` from the `worksheet` tab.
+  - The satellites FILTER those ranges together, so they must stay equal
+    height: `sa_EntirePhonelist` (A3:AA), `sa_LocalityColumn`,
+    `sa_StatusColumn` all end at the grid's last row. When an append
+    overflows the grid, the job grows the grid and extends every
+    row-scoped `saints` named range in the same batchUpdate.
+  - Row 2 is a TST sample row ("Church in Houston"); never written.
+  - There are **no formula columns** on `saints`. `Southeast saints` and
+    `Sheet6` are static copies with no consumers.
+- **Write rule (semantic diff):** the job runs the importer's own
+  `analyzeSheet()` over the current sheet and writes a cell only when the
+  Directory value differs from what the importer would read. It writes in
+  the sheet's native format (`+1…` cell, numeric zip/apt, serial
+  "Last change", `people/c…` contact id), so `.` placeholders and m8 URLs
+  stay untouched. Appended rows copy the previous row's formatting.
+  Spec: `scratch/s21-sync-back-spec.md`.
 - **Mechanics:** update in place by `cott` and append new Directory members
   after the last used row, with Sheets API `values.batchUpdate` (RAW). Rows
   whose `cott` isn't in Directory — the skipped `MOV`/`DEL` rows (§7.2) and any
@@ -647,15 +732,15 @@ ServiceHub-side work, and ask for the step by ID ("do S7").
 | S12 | P3 | `controllers/directorySms.js`, routes, `simulate` endpoint | `swe` | Wiring on top of S10/S11 |
 | S13 | P3 | Capture ~50 golden replies from V151; replay through `/sms/simulate` and diff | `swe` capture · `fusion` triage | Explaining diffs takes judgment |
 | S14 | P3 | Security review: signature validation, per-phone rate limit, log privacy | `codex` or `gemini` | Second-vendor review of S10–S12 |
-| S15 | P4 | `issueLoginLink(member)` refactor, nullable-email accounts, shared-email rules (§6.3.1–3) | `fusion` | Auth-adjacent conflict rules |
-| S16 | P4 | Household editing: `household` in `/me`, `PUT /me/household/:memberId`, MyProfile spouse section | `fusion` | New endpoint + UI; permission edge cases |
+| S15 | P4 | `issueLoginLink(member)` refactor, nullable-email accounts, shared-email rules (§6.3.1–3) | `fusion` | Auth-adjacent conflict rules. **Done 2026-09-28:** `pickLoginMember` (sign-in owner > head of household > earliest > id), `decideAccountEmail` (linked-spouse clash → account email null; clearing email now clears the sign-in email) |
+| S16 | P4 | Household editing: `household` in `/me`, `PUT /me/household/:memberId`, MyProfile spouse section | `fusion` | New endpoint + UI; permission edge cases. **Done 2026-09-28** (mutual + active links only; email/optedIn excluded) |
 | S26 | P4 | Staff data-review view: unlinked-couple hints, shared contacts, missing cells (§7.6) + district reference table (§7.1) | `fusion` | New scoped queries + UI; feeds S8/S9 cleanup |
-| S17 | P5 | In-process scheduler + `DirectoryJobRun` lease + manual-run endpoint | `fusion` | Idempotency across restarts and slot swaps |
+| S17 | P5 | In-process scheduler + `DirectoryJobRun` lease + manual-run endpoint | `fusion` | Idempotency across restarts and slot swaps. **Done 2026-09-28:** `server/src/jobs/`; `GET /jobs`, `POST /jobs/:name/run`; manual runs are forced dry-run unless `DIRECTORY_JOBS_ENABLED=true`. A daily job missed while the app was down runs on the first tick after its time that day |
 | S18 | P5 | `district-digest` and `maintenance` jobs | `swe` | Well-specified once S17 lands |
-| S19 | P6 | Google credentials: DWD service account or OAuth consent (§6.7, §15.2) | `human` | Workspace admin console |
-| S20 | P6 | Port `performContactsHousekeeping` → `googleContacts.js` (§6.5) | `fusion` | Deletes real contacts; get a `codex`/`gemini` review of the delete paths before the first live run |
-| S21 | P6 | Satellite `IMPORTRANGE` discovery → sheet sync-back writer (§6.6) | `fusion` | Discovery is read-only (`swe`-able); the writer needs the exact 38-col reverse map |
-| S22 | P7 | Staging E2E checklist (§9) via the test number | `human` + `swe` | Real SMS is manual; the agent can drive `simulate` cases and record evidence |
+| S19 | P6 | Google credentials: DWD service account or OAuth consent (§6.7, §15.2) | `human` | **Done 2026-09-29 (Option A):** SA `servicehub-directory-jobs` on project `project-id-0865232832069440140`; DWD client ID `114874807455729070200` authorized for `contacts` + `spreadsheets`; key JSON stashed gitignored at `scratch/google-sa.json` — paste into prod slot env `GOOGLE_DIRECTORY_SA_KEY` + `GOOGLE_DELEGATED_USER=serviceoffice@churchinhouston.org` at cutover |
+| S20 | P6 | Port `performContactsHousekeeping` → `googleContacts.js` (§6.5) | `fusion` | **Built and tested 2026-10-17; live apply blocked pending independent review:** SA JWT auth, People client, pure hash-based planner, 30-minute job and guarded CLI. Breaker >25 deletes / >50 creates; manual force only. CLI apply requires production environment/database, enabled job not dry-listed, `--backup` and typed DB name. 248/248 server tests pass. Final stage snapshot: 848 compared, 811 mark-synced, 20 updates, 8 creates, 7 deletes, 1 clear-id, 1 missing-contact error; see §6.5 closeout. Shared Elizabeth/Jose link fixed; Willie's stale ID re-pointed to his existing contact. Independent review done (Sol 6.1): found and fixed a cross-run duplicate-create race (job lock on `DirectoryJobRun`, lock period excluded from job history) and stale-plan array overwrites (fresh in-window recompute, CONTACT-source scoping). 267/267 tests pass. Live apply still awaits a production dry-run review at cutover |
+| S21 | P6 | Satellite `IMPORTRANGE` discovery → sheet sync-back writer (§6.6) | `fusion` | **Done 2026-10-18.** Discovery recorded in §6.6 (33 cols, 3 satellites, named-range height rule, 1200 cap). `sheet-sync-back` job (02:00, `SHEET_SYNC_SPREADSHEET_ID`, dry-run listed) + CLI. 294/294 tests. Proven on copies (phonelist `1cv26ks9…` + by-district satellite `1-5B-a9jY…` repointed at it): baseline satellite identical; stage-vs-copy dry run = 3 "Last change" cells only (S22 edits); controlled edit + 5 appends incl. grid overflow (grid 1113→1114, 3 named ranges extended) → satellite changed exactly as expected, no errors; re-run = 0 writes. Stage test data reverted |
+| S22 | P7 | Staging E2E checklist (§9) via the test number | `human` + `swe` | **Signed off 2026-10-18.** Every §9 case passed on staging — sim + real phone (see §9 evidence). Side discovery: prod had been down ~3 wks (deploy zip never shipped `server/scripts` → `helpTopics.json` crash); fixed in `a212585` + manual file upload. Auto-swap restored; gated-swap is follow-up |
 | S23 | P8 | Cutover runbook (§10) | `human` | Twilio console, Cognito/Zapier/GAS toggles, announcement |
 | S24 | P9 | Decommission: disable triggers and zaps, archive the form, rotate secrets (§12) | `human` | Secrets + external consoles |
 | S25 | P9 | Doc updates: `AGENT.md`, directory `SKILL.md`, church-forms docs | `swe` | Straightforward edits |
@@ -732,6 +817,61 @@ the five categories above, verified line-by-line.
 - the test-mode and accept-inbound switches
 - a restart during a deploy, confirming the fallback TwiML is sent
 
+**S22 evidence (simulated, 2026-10-18):** the test number's webhook was
+repointed to staging and the four `TWILIO_*`/`SMS_WEBHOOK_URL` slot-sticky
+settings added. Signed POSTs to `/api/directory/sms` on staging verified
+(raw transcripts in `scratch/s22-sim-evidence-*.txt`):
+
+- unknown number → "Your phone number not recognized…" (200)
+- lookup variants: `lookup chan`, bare `chan`, `lookup andy chan`, not-found,
+  `last garza` — all correct, incl. the legacy search-hint text
+- `me` single-owner → magic link; shared cell → pick-list → `1` → named link
+- `get help` → intro + numbered topics → `1` → topic body
+- keywords: `lockup` resolves for saint/helper/approver; `payments` falls to
+  lookup for everyone (parity: the staff keyword is literally `xxxpayments`)
+- `add` as approver → sign-in link deep-linked to `/directory?add=1`
+  (60 s link cooldown observed first, as designed); `add` as a saint → lookup
+- STOP → silence, inbound while stopped → silence, START → restored
+- `sms.acceptInbound=false` → "System is in test…" (+trailer);
+  `sms.testMode=true` + `devPhones` → dev phone works, others get
+  "System is in test…" (no trailer); both restored
+- sign-in via `me` link → `PUT /me` self-edit → read-back → revert;
+  `PUT /me/household/:id` spouse edit → read-back → revert
+  (audit rows stamped with the actor's name)
+- `lookup <10 digits>` → not found — parity with gas_v151 (name-only
+  matching); help text's "REVERSE SEARCH" claim was never implemented
+  (§19 open item)
+- settings cache is 30 s server-side — switch tests must wait it out
+
+**S22 evidence (real phone, 2026-10-18):** +1 832-924-5571's fallback was
+pointed at the existing "Online directory—working on it…" TwiML Bin
+(`EH6a59c4…`), matching the legacy fallback pattern.
+
+- `me` on Android: link delivered; the in-thread "tap to load preview" does
+  NOT consume the one-time token — link still opened afterward and correctly
+  worked only once. Sign-in → own record → edit → save verified on the phone
+- STOP → carrier unsubscribe ack + silence on further texts → START restores
+- `add` → sign-in link opens the Add Member dialog
+- Restart test: slot restarted; text during the ~2 min outage got the Bin's
+  "Working on it… give us a few seconds" via Twilio's fallback path; normal
+  replies resumed after recovery
+- One transient: the first texts after the deploy hit `stage` mid-wake
+  (60-min auto-pause) — Twilio 11200 timeout + one engine 'error' log.
+  Resolved once warm; only affects paused dev DBs, not prod's always-on
+  Basic tier. If rehearsals stall again, disable `stage` auto-pause for the
+  window
+
+**S22 side discovery — production outage (fixed same day):** the Sep 27
+deploy shipped `settings.js` which `require`s `scripts/lib/helpTopics.json`,
+but the zip never included `server/scripts` → module-load crash → bare 500 on
+every route for ~3 wks, unnoticed. Root-caused to the packaging step; fix
+`a212585` ships `server/scripts` and extends the Kudu poll to 40 min (the
+failed run was a 63-min deploy misread as failure). Missing file was also
+hand-uploaded to both slots. Follow-ups: uptime monitor on `/api/health`;
+gated swap (auto-swap promotes before smoke tests can block — the
+`swap-production` job only waits + verifies; a real gate needs ARM auth in
+CI).
+
 **Warm up the staging DB first:** `test-servicehub` auto-pauses, and the first
 request after a pause can take longer than Twilio's 15 s timeout.
 
@@ -747,7 +887,10 @@ one-time token. Only the SPA's POST should consume it.
 - Deploy the final code to prod with jobs disabled.
 - Configure prod settings: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
   `TWILIO_MESSAGING_SERVICE_SID`, `SMS_WEBHOOK_URL` (sticky), and the Google
-  credentials.
+  credentials. `SHEET_SYNC_SPREADSHEET_ID` stays **unset** until T0 (the
+  sheet is still the system of record before then), and
+  `DIRECTORY_JOBS_DRY_RUN` lists
+  `maintenance,district-digest,contacts-sync,sheet-sync-back`.
 - Create a fallback **TwiML Bin** in the Twilio Console.
 - Export a backup of the serviceoffice contacts.
 
@@ -895,3 +1038,70 @@ one-time token. Only the SPA's POST should consume it.
 - **New findings:** the Directory isn't committed or deployed yet, and prod
   settings are missing (A1–A4). The staging DB auto-pauses. The prod DB is Basic
   and always online.
+
+---
+
+## 19. Post-cutover SMS follow-ups
+
+### 19-1 `ADD` issues an Add-Member sign-in link (done 2026-09-28)
+
+Replaced the "This moved to the web" pointer with the legacy flow's shape —
+text the command, get a link:
+
+- `add` removed from `RETIRED_COMMANDS` in `engine.js`. Staff
+  (helper/approver/admin) texting `ADD` now get a one-time sign-in link that
+  opens the Add Member dialog directly (`/directory?add=1`). Saints texting
+  `add` still fall through to name lookup.
+- `issueLoginLink(member, prisma, next)` accepts an optional `next` site path
+  appended as `&next=…` (`server/src/services/directoryLoginLinks.js`).
+  Restricted to `/directory…` paths — no absolute or protocol-relative URLs,
+  so a bearer-token link can't redirect off-site. `DirectoryVerify.jsx`
+  honors the sanitized `next` after verify.
+- Shares the 60-second per-member link cooldown with `me`. The reply gets the
+  once-per-number welcome prefix + GET HELP/STOP trailer.
+- Tests: `smsEngine.test.mjs` (+3: staff add, saint fall-through, cooldown),
+  `directorySmsController.test.mjs` seam wiring. Manuals updated
+  (`docs/manuals/`). Side effect: the `GET HELP` "text ADD" topic is accurate
+  again.
+
+### 19-2 `HIM`/`HER` — saint edit link (open)
+
+- **Legacy:** `HIM <id>` / `HER <id>` returned a link to edit that saint's
+  record; staff forwarded it to the saint or opened it to make the change.
+- **Today:** staff get "This moved to the web"; saints get a name lookup.
+  SMS replies carry no record IDs, so the ported shape needs the `me`-style
+  pending pick list: `HIM john` → "Which record? Reply with a number:
+  1 - … 2 - …" → reply N → link.
+- **Options:** (a) mint the **saint's own** sign-in link to `/directory/me`
+  (forwardable to the saint, closest to legacy; a helper who opens it is
+  signed in *as* the saint), or (b) a **helper-session** deep link to the
+  member's edit dialog (needs a new `?edit=<id>` param on Browse). Either
+  way, scope the pick list to records the staffer can manage — own district
+  for helper/approver, anywhere for admin.
+- When decided, update the `helpTopics.json` topics that still mention
+  HIM/HER (helper 2/5, approver 2/7).
+
+### 19-3 Remaining retired commands need real replacements (open)
+
+Goal: **seamless transition** — no serving one should ever see
+"This moved to the web". Each retired word needs a ported reply (a
+deep-linked sign-in link or real behavior) or a deliberate keep-retired note.
+
+Remaining words in `RETIRED_COMMANDS` (`engine.js`), with likely targets:
+
+| Command | Legacy meaning | Candidate replacement |
+|---|---|---|
+| `him` / `her` | edit link for a saint's record | pick-list → link (19-2) |
+| `address` | update own address | sign-in link to `/directory/me` |
+| `pic` | update own photo | sign-in link to `/directory/me` (photo) |
+| `set` | `SET <status> <id>` lifecycle changes | keep web-only, or pick-list → deep link to Browse?table |
+| `setsrv` | `SETSRV HELPER/APPROVER <id>` role changes | keep web-only (role changes are rare + sensitive), or pick-list → deep link |
+| `attendance` | per-district attendance link | already open question §15.7 |
+| `send` | send a message out | assess legacy semantics |
+| `list` | list helpers/records | assess legacy semantics |
+
+- Also fix `helpTopics.json` once replacements land: helper/approver topics
+  still instruct staff to use `SET ACTIVE` / `SETSRV` / `HIM`/`HER`, and the
+  saints' topic 1 advertises reverse phone-number search — which was never
+  ported (all-digits input is captured by the pending-reply path and errors
+  out). Decide: add phone-number lookup to the engine, or drop the text.

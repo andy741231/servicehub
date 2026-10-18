@@ -15,6 +15,10 @@ import {
 import { userHasRole } from '../middleware/permissions.js';
 import { canonicalPhone } from '../utils/phone.js';
 
+// Test seam — unit tests stub prisma here (same pattern as directoryAuth.js).
+// The household-edit and sign-in email sync paths use it.
+export const deps = { prisma };
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -124,9 +128,23 @@ const PUBLIC_MEMBER_FIELDS = [
 const INTERNAL_FIELDS = ['userId', 'coupleId', 'account', 'auditLogs', 'loginTokens'];
 
 // Spouse shape fetched with every member row. `district`/`optedIn` are needed
-// by the canSeeMember() check inside serializeMember — they never reach the
-// response (the serialized spouse only carries id/name/status).
-const SPOUSE_SELECT = { id: true, firstName: true, lastName: true, status: true, district: true, optedIn: true };
+// by the canSeeMember() check inside serializeMember and `spouseMemberId` by
+// getHouseholdSpouse — they never reach the response (the serialized spouse
+// only carries id/name/status).
+const SPOUSE_SELECT = {
+  id: true, firstName: true, lastName: true, status: true,
+  district: true, optedIn: true, spouseMemberId: true,
+};
+
+// The full record shape: everything except INTERNAL_FIELDS, plus hasAccount.
+// Used for the authorized branch of serializeMember and for household rows —
+// both are self views, so neither is looser than the other.
+export function fullView(member, spouse = null) {
+  const base = { ...member, spouse };
+  for (const f of INTERNAL_FIELDS) delete base[f];
+  base.hasAccount = Boolean(member.account);
+  return base;
+}
 
 // Serialize for the requester: full record for authorized staff/self;
 // masked allowlist for everyone else. `phoneVisible`/`addressVisible` let the
@@ -140,10 +158,7 @@ export function serializeMember(member, ctx) {
     ? { id: member.spouse.id, firstName: member.spouse.firstName, lastName: member.spouse.lastName, status: member.spouse.status }
     : null;
   if (canSeeFullRecord(ctx, member)) {
-    const base = { ...member, spouse };
-    for (const f of INTERNAL_FIELDS) delete base[f];
-    base.hasAccount = Boolean(member.account);
-    return base;
+    return fullView(member, spouse);
   }
   const out = { spouse };
   for (const f of PUBLIC_MEMBER_FIELDS) out[f] = member[f] ?? null;
@@ -166,9 +181,11 @@ function stampChange(data, ctx, changeType) {
 }
 
 // Writes the audit log row only. Not needed on hard delete (row is gone and
-// FK constraints require its logs to be removed first anyway).
-async function writeAudit(memberId, actorId, ctx, changeType, summary = null) {
-  await prisma.directoryAuditLog.create({
+// FK constraints require its logs to be removed first anyway). `client`
+// defaults to the module prisma — the household handler passes its deps
+// seam so tests can stub the whole flow.
+async function writeAudit(memberId, actorId, ctx, changeType, summary = null, client = prisma) {
+  await client.directoryAuditLog.create({
     data: { memberId, actorId, actorName: ctx.actorName, changeType, summary },
   });
 }
@@ -189,6 +206,25 @@ const STAFF_EDITABLE = [
   'firstName', 'middleName', 'lastName', 'gender', 'isHeadOfHousehold',
   'spouseMemberId', 'locality', 'userId', 'district', 'lastVerifiedAt',
 ];
+
+// Household editing (§6.3.4): self-editable minus the two fields that are
+// unsafe on a spouse — email is the spouse's sign-in identity (takeover
+// risk) and optedIn is their personal listing consent.
+export const HOUSEHOLD_EDITABLE =
+  SELF_EDITABLE.filter((f) => f !== 'email' && f !== 'optedIn');
+
+// Mutual, active spouse link — the directory's definition of an editable
+// household pair. One-sided links or an inactive spouse don't count.
+// `member.spouse` must already be loaded (SPOUSE_SELECT includes
+// spouseMemberId for this check).
+export function getHouseholdSpouse(member) {
+  const s = member?.spouse;
+  if (!s) return null;
+  if (member.spouseMemberId !== s.id) return null;
+  if (s.spouseMemberId !== member.id) return null;
+  if (s.status !== DIRECTORY_STATUSES.ACTIVE) return null;
+  return s;
+}
 
 // '' from forms/imports → null so optional columns stay clean.
 function nullifyEmpty(data) {
@@ -237,6 +273,48 @@ function validateMemberFields(data, { partial = false } = {}) {
     errors.push('email must be a valid email address');
   }
   return errors;
+}
+
+// ── Sign-in email sync (§6.3.2–3) ──────────────────────────────────────────
+
+// What to do with the member's DirectoryAccount.email when the contact email
+// changes. The member keeps the contact email either way — this only decides
+// the sign-in email on the account.
+//   set      — adopt the normalized email
+//   clear    — email null (member cleared theirs, or it belongs to their
+//              linked spouse's account — they keep the contact email but
+//              can't both sign in with it)
+//   conflict — another member's account owns it → caller returns 409
+export function decideAccountEmail({ member, newEmail, clashAccount }) {
+  const norm = (newEmail || '').trim().toLowerCase();
+  if (!norm) return { action: 'clear' };
+  if (clashAccount && clashAccount.memberId !== member.id) {
+    if (member.spouseMemberId === clashAccount.memberId) return { action: 'clear' };
+    return { action: 'conflict' };
+  }
+  return { action: 'set', email: norm };
+}
+
+// Applies decideAccountEmail to the member's account (accounts are lazy —
+// no account means nothing to sync). Returns 'conflict' after writing the
+// 409 response so callers can bail before touching the member row.
+async function syncAccountEmail(member, newEmail, res) {
+  const account = await deps.prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
+  if (!account) return null;
+  const norm = (newEmail || '').trim().toLowerCase();
+  const clashAccount = norm
+    ? await deps.prisma.directoryAccount.findFirst({ where: { email: norm } })
+    : null;
+  const decision = decideAccountEmail({ member, newEmail, clashAccount });
+  if (decision.action === 'conflict') {
+    res.status(409).json({ error: 'Another directory sign-in already uses that email' });
+    return 'conflict';
+  }
+  await deps.prisma.directoryAccount.update({
+    where: { id: account.id },
+    data: { email: decision.action === 'clear' ? null : decision.email },
+  });
+  return null;
 }
 
 // ── Metadata ───────────────────────────────────────────────────────────────
@@ -555,17 +633,7 @@ export const updateMember = async (req, res) => {
     // link always reaches the address shown on the record. Conflicts (another
     // account already using that email) are rejected before any write.
     if (data.email !== undefined && data.email !== member.email) {
-      const account = await prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
-      if (account && data.email) {
-        const clash = await prisma.directoryAccount.findFirst({ where: { email: data.email.trim().toLowerCase() } });
-        if (clash && clash.memberId !== member.id) {
-          return res.status(409).json({ error: 'Another directory sign-in already uses that email' });
-        }
-        await prisma.directoryAccount.update({
-          where: { id: account.id },
-          data: { email: data.email.trim().toLowerCase() },
-        });
-      }
+      if (await syncAccountEmail(member, data.email, res) === 'conflict') return;
     }
 
     const changedFields = Object.keys(data).join(', ');
@@ -755,7 +823,22 @@ export const getMe = async (req, res) => {
         account: { select: { id: true } },
       },
     });
-    res.json({ member: serializeMember(member, ctx) });
+    // Household = the mutual, active linked spouse — serialized with the same
+    // full self view the requester gets.
+    const spouseRef = getHouseholdSpouse(member);
+    const householdMember = spouseRef
+      ? await prisma.directoryMember.findUnique({
+          where: { id: spouseRef.id },
+          include: { account: { select: { id: true } } },
+        })
+      : null;
+    const household = householdMember
+      ? [fullView(householdMember, {
+          id: member.id, firstName: member.firstName,
+          lastName: member.lastName, status: member.status,
+        })]
+      : [];
+    res.json({ member: serializeMember(member, ctx), household });
   } catch (error) {
     console.error('Error getting own directory record:', error);
     res.status(500).json({ error: 'Failed to get your directory record' });
@@ -774,17 +857,7 @@ export const updateMe = async (req, res) => {
 
     // Contact email doubles as the sign-in email — keep the account in sync.
     if (data.email !== undefined && data.email !== member.email) {
-      const account = await prisma.directoryAccount.findUnique({ where: { memberId: member.id } });
-      if (account && data.email) {
-        const clash = await prisma.directoryAccount.findFirst({ where: { email: data.email.trim().toLowerCase() } });
-        if (clash && clash.memberId !== member.id) {
-          return res.status(409).json({ error: 'Another directory sign-in already uses that email' });
-        }
-        await prisma.directoryAccount.update({
-          where: { id: account.id },
-          data: { email: data.email.trim().toLowerCase() },
-        });
-      }
+      if (await syncAccountEmail(member, data.email, res) === 'conflict') return;
     }
 
     const updated = await prisma.directoryMember.update({
@@ -801,6 +874,43 @@ export const updateMe = async (req, res) => {
   } catch (error) {
     console.error('Error updating own directory record:', error);
     res.status(500).json({ error: 'Failed to update your directory record' });
+  }
+};
+
+// Household editing (§6.3.4): the signed-in member may update their linked
+// spouse's self-editable fields — minus email (the spouse's sign-in identity)
+// and optedIn (their personal listing consent).
+export const updateHouseholdMember = async (req, res) => {
+  try {
+    const ctx = await getDirectoryContext(req);
+    if (!ctx.member) {
+      return res.status(404).json({ error: 'No directory record linked to your account' });
+    }
+    const member = await deps.prisma.directoryMember.findUnique({
+      where: { id: ctx.member.id },
+      include: { spouse: { select: SPOUSE_SELECT } },
+    });
+    const spouse = getHouseholdSpouse(member);
+    if (!spouse || spouse.id !== req.params.memberId) {
+      return res.status(403).json({ error: 'You can only edit your own household' });
+    }
+
+    const data = nullifyEmpty(pickFields(req.body, HOUSEHOLD_EDITABLE));
+    const errors = validateMemberFields(data, { partial: true });
+    if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+
+    const updated = await deps.prisma.directoryMember.update({
+      where: { id: spouse.id },
+      data: stampChange(data, ctx, 'updated'),
+      include: { account: { select: { id: true } } },
+    });
+    await writeAudit(spouse.id, ctx.actorId, ctx, 'updated',
+      `Household edit by ${ctx.actorName}: ${Object.keys(data).join(', ')}`, deps.prisma);
+
+    res.json({ member: fullView(updated) });
+  } catch (error) {
+    console.error('Error updating household member:', error);
+    res.status(500).json({ error: 'Failed to update household member' });
   }
 };
 

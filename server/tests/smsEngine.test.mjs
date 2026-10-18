@@ -55,7 +55,11 @@ function engine({ members = [], phones, settings = {}, issueLoginLink } = {}) {
     prisma,
     getSettings: async () => merged,
     issueLoginLink: issueLoginLink
-      ?? (async (m) => ({ link: `https://t.test/verify?tok-for-${m.id}`, tokenId: `t-${m.id}` })),
+      ?? (async (m, next) => ({
+        link: `https://t.test/verify?tok-for-${m.id}`
+          + (next ? `&next=${encodeURIComponent(next)}` : ''),
+        tokenId: `t-${m.id}`,
+      })),
     clientUrl: 'https://hub.test',
   });
   return { eng, prisma, phoneRows };
@@ -308,13 +312,49 @@ test('gethelp: no helpers → the no-helpers text; admin uses approver topics', 
 
 test('retired commands: staff get the web pointer, saints fall to lookup', async () => {
   const staff = engine({ members: [saint({ role: 'helper' })] });
-  const r1 = await call(staff.eng, 'add jane');
+  const r1 = await call(staff.eng, 'set active 5');
   assert.equal(r1.command, 'retired');
   assert.match(r1.replies[0], /This moved to the web: https:\/\/hub\.test\/directory/);
 
   const lay = engine({ members: [saint()] });
-  const r2 = await call(lay.eng, 'add jane');
+  const r2 = await call(lay.eng, 'him 3');
   assert.equal(r2.command, 'lookup'); // saint falls through
+});
+
+// ── add ─────────────────────────────────────────────────────────────────────
+
+test('add: staff get a sign-in link that opens the add-member form', async () => {
+  const staff = engine({ members: [saint({ role: 'helper' })] });
+  for (const text of ['add', 'add jane']) {
+    const r = await call(staff.eng, text);
+    assert.equal(r.command, 'add', text);
+    assert.deepEqual(r.memberIds, ['m1']);
+    assert.match(r.replies[0],
+      /Click this link to input information for a new saint:\n\nhttps:\/\/t\.test\/verify\?tok-for-m1/);
+    assert.match(r.replies[0], /next=%2Fdirectory%3Fadd%3D1/);
+    assert.match(r.replies[0], /Link works once, expires in 30 minutes\./);
+    // postProcessed — welcome prefix (first text) + help/STOP trailer
+    assert.match(r.replies[0], /Text GET HELP for info/);
+  }
+});
+
+test('add: saints fall through to name lookup', async () => {
+  const lay = engine({ members: [saint()] });
+  for (const text of ['add', 'add jane']) {
+    const r = await call(lay.eng, text);
+    assert.equal(r.command, 'lookup', text);
+  }
+});
+
+test('add: cooldown reply when a link was just issued', async () => {
+  const staff = engine({
+    members: [saint({ role: 'approver' })],
+    issueLoginLink: async () => ({ cooldown: true }),
+  });
+  const r = await call(staff.eng, 'add');
+  assert.equal(r.command, 'add');
+  assert.match(r.replies[0],
+    /A sign-in link was just sent\. You can request another in a minute\./);
 });
 
 test('keyword: role column URL, admin→approver, empty column', async () => {
