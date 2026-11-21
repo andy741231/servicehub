@@ -14,17 +14,19 @@ const stringifyJsonField = (value) => {
 
 const parseBlock = (block) => {
   const content = typeof block.content === 'string' ? JSON.parse(block.content) : (block.content || {});
-  const { _fluid, _fluidMobile, ...restContent } = content;
-  // Preserve existing block.fluid if already extracted (e.g. when parseBlock
-  // runs again on an already-parsed snapshot). Only set from _fluid when
-  // extracting from a raw DB row.
+  const { _fluid, _fluidMobile, _style, ...restContent } = content;
+  // Preserve existing block.fluid/style if already extracted (e.g. when
+  // parseBlock runs again on an already-parsed snapshot). Only set from the
+  // underscore keys when extracting from a raw DB row.
   const existingFluid = block.fluid;
   const existingFluidMobile = block.fluidMobile;
+  const style = block.style || _style;
   return {
     ...block,
     content: restContent,
     fluid: existingFluid || _fluid || null,
     fluidMobile: existingFluidMobile || _fluidMobile || null,
+    ...(style ? { style } : {}),
   };
 };
 
@@ -36,6 +38,9 @@ const parseSection = (section) => ({
 });
 
 // Default section settings
+// Autosaves create a version-history snapshot at most this often.
+const AUTOSAVE_VERSION_INTERVAL_MS = 10 * 60 * 1000;
+
 const DEFAULT_SECTION = {
   columns: 1,
   gap: 24,
@@ -187,39 +192,18 @@ export const getPageBySlug = async (req, res) => {
       }
     }
 
-    const siteStyle = await prisma.webSiteStyle.findFirst();
-
-    // ── Build nav from Pages list ─────────────────────────────────────────
-    const allNavPages = await prisma.webPage.findMany({
-      where: { isPublished: true, hideFromNav: false },
-      select: { id: true, slug: true, title: true, navLabel: true, href: true, parentId: true, order: true },
-      orderBy: { order: 'asc' },
-    });
-
-    const topLevel = allNavPages.filter(p => !p.parentId);
-    const navItems = topLevel.map(p => ({
-      label:    p.navLabel || p.title,
-      href:     p.href || (p.slug === 'home' ? '/' : `/${p.slug}`),
-      children: allNavPages
-        .filter(c => c.parentId === p.id)
-        .map(c => ({
-          label: c.navLabel || c.title,
-          href:  c.href || (c.slug === 'home' ? '/' : `/${c.slug}`),
-        })),
-    }));
+    const { siteStyle, nav } = await loadSiteContext();
 
     res.json({
       ...page,
       template: renderedTemplate,
       header: renderedHeader,
       footer: renderedFooter,
-      siteStyle: siteStyle
-        ? { ...siteStyle, tokens: parseJsonField(siteStyle.tokens) }
-        : null,
+      siteStyle,
       sections: renderedSections,
       // Keep legacy blocks field for any older clients
       blocks: page.blocks.map(parseBlock),
-      nav: navItems,
+      nav,
     });
   } catch (error) {
     console.error('Error fetching web page:', error);
@@ -230,7 +214,7 @@ export const getPageBySlug = async (req, res) => {
 export const updatePage = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { template, header, footer, sections } = req.body;
+    const { template, header, footer, sections, autosave = false } = req.body;
 
     const existingPage = await prisma.webPage.findUnique({
       where: { slug },
@@ -244,12 +228,20 @@ export const updatePage = async (req, res) => {
     }
 
     const updatedPage = await prisma.$transaction(async (tx) => {
-      // Snapshot the current page before every save so a prior state is always recoverable.
-      const versionCount = await tx.webPageVersion.count({ where: { pageId: existingPage.id } });
-      const savedBy = req.user?.id
+      // Snapshot the current page before saving so a prior state is always
+      // recoverable. The editor autosaves every few seconds, so autosaves only
+      // snapshot when the latest version is older than AUTOSAVE_VERSION_INTERVAL_MS
+      // (explicit saves always snapshot).
+      const lastVersion = autosave
+        ? await tx.webPageVersion.findFirst({ where: { pageId: existingPage.id }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } })
+        : null;
+      const shouldSnapshot = !autosave || !lastVersion
+        || Date.now() - new Date(lastVersion.createdAt).getTime() >= AUTOSAVE_VERSION_INTERVAL_MS;
+      const versionCount = shouldSnapshot ? await tx.webPageVersion.count({ where: { pageId: existingPage.id } }) : 0;
+      const savedBy = shouldSnapshot && req.user?.id
         ? await tx.user.findUnique({ where: { id: req.user.id }, select: { name: true } })
         : null;
-      await tx.webPageVersion.create({
+      if (shouldSnapshot) await tx.webPageVersion.create({
         data: {
           pageId: existingPage.id,
           title: existingPage.title,
@@ -313,7 +305,8 @@ export const updatePage = async (req, res) => {
                 sectionId: newSection.id,
                 type:      block.type,
                 order:     bIdx,
-                content:   JSON.stringify({ ...block.content, _fluid: block.fluid, _fluidMobile: block.fluidMobile }),
+                // Layout and style ride along in the content JSON (no columns for them).
+                content:   JSON.stringify({ ...block.content, _fluid: block.fluid, _fluidMobile: block.fluidMobile, _style: block.style }),
               })),
             });
           }
@@ -404,6 +397,38 @@ export const unpublishPage = async (req, res) => {
 };
 
 // GET /api/web/admin/:slug — always returns the live draft (for the editor)
+/**
+ * Site-wide data every rendered page needs: the theme (siteStyle) and the
+ * nav built from the published, visible pages. Used by the public page
+ * endpoint and the editor's admin endpoint so both render identically.
+ */
+async function loadSiteContext() {
+  const siteStyle = await prisma.webSiteStyle.findFirst();
+
+  const allNavPages = await prisma.webPage.findMany({
+    where: { isPublished: true, hideFromNav: false },
+    select: { id: true, slug: true, title: true, navLabel: true, href: true, parentId: true, order: true },
+    orderBy: { order: 'asc' },
+  });
+
+  const topLevel = allNavPages.filter(p => !p.parentId);
+  const nav = topLevel.map(p => ({
+    label:    p.navLabel || p.title,
+    href:     p.href || (p.slug === 'home' ? '/' : `/${p.slug}`),
+    children: allNavPages
+      .filter(c => c.parentId === p.id)
+      .map(c => ({
+        label: c.navLabel || c.title,
+        href:  c.href || (c.slug === 'home' ? '/' : `/${c.slug}`),
+      })),
+  }));
+
+  return {
+    siteStyle: siteStyle ? { ...siteStyle, tokens: parseJsonField(siteStyle.tokens) } : null,
+    nav,
+  };
+}
+
 export const getAdminPage = async (req, res) => {
   try {
     const { slug } = req.params;
@@ -477,6 +502,9 @@ export const getAdminPage = async (req, res) => {
     // Check if there are unpublished draft changes (publishedSnapshot exists but differs from live)
     const hasPublishedSnapshot = !!page.publishedSnapshot;
 
+    // Theme + nav so the editor canvas renders exactly like the public site.
+    const { siteStyle, nav } = await loadSiteContext();
+
     res.json({
       ...page,
       header: parseJsonField(page.header),
@@ -484,6 +512,8 @@ export const getAdminPage = async (req, res) => {
       sections: page.sections.map(parseSection),
       blocks: page.blocks.map(parseBlock),
       hasPublishedSnapshot,
+      siteStyle,
+      nav,
     });
   } catch (error) {
     console.error('Error fetching admin page:', error);
