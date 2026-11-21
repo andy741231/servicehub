@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Globe, ClipboardList, Mail, Users, BookOpen, LayoutDashboard, X,
-  ChevronRight, ChevronDown, Gauge, Files, PanelTop, Palette, Images, FileStack,
+  ChevronRight, ChevronLeft, ChevronDown, Gauge, Files, PanelTop, Palette, Images, FileStack,
   Wrench, Inbox, BarChart3, Copy, UserPlus, FileText, Send, IdCard,
 } from 'lucide-react';
 import { APP_IDS } from 'shared';
@@ -71,34 +71,50 @@ function activeAppId(pathname) {
   return APPS.find((app) => isAppActive(app.id, pathname))?.id ?? null;
 }
 
+// Small uppercase group label used at the root level ("Apps", "Admin").
+function SectionLabel({ children }) {
+  return (
+    <p className="px-3 pt-1 pb-1.5 text-xs font-semibold uppercase tracking-wide text-subtle select-none">
+      {children}
+    </p>
+  );
+}
+
 // ── Drill-down sidebar ───────────────────────────────────────────────────
-// A stack of frames drives the visible level. Empty stack = root (app list).
-// One frame = drilled into that app, showing its section children.
-function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdminRole, onDrillIn }) {
+// Empty stack = root (app list). One frame = drilled into that app, showing a
+// "← All apps" back row, the app title, and its section links.
+//
+// Drilling in/out only changes what the sidebar shows; it never navigates.
+// Navigation auto-drills into whichever app owns the new route.
+function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdminRole }) {
   const [stack, setStack] = useState([]); // [{ id, label }]
   const [direction, setDirection] = useState('forward'); // 'forward' | 'back'
 
-  // Auto-drill into the app that owns the current route. On navigation, if the
-  // current stack top doesn't match the active app, drill into it so the user
-  // always sees their current location's context.
+  // Focus management: the clicked control unmounts when the level swaps, so
+  // move focus to the logical next control (back button / originating app row).
+  // Only set by user actions, so route-driven drills never steal focus.
+  const focusTarget = useRef(null);
+  const backRef = useRef(null);
+  const appRowRefs = useRef({});
+
+  // Auto-drill into the app that owns the current route.
   useEffect(() => {
     const id = activeAppId(location.pathname);
+    const app = id ? APPS.find((a) => a.id === id) : null;
     setStack((prev) => {
       const top = prev[prev.length - 1];
-      if (id && top?.id === id) return prev;          // already drilled in
-      if (!id && prev.length === 0) return prev;       // at root, no active app
-      const app = APPS.find((a) => a.id === id);
-      if (!app) return [];                             // non-app route (admin) → root
-      setDirection('forward');
+      if (app && top?.id === app.id) return prev;      // already drilled in
+      if (!app) return prev.length === 0 ? prev : [];  // non-app route → root
       return [{ id: app.id, label: app.label }];
     });
+    setDirection('forward');
   }, [location.pathname]);
 
   const drillIn = useCallback((app) => {
+    focusTarget.current = 'back';
     setDirection('forward');
     setStack([{ id: app.id, label: app.label }]);
-    onDrillIn(app.id);
-  }, [onDrillIn]);
+  }, []);
 
   // The currently visible level's items.
   const currentFrame = stack[stack.length - 1] ?? null;
@@ -106,6 +122,20 @@ function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdmi
   const currentItems = currentApp ? currentApp.children : null;
   // Animation key — changes whenever the visible level changes, re-triggering CSS.
   const animKey = currentFrame ? `app-${currentFrame.id}` : 'root';
+
+  const goBack = useCallback(() => {
+    focusTarget.current = currentFrame?.id ?? null;
+    setDirection('back');
+    setStack([]);
+  }, [currentFrame]);
+
+  useEffect(() => {
+    const target = focusTarget.current;
+    if (!target) return;
+    focusTarget.current = null;
+    if (target === 'back') backRef.current?.focus();
+    else appRowRefs.current[target]?.focus();
+  }, [animKey]);
 
   return (
     <>
@@ -117,8 +147,27 @@ function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdmi
           className={`px-2 space-y-0.5 ${direction === 'forward' ? 'drill-enter-forward' : 'drill-enter-back'}`}
         >
           {currentItems ? (
-            // Drilled into an app — render its section children as leaf links
-            currentItems.map((child) => (
+            <>
+            {/* Level header: explicit way back up + where you are */}
+            <div className="pb-2 mb-1 border-b border-border-soft">
+              <button
+                ref={backRef}
+                type="button"
+                onClick={goBack}
+                aria-label="Back to all apps"
+                className="flex items-center gap-1 pl-1.5 pr-2.5 min-h-[36px] text-sm font-medium text-muted rounded-base hover:bg-surface-raised hover:text-text-base transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+              >
+                <ChevronLeft className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                All apps
+              </button>
+              <h2 className="flex items-center gap-3 px-3 pt-1.5 text-body font-semibold text-text-base">
+                <currentApp.Icon className="h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
+                <span className="truncate">{currentApp.label}</span>
+              </h2>
+            </div>
+
+            {/* Section links */}
+            {currentItems.map((child) => (
               <NavLink
                 key={child.path}
                 to={child.path}
@@ -136,33 +185,38 @@ function DrilldownSidebar({ accessibleApps, location, closeSidebar, hasSuperAdmi
                 )}
                 <span className="truncate">{child.label}</span>
               </NavLink>
-            ))
+            ))}
+            </>
           ) : (
             // Root level — render accessible apps as parent rows + admin link
             <>
+              <SectionLabel>Apps</SectionLabel>
               {accessibleApps.map((app) => {
                 const isParentActive = isAppActive(app.id, location.pathname);
                 return (
                   <button
                     key={app.id}
+                    ref={(el) => { appRowRefs.current[app.id] = el; }}
                     type="button"
                     onClick={() => drillIn(app)}
-                    className={`w-full flex items-center gap-3 px-3 min-h-[44px] text-body font-medium rounded-base transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 text-left ${
+                    aria-label={`${app.label}${isParentActive ? ' (current)' : ''} — show sections`}
+                    className={`group w-full flex items-center gap-3 px-3 min-h-[44px] text-body font-medium rounded-base transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 text-left ${
                       isParentActive
-                        ? 'text-primary font-semibold'
+                        ? 'bg-primary-light text-primary font-semibold'
                         : 'text-muted hover:bg-surface-raised hover:text-base'
                     }`}
                   >
                     <app.Icon className={`h-5 w-5 flex-shrink-0 ${isParentActive ? 'text-primary' : 'text-subtle'}`} />
                     <span className="flex-1 truncate">{app.label}</span>
-                    <ChevronRight className={`w-4 h-4 flex-shrink-0 ${isParentActive ? 'text-primary' : 'text-subtle'}`} />
+                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-transform duration-150 ease-out group-hover:translate-x-0.5 ${isParentActive ? 'text-primary' : 'text-subtle'}`} />
                   </button>
                 );
               })}
 
               {hasSuperAdminRole && (
                 <>
-                  <div className="pt-3 mt-3 border-t border-border mx-1" />
+                  <div className="pt-3" />
+                  <SectionLabel>Admin</SectionLabel>
                   <NavLink
                     to="/hub-admin/admin/users"
                     onClick={closeSidebar}
@@ -270,7 +324,6 @@ function AppShell() {
   const { user } = useAuthStore();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [drilldownAppId, setDrilldownAppId] = useState(null);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
@@ -283,18 +336,6 @@ function AppShell() {
   );
 
   const useAccordion = accessibleApps.length === 1;
-
-  // Keep the brand breadcrumb in sync with both route changes and drilldown clicks.
-  useEffect(() => {
-    setDrilldownAppId(activeAppId(location.pathname));
-  }, [location.pathname]);
-
-  // Active sub-app for the brand row breadcrumb (including a drilldown selection
-  // made from the Welcome page before a dashboard route is opened).
-  const activeApp = useMemo(
-    () => (drilldownAppId ? APPS.find((a) => a.id === drilldownAppId) ?? null : null),
-    [drilldownAppId],
-  );
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -316,9 +357,10 @@ function AppShell() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Brand row — "Service Hub" links home; active app name links to its dashboard */}
-        <div className={`px-6 border-b border-border shrink-0 ${activeApp ? 'py-3' : 'h-14 flex items-center'}`}>
-          <div className="flex items-center min-h-8">
+        {/* Brand row — fixed h-14 so it lines up with the TopBar border.
+            Current-app context lives in the drill-down level header instead. */}
+        <div className="px-6 border-b border-border shrink-0 h-14 flex items-center">
+          <div className="flex items-center w-full">
             <Link
               to="/hub-admin/"
               onClick={closeSidebar}
@@ -334,18 +376,6 @@ function AppShell() {
               <X className="w-5 h-5" />
             </button>
           </div>
-          {activeApp && (
-            <Link
-              to={activeApp.path}
-              onClick={closeSidebar}
-              className="mt-1.5 flex items-center gap-1.5 pl-0.5 text-sm font-medium text-muted hover:text-text-base transition-colors duration-150 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded-base"
-              aria-label={`${activeApp.label} dashboard`}
-            >
-              <ChevronRight className="w-4 h-4 shrink-0 text-subtle" aria-hidden="true" />
-              <activeApp.Icon className="w-4 h-4 shrink-0 text-subtle" />
-              <span>{activeApp.label}</span>
-            </Link>
-          )}
         </div>
 
         {useAccordion ? (
@@ -361,7 +391,6 @@ function AppShell() {
             location={location}
             closeSidebar={closeSidebar}
             hasSuperAdminRole={hasSuperAdminRole}
-            onDrillIn={setDrilldownAppId}
           />
         )}
       </aside>
