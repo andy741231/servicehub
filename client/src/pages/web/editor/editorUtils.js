@@ -28,22 +28,29 @@ export const resolveUrl = (url) => {
   return `/uploads/${url}`;
 };
 
+/**
+ * Block catalog for the block picker. `rows` is the starting height on the
+ * 80px layout grid (new blocks are then fitted to their content), `category`
+ * groups the picker, `keywords` help search. Legacy 'grid' is not offered.
+ */
+export const BLOCK_CATEGORIES = ['Basics', 'Lists & features', 'Community', 'Media'];
 export const BLOCK_TYPES = [
-  { id: 'text',         name: 'Text',         Icon: AlignLeft,    description: 'Rich text content with formatting' },
-  { id: 'trust-bar',     name: 'Trust Bar',   Icon: Star,          description: 'Numbered proof points and highlights' },
-  { id: 'split-banner',  name: 'Split Banner',Icon: Hand,          description: 'Two-column callout with service times' },
-  { id: 'events',        name: 'Events',      Icon: Rows3,         description: 'Upcoming events list' },
-  { id: 'quote',         name: 'Quote',       Icon: Quote,          description: 'Large testimonial quote' },
-  { id: 'map',           name: 'Map',         Icon: LayoutGrid,     description: 'Location and map placeholder' },
-  { id: 'intro',        name: 'Introduction', Icon: Hand,         description: 'Introduction section with button' },
-  { id: 'features',     name: 'Features',     Icon: Star,         description: 'Feature grid with icons' },
-  { id: 'highlights',   name: 'Highlights',   Icon: Sparkles,     description: 'Highlight cards with images' },
-  { id: 'gallery',      name: 'Gallery',      Icon: LayoutGrid,   description: 'Image gallery' },
-  { id: 'testimonials', name: 'Testimonials', Icon: MessageSquare,description: 'Customer testimonials' },
-  { id: 'contact',      name: 'Contact',      Icon: Mail,         description: 'Contact information' },
-  { id: 'video',        name: 'Video',        Icon: Video,        description: 'Video section' },
-  { id: 'grid',         name: 'Grid',         Icon: Columns,      description: 'Multi-column layout' },
+  { id: 'hero',         name: 'Hero',         Icon: Sparkles,      category: 'Basics',           rows: 6, description: 'Large headline with a subtitle', keywords: 'banner header title welcome' },
+  { id: 'text',         name: 'Text',         Icon: AlignLeft,     category: 'Basics',           rows: 3, description: 'Paragraphs, headings and lists', keywords: 'paragraph copy body rich' },
+  { id: 'intro',        name: 'Introduction', Icon: Hand,          category: 'Basics',           rows: 5, description: 'Colored band with a title and button', keywords: 'call to action cta button' },
+  { id: 'quote',        name: 'Quote',        Icon: Quote,         category: 'Basics',           rows: 3, description: 'Large pull quote', keywords: 'testimonial citation' },
+  { id: 'trust-bar',    name: 'Trust bar',    Icon: Star,          category: 'Lists & features', rows: 2, description: 'Short numbered proof points', keywords: 'stats numbers points' },
+  { id: 'features',     name: 'Features',     Icon: Star,          category: 'Lists & features', rows: 7, description: 'Cards with an icon or number', keywords: 'cards grid services ministries' },
+  { id: 'highlights',   name: 'Highlights',   Icon: Sparkles,      category: 'Lists & features', rows: 7, description: 'Image cards with a button', keywords: 'cards images programs' },
+  { id: 'testimonials', name: 'Testimonials', Icon: MessageSquare, category: 'Lists & features', rows: 5, description: 'What people say', keywords: 'quotes reviews stories' },
+  { id: 'split-banner', name: 'Service times',Icon: Rows3,         category: 'Community',        rows: 5, description: 'Callout with a list of times', keywords: 'split banner sunday schedule worship' },
+  { id: 'events',       name: 'Events',       Icon: Rows3,         category: 'Community',        rows: 6, description: 'Upcoming events list', keywords: 'calendar dates' },
+  { id: 'contact',      name: 'Contact',      Icon: Mail,          category: 'Community',        rows: 6, description: 'Email, phone, address and a form', keywords: 'email phone address form' },
+  { id: 'map',          name: 'Map',          Icon: LayoutGrid,    category: 'Community',        rows: 5, description: 'Location with an embedded map', keywords: 'address directions location' },
+  { id: 'gallery',      name: 'Gallery',      Icon: LayoutGrid,    category: 'Media',            rows: 6, description: 'Grid of images with captions', keywords: 'photos images pictures' },
+  { id: 'video',        name: 'Video',        Icon: Video,         category: 'Media',            rows: 7, description: 'YouTube or Vimeo video', keywords: 'youtube vimeo sermon' },
 ];
+export const blockCatalogEntry = (type) => BLOCK_TYPES.find((b) => b.id === type);
 
 export const DEFAULT_SECTION = {
   columns: 1,
@@ -104,11 +111,12 @@ export const SPACING_PRESETS = [
 ];
 
 export function createBlock(type, options = {}) {
+  const rows = BLOCK_TYPES.find((b) => b.id === type)?.rows ?? 2;
   const fluid = options.fluid || {
     colStart: 1,
     colEnd: 25,   // full width (24-col grid, 1-indexed lines)
     rowStart: 1,
-    rowEnd: 3,    // 2 rows tall by default
+    rowEnd: 1 + rows,
     zIndex: 0,
   };
   return {
@@ -124,9 +132,9 @@ export function createBlock(type, options = {}) {
  * Auto-stack a new block below existing blocks in a section.
  * Returns fluid coords for a new block placed at the bottom of the grid.
  */
-export function autoStackFluid(blocks, gridColumns = 24) {
+export function autoStackFluid(blocks, gridColumns = 24, rows = 2) {
   if (!blocks || blocks.length === 0) {
-    return { colStart: 1, colEnd: gridColumns + 1, rowStart: 1, rowEnd: 3, zIndex: 0 };
+    return { colStart: 1, colEnd: gridColumns + 1, rowStart: 1, rowEnd: 1 + rows, zIndex: 0 };
   }
   const maxRowEnd = blocks.reduce((max, b) => {
     const fe = b.fluid?.rowEnd ?? 3;
@@ -140,7 +148,7 @@ export function autoStackFluid(blocks, gridColumns = 24) {
     colStart: 1,
     colEnd: gridColumns + 1,
     rowStart: maxRowEnd,
-    rowEnd: maxRowEnd + 2,
+    rowEnd: maxRowEnd + rows,
     zIndex: maxZ + 1,
   };
 }
@@ -180,4 +188,24 @@ export function duplicateSection(section) {
     fluidConfig: section.fluidConfig ? JSON.parse(JSON.stringify(section.fluidConfig)) : null,
     blocks: (section.blocks || []).map(duplicateBlock),
   };
+}
+
+/** True when the user is entering text (fields, contentEditable). All editor shortcuts skip these. */
+export function isTextEntryTarget(target) {
+  if (!target || typeof target !== 'object') return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
+/**
+ * True when a keyboard event target is something the user is typing into or
+ * operating (text entry, buttons, menus, dialogs). Single-key editor shortcuts
+ * (Delete, Space, arrows, "+", "?") must ignore these targets.
+ */
+export function isTypingTarget(target) {
+  if (isTextEntryTarget(target)) return true;
+  if (!target || typeof target !== 'object') return false;
+  if (target.tagName === 'BUTTON') return true;
+  return !!target.closest?.('[role="menu"], [role="dialog"], [role="listbox"]');
 }

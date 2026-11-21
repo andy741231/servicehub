@@ -2,14 +2,14 @@
  * EditorToolbar.jsx — The dark top toolbar for the Web Editor edit mode.
  *
  * Extracted from WebEditor.jsx for modularity. Contains:
- * - Left: SAVE button + Exit + save status indicator
+ * - Left: Exit + Preview + autosave status
  * - Center: page title + publish status
  * - Right: breakpoint selector, undo/redo, publish, secondary actions
  *
  * All icon buttons have 44px touch targets and aria-labels.
  */
 
-import { Plus, Type, X, Edit3, Copy, Sparkles, Rows3, History, Eye, AlertCircle, Layers } from 'lucide-react';
+import { Type, Copy, History, Eye, Layers, ExternalLink } from 'lucide-react';
 import BuilderBreakpointSelector from '../../../components/builder/BuilderBreakpointSelector';
 import BuilderHistoryControls from '../../../components/builder/BuilderHistoryControls';
 import BuilderSaveStatus from '../../../components/builder/BuilderSaveStatus';
@@ -17,8 +17,8 @@ import BuilderSaveStatus from '../../../components/builder/BuilderSaveStatus';
 export default function EditorToolbar({
   // Save
   saveStatus, lastSavedAt, onSave, saveRef,
-  // Exit
-  onExit,
+  // Exit / preview
+  onExit, onPreview,
   // Page info
   pageTitle, pageSlug, hasPublishedSnapshot, isPublished,
   // Breakpoint
@@ -37,48 +37,48 @@ export default function EditorToolbar({
 }) {
   return (
     <div
-      className="sticky top-0 z-40 flex items-center justify-between px-5 text-[13px]"
+      className="sticky top-0 z-40 flex items-center justify-between gap-4 px-5 text-[13px]"
       style={{ height: 52, background: 'hsl(var(--editor-chrome))', color: 'hsl(var(--editor-chrome-text))' }}
     >
-      {/* Left — SAVE + Exit */}
-      <div className="flex items-center gap-3.5">
-        <button
-          onClick={() => saveRef.current()}
-          disabled={saveStatus === 'saving' || saveStatus === 'clean' || saveStatus === 'saved'}
-          className="px-3.5 py-1.5 rounded-md font-semibold text-[12px] tracking-[0.03em] text-[color:hsl(var(--editor-chrome))] bg-white hover:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed"
-          title="Save draft (Ctrl/Cmd+S)"
-        >
-          {saveStatus === 'saving' ? 'SAVING…' : saveStatus === 'error' ? 'RETRY SAVE' : 'SAVE'}
-        </button>
+      {/* Left — Exit + Preview + autosave status + page title (title truncates; it used to be
+          absolutely centered and ran underneath the breakpoint switcher). */}
+      <div className="flex items-center gap-3.5 min-w-0 flex-1">
         <button
           onClick={onExit}
           className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors text-[13px] px-3 py-2 rounded min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-primary"
-          title="Exit edit mode"
-          aria-label="Exit edit mode"
+          title="Save and return to Pages"
+          aria-label="Exit editor"
         >
           Exit
         </button>
-        <div className="min-w-[110px] flex justify-center">
+        <button
+          onClick={onPreview}
+          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors text-[13px] px-3 py-2 rounded min-h-[44px] flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
+          title="Preview this page without editor controls"
+          aria-label="Preview"
+        >
+          <Eye className="w-4 h-4" /> Preview
+        </button>
+        <div className="min-w-[110px] flex justify-center shrink-0">
           <BuilderSaveStatus
             status={saveStatus}
             lastSavedAt={lastSavedAt}
             onRetry={() => saveRef.current()}
           />
         </div>
-      </div>
-
-      {/* Center — page title + publish status */}
-      <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-        <div className="font-semibold text-white text-[14px] leading-tight">
-          {pageTitle || pageSlug}
-        </div>
-        <div className="text-[color:hsl(var(--editor-chrome-muted))] text-[11px] leading-tight">
-          Page · {hasPublishedSnapshot && isPublished ? 'Published' : hasPublishedSnapshot ? 'Unpublished' : 'Draft'}
+        <div className="w-px h-5 bg-white/10 shrink-0" />
+        <div className="min-w-0">
+          <div className="font-semibold text-white text-[14px] leading-tight truncate" title={pageTitle || pageSlug}>
+            {pageTitle || pageSlug}
+          </div>
+          <div className="text-[color:hsl(var(--editor-chrome-muted))] text-[11px] leading-tight truncate">
+            Page · {hasPublishedSnapshot && isPublished ? 'Published' : hasPublishedSnapshot ? 'Unpublished' : 'Draft'}
+          </div>
         </div>
       </div>
 
       {/* Right — unified breakpoint selector + actions */}
-      <div className="flex items-center gap-4 text-[color:hsl(var(--editor-chrome-muted))]">
+      <div className="flex items-center gap-4 shrink-0 text-[color:hsl(var(--editor-chrome-muted))]">
         <BuilderBreakpointSelector
           value={viewport === 'mobile' ? 'mobile' : previewDevice}
           onChange={onBreakpointChange}
@@ -141,7 +141,7 @@ export default function EditorToolbar({
           title="Open published page in a new tab"
           aria-label="Open published page in a new tab"
         >
-          <Eye className="w-4 h-4" />
+          <ExternalLink className="w-4 h-4" />
         </button>
       </div>
     </div>

@@ -1,85 +1,19 @@
 /**
  * EditorDialogs.jsx — All modal dialogs for the Web Editor.
  *
- * Extracted from WebEditor.jsx. Contains:
- * - Add Section modal
- * - Add Block palette modal
- * - Keyboard Shortcuts help modal
+ * Keyboard Shortcuts help modal. (Adding blocks/sections now uses
+ * BlockPicker and SectionPicker.)
  *
  * All dialogs use AccessibleModal for focus trap, Escape handling,
  * focus restoration, and scroll locking.
  */
 
-import { Plus, Type, X, Sparkles } from 'lucide-react';
+import { Type, X, Sparkles } from 'lucide-react';
 import { AccessibleModal } from '../../../components/Dialog';
-import { AddSectionModal } from './editorComponents';
-import { BLOCK_TYPES } from './editorUtils';
 
-export default function EditorDialogs({
-  // Add Section
-  addSectionAfterIndex, onAddSection, onCloseAddSection,
-  // Add Block
-  blockPaletteTarget, onAddBlock, onCloseBlockPalette,
-  // Keyboard Help
-  showKeyboardHelp, onCloseKeyboardHelp,
-}) {
+export default function EditorDialogs({ showKeyboardHelp, onCloseKeyboardHelp }) {
   return (
     <>
-      {/* Add Section modal */}
-      {addSectionAfterIndex !== null && (
-        <AddSectionModal
-          onClose={onCloseAddSection}
-          onAdd={(sectionConfig) => onAddSection(sectionConfig, addSectionAfterIndex)}
-        />
-      )}
-
-      {/* Block palette modal — for adding blocks inside a section */}
-      {blockPaletteTarget !== null && (
-        <AccessibleModal onClose={onCloseBlockPalette} labelledById="block-palette-title" maxWidth="max-w-5xl" className="max-h-[85vh] flex flex-col">
-          <div className="p-6 border-b border-border bg-surface-raised">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 id="block-palette-title" className="text-xl font-semibold text-text-base">Add Block</h3>
-                  <p className="text-sm text-muted">Choose a block type to add to this section</p>
-                </div>
-              </div>
-              <button
-                onClick={onCloseBlockPalette}
-                className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5 text-muted" />
-              </button>
-            </div>
-          </div>
-          <div className="p-6 overflow-y-auto flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {BLOCK_TYPES.map(({ id, name, Icon, description }) => (
-                <button
-                  key={id}
-                  onClick={() => onAddBlock(blockPaletteTarget.sectionIndex, id)}
-                  className="p-5 border-2 border-border rounded-xl hover:border-primary-light hover:bg-primary-light hover:shadow-lg transition-all duration-200 text-left group"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-surface-raised group-hover:bg-primary-light flex items-center justify-center flex-shrink-0 transition-colors">
-                      <Icon className="w-6 h-6 text-muted group-hover:text-primary transition-colors" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-text-base mb-1 group-hover:text-primary transition-colors">{name}</div>
-                      <div className="text-sm text-muted leading-relaxed">{description}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </AccessibleModal>
-      )}
-
       {/* Keyboard shortcuts help modal */}
       {showKeyboardHelp && (
         <AccessibleModal onClose={onCloseKeyboardHelp} labelledById="keyboard-help-title" maxWidth="max-w-2xl" className="max-h-[85vh] flex flex-col">
@@ -107,12 +41,15 @@ export default function EditorDialogs({
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { action: 'Save', shortcut: 'Ctrl/Cmd + S' },
+                  { action: 'Save now (also autosaves)', shortcut: 'Ctrl/Cmd + S' },
                   { action: 'Undo', shortcut: 'Ctrl/Cmd + Z' },
                   { action: 'Redo', shortcut: 'Ctrl/Cmd + Shift + Z' },
                   { action: 'Preview', shortcut: 'Ctrl/Cmd + P' },
                   { action: 'Add Section', shortcut: '+' },
-                  { action: 'Close Dialog', shortcut: 'Esc' },
+                  { action: 'Select parent / close', shortcut: 'Esc' },
+                  { action: 'Nudge block', shortcut: 'Arrow keys' },
+                  { action: 'Delete block', shortcut: 'Delete' },
+                  { action: 'Show layout grid', shortcut: 'G' },
                   { action: 'Show Help', shortcut: '?' },
                 ].map(({ action, shortcut }) => (
                   <div key={action} className="flex justify-between items-center p-3 bg-surface-raised rounded-lg">
@@ -130,23 +67,23 @@ export default function EditorDialogs({
                 <ul className="text-sm text-primary space-y-2">
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">-</span>
-                    <span>Click any text to edit it inline</span>
+                    <span>Click a block to select it; click its text again to type</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">-</span>
-                    <span>Hover over blocks to reveal action toolbar</span>
+                    <span>Drag blocks from Add block straight onto the page</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">-</span>
-                    <span>Drag blocks to reorder them on the page</span>
+                    <span>Block and section settings are in the panel on the right</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">-</span>
-                    <span>Use the style panel (palette icon) for advanced styling</span>
+                    <span>Switch to Mobile to check (or customize) the phone layout</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-0.5">-</span>
-                    <span>Switch device previews to see responsive layouts</span>
+                    <span>Changes save automatically — Publish makes them live</span>
                   </li>
                 </ul>
               </div>

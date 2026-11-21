@@ -1165,3 +1165,64 @@
   .fluid-grid-desktop { display: none !important; }
   .fluid-grid-mobile { display: grid !important; }
 }
+
+/* ─── Web editor canvas ──────────────────────────────────────────────────
+   The editor renders the page inside `.public-site.site-editor` so blocks get
+   the real site theme. Editor chrome (toolbars, pills, panels) living inside
+   that wrapper opts back into the admin design system via
+   `.site-editor-chrome`. The --admin-* aliases are resolved once on :root
+   (so they follow light/dark mode) and are not overridden by the site theme. */
+:root {
+  --admin-primary: var(--primary);
+  --admin-primary-hover: var(--primary-hover);
+  --admin-primary-foreground: var(--primary-foreground);
+  --admin-primary-light: var(--primary-light);
+  --admin-accent: var(--accent);
+  --admin-background: var(--background);
+  --admin-surface: var(--surface);
+  --admin-surface-raised: var(--surface-raised);
+  --admin-surface-tertiary: var(--surface-tertiary);
+  --admin-border: var(--border);
+  --admin-border-soft: var(--border-soft);
+  --admin-border-strong: var(--border-strong);
+  --admin-text-base: var(--text-base);
+  --admin-text-muted: var(--text-muted);
+  --admin-text-subtle: var(--text-subtle);
+  --admin-text-inverse: var(--text-inverse);
+}
+.public-site .site-editor-chrome {
+  --primary: var(--admin-primary);
+  --primary-hover: var(--admin-primary-hover);
+  --primary-foreground: var(--admin-primary-foreground);
+  --primary-light: var(--admin-primary-light);
+  --accent: var(--admin-accent);
+  --background: var(--admin-background);
+  --surface: var(--admin-surface);
+  --surface-raised: var(--admin-surface-raised);
+  --surface-tertiary: var(--admin-surface-tertiary);
+  --border: var(--admin-border);
+  --border-soft: var(--admin-border-soft);
+  --border-strong: var(--admin-border-strong);
+  --text-base: var(--admin-text-base);
+  --text-muted: var(--admin-text-muted);
+  --text-subtle: var(--admin-text-subtle);
+  --text-inverse: var(--admin-text-inverse);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+/* Content is always visible while editing (no scroll-reveal). */
+.public-site.site-editor .public-reveal { opacity: 1; transform: none; transition: none; }
+/* Site header/footer are shown for context but edited elsewhere. */
+.site-editor-frame { position: relative; }
+.site-editor-frame > .site-editor-frame-content { pointer-events: none; user-select: none; }
+.site-editor-frame > .site-editor-frame-cta { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .12s ease; background: hsl(var(--admin-primary) / .06); outline: 2px dashed hsl(var(--admin-primary) / .5); outline-offset: -2px; z-index: 5; }
+.site-editor-frame:hover > .site-editor-frame-cta,
+.site-editor-frame > .site-editor-frame-cta:focus-within { opacity: 1; }
+/* "+ Add item" and link-URL controls rendered by editable site fields. */
+.site-edit-add { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px dashed hsl(var(--border-strong)); border-radius: 999px; background: hsl(var(--surface) / .9); color: hsl(var(--text-muted)); font-size: 12px; font-weight: 600; line-height: 1.2; }
+.site-edit-add:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+.site-edit-link { display: inline-flex; align-items: center; gap: 6px; }
+.site-edit-link-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: hsl(var(--surface)); color: hsl(var(--text-muted)); box-shadow: 0 1px 3px rgba(16,20,30,.18); }
+.site-edit-link-btn:hover { color: hsl(var(--primary)); }

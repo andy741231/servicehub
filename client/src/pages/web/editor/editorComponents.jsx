@@ -1211,20 +1211,36 @@ const EditableBlock = ({
 };
 
 
+// Multi-line safe text field: content can contain newlines (rendered as <br>
+// by richText), which a plain <input> silently strips on the first edit.
+// Grows with its line count so single-line values still look like inputs.
+const LineField = ({ value, onChange, placeholder, className }) => {
+  const text = value || '';
+  return (
+    <textarea
+      value={text}
+      onChange={onChange}
+      placeholder={placeholder}
+      rows={Math.max(1, text.split('\n').length)}
+      className={`resize-none leading-snug ${className}`}
+    />
+  );
+};
+
 const StructuredBlockEditor = ({ block, onChange }) => {
   const content = block.content || {};
   const update = (changes) => onChange({ ...content, ...changes });
   const input = (key, label, placeholder = '') => (
     <label className="block text-xs text-muted">{label}
-      <input value={content[key] || ''} onChange={e => update({ [key]: e.target.value })} placeholder={placeholder} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" />
+      <LineField value={content[key]} onChange={e => update({ [key]: e.target.value })} placeholder={placeholder} className="mt-1 w-full px-3 py-2 border border-border rounded bg-surface" />
     </label>
   );
   const arrayRows = (key, fields, emptyRow) => (
     <div className="space-y-2">
       {(content[key] || []).map((row, index) => (
         <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-start">
-          {fields.map(field => <input key={field.key} value={row[field.key] || ''} onChange={e => { const rows = [...(content[key] || [])]; rows[index] = { ...rows[index], [field.key]: e.target.value }; update({ [key]: rows }); }} placeholder={field.label} className="px-2 py-2 border border-border rounded bg-surface text-sm" />)}
-          <button type="button" onClick={() => update({ [key]: (content[key] || []).filter((_, i) => i !== index) })} className="px-2 py-2 text-xs text-danger border border-danger rounded">Ã—</button>
+          {fields.map(field => <LineField key={field.key} value={row[field.key]} onChange={e => { const rows = [...(content[key] || [])]; rows[index] = { ...rows[index], [field.key]: e.target.value }; update({ [key]: rows }); }} placeholder={field.label} className="w-full px-2 py-2 border border-border rounded bg-surface text-sm" />)}
+          <button type="button" onClick={() => update({ [key]: (content[key] || []).filter((_, i) => i !== index) })} className="px-2 py-2 text-xs text-danger border border-danger rounded" aria-label="Remove item">×</button>
         </div>
       ))}
       <button type="button" onClick={() => update({ [key]: [...(content[key] || []), { ...emptyRow }] })} className="px-3 py-2 text-xs border border-dashed border-border rounded text-muted hover:border-primary hover:text-primary">+ Add item</button>
@@ -1233,7 +1249,7 @@ const StructuredBlockEditor = ({ block, onChange }) => {
 
   if (block.type === 'trust-bar') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg"><h3 className="text-sm font-semibold">Trust bar items</h3>{arrayRows('items', [{ key: 'number', label: 'Number' }, { key: 'label', label: 'Label' }], { number: '01', label: 'New point' })}</div>;
   if (block.type === 'split-banner') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg"><div className="grid md:grid-cols-2 gap-3">{input('eyebrow', 'Eyebrow')}{input('title', 'Title')}</div>{input('body', 'Body text')}<div className="grid md:grid-cols-3 gap-3">{input('buttonText', 'Button text')}{input('buttonLink', 'Button link')}<label className="block text-xs text-muted">Button style<select value={content.buttonVariant || 'gold'} onChange={e => update({ buttonVariant: e.target.value })} className="mt-1 w-full px-2 py-2 border border-border rounded bg-surface"><option value="gold">Gold</option><option value="outline">Outline</option><option value="default">Navy</option></select></label></div><h3 className="text-sm font-semibold pt-2">Service times</h3>{arrayRows('times', [{ key: 'label', label: 'Label' }, { key: 'value', label: 'Value' }], { label: 'Sunday morning', value: '9:00 AM' })}</div>;
-  if (block.type === 'events') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg">{input('eyebrow', 'Eyebrow')}{input('title', 'Title')}<h3 className="text-sm font-semibold pt-2">Events</h3>{arrayRows('items', [{ key: 'date', label: 'Date' }, { key: 'title', label: 'Title' }], { date: 'AUG 18', title: 'New event' })}{(content.items || []).map((item, index) => <div key={`details-${index}`} className="grid md:grid-cols-2 gap-2"><input value={item.description || ''} onChange={e => { const items = [...content.items]; items[index] = { ...items[index], description: e.target.value }; update({ items }); }} placeholder="Description" className="px-2 py-2 border border-border rounded bg-surface text-sm" /><input value={item.time || ''} onChange={e => { const items = [...content.items]; items[index] = { ...items[index], time: e.target.value }; update({ items }); }} placeholder="Time" className="px-2 py-2 border border-border rounded bg-surface text-sm" /></div>)}</div>;
+  if (block.type === 'events') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg">{input('eyebrow', 'Eyebrow')}{input('title', 'Title')}<h3 className="text-sm font-semibold pt-2">Events</h3>{arrayRows('items', [{ key: 'date', label: 'Date' }, { key: 'title', label: 'Title' }], { date: 'AUG 18', title: 'New event' })}{(content.items || []).map((item, index) => <div key={`details-${index}`} className="grid md:grid-cols-2 gap-2"><LineField value={item.description} onChange={e => { const items = [...content.items]; items[index] = { ...items[index], description: e.target.value }; update({ items }); }} placeholder="Description" className="w-full px-2 py-2 border border-border rounded bg-surface text-sm" /><LineField value={item.time} onChange={e => { const items = [...content.items]; items[index] = { ...items[index], time: e.target.value }; update({ items }); }} placeholder="Time" className="w-full px-2 py-2 border border-border rounded bg-surface text-sm" /></div>)}</div>;
   if (block.type === 'quote') return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg">{input('quote', 'Quote')}{input('citation', 'Citation')}{input('backgroundColor', 'Background color', '#eadfc9')}</div>;
   return <div className="p-5 space-y-4 bg-surface-raised border border-border rounded-lg">{input('address', 'Address')}{input('embedUrl', 'Map embed URL (optional)')}</div>;
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Type, X, Edit3, Copy, Sparkles, Rows3, History, Eye, AlertCircle, Layers,
 } from 'lucide-react';
@@ -8,10 +8,13 @@ import { useConfirm, AccessibleModal } from '../../../components/Dialog';
 import { useToast } from '../../../components/Toast';
 import EditorToolbar from './EditorToolbar';
 import EditorDialogs from './EditorDialogs';
+import BlockPicker from './BlockPicker';
+import SectionPicker from './SectionPicker';
+import { sectionFromTemplate } from './sectionTemplates';
 import LayersPanel from './LayersPanel';
-import MobileLayoutInspector from './MobileLayoutInspector';
+import EditorInspector from './EditorInspector';
 import WebVersionHistoryPanel from '../WebVersionHistoryPanel';
-import { resolveUrl, BLOCK_TYPES, DEFAULT_SECTION, makeDefaultBlockContent, SECTION_LAYOUTS, SPACING_PRESETS, createBlock, createSection, duplicateBlock as duplicateBlockEntity, duplicateSection as duplicateSectionEntity, autoStackFluid } from './editorUtils';
+import { resolveUrl, BLOCK_TYPES, DEFAULT_SECTION, makeDefaultBlockContent, SECTION_LAYOUTS, SPACING_PRESETS, createBlock, createSection, duplicateBlock as duplicateBlockEntity, duplicateSection as duplicateSectionEntity, autoStackFluid, blockCatalogEntry } from './editorUtils';
 import {
   BaseEditableText,
   HeroBlock,
@@ -27,7 +30,37 @@ import {
 import BlockContent from './BlockContent';
 import ReadOnlyBlockContent from './ReadOnlyBlockContent';
 import PublicHome from '../../public/Home';
+import { resolveSiteTokens, siteThemeStyle, useSiteFonts } from '../../../site/siteTheme';
+import { mobilePlacements, isMobileAuto, MOBILE_GRID_COLUMNS } from '../../../site/SiteSections';
+import { SiteHeader, SiteFooter } from '../../../site/SiteChrome';
 import FluidSection from './fluid/FluidSection.jsx';
+import { isTypingTarget, isTextEntryTarget } from './editorUtils';
+
+const MAX_HISTORY = 50; // Bound undo history to prevent memory growth
+
+/**
+ * Site header/footer shown on the canvas for context (read-only). They're
+ * shared by every page and edited on the Header & Footer screen; hovering
+ * offers a link there (new tab, so unsaved canvas edits are never lost).
+ */
+function SiteFrame({ label, note, children }) {
+  return (
+    <div className="site-editor-frame">
+      <div className="site-editor-frame-content" aria-hidden="true">{children}</div>
+      <div className="site-editor-frame-cta site-editor-chrome">
+        <a
+          href="/hub-admin/web/header-footer"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-text-base text-xs font-semibold shadow-[0_2px_8px_rgba(16,20,30,0.18)] hover:text-primary"
+        >
+          Edit {label.toLowerCase()} · <span className="font-normal text-muted">{note}</span>
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function WebEditor() {
   const { slug: routeSlug } = useParams();
   const pageSlug = routeSlug || 'home';
@@ -48,22 +81,62 @@ export default function WebEditor() {
   const [saveStatus, setSaveStatus] = useState('clean'); // 'clean' | 'dirty' | 'saving' | 'saved' | 'error'
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [isPublished, setIsPublished] = useState(true);
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  // Undo history lives in a ref (always current — no stale closures from
+  // keyboard handlers or timers); historyVersion re-renders undo/redo buttons.
+  const historyRef = useRef({ entries: [], index: -1 });
+  const [, setHistoryVersion] = useState(0);
+  const syncHistoryState = () => setHistoryVersion((v) => v + 1);
+  const pendingHistoryRef = useRef(null); // latest uncommitted typing state
+  const historyTimerRef = useRef(null);
+  // These helpers touch only refs + stable setters, so it is safe to call
+  // them from timers or handlers created in an earlier render.
+  const pushHistoryEntry = (entry) => {
+    const h = historyRef.current;
+    const entries = h.entries.slice(0, h.index + 1);
+    entries.push(entry);
+    while (entries.length > MAX_HISTORY) entries.shift();
+    historyRef.current = { entries, index: entries.length - 1 };
+    syncHistoryState();
+  };
+  const flushPendingHistory = () => {
+    clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = null;
+    const pending = pendingHistoryRef.current;
+    if (!pending) return;
+    pendingHistoryRef.current = null;
+    pushHistoryEntry(pending);
+  };
+  const cancelPendingHistory = () => {
+    clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = null;
+    pendingHistoryRef.current = null;
+  };
+  const resetHistory = (entry) => {
+    cancelPendingHistory();
+    historyRef.current = { entries: [entry], index: 0 };
+    syncHistoryState();
+  };
+  useEffect(() => () => clearTimeout(historyTimerRef.current), []);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showLayersPanel, setShowLayersPanel] = useState(false);
   const [announcement, setAnnouncement] = useState(''); // screen-reader-only live region
   const [templateSaving, setTemplateSaving] = useState(false);
   const [lastChangeTime, setLastChangeTime] = useState(0);
-  const [viewMode, setViewMode] = useState('live'); // 'live' | 'edit'
-  const [transitionDirection, setTransitionDirection] = useState(null); // 'enter' | 'exit' | null
-  const [isExiting, setIsExiting] = useState(false);
+  // Opening a page goes straight into editing; 'live' is the chrome-free preview.
+  const [viewMode, setViewMode] = useState('edit'); // 'edit' | 'live'
+  const navigate = useNavigate();
+  // Last state known to match the server — "Exit without saving" restores it.
+  const savedSnapshotRef = useRef(null);
   const [hasPublishedSnapshot, setHasPublishedSnapshot] = useState(false);
   const [publishSaving, setPublishSaving] = useState(false);
   const [viewport, setViewport] = useState('desktop'); // 'desktop' | 'mobile'
   const saveRef = useRef();
   const [selectedBlockIds, setSelectedBlockIds] = useState(() => new Set());
+  // Selected section (null when a block — or nothing — is selected). Block and
+  // section selection are mutually exclusive; the inspector shows whichever.
+  const [selectedSectionIndex, setSelectedSectionIndex] = useState(null);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
 
   // Accessible confirm dialog (replaces window.confirm)
   const { confirmDialog, ConfirmDialogMount } = useConfirm();
@@ -77,7 +150,11 @@ export default function WebEditor() {
   // handleExitEdit confirm dialog for the editor's own Exit button.
   // (Note: useBlocker requires a data router; this app uses BrowserRouter,
   //  so we rely on beforeunload + explicit confirm in handleExitEdit.)
-  const isDirty = saveStatus === 'dirty' || saveStatus === 'error';
+  // Site theme for the canvas — same tokens/fonts as the public site.
+  const siteTokens = resolveSiteTokens(pageData?.siteStyle);
+  useSiteFonts(siteTokens, !!pageData);
+
+  const isDirty = saveStatus === 'dirty' || saveStatus === 'error' || saveStatus === 'saving';
   useEffect(() => {
     if (!isDirty) return;
     const handler = (e) => {
@@ -110,6 +187,7 @@ export default function WebEditor() {
 
   // Selection handler — supports Cmd/Ctrl+click for multi-select
   const handleSelectBlock = useCallback((id, { additive = false } = {}) => {
+    setSelectedSectionIndex(null);
     setSelectedBlockIds((prev) => {
       if (additive) {
         const next = new Set(prev);
@@ -120,7 +198,14 @@ export default function WebEditor() {
     });
   }, []);
 
-  const clearSelection = useCallback(() => setSelectedBlockIds(new Set()), []);
+  const clearSelection = useCallback(() => {
+    setSelectedBlockIds(new Set());
+    setSelectedSectionIndex(null);
+  }, []);
+  const selectSection = useCallback((sIdx) => {
+    setSelectedBlockIds(new Set());
+    setSelectedSectionIndex(sIdx);
+  }, []);
 
   const fetchPage = useCallback(async () => {
     try {
@@ -141,8 +226,12 @@ export default function WebEditor() {
       setHasPublishedSnapshot(data.hasPublishedSnapshot ?? false);
 
       const initialState = { sections: loadedSections, header: data.header || {}, footer: data.footer || {} };
-      setHistory([initialState]);
-      setHistoryIndex(0);
+      savedSnapshotRef.current = {
+        sections: loadedSections,
+        header: data.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} },
+        footer: data.footer || { sections: [], copyright: '', styles: {} },
+      };
+      resetHistory(initialState);
     } catch (error) {
       console.error('Failed to fetch page data:', error);
       const status = error?.response?.status;
@@ -162,68 +251,79 @@ export default function WebEditor() {
   }, [fetchPage]);
 
 
-  // Save function ref to avoid stale closures and dependency issues
-  saveRef.current = async () => {
-    if (saveStatus === 'saving') return;
-    // No-op if there are no unsaved changes
-    if (saveStatus === 'clean' || saveStatus === 'saved') return;
+  // ── Saving ─────────────────────────────────────────────────────────────
+  // Drafts autosave ~1.5s after the last change (Ctrl+S saves immediately).
+  // changeSeq counts edits; a save records the seq it sent, so edits made
+  // while a request is in flight are never mistaken for saved. Saves run
+  // one at a time through saveChainRef and always send the LATEST state
+  // (latestRef), so overlapping requests can't land out of order.
+  const changeSeqRef = useRef(0);
+  const savedSeqRef = useRef(0);
+  const saveChainRef = useRef(Promise.resolve());
+  const latestRef = useRef(null);
+  latestRef.current = { sections, header, footer };
 
+  function markDirty() {
+    changeSeqRef.current += 1;
+    setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
+  }
+
+  const runSave = async ({ autosave }) => {
+    flushPendingHistory();
+    const seq = changeSeqRef.current;
+    if (seq === savedSeqRef.current) return; // nothing new
+    setSaveStatus('saving');
+    const { sections: secs, header: hdr, footer: ftr } = latestRef.current;
     try {
-      setSaveStatus('saving');
       const { data } = await api.put(`/web/${pageSlug}`, {
-        header,
-        footer,
-        sections: sections.map((sec, sIdx) => ({
+        autosave,
+        header: hdr,
+        footer: ftr,
+        sections: secs.map((sec, sIdx) => ({
           ...sec,
           order: sIdx,
           blocks: (sec.blocks || []).map((b, bIdx) => ({ ...b, order: bIdx })),
         })),
       });
-      setPageData(data);
-      const savedAt = new Date();
-      setLastSavedAt(savedAt);
-      setSaveStatus('saved');
-      // After 2s, transition from "Saved" (green) to "clean" (muted) — still truthful
-      setTimeout(() => setSaveStatus((s) => (s === 'saved' ? 'clean' : s)), 2000);
+      savedSeqRef.current = seq;
+      savedSnapshotRef.current = { sections: secs, header: hdr, footer: ftr };
+      // The save response has no siteStyle/nav — keep the ones we loaded.
+      setPageData((prev) => ({ ...data, siteStyle: data.siteStyle ?? prev?.siteStyle, nav: data.nav ?? prev?.nav }));
+      setLastSavedAt(new Date());
+      if (changeSeqRef.current !== seq) {
+        setSaveStatus('dirty'); // edited during the request — autosave again
+      } else {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus((s) => (s === 'saved' ? 'clean' : s)), 2000);
+      }
     } catch (error) {
       console.error('Failed to save page:', error);
-      // Stay in 'error' until the user explicitly retries — no auto-clear
       setSaveStatus('error');
+      throw error;
     }
   };
+
+  /** Queue a save; resolves when everything up to now is saved (rejects on failure). */
+  const saveNow = ({ autosave = false } = {}) => {
+    const run = saveChainRef.current.catch(() => {}).then(() => runSave({ autosave }));
+    saveChainRef.current = run;
+    return run;
+  };
+  saveRef.current = () => saveNow().catch(() => {}); // Ctrl+S / retry
+
+  // Autosave after a pause in editing; retry a failed save every 10s.
+  useEffect(() => {
+    if (saveStatus !== 'dirty' && saveStatus !== 'error') return undefined;
+    const t = setTimeout(() => saveNow({ autosave: true }).catch(() => {}), saveStatus === 'error' ? 10000 : 1500);
+    return () => clearTimeout(t);
+  }, [saveStatus, lastChangeTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePublish = async () => {
     if (publishSaving) return;
     setPublishSaving(true);
     try {
-      // Save first — never publish stale draft state
-      if (saveStatus === 'dirty' || saveStatus === 'error') {
-        await new Promise((resolve, reject) => {
-          const prev = saveStatus;
-          setSaveStatus('saving');
-          api.put(`/web/${pageSlug}`, {
-            header,
-            footer,
-            sections: sections.map((sec, sIdx) => ({
-              ...sec,
-              order: sIdx,
-              blocks: (sec.blocks || []).map((b, bIdx) => ({ ...b, order: bIdx })),
-            })),
-          })
-            .then(({ data }) => {
-              setPageData(data);
-              setLastSavedAt(new Date());
-              setSaveStatus('clean');
-              resolve();
-            })
-            .catch((err) => {
-              console.error('Failed to save before publish:', err);
-              setSaveStatus('error');
-              reject(err);
-            });
-          void prev;
-        });
-      }
+      // Save first (waits for any in-flight save) — never publish stale drafts
+      await saveNow();
       await api.post(`/web/${pageSlug}/publish`);
       setHasPublishedSnapshot(true);
       setIsPublished(true);
@@ -236,114 +336,114 @@ export default function WebEditor() {
     }
   };
 
+  // Mode switches are instant: the old View Transition + 320ms slide-in left
+  // the canvas unclickable (and moving) for ~1s after pressing Edit.
   const transitionToViewMode = useCallback((nextMode) => {
-    if (nextMode === viewMode) return;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    setTransitionDirection(nextMode === 'edit' ? 'enter' : 'exit');
-    setIsExiting(false);
-    if (document.startViewTransition && !prefersReducedMotion) {
-      document.startViewTransition(() => setViewMode(nextMode));
-      return;
-    }
     setViewMode(nextMode);
-  }, [viewMode]);
+  }, []);
 
+  // Exit = make sure everything is saved, then back to the Pages list.
+  // (No "discard" step: edits autosave as a draft; undo and version history
+  // cover mistakes, and nothing goes live until Publish.)
   const handleExitEdit = async () => {
-    // Confirm before discarding unsaved changes
-    if (saveStatus === 'dirty' || saveStatus === 'error') {
+    try {
+      await saveNow();
+    } catch {
       const ok = await confirmDialog({
-        title: 'Exit without saving?',
-        message: 'You have unsaved changes that will be lost when you exit edit mode.',
-        confirmLabel: 'Exit without saving',
-        cancelLabel: 'Stay and save',
+        title: "Couldn't save your latest changes",
+        message: 'Your most recent edits could not be saved. Leave anyway and lose them?',
+        confirmLabel: 'Leave without saving',
+        cancelLabel: 'Stay',
         variant: 'warning',
       });
       if (!ok) return;
-      // Reset save status since the user explicitly chose to discard
-      setSaveStatus('clean');
     }
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      transitionToViewMode('live');
-      return;
-    }
-    setTransitionDirection('exit');
-    setIsExiting(true);
-    setTimeout(() => {
-      setViewMode('live');
-      setIsExiting(false);
-    }, 320);
+    navigate('/hub-admin/web/pages');
+  };
+
+  const applyHistoryEntry = (state) => {
+    setSections(state.sections);
+    if (state.header) setHeader(state.header);
+    if (state.footer) setFooter(state.footer);
+    markDirty();
+    // Drop selected blocks that no longer exist in the restored state
+    setSelectedBlockIds((prev) => {
+      if (prev.size === 0) return prev;
+      const allBlockIds = new Set((state.sections || []).flatMap((s) => (s.blocks || []).map((b) => b.id)));
+      const surviving = new Set([...prev].filter((id) => allBlockIds.has(id)));
+      return surviving.size === prev.size ? prev : surviving;
+    });
   };
 
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      const state = history[newIndex];
-      setHistoryIndex(newIndex);
-      setSections(state.sections);
-      setHeader(state.header || header);
-      setFooter(state.footer || footer);
-      setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
-      // Clear selection if selected blocks no longer exist in the restored state
-      if (selectedBlockIds.size > 0) {
-        const allBlockIds = new Set((state.sections || []).flatMap((s) => (s.blocks || []).map((b) => b.id)));
-        const surviving = new Set([...selectedBlockIds].filter((id) => allBlockIds.has(id)));
-        if (surviving.size !== selectedBlockIds.size) setSelectedBlockIds(surviving);
-      }
-    }
+    flushPendingHistory();
+    const h = historyRef.current;
+    if (h.index <= 0) return;
+    h.index -= 1;
+    syncHistoryState();
+    applyHistoryEntry(h.entries[h.index]);
   };
 
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      const state = history[newIndex];
-      setHistoryIndex(newIndex);
-      setSections(state.sections);
-      setHeader(state.header || header);
-      setFooter(state.footer || footer);
-      setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
-      // Clear selection if selected blocks no longer exist in the restored state
-      if (selectedBlockIds.size > 0) {
-        const allBlockIds = new Set((state.sections || []).flatMap((s) => (s.blocks || []).map((b) => b.id)));
-        const surviving = new Set([...selectedBlockIds].filter((id) => allBlockIds.has(id)));
-        if (surviving.size !== selectedBlockIds.size) setSelectedBlockIds(surviving);
-      }
-    }
+    flushPendingHistory();
+    const h = historyRef.current;
+    if (h.index >= h.entries.length - 1) return;
+    h.index += 1;
+    syncHistoryState();
+    applyHistoryEntry(h.entries[h.index]);
   };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Only handle shortcuts when not typing in input fields
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') {
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+      // Ctrl/Cmd + S: Save — works everywhere, including while typing
+      // (otherwise the browser's "Save page" dialog opens).
+      if (mod && key === 's') {
+        e.preventDefault();
+        saveRef.current();
         return;
       }
 
-      // Ctrl/Cmd + S: Save
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        saveRef.current();
-      }
+      // Text entry keeps its native undo, arrows, Delete, etc.
+      if (isTextEntryTarget(e.target)) return;
 
-      // Ctrl/Cmd + Z: Undo
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      // Ctrl/Cmd + Z: Undo · Ctrl/Cmd + Shift + Z or Ctrl + Y: Redo
+      if (mod && key === 'z') {
         e.preventDefault();
-        handleUndo();
+        if (e.shiftKey) handleRedo(); else handleUndo();
+        return;
       }
-
-      // Ctrl/Cmd + Shift + Z: Redo
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+      if (mod && key === 'y') {
         e.preventDefault();
         handleRedo();
+        return;
       }
 
-      // Escape: Close modals/dropdowns
+      // Escape: close pickers, otherwise walk the selection up one level
+      // (text editing → block is handled by the text field itself;
+      //  block → its section → nothing).
       if (e.key === 'Escape') {
-        setBlockPaletteTarget(null);
-        setAddSectionAfterIndex(null);
+        if (blockPaletteTarget || addSectionAfterIndex !== null) {
+          setBlockPaletteTarget(null);
+          setAddSectionAfterIndex(null);
+        } else if (selectedBlockIds.size > 0) {
+          const sIdx = sections.findIndex((sec) => (sec.blocks || []).some((b) => selectedBlockIds.has(b.id)));
+          if (sIdx >= 0) selectSection(sIdx); else clearSelection();
+        } else if (selectedSectionIndex !== null) {
+          clearSelection();
+        }
+        return;
       }
+
+      // Single-key shortcuts below must not fire while a button, menu or
+      // dialog has focus (e.g. Delete on a focused <select> deleted the block).
+      if (isTypingTarget(e.target)) return;
 
       // Arrow keys: Nudge selected block(s) by 1 grid cell (Shift = 3 cells)
-      if (selectedBlockIds.size > 0 && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      // (desktop grid only — phone layouts are usually auto-stacked)
+      if (selectedBlockIds.size > 0 && viewport !== 'mobile' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
         e.preventDefault();
         const step = e.shiftKey ? 3 : 1;
         const isMobile = viewport === 'mobile';
@@ -382,19 +482,19 @@ export default function WebEditor() {
       }
 
       // Ctrl/Cmd + P: Preview
-      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+      if (mod && key === 'p') {
         e.preventDefault();
         window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank');
       }
 
       // + : Add section
-      if (e.key === '+') {
+      if (e.key === '+' && !mod) {
         e.preventDefault();
         setAddSectionAfterIndex(sections.length - 1);
       }
 
       // ?: Show keyboard shortcuts
-      if (e.key === '?' && !e.shiftKey) {
+      if (e.key === '?' && !mod) {
         e.preventDefault();
         setShowKeyboardHelp(true);
       }
@@ -402,52 +502,55 @@ export default function WebEditor() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [history, historyIndex, sections, selectedBlockIds, header, footer, viewport]);
+  }, [sections, selectedBlockIds, selectedSectionIndex, blockPaletteTarget, addSectionAfterIndex, header, footer, viewport]);
 
-  const MAX_HISTORY = 50; // Bound history to prevent memory growth
   const saveToHistory = (newSections, newHeader, newFooter) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push({ sections: newSections, header: newHeader, footer: newFooter });
-    // Bound: drop oldest entries if exceeding MAX_HISTORY
-    while (newHistory.length > MAX_HISTORY) newHistory.shift();
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+    flushPendingHistory(); // keep typing entries ordered before this one
+    pushHistoryEntry({ sections: newSections, header: newHeader, footer: newFooter });
     setLastChangeTime(Date.now());
     // Mark unsaved — but don't overwrite an in-flight saving/error status
-    setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
+    markDirty();
   };
 
   // Debounced history commit for typing — groups rapid contentEditable
-  // changes into a single history entry per ~800ms idle interval.
-  const pendingHistoryRef = useRef(null);
-  const saveToHistoryDebounced = useCallback((newSections, newHeader, newFooter) => {
+  // changes into one history entry after ~800ms of idle.
+  const saveToHistoryDebounced = (newSections, newHeader, newFooter) => {
     // Update state immediately, but defer the history push
     setSections(newSections);
     setLastChangeTime(Date.now());
-    setSaveStatus((s) => (s === 'saving' ? s : 'dirty'));
-    // Store the latest state; the timeout will commit it
+    markDirty();
     pendingHistoryRef.current = { sections: newSections, header: newHeader, footer: newFooter };
-    if (!window.__webEditorHistoryTimer) {
-      window.__webEditorHistoryTimer = setTimeout(() => {
-        if (pendingHistoryRef.current) {
-          const { sections: s, header: h, footer: f } = pendingHistoryRef.current;
-          pendingHistoryRef.current = null;
-          saveToHistory(s, h, f);
-        }
-        window.__webEditorHistoryTimer = null;
-      }, 800);
-    }
-  }, [history, historyIndex]);
+    clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = setTimeout(flushPendingHistory, 800);
+  };
 
   // —— Section-level operations ————————————————————————————————————————————————
 
-  const addSection = (sectionConfig, afterIndex) => {
-    const newSection = createSection(sectionConfig);
+  // Newly inserted blocks fit themselves to their content once rendered
+  // (FluidBlock autoFit). Tracked briefly by id; loading a page never fits.
+  const justAddedRef = useRef(new Set());
+  const markJustAdded = (ids) => {
+    ids.forEach((id) => justAddedRef.current.add(id));
+    setTimeout(() => ids.forEach((id) => justAddedRef.current.delete(id)), 1500);
+  };
+  const isJustAdded = useCallback((id) => justAddedRef.current.has(id), []);
+
+  /** Bring a freshly inserted block/section into view. */
+  const revealAfterRender = (selector) => {
+    setTimeout(() => document.querySelector(selector)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
+  };
+
+  /** Insert a ready-made section (from the section picker) after `afterIndex`. */
+  const addSectionFromTemplate = (template, afterIndex) => {
+    const newSection = sectionFromTemplate(template);
     const insertAt = afterIndex == null ? sections.length : afterIndex + 1;
     const newSections = [...sections.slice(0, insertAt), newSection, ...sections.slice(insertAt)];
+    markJustAdded(newSection.blocks.map((b) => b.id));
     setSections(newSections);
     saveToHistory(newSections, header, footer);
     setAddSectionAfterIndex(null);
+    selectSection(insertAt);
+    revealAfterRender(`[role="group"][aria-label^="Section ${insertAt + 1}"]`);
   };
 
   const deleteSection = (sIdx) => {
@@ -456,18 +559,25 @@ export default function WebEditor() {
     const newSections = sections.filter((_, i) => i !== sIdx);
     setSections(newSections);
     saveToHistory(newSections, header, footer);
-    // Undo toast — restore the section at its original position
+    // Undo toast — same as Ctrl+Z when nothing else changed since the delete,
+    // otherwise re-insert the section at its original position.
+    const deleteEntryIndex = historyRef.current.index;
     toast('Section deleted', {
       type: 'info',
       duration: 6000,
       action: {
         label: 'Undo',
         onClick: () => {
-          setSections((prev) => {
-            const restored = [...prev.slice(0, sIdx), deletedSection, ...prev.slice(sIdx)];
-            saveToHistory(restored, header, footer);
-            return restored;
-          });
+          flushPendingHistory();
+          if (historyRef.current.index === deleteEntryIndex) {
+            handleUndo();
+          } else {
+            const latest = historyRef.current.entries[historyRef.current.index];
+            const base = latest?.sections ?? [];
+            const restored = [...base.slice(0, sIdx), deletedSection, ...base.slice(sIdx)];
+            setSections(restored);
+            saveToHistory(restored, latest?.header ?? header, latest?.footer ?? footer);
+          }
           setAnnouncement('Section restored');
         },
       },
@@ -506,13 +616,51 @@ export default function WebEditor() {
     saveToHistory(newSections, header, footer);
   };
 
-  const addBlockToSection = (sIdx, type) => {
-    const sec = sections[sIdx];
+  /**
+   * Add a block from the block picker. `row` null → bottom of the section;
+   * otherwise (dropped on the page) it goes in at that row and blocks at or
+   * below it move down to make room — never on top of another block.
+   */
+  const addBlockToSection = (sIdx, type, row = null) => {
+    let targetIdx = sIdx;
+    let workingSections = sections;
+    if (!sections[targetIdx]) {
+      // No sections yet — create a blank one to hold the block.
+      const blank = createSection({ fluidConfig: { ...DEFAULT_SECTION.fluidConfig } });
+      workingSections = [...sections, blank];
+      targetIdx = workingSections.length - 1;
+    }
+    const sec = workingSections[targetIdx];
+    const blocks = sec.blocks || [];
     const gridColumns = sec.fluidConfig?.gridColumns || 24;
-    const fluid = autoStackFluid(sec.blocks || [], gridColumns);
-    const newBlock = createBlock(type, { fluid });
-    updateSectionBlocks(sIdx, [...(sec.blocks || []), newBlock]);
+    const rows = blockCatalogEntry(type)?.rows ?? 2;
+    let newBlocks;
+    let newBlock;
+    if (row == null) {
+      newBlock = createBlock(type, { fluid: autoStackFluid(blocks, gridColumns, rows) });
+      newBlocks = [...blocks, newBlock];
+    } else {
+      // Don't split a block: if the row is inside one, insert below it.
+      const at = blocks.reduce((r, b) => {
+        const f = b.fluid || {};
+        return (f.rowStart < r && f.rowEnd > r) ? Math.max(r, f.rowEnd) : r;
+      }, row);
+      newBlock = createBlock(type, { fluid: { colStart: 1, colEnd: gridColumns + 1, rowStart: at, rowEnd: at + rows, zIndex: 0 } });
+      newBlocks = [
+        ...blocks.map((b) => {
+          const f = b.fluid || {};
+          return f.rowStart >= at ? { ...b, fluid: { ...f, rowStart: f.rowStart + rows, rowEnd: f.rowEnd + rows } } : b;
+        }),
+        newBlock,
+      ];
+    }
+    const newSections = workingSections.map((s, i) => (i === targetIdx ? { ...s, blocks: newBlocks } : s));
+    markJustAdded([newBlock.id]);
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
     setBlockPaletteTarget(null);
+    handleSelectBlock(newBlock.id);
+    revealAfterRender(`[data-block-id="${newBlock.id}"]`);
   };
 
   const updateBlock = (sIdx, bIdx, updates) => {
@@ -537,19 +685,29 @@ export default function WebEditor() {
     const deletedBlock = sec?.blocks?.[bIdx];
     if (!deletedBlock) return;
     updateSectionBlocks(sIdx, (sec.blocks || []).filter((_, i) => i !== bIdx));
-    // Undo toast — restore the block at its original position
+    // Undo toast — same as Ctrl+Z when nothing else changed since the delete,
+    // otherwise re-insert the block at its original position.
+    const deleteEntryIndex = historyRef.current.index;
     toast('Block deleted', {
       type: 'info',
       duration: 6000,
       action: {
         label: 'Undo',
         onClick: () => {
-          setSections((prev) => prev.map((s, i) => {
-            if (i !== sIdx) return s;
-            const restoredBlocks = [...(s.blocks || []).slice(0, bIdx), deletedBlock, ...(s.blocks || []).slice(bIdx)];
-            saveToHistory(prev.map((s2, j) => j === sIdx ? { ...s2, blocks: restoredBlocks } : s2), header, footer);
-            return { ...s, blocks: restoredBlocks };
-          }));
+          flushPendingHistory();
+          if (historyRef.current.index === deleteEntryIndex) {
+            handleUndo();
+          } else {
+            const latest = historyRef.current.entries[historyRef.current.index];
+            const base = latest?.sections ?? [];
+            const restored = base.map((s, i) => {
+              if (i !== sIdx) return s;
+              const blocks = s.blocks || [];
+              return { ...s, blocks: [...blocks.slice(0, bIdx), deletedBlock, ...blocks.slice(bIdx)] };
+            });
+            setSections(restored);
+            saveToHistory(restored, latest?.header ?? header, latest?.footer ?? footer);
+          }
           setAnnouncement('Block restored');
         },
       },
@@ -660,7 +818,7 @@ export default function WebEditor() {
     };
 
     return (
-      <div className={`min-h-screen bg-surface ${transitionDirection === 'enter' ? 'editor-stage-live-exit' : transitionDirection === 'exit' ? 'editor-stage-live-enter' : ''}`} style={{ viewTransitionName: 'editor-stage' }}>
+      <div className="min-h-screen bg-surface">
         {/* Minimal live view toolbar */}
         <div className="bg-surface border-b border-border px-6 py-3 sticky top-0 z-40 shadow-sm">
           <div className="flex items-center justify-between">
@@ -671,7 +829,7 @@ export default function WebEditor() {
                 className="px-5 py-2 min-h-[40px] bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover flex items-center gap-2 transition-colors font-medium text-sm shadow-sm"
               >
                 <Edit3 className="w-4 h-4" />
-                Edit
+                Back to editor
               </button>
               {/* Publish status badge */}
               {hasPublishedSnapshot && isPublished && (
@@ -706,7 +864,7 @@ export default function WebEditor() {
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold"
               >
                 <Edit3 className="w-5 h-5" />
-                Start Editing
+                Back to editor
               </button>
             </div>
           ) : (
@@ -717,14 +875,40 @@ export default function WebEditor() {
     );
   }
 
+  // What the inspector shows: the first selected block, else the selected section.
+  const inspectorSelection = (() => {
+    const isMobileView = viewport === 'mobile';
+    if (selectedBlockIds.size > 0) {
+      for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+        const blocks = sections[sIdx].blocks || [];
+        const bIdx = blocks.findIndex((b) => selectedBlockIds.has(b.id));
+        if (bIdx >= 0) {
+          const columns = isMobileView ? MOBILE_GRID_COLUMNS : (sections[sIdx].fluidConfig?.gridColumns || 24);
+          const placement = isMobileView
+            ? mobilePlacements(blocks)[bIdx]
+            : { colStart: 1, colEnd: columns + 1, rowStart: 1, rowEnd: 3, zIndex: 0, ...(blocks[bIdx].fluid || {}) };
+          return {
+            kind: 'block', sIdx, bIdx, block: blocks[bIdx], placement, columns,
+            mobileAuto: isMobileView && isMobileAuto(blocks),
+          };
+        }
+      }
+    }
+    if (selectedSectionIndex !== null && sections[selectedSectionIndex]) {
+      return { kind: 'section', sIdx: selectedSectionIndex, section: sections[selectedSectionIndex] };
+    }
+    return null;
+  })();
+
   // ── Edit mode: full-screen overlay editor ──────────────────────────────
   return (
-    <div className={`fixed inset-0 z-[100] bg-surface-raised overflow-y-auto ${isExiting ? 'editor-stage-edit-exit' : 'editor-stage-edit-enter'}`} style={{ viewTransitionName: 'editor-stage' }}>
+    <div className="fixed inset-0 z-[100] bg-surface-raised overflow-y-auto">
       <EditorToolbar
         saveStatus={saveStatus}
         lastSavedAt={lastSavedAt}
         saveRef={saveRef}
         onExit={handleExitEdit}
+        onPreview={() => transitionToViewMode('live')}
         pageTitle={pageData?.title}
         pageSlug={pageSlug}
         hasPublishedSnapshot={hasPublishedSnapshot}
@@ -745,8 +929,8 @@ export default function WebEditor() {
         }}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
+        canUndo={historyRef.current.index > 0 || !!pendingHistoryRef.current}
+        canRedo={historyRef.current.index < historyRef.current.entries.length - 1}
         onPublish={handlePublish}
         publishSaving={publishSaving}
         onSaveTemplate={async () => {
@@ -775,35 +959,40 @@ export default function WebEditor() {
         <WebVersionHistoryPanel
           slug={pageSlug}
           onClose={() => setShowVersionHistory(false)}
-          onRestored={(restoredPage) => {
-            // Restore from version history — marks dirty so user can save
-            const restoredSections = restoredPage?.sections || [];
-            setSections(restoredSections);
-            setHeader(restoredPage?.header || header);
-            setFooter(restoredPage?.footer || footer);
-            setShowVersionHistory(false);
-            setSaveStatus('dirty');
-            // Reset history so the restored state is the new baseline
-            setHistory([{ sections: restoredSections, header: restoredPage?.header || {}, footer: restoredPage?.footer || {} }]);
-            setHistoryIndex(0);
-          }}
           onRestored={(page) => {
-            const restoredSections = page.sections || [];
-            const restoredHeader = page.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} };
-            const restoredFooter = page.footer || { sections: [], copyright: '', styles: {} };
-            setPageData(page);
-            setSections(restoredSections);
-            setHeader(restoredHeader);
-            setFooter(restoredFooter);
-            setHistory([{ sections: restoredSections, header: restoredHeader, footer: restoredFooter }]);
-            setHistoryIndex(0);
+            // The server has already restored this version, so it's the new
+            // saved baseline (not dirty) and the new undo starting point.
+            const restored = {
+              sections: page?.sections || [],
+              header: page?.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} },
+              footer: page?.footer || { sections: [], copyright: '', styles: {} },
+            };
+            if (page) setPageData((prev) => ({ ...page, siteStyle: page.siteStyle ?? prev?.siteStyle, nav: page.nav ?? prev?.nav }));
+            setSections(restored.sections);
+            setHeader(restored.header);
+            setFooter(restored.footer);
+            savedSnapshotRef.current = restored;
+            savedSeqRef.current = changeSeqRef.current; // server already has it
+            resetHistory(restored);
+            setSelectedBlockIds(new Set());
+            setSaveStatus('clean');
             setLastChangeTime(0);
+            setShowVersionHistory(false);
           }}
         />
       )}
 
       {/* Main editor area — sections + optional layers panel */}
       <div className="flex min-h-screen">
+        {/* Add-block panel (docked so blocks can be dragged onto the page) */}
+        {blockPaletteTarget !== null && (
+          <BlockPicker
+            targetSectionIndex={blockPaletteTarget.sectionIndex}
+            sectionCount={sections.length}
+            onAdd={(type, sIdx, row) => addBlockToSection(sIdx, type, row)}
+            onClose={() => setBlockPaletteTarget(null)}
+          />
+        )}
         {showLayersPanel && (
           <LayersPanel
             sections={sections}
@@ -826,16 +1015,22 @@ export default function WebEditor() {
           <div className={`min-h-screen ${(previewDevice !== 'desktop' || viewport === 'mobile') ? 'py-8' : ''}`}>
             <div className={`${deviceClasses[previewDevice]} min-h-screen bg-surface ${previewDevice !== 'desktop' ? 'rounded-xl overflow-hidden' : ''} ${viewport === 'mobile' ? 'max-w-md mx-auto border-x-4 border-border shadow-dropdown' : ''}`}>
 
-              {/* ── Fluid Engine canvas ───────────────────────────────────────
-                  Each section is a 24-column CSS Grid. Blocks are positioned
-                  via grid coordinates (colStart/colEnd/rowStart/rowEnd) and
-                  can be freely dragged, resized, and layered (zIndex).
-                  Press "G" to toggle the grid overlay.
+              {/* ── Layout grid canvas ────────────────────────────────────────
+                  Rendered inside the real site theme (.public-site) with the
+                  same block components as the published page, so what you
+                  edit is what visitors see. Each section is a 24-column CSS
+                  grid; blocks are dragged/resized on it. Press "G" to toggle
+                  the grid overlay. Editor chrome opts back into admin styling
+                  with .site-editor-chrome.
               */}
+              <div className="public-site site-editor min-h-screen bg-surface text-text-base" style={siteThemeStyle(siteTokens)}>
+              <SiteFrame label="Header" note="Shared across all pages">
+                <SiteHeader pageData={{ ...pageData, header, footer }} currentPath={pageSlug === 'home' ? '/' : `/${pageSlug}`} sticky={false} />
+              </SiteFrame>
 
               {/* Empty state */}
               {sections.length === 0 && (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+                <div className="site-editor-chrome flex flex-col items-center justify-center min-h-[60vh] gap-6">
                   <div className="w-20 h-20 rounded-2xl bg-primary-light flex items-center justify-center">
                     <Rows3 className="w-10 h-10 text-primary" />
                   </div>
@@ -859,6 +1054,10 @@ export default function WebEditor() {
                   key={section.id || sIdx}
                   section={section}
                   sectionIndex={sIdx}
+                  selected={selectedSectionIndex === sIdx}
+                  onSelectSection={selectSection}
+                  onOpenInspector={() => setInspectorOpen(true)}
+                  isLastSection={sIdx === sections.length - 1}
                   selectedBlockIds={selectedBlockIds}
                   onSelectBlock={handleSelectBlock}
                   onClearSelection={clearSelection}
@@ -868,14 +1067,13 @@ export default function WebEditor() {
                   onDeleteBlock={deleteBlock}
                   onDuplicateBlock={duplicateBlock}
                   onAddBlock={(sIdx) => setBlockPaletteTarget({ sectionIndex: sIdx })}
+                  onDropBlock={(sIdx, type, row) => addBlockToSection(sIdx, type, row)}
+                  isJustAdded={isJustAdded}
                   onDeleteSection={deleteSection}
                   onDuplicateSection={duplicateSection}
                   onMoveSectionUp={(i) => moveSection(i, -1)}
                   onMoveSectionDown={(i) => moveSection(i, 1)}
                   onAddSectionBelow={(i) => setAddSectionAfterIndex(i)}
-                  EditableText={EditableText}
-                  EditableButton={EditableButton}
-                  EditableImage={EditableImage}
                   onAddNestedBlock={(sIdx, bIdx, colIndex, type) => addNestedBlock(sIdx, bIdx, colIndex, type)}
                   readOnly={false}
                   viewport={viewport}
@@ -884,7 +1082,7 @@ export default function WebEditor() {
 
               {/* Bottom add-section hint */}
               {sections.length > 0 && (
-                <div className="py-8 text-center">
+                <div className="site-editor-chrome py-8 text-center">
                   <button
                     onClick={() => setAddSectionAfterIndex(sections.length - 1)}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-surface-raised border border-border text-muted hover:text-primary hover:border-primary rounded-xl transition-colors"
@@ -898,45 +1096,37 @@ export default function WebEditor() {
                 </div>
               )}
 
-
+              <SiteFrame label="Footer" note="Shared across all pages">
+                <SiteFooter pageData={{ ...pageData, header, footer }} />
+              </SiteFrame>
+              </div>
             </div>
           </div>
         </div>
-        {/* Mobile layout inspector — shown when in mobile viewport with a selected block */}
-        {viewport === 'mobile' && selectedBlockIds.size > 0 && (() => {
-          // Find the first selected block and its section index
-          for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-            const sec = sections[sIdx];
-            if (!sec?.blocks) continue;
-            for (let bIdx = 0; bIdx < sec.blocks.length; bIdx++) {
-              if (selectedBlockIds.has(sec.blocks[bIdx].id)) {
-                const block = sec.blocks[bIdx];
-                return (
-                  <MobileLayoutInspector
-                    block={block}
-                    onUpdate={(fluidMobile) => updateSectionBlocks(sIdx, (blocks) => blocks.map((b, i) => i === bIdx ? { ...b, fluidMobile } : b))}
-                    onClose={() => setSelectedBlockIds(new Set())}
-                    onMoveUp={() => moveBlock(sIdx, bIdx, -1)}
-                    onMoveDown={() => moveBlock(sIdx, bIdx, 1)}
-                    canMoveUp={bIdx > 0}
-                    canMoveDown={bIdx < (sec.blocks.length - 1)}
-                  />
-                );
-              }
-            }
-          }
-          return null;
-        })()}
+        {/* Inspector — settings for the selected block or section */}
+        {inspectorOpen && (
+          <EditorInspector
+            selection={inspectorSelection}
+            isMobile={viewport === 'mobile'}
+            onUpdateBlockContent={updateBlockContent}
+            onUpdateBlock={updateBlock}
+            onUpdateSection={updateSection}
+            onClose={() => setInspectorOpen(false)}
+          />
+        )}
       </div>
 
-      {/* Dialogs (Add Section, Add Block, Keyboard Help) */}
+      {/* Add-section picker (ready-made sections) */}
+      {addSectionAfterIndex !== null && (
+        <SectionPicker
+          siteTokens={siteTokens}
+          onAdd={(template) => addSectionFromTemplate(template, addSectionAfterIndex)}
+          onClose={() => setAddSectionAfterIndex(null)}
+        />
+      )}
+
+      {/* Keyboard shortcuts help */}
       <EditorDialogs
-        addSectionAfterIndex={addSectionAfterIndex}
-        onAddSection={addSection}
-        onCloseAddSection={() => setAddSectionAfterIndex(null)}
-        blockPaletteTarget={blockPaletteTarget}
-        onAddBlock={addBlockToSection}
-        onCloseBlockPalette={() => setBlockPaletteTarget(null)}
         showKeyboardHelp={showKeyboardHelp}
         onCloseKeyboardHelp={() => setShowKeyboardHelp(false)}
       />

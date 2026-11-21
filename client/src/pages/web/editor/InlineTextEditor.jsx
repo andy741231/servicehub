@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Undo2, Redo2, Bold, Italic, Underline as UnderlineIcon, Strikethrough,
-  List, ListOrdered, Quote, Code, AlignLeft, AlignCenter, AlignRight,
-  Link2, Image as ImageIcon,
+  List, ListOrdered, Quote, AlignLeft, AlignCenter, AlignRight,
+  Link2, Unlink, RemoveFormatting, Check,
 } from 'lucide-react';
 
 /**
@@ -39,9 +38,15 @@ export default function InlineTextEditor({
   multiline = false,
   tag = 'span',
   minHeight,
+  // 'full'   — text blocks: paragraph/headings, lists, quote, alignment + inline
+  // 'inline' — titles, subtitles: bold/italic/underline/strike, link, clear
+  // 'none'   — plain fields (dates, numbers, labels): no formatting at all
+  toolbar = multiline ? 'full' : 'inline',
 }) {
+  const plainOnly = toolbar === 'none';
   const ref = useRef(null);
   const toolbarRef = useRef(null);
+  const linkOpenRef = useRef(false); // link URL form open in the toolbar
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0, flip: false });
   const [activeFormats, setActiveFormats] = useState({});
@@ -66,7 +71,13 @@ export default function InlineTextEditor({
     setTimeout(() => computePositionRef.current?.(), 0);
   }, [onEditingStart]);
 
+  // True once the user has changed the text in the current focus session.
+  // Blur-time cleanup only runs then, so merely clicking in and out of a
+  // field never rewrites stored content.
+  const editedRef = useRef(false);
+
   const handleInput = useCallback((e) => {
+    editedRef.current = true;
     const el = e.currentTarget;
     // Browsers leave a <br> after deleting all text, which prevents the
     // :empty CSS placeholder from showing. Strip it so the placeholder
@@ -82,6 +93,11 @@ export default function InlineTextEditor({
   // Escape also commits and blurs, matching builder-mockup.html's spec
   // ("Click outside or press Esc to commit and exit").
   const handleKeyDown = useCallback((e) => {
+    // Plain fields store text only — formatting would be silently dropped.
+    if (plainOnly && (e.ctrlKey || e.metaKey) && ['b', 'i', 'u'].includes(e.key.toLowerCase())) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'Enter' && !multiline) {
       e.preventDefault();
       ref.current?.blur();
@@ -89,7 +105,7 @@ export default function InlineTextEditor({
       e.preventDefault();
       ref.current?.blur();
     }
-  }, [multiline]);
+  }, [multiline, plainOnly]);
 
   // Strip <br>/<div> that browsers may have inserted when the field is
   // supposed to be single-line (e.g. from a paste or a prior multiline
@@ -105,13 +121,12 @@ export default function InlineTextEditor({
   }, [multiline]);
 
   const handlePaste = useCallback((e) => {
-    // Allow paste, then sanitize line breaks for single-line fields on the
-    // next tick (after the browser has inserted the pasted content).
-    if (multiline) return;
+    // Single-line and plain fields paste as plain text.
+    if (multiline && !plainOnly) return;
     e.preventDefault();
     const text = (e.clipboardData || window.clipboardData).getData('text/plain');
     document.execCommand('insertText', false, text);
-  }, [multiline]);
+  }, [multiline, plainOnly]);
 
   const handleBlurSanitize = useCallback((e) => {
     // Don't exit editing if focus is moving to a toolbar control — the
@@ -119,16 +134,19 @@ export default function InlineTextEditor({
     // focused, but a <select>/<input> for link URL would steal focus.
     const next = e.relatedTarget;
     if (next?.closest?.('[data-inline-toolbar="1"]')) {
+      // Typing a link URL in the toolbar: stay in this editing session.
+      if (next.tagName === 'INPUT') return;
       ref.current?.focus();
       return;
     }
     const el = e.currentTarget;
-    if (!multiline) {
+    if (!multiline && editedRef.current) {
       const before = el.innerHTML;
       stripLineBreaks(el);
       const after = el.innerHTML;
       if (after !== before) onChange?.(after);
     }
+    editedRef.current = false;
     onEditingEnd?.(e);
     setVisible(false);
   }, [multiline, stripLineBreaks, onChange, onEditingEnd]);
@@ -205,6 +223,8 @@ export default function InlineTextEditor({
   }, [updateActiveFormats]);
 
   const computePosition = useCallback(() => {
+    if (plainOnly) { setVisible(false); return; }
+    if (linkOpenRef.current) return; // selection is in the link input
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) {
       setVisible(false);
@@ -244,7 +264,7 @@ export default function InlineTextEditor({
     }
 
     positionToolbarAtRect(rect);
-  }, [updateActiveFormats, positionToolbarAtRect]);
+  }, [updateActiveFormats, positionToolbarAtRect, plainOnly]);
 
   // Keep a ref to computePosition so handleFocus (defined above) can call it
   // without creating a circular dependency.
@@ -317,27 +337,59 @@ export default function InlineTextEditor({
     return null;
   };
 
-  const handleLink = useCallback(() => {
-    const url = window.prompt('Enter link URL (https://, mailto:, or relative):', 'https://');
-    if (!url) return;
-    const safe = sanitizeUrl(url);
+  // ── Links (inline form in the toolbar, no browser prompt) ─────────────
+  const savedRangeRef = useRef(null);
+  const [link, setLink] = useState(null); // null | { href, error, existing }
+  const restoreSelection = () => {
+    const range = savedRangeRef.current;
+    if (!range) return;
+    ref.current?.focus();
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+  const closeLink = () => {
+    linkOpenRef.current = false;
+    setLink(null);
+    restoreSelection();
+  };
+  const openLink = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!ref.current?.contains(range.commonAncestorContainer)) return;
+    savedRangeRef.current = range.cloneRange();
+    const container = range.commonAncestorContainer;
+    const node = container.nodeType === 1 ? container : container.parentElement;
+    const existing = node?.closest?.('a');
+    const inThis = !!existing && ref.current.contains(existing);
+    linkOpenRef.current = true;
+    setLink({ href: inThis ? existing.getAttribute('href') || '' : '', error: null, existing: inThis });
+  }, []);
+  const applyLink = () => {
+    const safe = sanitizeUrl(link?.href || '');
     if (!safe) {
-      window.alert('Invalid URL. Only http://, https://, mailto:, tel:, or relative URLs are allowed.');
+      setLink((l) => ({ ...l, error: 'Use https://…, /page, mailto: or tel:' }));
       return;
     }
-    exec('createLink', safe);
-  }, [exec]);
-
-  const handleImage = useCallback(() => {
-    const url = window.prompt('Enter image URL (https:// or relative):', 'https://');
-    if (!url) return;
-    const safe = sanitizeUrl(url);
-    if (!safe) {
-      window.alert('Invalid URL. Only http://, https://, or relative URLs are allowed.');
-      return;
+    linkOpenRef.current = false;
+    setLink(null);
+    restoreSelection();
+    const sel = window.getSelection();
+    if (sel && sel.isCollapsed) {
+      // Nothing selected: insert the URL itself as the link text.
+      const esc = safe.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      exec('insertHTML', `<a href="${esc}">${esc}</a>`);
+    } else {
+      exec('createLink', safe);
     }
-    exec('insertImage', safe);
-  }, [exec]);
+  };
+  const removeLink = () => {
+    linkOpenRef.current = false;
+    setLink(null);
+    restoreSelection();
+    exec('unlink');
+  };
 
   // ── Placeholder for empty content ───────────────────────────────────────
   // Use a CSS ::before via data attribute so we don't pollute the
@@ -365,14 +417,19 @@ export default function InlineTextEditor({
         onPaste={handlePaste}
         spellCheck={true}
       />
-      {visible && createPortal(
+      {visible && !plainOnly && createPortal(
         <Toolbar
           ref={toolbarRef}
+          variant={toolbar}
           position={position}
           activeFormats={activeFormats}
           onCommand={exec}
-          onLink={handleLink}
-          onImage={handleImage}
+          onLink={openLink}
+          link={link}
+          onLinkChange={(href) => setLink((l) => ({ ...l, href, error: null }))}
+          onLinkApply={applyLink}
+          onLinkRemove={removeLink}
+          onLinkCancel={closeLink}
         />,
         document.body,
       )}
@@ -381,8 +438,9 @@ export default function InlineTextEditor({
 }
 
 // ── Toolbar (dark, floating, arrow pointer — matches mockup) ───────────────
-const Toolbar = forwardRef(({ position, activeFormats, onCommand, onLink, onImage }, ref) => {
+const Toolbar = forwardRef(({ variant, position, activeFormats, onCommand, onLink, link, onLinkChange, onLinkApply, onLinkRemove, onLinkCancel }, ref) => {
   const { top, left, flip } = position;
+  const full = variant === 'full';
   return (
     <div
       ref={ref}
@@ -399,31 +457,60 @@ const Toolbar = forwardRef(({ position, activeFormats, onCommand, onLink, onImag
           : 'translate(-50%, -100%) translateY(-10px) scale(1)',
       }}
       data-flip={flip ? '1' : undefined}
-      onMouseDown={(e) => e.preventDefault()} // keep editor selection
+      // keep the editor's selection — except inside the link URL field
+      onMouseDown={(e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); }}
     >
-      <ToolbarButton title="Undo" onClick={() => onCommand('undo')}><Undo2 className="w-[15px] h-[15px]" /></ToolbarButton>
-      <ToolbarButton title="Redo" onClick={() => onCommand('redo')}><Redo2 className="w-[15px] h-[15px]" /></ToolbarButton>
-      <Divider />
-      <ToolbarTextButton title="Heading 1" active={activeFormats.formatBlock === 'h1'} onClick={() => onCommand('formatBlock', 'H1')}>H1</ToolbarTextButton>
-      <ToolbarTextButton title="Heading 2" active={activeFormats.formatBlock === 'h2'} onClick={() => onCommand('formatBlock', 'H2')}>H2</ToolbarTextButton>
-      <ToolbarTextButton title="Paragraph" active={activeFormats.formatBlock === 'p' || activeFormats.formatBlock === ''} onClick={() => onCommand('formatBlock', 'P')}>P</ToolbarTextButton>
-      <Divider />
-      <ToolbarTextButton title="Bold" active={activeFormats.bold} onClick={() => onCommand('bold')} style={{ fontWeight: 700 }}>B</ToolbarTextButton>
-      <ToolbarTextButton title="Italic" active={activeFormats.italic} onClick={() => onCommand('italic')} style={{ fontStyle: 'italic' }}>I</ToolbarTextButton>
-      <ToolbarTextButton title="Underline" active={activeFormats.underline} onClick={() => onCommand('underline')} style={{ textDecoration: 'underline' }}>U</ToolbarTextButton>
-      <ToolbarTextButton title="Strikethrough" active={activeFormats.strikeThrough} onClick={() => onCommand('strikeThrough')} style={{ textDecoration: 'line-through' }}>S</ToolbarTextButton>
-      <Divider />
-      <ToolbarButton title="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => onCommand('insertUnorderedList')}><List className="w-[15px] h-[15px]" /></ToolbarButton>
-      <ToolbarButton title="Numbered list" active={activeFormats.insertOrderedList} onClick={() => onCommand('insertOrderedList')}><ListOrdered className="w-[15px] h-[15px]" /></ToolbarButton>
-      <ToolbarButton title="Quote" active={activeFormats.formatBlock === 'blockquote'} onClick={() => onCommand('formatBlock', 'BLOCKQUOTE')}><Quote className="w-[15px] h-[15px]" /></ToolbarButton>
-      <ToolbarButton title="Code block" active={activeFormats.formatBlock === 'pre'} onClick={() => onCommand('formatBlock', 'PRE')}><Code className="w-[15px] h-[15px]" /></ToolbarButton>
-      <Divider />
-      <ToolbarButton title="Align left" active={activeFormats.justifyLeft && !activeFormats.justifyCenter && !activeFormats.justifyRight} onClick={() => onCommand('justifyLeft')}><AlignLeft className="w-[15px] h-[15px]" /></ToolbarButton>
-      <ToolbarButton title="Align center" active={activeFormats.justifyCenter} onClick={() => onCommand('justifyCenter')}><AlignCenter className="w-[15px] h-[15px]" /></ToolbarButton>
-      <ToolbarButton title="Align right" active={activeFormats.justifyRight} onClick={() => onCommand('justifyRight')}><AlignRight className="w-[15px] h-[15px]" /></ToolbarButton>
-      <Divider />
-      <ToolbarButton title="Link" onClick={onLink}><Link2 className="w-[15px] h-[15px]" /></ToolbarButton>
-      <ToolbarButton title="Image" onClick={onImage}><ImageIcon className="w-[15px] h-[15px]" /></ToolbarButton>
+      {link ? (
+        <div className="flex items-center gap-1.5 px-1" role="group" aria-label="Edit link">
+          <input
+            autoFocus
+            type="text"
+            value={link.href}
+            onChange={(e) => onLinkChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); onLinkApply(); }
+              if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onLinkCancel(); }
+            }}
+            placeholder="https://… or /page"
+            aria-label="Link URL"
+            aria-invalid={!!link.error}
+            className="w-56 px-2 py-1 rounded text-[13px] bg-white/10 text-white placeholder:text-white/50 outline-none focus:ring-1 focus:ring-white/40"
+          />
+          <ToolbarButton title="Apply link" onClick={onLinkApply}><Check className="w-[15px] h-[15px]" /></ToolbarButton>
+          {link.existing && <ToolbarButton title="Remove link" onClick={onLinkRemove}><Unlink className="w-[15px] h-[15px]" /></ToolbarButton>}
+          {link.error && <span className="text-[11px] text-red-300 whitespace-nowrap" role="alert">{link.error}</span>}
+        </div>
+      ) : (
+        <>
+          {full && (
+            <>
+              <ToolbarTextButton title="Paragraph" active={['p', '', 'div'].includes(activeFormats.formatBlock)} onClick={() => onCommand('formatBlock', 'P')}>P</ToolbarTextButton>
+              <ToolbarTextButton title="Heading" active={activeFormats.formatBlock === 'h2'} onClick={() => onCommand('formatBlock', 'H2')}>H2</ToolbarTextButton>
+              <ToolbarTextButton title="Subheading" active={activeFormats.formatBlock === 'h3'} onClick={() => onCommand('formatBlock', 'H3')}>H3</ToolbarTextButton>
+              <Divider />
+            </>
+          )}
+          <ToolbarTextButton title="Bold" active={activeFormats.bold} onClick={() => onCommand('bold')} style={{ fontWeight: 700 }}>B</ToolbarTextButton>
+          <ToolbarTextButton title="Italic" active={activeFormats.italic} onClick={() => onCommand('italic')} style={{ fontStyle: 'italic' }}>I</ToolbarTextButton>
+          <ToolbarTextButton title="Underline" active={activeFormats.underline} onClick={() => onCommand('underline')} style={{ textDecoration: 'underline' }}>U</ToolbarTextButton>
+          <ToolbarTextButton title="Strikethrough" active={activeFormats.strikeThrough} onClick={() => onCommand('strikeThrough')} style={{ textDecoration: 'line-through' }}>S</ToolbarTextButton>
+          {full && (
+            <>
+              <Divider />
+              <ToolbarButton title="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => onCommand('insertUnorderedList')}><List className="w-[15px] h-[15px]" /></ToolbarButton>
+              <ToolbarButton title="Numbered list" active={activeFormats.insertOrderedList} onClick={() => onCommand('insertOrderedList')}><ListOrdered className="w-[15px] h-[15px]" /></ToolbarButton>
+              <ToolbarButton title="Quote" active={activeFormats.formatBlock === 'blockquote'} onClick={() => onCommand('formatBlock', 'BLOCKQUOTE')}><Quote className="w-[15px] h-[15px]" /></ToolbarButton>
+              <Divider />
+              <ToolbarButton title="Align left" active={activeFormats.justifyLeft && !activeFormats.justifyCenter && !activeFormats.justifyRight} onClick={() => onCommand('justifyLeft')}><AlignLeft className="w-[15px] h-[15px]" /></ToolbarButton>
+              <ToolbarButton title="Align center" active={activeFormats.justifyCenter} onClick={() => onCommand('justifyCenter')}><AlignCenter className="w-[15px] h-[15px]" /></ToolbarButton>
+              <ToolbarButton title="Align right" active={activeFormats.justifyRight} onClick={() => onCommand('justifyRight')}><AlignRight className="w-[15px] h-[15px]" /></ToolbarButton>
+            </>
+          )}
+          <Divider />
+          <ToolbarButton title="Link" onClick={onLink}><Link2 className="w-[15px] h-[15px]" /></ToolbarButton>
+          <ToolbarButton title="Clear formatting" onClick={() => onCommand('removeFormat')}><RemoveFormatting className="w-[15px] h-[15px]" /></ToolbarButton>
+        </>
+      )}
     </div>
   );
 });

@@ -61,7 +61,13 @@ describe('createBlock', () => {
     expect(block.fluid.colStart).toBe(1);
     expect(block.fluid.colEnd).toBe(25);
     expect(block.fluid.rowStart).toBe(1);
-    expect(block.fluid.rowEnd).toBe(3);
+    // Starting height comes from the block catalog (text = 3 rows)
+    expect(block.fluid.rowEnd).toBe(4);
+  });
+
+  it('sizes new blocks by type from the catalog', () => {
+    expect(createBlock('hero').fluid.rowEnd - createBlock('hero').fluid.rowStart).toBe(6);
+    expect(createBlock('trust-bar').fluid.rowEnd - createBlock('trust-bar').fluid.rowStart).toBe(2);
   });
 });
 

@@ -1,24 +1,43 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
-  Plus, Settings as SettingsIcon, Copy, Trash2, MoveUp, MoveDown,
-  Layers, Pencil, LayoutGrid, Maximize2, Minimize2, ArrowUpDown,
+  Plus, Copy, Trash2, MoveUp, MoveDown,
+  SlidersHorizontal, Pencil, LayoutGrid, Maximize2, Minimize2, Smartphone, RotateCcw,
 } from 'lucide-react';
 import FluidBlock from './FluidBlock.jsx';
+import {
+  fluidGridMetrics, sectionBoxStyle, fluidSectionMinHeight, isMobileAuto, mobileAutoFlow,
+} from '../../../../site/SiteSections.jsx';
+
+const DEFAULT_CFG = {
+  gridColumns: 24,
+  rowHeight: 80,
+  gap: { horizontal: 8, vertical: 8 },
+  fillScreen: false,
+  minHeight: 320,
+  verticalAlignment: 'top',
+};
+
+const overlapsColumns = (a, b) => a.colStart < b.colEnd && b.colStart < a.colEnd;
 
 /**
- * FluidSection — a CSS Grid–based freeform layout container.
+ * FluidSection — one page section on the editor canvas.
  *
- * Each section has an invisible 24-column grid. Blocks are positioned
- * using grid coordinates (colStart/colEnd/rowStart/rowEnd) and can
- * overlap/layer via zIndex.
+ * Desktop (and customised mobile) layouts are a CSS grid: blocks sit at grid
+ * coordinates and are dragged/resized on it. A mobile layout nobody has
+ * customised is "auto": the same stacked flow the public site renders
+ * (src/site/SiteSections.jsx), shown read-only until the user chooses to
+ * customise it.
  *
- * The grid overlay appears while dragging/resizing a block, or when
- * the user holds the "G" key.
+ * Sizing/placement comes from the shared site layout helpers so blocks sit
+ * exactly where they will on the published page. Selection state is owned by
+ * WebEditor (the inspector shows the selected section/block).
  */
 export default function FluidSection({
   section,
   sectionIndex,
+  selected,
   selectedBlockIds,
+  onSelectSection,
   onSelectBlock,
   onClearSelection,
   onUpdateBlock,
@@ -31,150 +50,282 @@ export default function FluidSection({
   onMoveSectionUp,
   onMoveSectionDown,
   onAddSectionBelow,
-  EditableText,
-  EditableButton,
-  EditableImage,
   onUpdateBlockContent,
   onAddNestedBlock,
+  onOpenInspector,
+  onDropBlock,
+  isJustAdded,
+  isLastSection,
   viewport = 'desktop',
   readOnly,
 }) {
-  const cfg = section.fluidConfig || {
-    gridColumns: 24,
-    rowHeight: 80,
-    gap: { horizontal: 8, vertical: 8 },
-    fillScreen: false,
-    minHeight: 320,
-    verticalAlignment: 'top',
-  };
+  const cfg = section.fluidConfig || DEFAULT_CFG;
   const isMobile = viewport === 'mobile';
-  const gridColumns = isMobile ? 6 : (cfg.gridColumns || 24);
-  const rowHeight = cfg.rowHeight || 80;
-  const gapH = cfg.gap?.horizontal ?? 8;
-  const gapV = cfg.gap?.vertical ?? 8;
+  const blocks = section.blocks || [];
+  const mobileAuto = isMobile && isMobileAuto(blocks);
 
   const [showGrid, setShowGrid] = useState(false);
+  // Same grid metrics as the public renderer, so blocks sit exactly where they
+  // will on the site. While dragging/resizing, two extra rows give room below.
+  const metrics = fluidGridMetrics({ ...section, fluidConfig: cfg }, { mobile: isMobile, extraRows: showGrid ? 2 : 0 });
+  const { columns: gridColumns, rowHeight, gapH, gapV, placements } = metrics;
+  const layoutKey = isMobile ? 'fluidMobile' : 'fluid';
+
   const [isHovered, setIsHovered] = useState(false);
-  const [isSelected, setIsSelected] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
-  const sectionRef = useRef(null);
+  const gridRef = useRef(null);
   const [colWidth, setColWidth] = useState(40);
 
-  // Clear section selection when a block in this section is selected —
-  // the mockup spec says "only one toolbar shows at once."
-  const hasSelectedBlock = (section.blocks || []).some(b => selectedBlockIds?.has(b.id));
-  useEffect(() => {
-    if (hasSelectedBlock && isSelected) setIsSelected(false);
-  }, [hasSelectedBlock, isSelected]);
+  const hasSelectedBlock = blocks.some((b) => selectedBlockIds?.has(b.id));
 
-  // Measure column width from the actual container
+  // Measure column width from the grid container itself.
   useEffect(() => {
-    if (!sectionRef.current) return;
+    const el = gridRef.current;
+    if (!el || mobileAuto) return undefined;
     const measure = () => {
-      const w = sectionRef.current?.clientWidth || 960;
+      const w = el.clientWidth || 960;
       setColWidth((w + gapH) / gridColumns); // each column = (totalWidth + gap) / cols
     };
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(sectionRef.current);
+    ro.observe(el);
     return () => ro.disconnect();
-  }, [gridColumns, gapH]);
+  }, [gridColumns, gapH, mobileAuto]);
 
   // "G" key toggles grid overlay
   useEffect(() => {
-    if (readOnly) return;
+    if (readOnly) return undefined;
     const onKey = (e) => {
       if (e.key === 'g' || e.key === 'G') {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-        setShowGrid(s => !s);
+        setShowGrid((s) => !s);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [readOnly]);
 
-  // Compute section height: fillScreen → min(viewport%), else hug content
-  const blocks = section.blocks || [];
-  const maxRowEnd = blocks.reduce((max, b) => Math.max(max, b.fluid?.rowEnd ?? 3), 1);
-  const contentHeight = maxRowEnd * (rowHeight + gapV) - gapV;
-  const sectionMinHeight = cfg.fillScreen
-    ? Math.max(cfg.minHeight || 320, contentHeight)
-    : Math.max(contentHeight + 96, 120); // +96 for padding
-
-  const vAlignStyle = cfg.verticalAlignment === 'center'
-    ? { alignContent: 'center' }
-    : cfg.verticalAlignment === 'bottom'
-    ? { alignContent: 'end' }
-    : { alignContent: 'start' };
-
-  const sectionStyle = {
-    paddingTop:    section.paddingTop    ?? 48,
-    paddingBottom: section.paddingBottom ?? 48,
-    paddingLeft:   section.paddingLeft   ?? 0,
-    paddingRight:  section.paddingRight  ?? 0,
-    marginTop:     section.marginTop     ?? 0,
-    marginBottom:  section.marginBottom  ?? 0,
-    backgroundColor: section.backgroundColor || undefined,
-    minHeight: sectionMinHeight,
+  // ── Layout updates ──────────────────────────────────────────────────────
+  /** Write placements for every block at once (one undo step). */
+  const writePlacements = (next) => {
+    onUpdateSection(sectionIndex, {
+      blocks: blocks.map((b, i) => ({ ...b, [layoutKey]: next[i] })),
+    });
   };
 
-  const gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
-    gridTemplateRows: `repeat(${Math.max(maxRowEnd + 2, 4)}, ${rowHeight}px)`,
-    gap: `${gapV}px ${gapH}px`,
-    position: 'relative',
-    ...vAlignStyle,
+  /** Move/resize one block. On mobile this also freezes the other blocks'
+   *  current positions, so customising one block doesn't reshuffle the rest. */
+  const updatePlacement = (bIdx, updates) => {
+    const current = placements.map((p, i) => (blocks[i][layoutKey] ? blocks[i][layoutKey] : p));
+    if (isMobile && blocks.some((b) => !b.fluidMobile)) {
+      writePlacements(current.map((p, i) => (i === bIdx ? { ...p, ...updates } : p)));
+      return;
+    }
+    onUpdateBlock(sectionIndex, bIdx, { [layoutKey]: { ...current[bIdx], ...updates } });
   };
 
-  const chromeVisible = isHovered || isSelected;
+  /** Auto-grow: content outgrew the block → extend it and push blocks that
+   *  sit below it (in overlapping columns) down by the same amount.
+   *  Requests from one render (e.g. several blocks of a freshly inserted
+   *  section fitting themselves at once) are batched into a single update —
+   *  applied one by one they'd each start from the same stale layout. */
+  const growQueueRef = useRef([]);
+  const growBlock = (bIdx, newRowEnd) => {
+    growQueueRef.current.push({ bIdx, newRowEnd });
+    if (growQueueRef.current.length > 1) return; // flush already scheduled
+    queueMicrotask(() => {
+      const requests = growQueueRef.current;
+      growQueueRef.current = [];
+      const next = placements.map((p, i) => ({ ...(blocks[i][layoutKey] ? blocks[i][layoutKey] : p) }));
+      // Top-most first, so pushes cascade downwards correctly.
+      requests.sort((a, b) => next[a.bIdx].rowStart - next[b.bIdx].rowStart);
+      let changed = false;
+      for (const { bIdx: i, newRowEnd: wanted } of requests) {
+        const target = next[i];
+        const delta = (target.rowStart + (wanted - placements[i].rowStart)) - target.rowEnd;
+        if (delta <= 0) continue;
+        const oldEnd = target.rowEnd;
+        target.rowEnd += delta;
+        next.forEach((p, j) => {
+          if (j !== i && p.rowStart >= oldEnd && overlapsColumns(p, target)) {
+            p.rowStart += delta;
+            p.rowEnd += delta;
+          }
+        });
+        changed = true;
+      }
+      if (changed) writePlacements(next);
+    });
+  };
 
-  // Accessible name for this section, e.g. "Section 2, 3 blocks"
-  const sectionAccessibleName = `Section ${sectionIndex + 1}${(blocks?.length || 0) > 0 ? `, ${blocks.length} block${blocks.length !== 1 ? 's' : ''}` : ''}`;
+  /** Turn the auto-stacked mobile flow into an editable grid, sizing each
+   *  block from its measured height so nothing overlaps. */
+  const customizeMobile = () => {
+    const flow = mobileAutoFlow(section);
+    const items = gridRef.current ? [...gridRef.current.querySelectorAll(':scope > [data-block-index]')] : [];
+    const heights = new Map(items.map((el) => [Number(el.dataset.blockIndex), el.getBoundingClientRect().height]));
+    const next = new Array(blocks.length);
+    let cursor = Math.min(...placements.map((p) => p.rowStart), Infinity);
+    if (!Number.isFinite(cursor)) cursor = 1;
+    for (const i of flow.order) {
+      const minSpan = Math.max(1, placements[i].rowEnd - placements[i].rowStart);
+      const h = heights.get(i) || 0;
+      const span = Math.max(minSpan, Math.ceil((h + gapV) / (rowHeight + gapV)));
+      next[i] = { ...placements[i], rowStart: cursor, rowEnd: cursor + span };
+      cursor += span;
+    }
+    writePlacements(next);
+  };
+
+  /** Layering. Layers are kept as 0…n-1 within the section — never negative:
+   *  a negative z-index paints the block behind the page background on the
+   *  public site (invisible) and under the grid in the editor (unclickable). */
+  const layerBlock = (bIdx, action) => {
+    const current = placements.map((p, i) => ({ ...(blocks[i][layoutKey] ? blocks[i][layoutKey] : p) }));
+    const order = current.map((_, i) => i).sort((a, b) => ((current[a].zIndex ?? 0) - (current[b].zIndex ?? 0)) || (a - b));
+    const pos = order.indexOf(bIdx);
+    order.splice(pos, 1);
+    if (action === 'front') order.push(bIdx);
+    else if (action === 'back') order.unshift(bIdx);
+    else if (action === 'forward') order.splice(Math.min(pos + 1, order.length), 0, bIdx);
+    else order.splice(Math.max(pos - 1, 0), 0, bIdx); // backward
+    order.forEach((i, z) => { current[i].zIndex = z; });
+    writePlacements(current);
+  };
+
+  const resetMobileToAuto = () => {
+    onUpdateSection(sectionIndex, { blocks: blocks.map((b) => ({ ...b, fluidMobile: null })) });
+  };
+
+  // ── Rendering ───────────────────────────────────────────────────────────
+  const sectionStyle = { ...sectionBoxStyle(section), minHeight: fluidSectionMinHeight(cfg) };
+  const flow = mobileAuto ? mobileAutoFlow(section) : null;
+  // isolation: own stacking context, so blocks with a negative layer (older
+  // data) still render above the section and stay clickable.
+  const gridStyle = mobileAuto
+    ? { ...flow.containerStyle, position: 'relative', isolation: 'isolate' }
+    : { ...metrics.gridStyle, position: 'relative', isolation: 'isolate' };
+
+  // One toolbar at a time: while a block in this section is selected, the
+  // block's toolbar is shown and the section chrome steps aside.
+  const chromeVisible = (isHovered || selected) && !hasSelectedBlock;
+  // Section chrome is z-[2000]: above every block's drag overlay (z 100 + the
+  // block's layer, up to 1100 for "bring to front"), otherwise clicking
+  // "Add Block" / "Edit Section" over a block selected the block instead.
+  const chromeStyle = { opacity: chromeVisible ? 1 : 0, pointerEvents: chromeVisible ? 'auto' : 'none' };
+  const pillShadow = 'shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)]';
+
+  const sectionAccessibleName = `Section ${sectionIndex + 1}${blocks.length > 0 ? `, ${blocks.length} block${blocks.length !== 1 ? 's' : ''}` : ''}`;
+
+  const renderBlock = (block, bIdx) => (
+    <FluidBlock
+      key={block.id || bIdx}
+      block={block}
+      blockIndex={bIdx}
+      sectionIndex={sectionIndex}
+      fluid={placements[bIdx]}
+      flowStyle={mobileAuto ? flow.itemStyle(bIdx) : null}
+      gridColumns={gridColumns}
+      rowHeight={rowHeight}
+      gapH={gapH}
+      gapV={gapV}
+      colWidth={colWidth}
+      selected={selectedBlockIds?.has(block.id) ?? false}
+      readOnly={readOnly}
+      onSelect={(additive) => onSelectBlock(block.id, { additive })}
+      onClearSelection={onClearSelection}
+      onUpdate={(updates) => updatePlacement(bIdx, updates)}
+      onLayer={(action) => layerBlock(bIdx, action)}
+      onGrow={(newRowEnd) => growBlock(bIdx, newRowEnd)}
+      onUpdateContent={(updates) => onUpdateBlockContent(sectionIndex, bIdx, updates)}
+      onAddNestedBlock={(colIndex, type) => onAddNestedBlock?.(sectionIndex, bIdx, colIndex, type)}
+      onDelete={() => onDeleteBlock(sectionIndex, bIdx)}
+      onDuplicate={() => onDuplicateBlock(sectionIndex, bIdx)}
+      onOpenInspector={onOpenInspector}
+      onShowGrid={() => setShowGrid(true)}
+      onHideGrid={() => { setShowGrid(false); setGuides({ vertical: [], horizontal: [] }); }}
+      onGuidesChange={setGuides}
+      allBlocks={blocks}
+      allPlacements={placements}
+      viewport={viewport}
+      autoFit={isJustAdded ? isJustAdded(block.id) : false}
+    />
+  );
+
+  // ── Drag a block in from the block picker ──────────────────────────────
+  // Drop preview: a full-width bar at the row under the cursor.
+  const [dropRow, setDropRow] = useState(null);
+  const DRAG_TYPE = 'application/x-site-block';
+  const isBlockDrag = (e) => Array.from(e.dataTransfer?.types || []).includes(DRAG_TYPE);
+  const rowFromEvent = (e) => {
+    const rect = gridRef.current.getBoundingClientRect();
+    return Math.max(1, Math.floor((e.clientY - rect.top) / (rowHeight + gapV)) + 1);
+  };
+  const dropHandlers = onDropBlock && !readOnly ? {
+    onDragOver: (e) => {
+      if (!isBlockDrag(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      const r = mobileAuto ? null : rowFromEvent(e);
+      if (r !== dropRow) setDropRow(r ?? 0);
+    },
+    onDragLeave: (e) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) setDropRow(null);
+    },
+    onDrop: (e) => {
+      if (!isBlockDrag(e)) return;
+      e.preventDefault();
+      const type = e.dataTransfer.getData(DRAG_TYPE);
+      const r = mobileAuto ? null : rowFromEvent(e);
+      setDropRow(null);
+      // Phone view auto-stacks, so a drop there just appends.
+      onDropBlock(sectionIndex, type, r);
+    },
+  } : {};
 
   return (
     <div
-      ref={sectionRef}
       className="relative group"
       style={{
         ...sectionStyle,
-        outline: chromeVisible ? '2px solid hsl(var(--primary))' : '2px solid transparent',
+        outline: chromeVisible ? '2px solid hsl(var(--admin-primary))' : '2px solid transparent',
         outlineOffset: -2,
         transition: 'outline-color .08s ease',
-        zIndex: isSelected ? 5 : 'auto',
+        // Each section is its own stacking context (z-index 0+), so its blocks'
+        // transparent drag overlays (z 100+) can't cover toolbars/panels that
+        // overflow from a neighbouring section. The active section is raised
+        // so its overflowing chrome stays on top.
+        zIndex: (selected || hasSelectedBlock) ? 6 : isHovered ? 5 : 0,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseDown={(e) => {
-        // Click on the section's own padding area (not a child block or chrome
-        // button) selects the section. Chrome buttons call stopPropagation.
-        if (e.target === e.currentTarget) {
-          if (onClearSelection) onClearSelection();
-          setIsSelected(true);
-        }
+        // Click on the section's own background (not a block or chrome) selects it.
+        if (e.target === e.currentTarget) onSelectSection(sectionIndex);
       }}
       onKeyDown={(e) => {
+        if (hasSelectedBlock) return; // a block owns the selection — don't steal it
         if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
-          if (onClearSelection) onClearSelection();
-          setIsSelected(true);
+          onSelectSection(sectionIndex);
         }
       }}
       tabIndex={0}
       role="group"
       aria-label={sectionAccessibleName}
+      aria-current={selected ? 'true' : undefined}
     >
-      {/* ── Top-center: + Add Section pill ─────────────────────────────── */}
+      {/* ── Top-center: + Add Section (above) ───────────────────────────── */}
       {!readOnly && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 z-50 transition-opacity duration-100"
-          style={{ top: -14, opacity: chromeVisible ? 1 : 0, pointerEvents: chromeVisible ? 'auto' : 'none' }}
+          className="site-editor-chrome absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100"
+          // First section sits under the sticky toolbar — keep its pill inside.
+          style={{ top: sectionIndex === 0 ? 8 : -14, ...chromeStyle }}
         >
           <button
-            onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.06em] shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] text-white"
-            style={{ background: 'hsl(var(--primary))' }}
+            onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex - 1); }}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} text-white`}
+            style={{ background: 'hsl(var(--admin-primary))' }}
             title="Add section above"
           >
             <Plus className="w-3 h-3" /> Add Section
@@ -182,22 +333,20 @@ export default function FluidSection({
         </div>
       )}
 
-      {/* ── Top-left corner: Layers + Add Block pill ───────────────────── */}
+      {/* ── Top-left: section settings + Add Block ─────────────────────── */}
       {!readOnly && (
-        <div
-          className="absolute top-4 left-4 flex items-center gap-2 z-50 transition-opacity duration-100"
-          style={{ opacity: chromeVisible ? 1 : 0, pointerEvents: chromeVisible ? 'auto' : 'none' }}
-        >
+        <div className="site-editor-chrome absolute top-4 left-4 flex items-center gap-2 z-[2000] transition-opacity duration-100" style={chromeStyle}>
           <button
-            onClick={(e) => { e.stopPropagation(); setIsSelected(true); }}
-            title="Layers"
-            className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] text-text-base hover:bg-surface-raised"
+            onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
+            title="Section settings"
+            aria-label="Section settings"
+            className={`w-9 h-9 bg-white rounded-lg flex items-center justify-center ${pillShadow} text-text-base hover:bg-surface-raised`}
           >
-            <Layers className="w-4 h-4" />
+            <SlidersHorizontal className="w-4 h-4" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAddBlock(sectionIndex); }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white text-text-base text-[11px] font-bold uppercase tracking-[0.06em] shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] hover:bg-surface-raised"
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white text-text-base text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} hover:bg-surface-raised`}
             title="Add block to this section"
           >
             <Plus className="w-3 h-3" /> Add Block
@@ -205,29 +354,23 @@ export default function FluidSection({
         </div>
       )}
 
-      {/* ── Top-right corner: side-panel + Ask Beacon pill ─────────────── */}
+      {/* ── Top-right: section menu ────────────────────────────────────── */}
       {!readOnly && (
-        <div
-          className="absolute top-4 right-4 flex flex-col gap-2 z-50 transition-opacity duration-100"
-          style={{ opacity: chromeVisible ? 1 : 0, pointerEvents: chromeVisible ? 'auto' : 'none' }}
-        >
-          <div className="bg-white rounded-lg shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] overflow-hidden min-w-[168px]">
-            {/* Edit Section row */}
+        <div className="site-editor-chrome absolute top-4 right-4 flex flex-col gap-2 z-[2000] transition-opacity duration-100" style={chromeStyle}>
+          <div className={`bg-white rounded-lg ${pillShadow} overflow-hidden min-w-[168px]`}>
             <button
-              onClick={(e) => { e.stopPropagation(); setShowSettings(s => !s); setIsSelected(true); }}
+              onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
               className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold text-text-base hover:bg-surface-raised w-full text-left border-b border-border"
             >
               <Pencil className="w-[15px] h-[15px]" /> Edit Section
             </button>
-            {/* Add Section Below row */}
             <button
-              onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); setIsSelected(true); }}
+              onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}
               className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold text-text-base hover:bg-surface-raised w-full text-left border-b border-border"
               title="Add a new section below this one"
             >
               <LayoutGrid className="w-[15px] h-[15px]" /> Add Section Below
             </button>
-            {/* Icon row: Duplicate / Height toggle / Move up / Move down */}
             <div className="flex border-b border-border">
               <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="flex-1 h-10 flex items-center justify-center hover:bg-surface-raised border-r border-border">
                 <Copy className="w-[15px] h-[15px]" />
@@ -251,14 +394,14 @@ export default function FluidSection({
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onMoveSectionDown(sectionIndex); }}
+                disabled={isLastSection}
                 title="Move section down"
                 aria-label="Move section down"
-                className="flex-1 h-10 flex items-center justify-center hover:bg-surface-raised"
+                className={`flex-1 h-10 flex items-center justify-center ${isLastSection ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
               >
                 <MoveDown className="w-[15px] h-[15px]" />
               </button>
             </div>
-            {/* Remove row */}
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteSection(sectionIndex); }}
               className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold w-full text-left hover:bg-surface-raised"
@@ -266,39 +409,42 @@ export default function FluidSection({
               title="Remove section"
               aria-label="Remove section"
             >
-              <Trash2 className="w-[15px] h-[15px]" style={{ color: 'hsl(var(--danger, 0 84% 60%))' }} /> Remove
+              <Trash2 className="w-[15px] h-[15px]" /> Remove
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Bottom-right: section height toggle ────────────────────────── */}
-      {!readOnly && (
-        <div
-          className="absolute bottom-4 right-4 z-50 transition-opacity duration-100"
-          style={{ opacity: chromeVisible ? 1 : 0, pointerEvents: chromeVisible ? 'auto' : 'none' }}
-        >
-          <button
-            onClick={(e) => { e.stopPropagation(); onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, fillScreen: !cfg.fillScreen } }); }}
-            title={cfg.fillScreen ? 'Switch to hug-content height' : 'Switch to fill-screen height'}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-white shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)]"
-            style={{ background: 'hsl(var(--primary))' }}
-          >
-            <ArrowUpDown className="w-4 h-4" />
-          </button>
+      {/* ── Mobile layout mode (mobile view only) ──────────────────────── */}
+      {!readOnly && isMobile && blocks.length > 0 && (
+        <div className="site-editor-chrome absolute bottom-3 left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={chromeStyle}>
+          {mobileAuto ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); customizeMobile(); }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white text-text-base text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} hover:bg-surface-raised whitespace-nowrap`}
+              title="Blocks stack automatically on phones. Customize to drag and resize them."
+            >
+              <Smartphone className="w-3 h-3" /> Auto layout · Customize
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); resetMobileToAuto(); }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white text-text-base text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} hover:bg-surface-raised whitespace-nowrap`}
+              title="Discard the custom mobile layout and stack blocks automatically"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset to auto layout
+            </button>
+          )}
         </div>
       )}
 
-      {/* ── Bottom-center: + Add Section pill ──────────────────────────── */}
+      {/* ── Bottom-center: + Add Section (below) ───────────────────────── */}
       {!readOnly && (
-        <div
-          className="absolute left-1/2 -translate-x-1/2 z-50 transition-opacity duration-100"
-          style={{ bottom: -14, opacity: chromeVisible ? 1 : 0, pointerEvents: chromeVisible ? 'auto' : 'none' }}
-        >
+        <div className="site-editor-chrome absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={{ bottom: -14, ...chromeStyle }}>
           <button
             onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.06em] shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] text-white"
-            style={{ background: 'hsl(var(--primary))' }}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} text-white`}
+            style={{ background: 'hsl(var(--admin-primary))' }}
             title="Add section below"
           >
             <Plus className="w-3 h-3" /> Add Section
@@ -306,73 +452,19 @@ export default function FluidSection({
         </div>
       )}
 
-      {/* Section settings panel — opens below the top-left cluster when toggled */}
-      {showSettings && !readOnly && (
-        <div className="absolute top-20 left-4 z-[60] bg-surface border border-border rounded-xl shadow-[var(--shadow-modal-value)] p-4 w-72" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-text-base flex items-center gap-2">
-              <SettingsIcon className="w-4 h-4" /> Fluid Section Settings
-            </h4>
-            <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-surface-raised rounded text-muted">✕</button>
-          </div>
-          <div className="space-y-3">
-            {/* Gap control */}
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Gap (px)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-xs text-muted">Horizontal</span>
-                  <input type="number" value={gapH} onChange={e => onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, gap: { ...cfg.gap, horizontal: Number(e.target.value) } } })} className="w-full px-2 py-1 text-xs border border-border rounded" />
-                </div>
-                <div>
-                  <span className="text-xs text-muted">Vertical</span>
-                  <input type="number" value={gapV} onChange={e => onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, gap: { ...cfg.gap, vertical: Number(e.target.value) } } })} className="w-full px-2 py-1 text-xs border border-border rounded" />
-                </div>
-              </div>
-            </div>
-            {/* Row height */}
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Row Height (px)</label>
-              <input type="number" value={rowHeight} onChange={e => onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, rowHeight: Number(e.target.value) } })} className="w-full px-2 py-1 text-xs border border-border rounded" />
-            </div>
-            {/* Fill Screen */}
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Fill Screen</label>
-              <button onClick={() => onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, fillScreen: !cfg.fillScreen } })} className={`px-3 py-1 text-xs rounded ${cfg.fillScreen ? 'bg-primary text-primary-foreground' : 'bg-surface-raised text-muted'}`}>
-                {cfg.fillScreen ? 'ON' : 'OFF'}
-              </button>
-              {cfg.fillScreen && (
-                <div className="mt-2">
-                  <span className="text-xs text-muted">Min Height (px)</span>
-                  <input type="number" value={cfg.minHeight ?? 320} onChange={e => onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, minHeight: Number(e.target.value) } })} className="w-full px-2 py-1 text-xs border border-border rounded" />
-                </div>
-              )}
-            </div>
-            {/* Vertical alignment */}
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Vertical Alignment</label>
-              <div className="flex gap-1">
-                {['top', 'center', 'bottom'].map(a => (
-                  <button key={a} onClick={() => onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, verticalAlignment: a } })} className={`flex-1 py-1 text-xs rounded ${(cfg.verticalAlignment || 'top') === a ? 'bg-primary text-primary-foreground' : 'bg-surface-raised text-muted'}`}>{a}</button>
-                ))}
-              </div>
-            </div>
-            {/* Background color */}
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Background Color</label>
-              <input type="text" placeholder="#f9fafb or transparent" value={section.backgroundColor || ''} onChange={e => onUpdateSection(sectionIndex, { backgroundColor: e.target.value || null })} className="w-full px-2 py-1 text-xs border border-border rounded" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* The fluid grid container */}
-      <div style={gridStyle} className="relative" onMouseDown={(e) => {
-        // Only clear if clicking the grid container itself (not a child block)
-        if (e.target === e.currentTarget && onClearSelection) onClearSelection();
-      }}>
+      {/* The layout container: grid, or the auto mobile flow */}
+      <div
+        ref={gridRef}
+        style={gridStyle}
+        {...dropHandlers}
+        className="relative"
+        onMouseDown={(e) => {
+          // Clicking the empty grid selects the section
+          if (e.target === e.currentTarget) onSelectSection(sectionIndex);
+        }}
+      >
         {/* Grid overlay — visible during drag/resize or when toggled with G */}
-        {(showGrid || showGrid) && (
+        {showGrid && !mobileAuto && (
           <div
             className="absolute inset-0 pointer-events-none z-0"
             style={{
@@ -386,43 +478,21 @@ export default function FluidSection({
           />
         )}
 
-        {/* Render blocks */}
-        {blocks.map((block, bIdx) => (
-          <FluidBlock
-            key={block.id || bIdx}
-            block={block}
-            blockIndex={bIdx}
-            sectionIndex={sectionIndex}
-            gridColumns={gridColumns}
-            rowHeight={rowHeight}
-            gapH={gapH}
-            gapV={gapV}
-            colWidth={colWidth}
-            selected={selectedBlockIds?.has(block.id) ?? false}
-            readOnly={readOnly}
-            onSelect={(additive) => onSelectBlock(block.id, { additive })}
-            onClearSelection={onClearSelection}
-            onUpdate={(fluidUpdates) => {
-              if (isMobile) {
-                onUpdateBlock(sectionIndex, bIdx, { fluidMobile: { ...(block.fluidMobile || {}), ...fluidUpdates } });
-              } else {
-                onUpdateBlock(sectionIndex, bIdx, { fluid: { ...block.fluid, ...fluidUpdates } });
-              }
-            }}
-            onUpdateContent={(updates) => onUpdateBlockContent(sectionIndex, bIdx, updates)}
-            onAddNestedBlock={(colIndex, type) => onAddNestedBlock?.(sectionIndex, bIdx, colIndex, type)}
-            onDelete={() => onDeleteBlock(sectionIndex, bIdx)}
-            onDuplicate={() => onDuplicateBlock(sectionIndex, bIdx)}
-            onShowGrid={() => setShowGrid(true)}
-            onHideGrid={() => { setShowGrid(false); setGuides({ vertical: [], horizontal: [] }); }}
-            onGuidesChange={setGuides}
-            allBlocks={blocks}
-            viewport={viewport}
-            EditableText={EditableText}
-            EditableButton={EditableButton}
-            EditableImage={EditableImage}
-          />
-        ))}
+        {mobileAuto
+          ? flow.order.map((bIdx) => renderBlock(blocks[bIdx], bIdx))
+          : blocks.map((block, bIdx) => renderBlock(block, bIdx))}
+
+        {/* Drop preview while dragging a block in from the picker */}
+        {dropRow !== null && (
+          <div
+            className="site-editor-chrome pointer-events-none z-[150] rounded-md border-2 border-dashed flex items-center justify-center text-xs font-semibold"
+            style={dropRow > 0
+              ? { gridColumn: '1 / -1', gridRow: `${dropRow} / span 2`, borderColor: 'hsl(var(--admin-primary))', background: 'hsl(var(--admin-primary) / .08)', color: 'hsl(var(--admin-primary))' }
+              : { position: 'absolute', left: 0, right: 0, bottom: 0, height: 64, borderColor: 'hsl(var(--admin-primary))', background: 'hsl(var(--admin-primary) / .08)', color: 'hsl(var(--admin-primary))' }}
+          >
+            Drop to add block here
+          </div>
+        )}
 
         {/* Alignment guide lines — shown during drag/resize */}
         {guides.vertical.map((x, i) => (
@@ -434,7 +504,7 @@ export default function FluidSection({
 
         {/* Empty state */}
         {blocks.length === 0 && !readOnly && (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-border rounded-lg">
+          <div className="site-editor-chrome col-span-full flex flex-col items-center justify-center py-16 gap-3 border-2 border-dashed border-border rounded-lg">
             <p className="text-muted text-sm">Empty section — add a block to begin</p>
             <button onClick={() => onAddBlock(sectionIndex)} className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary-hover">
               <Plus className="w-4 h-4" /> Add Block
