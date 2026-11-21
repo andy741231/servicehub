@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Plus, Type, X, Edit3, Copy, Sparkles, Rows3, History, Eye, AlertCircle, Layers,
-} from 'lucide-react';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { Plus, Edit3, Rows3, AlertCircle } from 'lucide-react';
 import api from '../../../utils/api';
-import { useConfirm, AccessibleModal } from '../../../components/Dialog';
+import { useConfirm } from '../../../components/Dialog';
 import { useToast } from '../../../components/Toast';
 import EditorToolbar from './EditorToolbar';
 import EditorDialogs from './EditorDialogs';
@@ -13,22 +11,10 @@ import SectionPicker from './SectionPicker';
 import { sectionFromTemplate } from './sectionTemplates';
 import LayersPanel from './LayersPanel';
 import EditorInspector from './EditorInspector';
+import CanvasFrame from './CanvasFrame';
+import EditorErrorBoundary from './EditorErrorBoundary';
 import WebVersionHistoryPanel from '../WebVersionHistoryPanel';
-import { resolveUrl, BLOCK_TYPES, DEFAULT_SECTION, makeDefaultBlockContent, SECTION_LAYOUTS, SPACING_PRESETS, createBlock, createSection, duplicateBlock as duplicateBlockEntity, duplicateSection as duplicateSectionEntity, autoStackFluid, blockCatalogEntry } from './editorUtils';
-import {
-  BaseEditableText,
-  HeroBlock,
-  BaseEditableImage,
-  BaseEditableButton,
-  BackgroundImageDialog,
-  EditableBlock,
-  StructuredBlockEditor,
-  AddSectionModal,
-  SectionWrapper,
-  AddBlockButton,
-} from './editorComponents';
-import BlockContent from './BlockContent';
-import ReadOnlyBlockContent from './ReadOnlyBlockContent';
+import { DEFAULT_SECTION, makeDefaultBlockContent, createBlock, createSection, duplicateBlock as duplicateBlockEntity, duplicateSection as duplicateSectionEntity, autoStackFluid, blockCatalogEntry } from './editorUtils';
 import PublicHome from '../../public/Home';
 import { resolveSiteTokens, siteThemeStyle, useSiteFonts } from '../../../site/siteTheme';
 import { mobilePlacements, isMobileAuto, MOBILE_GRID_COLUMNS } from '../../../site/SiteSections';
@@ -137,6 +123,9 @@ export default function WebEditor() {
   // section selection are mutually exclusive; the inspector shows whichever.
   const [selectedSectionIndex, setSelectedSectionIndex] = useState(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  // Document inside the canvas iframe (CanvasFrame) — keyboard shortcuts and
+  // DOM lookups must also cover it.
+  const [canvasDoc, setCanvasDoc] = useState(null);
 
   // Accessible confirm dialog (replaces window.confirm)
   const { confirmDialog, ConfirmDialogMount } = useConfirm();
@@ -144,12 +133,10 @@ export default function WebEditor() {
   const { toast, ToastMount } = useToast();
 
   // ─── Dirty-exit protection ────────────────────────────────────────────────
-  // beforeunload — catches tab close, refresh, and external navigation.
-  // In-app route navigation (sidebar links, back button) is handled by the
-  // browser's native beforeunload when the user clicks a link, plus the
-  // handleExitEdit confirm dialog for the editor's own Exit button.
-  // (Note: useBlocker requires a data router; this app uses BrowserRouter,
-  //  so we rely on beforeunload + explicit confirm in handleExitEdit.)
+  // beforeunload (below) covers tab close, refresh and external navigation;
+  // in-app navigation is held by useBlocker until the save finishes (see the
+  // Saving section), and Exit saves before leaving.
+
   // Site theme for the canvas — same tokens/fonts as the public site.
   const siteTokens = resolveSiteTokens(pageData?.siteStyle);
   useSiteFonts(siteTokens, !!pageData);
@@ -165,25 +152,6 @@ export default function WebEditor() {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [isDirty]);
-
-  // Wrapper components that notify parent of editing state
-  const EditableText = useCallback((props) => (
-    <BaseEditableText
-      {...props}
-      onEditingStart={() => { props.onEditingStart?.(); }}
-      onEditingEnd={(e) => {
-        props.onEditingEnd?.(e);
-      }}
-    />
-  ), []);
-
-  const EditableImage = useCallback((props) => (
-    <BaseEditableImage {...props} onEditingStart={() => props.onEditingStart?.()} onEditingEnd={() => props.onEditingEnd?.()} />
-  ), []);
-
-  const EditableButton = useCallback((props) => (
-    <BaseEditableButton {...props} onEditingStart={() => props.onEditingStart?.()} onEditingEnd={() => props.onEditingEnd?.()} />
-  ), []);
 
   // Selection handler — supports Cmd/Ctrl+click for multi-select
   const handleSelectBlock = useCallback((id, { additive = false } = {}) => {
@@ -310,6 +278,34 @@ export default function WebEditor() {
     return run;
   };
   saveRef.current = () => saveNow().catch(() => {}); // Ctrl+S / retry
+
+  // In-app navigation away (sidebar, browser back) waits for unsaved edits to
+  // be saved; if that fails, ask before leaving. (Closing the tab is covered
+  // by the beforeunload prompt below.)
+  const hasUnsaved = () => changeSeqRef.current !== savedSeqRef.current || !!pendingHistoryRef.current;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    hasUnsaved() && currentLocation.pathname !== nextLocation.pathname);
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        await saveNow();
+        if (!cancelled) blocker.proceed();
+      } catch {
+        const ok = await confirmDialog({
+          title: "Couldn't save your latest changes",
+          message: 'Your most recent edits could not be saved. Leave anyway and lose them?',
+          confirmLabel: 'Leave without saving',
+          cancelLabel: 'Stay',
+          variant: 'warning',
+        });
+        if (cancelled) return;
+        if (ok) blocker.proceed(); else blocker.reset();
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [blocker.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autosave after a pause in editing; retry a failed save every 10s.
   useEffect(() => {
@@ -501,8 +497,12 @@ export default function WebEditor() {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [sections, selectedBlockIds, selectedSectionIndex, blockPaletteTarget, addSectionAfterIndex, header, footer, viewport]);
+    canvasDoc?.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      canvasDoc?.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [sections, selectedBlockIds, selectedSectionIndex, blockPaletteTarget, addSectionAfterIndex, header, footer, viewport, canvasDoc]);
 
   const saveToHistory = (newSections, newHeader, newFooter) => {
     flushPendingHistory(); // keep typing entries ordered before this one
@@ -537,7 +537,7 @@ export default function WebEditor() {
 
   /** Bring a freshly inserted block/section into view. */
   const revealAfterRender = (selector) => {
-    setTimeout(() => document.querySelector(selector)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
+    setTimeout(() => (canvasDoc || document).querySelector(selector)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60);
   };
 
   /** Insert a ready-made section (from the section picker) after `afterIndex`. */
@@ -743,18 +743,6 @@ export default function WebEditor() {
     updateBlockContent(sIdx, parentBIdx, { items });
   };
 
-  const renderEditableBlock = (block, sIdx, bIdx) => (
-    <BlockContent
-      block={block}
-      EditableText={EditableText}
-      EditableButton={EditableButton}
-      EditableImage={EditableImage}
-      onUpdateContent={(updates) => updateBlockContent(sIdx, bIdx, updates)}
-      onUpdateBlock={(updates) => updateBlock(sIdx, bIdx, updates)}
-      onAddNestedBlock={(colIndex, type) => addNestedBlock(sIdx, bIdx, colIndex, type)}
-    />
-  );
-
   // ── Error state: fetch failed — show retry + back to pages ───────────────
   if (fetchError) {
     return (
@@ -795,11 +783,6 @@ export default function WebEditor() {
     );
   }
 
-  const deviceClasses = {
-    desktop: 'w-full',
-    tablet: 'max-w-2xl mx-auto border-x-4 border-border shadow-dropdown',
-    mobile: 'max-w-md mx-auto border-x-4 border-border shadow-dropdown'
-  };
 
   // ── Live view mode: renders the actual public site (read-only) ──────────
   if (viewMode === 'live') {
@@ -1012,8 +995,15 @@ export default function WebEditor() {
           />
         )}
         <div className="flex-1">
-          <div className={`min-h-screen ${(previewDevice !== 'desktop' || viewport === 'mobile') ? 'py-8' : ''}`}>
-            <div className={`${deviceClasses[previewDevice]} min-h-screen bg-surface ${previewDevice !== 'desktop' ? 'rounded-xl overflow-hidden' : ''} ${viewport === 'mobile' ? 'max-w-md mx-auto border-x-4 border-border shadow-dropdown' : ''}`}>
+          <div className={`min-h-screen ${(previewDevice !== 'desktop' || viewport === 'mobile') ? 'py-8 bg-surface-raised' : ''}`}>
+            {/* The canvas is an iframe so Tablet/Mobile are real 768px/390px
+                viewports: blocks' responsive styles behave as on a device. */}
+            <CanvasFrame
+              width={viewport === 'mobile' ? 375 : previewDevice === 'tablet' ? 768 : '100%'}
+              minHeight="calc(100vh - 52px)"
+              onDocument={setCanvasDoc}
+              className={(viewport === 'mobile' || previewDevice === 'tablet') ? 'rounded-xl shadow-dropdown bg-surface' : 'bg-surface'}
+            >
 
               {/* ── Layout grid canvas ────────────────────────────────────────
                   Rendered inside the real site theme (.public-site) with the
@@ -1023,7 +1013,8 @@ export default function WebEditor() {
                   the grid overlay. Editor chrome opts back into admin styling
                   with .site-editor-chrome.
               */}
-              <div className="public-site site-editor min-h-screen bg-surface text-text-base" style={siteThemeStyle(siteTokens)}>
+              <EditorErrorBoundary>
+              <div className="public-site site-editor bg-surface text-text-base" style={siteThemeStyle(siteTokens)}>
               <SiteFrame label="Header" note="Shared across all pages">
                 <SiteHeader pageData={{ ...pageData, header, footer }} currentPath={pageSlug === 'home' ? '/' : `/${pageSlug}`} sticky={false} />
               </SiteFrame>
@@ -1100,7 +1091,8 @@ export default function WebEditor() {
                 <SiteFooter pageData={{ ...pageData, header, footer }} />
               </SiteFrame>
               </div>
-            </div>
+              </EditorErrorBoundary>
+            </CanvasFrame>
           </div>
         </div>
         {/* Inspector — settings for the selected block or section */}

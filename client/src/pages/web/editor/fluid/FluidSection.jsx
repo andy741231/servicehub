@@ -87,7 +87,9 @@ export default function FluidSection({
       setColWidth((w + gapH) / gridColumns); // each column = (totalWidth + gap) / cols
     };
     measure();
-    const ro = new ResizeObserver(measure);
+    // The canvas is an iframe — use its realm's ResizeObserver.
+    const RO = el.ownerDocument.defaultView?.ResizeObserver || ResizeObserver;
+    const ro = new RO(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, [gridColumns, gapH, mobileAuto]);
@@ -101,8 +103,14 @@ export default function FluidSection({
         setShowGrid((s) => !s);
       }
     };
+    // Listen in the editor window and in the canvas iframe.
+    const canvasWin = gridRef.current?.ownerDocument?.defaultView;
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    if (canvasWin && canvasWin !== window) canvasWin.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      if (canvasWin && canvasWin !== window) canvasWin.removeEventListener('keydown', onKey);
+    };
   }, [readOnly]);
 
   // ── Layout updates ──────────────────────────────────────────────────────
@@ -335,7 +343,12 @@ export default function FluidSection({
 
       {/* ── Top-left: section settings + Add Block ─────────────────────── */}
       {!readOnly && (
-        <div className="site-editor-chrome absolute top-4 left-4 flex items-center gap-2 z-[2000] transition-opacity duration-100" style={chromeStyle}>
+        <div
+          className="site-editor-chrome absolute left-4 flex items-center gap-2 z-[2000] transition-opacity duration-100"
+          // First section: its "Add Section" pill sits inside at the top, so
+          // start this cluster below it (they collide on narrow canvases).
+          style={{ top: sectionIndex === 0 ? 56 : 16, ...chromeStyle }}
+        >
           <button
             onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
             title="Section settings"
@@ -356,7 +369,7 @@ export default function FluidSection({
 
       {/* ── Top-right: section menu ────────────────────────────────────── */}
       {!readOnly && (
-        <div className="site-editor-chrome absolute top-4 right-4 flex flex-col gap-2 z-[2000] transition-opacity duration-100" style={chromeStyle}>
+        <div className="site-editor-chrome absolute right-4 flex flex-col gap-2 z-[2000] transition-opacity duration-100" style={{ top: sectionIndex === 0 ? 56 : 16, ...chromeStyle }}>
           <div className={`bg-white rounded-lg ${pillShadow} overflow-hidden min-w-[168px]`}>
             <button
               onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}

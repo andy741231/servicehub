@@ -1,6 +1,6 @@
 import {
   AlignLeft, Star, Hand, Rows3, Quote, LayoutGrid,
-  Sparkles, MessageSquare, Mail, Video, Columns
+  Sparkles, MessageSquare, Mail, Video
 } from 'lucide-react';
 
 /**
@@ -14,19 +14,6 @@ export function generateClientId(prefix = 'entity') {
   }
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
-
-export const resolveUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) {
-    try {
-      const parsed = new URL(url);
-      if (parsed.hostname === window.location.hostname) return parsed.pathname + parsed.search + parsed.hash;
-    } catch (e) { /* fall through */ }
-    return url;
-  }
-  if (url.startsWith('/')) return url;
-  return `/uploads/${url}`;
-};
 
 /**
  * Block catalog for the block picker. `rows` is the starting height on the
@@ -92,23 +79,6 @@ export const makeDefaultBlockContent = (type) => {
     default:             return {};
   }
 };
-
-export const SECTION_LAYOUTS = [
-  { columns: 1, label: 'Full Width',  preview: [100] },
-  { columns: 2, label: '2 Columns',   preview: [50, 50] },
-  { columns: 3, label: '3 Columns',   preview: [33, 33, 33] },
-  { columns: 4, label: '4 Columns',   preview: [25, 25, 25, 25] },
-  { columns: 5, label: '5 Columns',   preview: [20, 20, 20, 20, 20] },
-  { columns: 6, label: '6 Columns',   preview: [17, 17, 17, 17, 17, 17] },
-];
-
-export const SPACING_PRESETS = [
-  { label: 'None',   value: 0 },
-  { label: 'SM',     value: 24 },
-  { label: 'MD',     value: 48 },
-  { label: 'LG',     value: 80 },
-  { label: 'XL',     value: 120 },
-];
 
 export function createBlock(type, options = {}) {
   const rows = BLOCK_TYPES.find((b) => b.id === type)?.rows ?? 2;

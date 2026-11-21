@@ -1,1 +1,0 @@
-export { EditableBlock as default, EditableBlock, StructuredBlockEditor, HeroBlock } from './editorComponents';

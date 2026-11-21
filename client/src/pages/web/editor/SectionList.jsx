@@ -1,1 +1,0 @@
-export { SectionWrapper as default, SectionWrapper } from './editorComponents';

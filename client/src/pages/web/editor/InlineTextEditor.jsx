@@ -47,6 +47,10 @@ export default function InlineTextEditor({
   const ref = useRef(null);
   const toolbarRef = useRef(null);
   const linkOpenRef = useRef(false); // link URL form open in the toolbar
+  // The editable may live in the canvas iframe: always use ITS document and
+  // window for selection, execCommand and listeners (not the globals).
+  const docOf = () => ref.current?.ownerDocument || document;
+  const winOf = () => docOf().defaultView || window;
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0, flip: false });
   const [activeFormats, setActiveFormats] = useState({});
@@ -58,7 +62,7 @@ export default function InlineTextEditor({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (document.activeElement === el) return;
+    if (el.ownerDocument.activeElement === el) return;
     const html = content || '';
     if (el.innerHTML !== html) el.innerHTML = html;
   }, [content]);
@@ -125,13 +129,16 @@ export default function InlineTextEditor({
     if (multiline && !plainOnly) return;
     e.preventDefault();
     const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-    document.execCommand('insertText', false, text);
+    e.currentTarget.ownerDocument.execCommand('insertText', false, text);
   }, [multiline, plainOnly]);
 
   const handleBlurSanitize = useCallback((e) => {
     // Don't exit editing if focus is moving to a toolbar control — the
     // toolbar buttons use onMouseDown preventDefault to keep the editor
     // focused, but a <select>/<input> for link URL would steal focus.
+    // Typing a link URL: the field lives in the editor window, so focus left
+    // this document (relatedTarget is null) — keep the editing session.
+    if (linkOpenRef.current) return;
     const next = e.relatedTarget;
     if (next?.closest?.('[data-inline-toolbar="1"]')) {
       // Typing a link URL in the toolbar: stay in this editing session.
@@ -161,6 +168,7 @@ export default function InlineTextEditor({
   // ── Active formatting state ─────────────────────────────────────────────
   const updateActiveFormats = useCallback(() => {
     try {
+      const document = docOf(); // query the canvas document's command state
       const formatBlock = (document.queryCommandValue('formatBlock') || '').toLowerCase();
       setActiveFormats({
         bold: document.queryCommandState('bold'),
@@ -181,7 +189,15 @@ export default function InlineTextEditor({
 
   // ── Toolbar positioning ─────────────────────────────────────────────────
   // Helper: position the toolbar at a given rect (selection or caret)
-  const positionToolbarAtRect = useCallback((rect) => {
+  const positionToolbarAtRect = useCallback((frameRect) => {
+    // The toolbar is portaled into the editor window; translate rects from
+    // the canvas iframe's coordinates.
+    const frameEl = winOf().frameElement;
+    const off = frameEl ? frameEl.getBoundingClientRect() : { left: 0, top: 0 };
+    const rect = {
+      top: frameRect.top + off.top, bottom: frameRect.bottom + off.top,
+      left: frameRect.left + off.left, width: frameRect.width,
+    };
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const tbEl = toolbarRef.current;
@@ -225,7 +241,7 @@ export default function InlineTextEditor({
   const computePosition = useCallback(() => {
     if (plainOnly) { setVisible(false); return; }
     if (linkOpenRef.current) return; // selection is in the link input
-    const sel = window.getSelection();
+    const sel = winOf().getSelection();
     if (!sel || sel.rangeCount === 0) {
       setVisible(false);
       return;
@@ -277,14 +293,18 @@ export default function InlineTextEditor({
     const onScroll = () => computePosition();
     const onResize = () => setVisible(false);
 
-    document.addEventListener('selectionchange', onSelectionChange);
-    window.addEventListener('scroll', onScroll, true);
+    const cdoc = docOf();
+    const cwin = winOf();
+    cdoc.addEventListener('selectionchange', onSelectionChange);
+    window.addEventListener('scroll', onScroll, true); // editor scroll container
     window.addEventListener('resize', onResize);
+    if (cwin !== window) cwin.addEventListener('resize', onResize);
 
     return () => {
-      document.removeEventListener('selectionchange', onSelectionChange);
+      cdoc.removeEventListener('selectionchange', onSelectionChange);
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onResize);
+      if (cwin !== window) cwin.removeEventListener('resize', onResize);
     };
   }, [computePosition]);
 
@@ -302,15 +322,20 @@ export default function InlineTextEditor({
       if (ed?.contains(e.target)) return;
       setVisible(false);
     };
+    const cdoc = docOf();
     document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
+    if (cdoc !== document) cdoc.addEventListener('mousedown', onMouseDown);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      if (cdoc !== document) cdoc.removeEventListener('mousedown', onMouseDown);
+    };
   }, []);
 
   // ── Command execution ───────────────────────────────────────────────────
   const exec = useCallback((cmd, value = null) => {
     ref.current?.focus();
     try {
-      document.execCommand(cmd, false, value);
+      docOf().execCommand(cmd, false, value);
     } catch {
       // ignore
     }
@@ -344,7 +369,7 @@ export default function InlineTextEditor({
     const range = savedRangeRef.current;
     if (!range) return;
     ref.current?.focus();
-    const sel = window.getSelection();
+    const sel = winOf().getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
   };
@@ -354,7 +379,7 @@ export default function InlineTextEditor({
     restoreSelection();
   };
   const openLink = useCallback(() => {
-    const sel = window.getSelection();
+    const sel = winOf().getSelection();
     if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
     if (!ref.current?.contains(range.commonAncestorContainer)) return;
@@ -375,7 +400,7 @@ export default function InlineTextEditor({
     linkOpenRef.current = false;
     setLink(null);
     restoreSelection();
-    const sel = window.getSelection();
+    const sel = winOf().getSelection();
     if (sel && sel.isCollapsed) {
       // Nothing selected: insert the URL itself as the link text.
       const esc = safe.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');

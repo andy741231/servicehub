@@ -5,6 +5,11 @@ import { AlertTriangle, RotateCcw } from 'lucide-react';
  * EditorErrorBoundary — catches render errors in the Fluid Engine canvas so a
  * broken block/section can't white-screen the whole editor (the topbar, save,
  * and exit controls stay alive). Offers a retry that remounts the subtree.
+ *
+ * `compact` renders a small in-place card (used around each block, so one bad
+ * block doesn't take down the page; its toolbar still works to delete it).
+ * `resetKey` clears the error when it changes (e.g. the block's content after
+ * an undo).
  */
 export default class EditorErrorBoundary extends Component {
   constructor(props) {
@@ -20,10 +25,26 @@ export default class EditorErrorBoundary extends Component {
     console.error('Editor canvas crashed:', error, info?.componentStack);
   }
 
+  componentDidUpdate(prevProps) {
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) this.setState({ error: null });
+  }
+
   handleRetry = () => this.setState({ error: null });
 
   render() {
     if (!this.state.error) return this.props.children;
+    if (this.props.compact) {
+      return (
+        <div className="site-editor-chrome flex items-center gap-3 p-4 m-2 rounded-lg border border-dashed border-border bg-surface text-left" role="alert">
+          <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: 'hsl(var(--warning, 35 92% 45%))' }} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-text-base">This block couldn&apos;t be displayed.</p>
+            <p className="text-xs text-muted truncate" title={this.state.error?.message}>{this.state.error?.message}</p>
+          </div>
+          <button onClick={this.handleRetry} className="text-xs font-semibold text-primary hover:underline shrink-0">Try again</button>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 text-center">
         <div className="w-14 h-14 rounded-2xl bg-surface-raised flex items-center justify-center">

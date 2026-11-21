@@ -11,7 +11,7 @@ import { Plus, Link2 } from 'lucide-react';
 import { SiteEditContext, useSiteEdit } from '../../../site/fields';
 import { renderRichText } from '../../../site/siteRichText';
 import InlineTextEditor from './InlineTextEditor';
-import { BaseEditableImage } from './editorComponents';
+import EditableImage from './EditableImage';
 
 // ── Path helpers ("items.2.label") ─────────────────────────────────────────
 const splitPath = (path) => path.split('.').map((k) => (/^\d+$/.test(k) ? Number(k) : k));
@@ -88,7 +88,7 @@ function EditText({ as: Tag, path, value, className, style, placeholder, multili
 function EditImage({ path, value, alt, className }) {
   const { update, startEditing, endEditing } = useSiteEdit();
   return (
-    <BaseEditableImage
+    <EditableImage
       src={value}
       alt={alt}
       className={className}

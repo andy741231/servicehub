@@ -123,9 +123,11 @@ Small, independent fixes; ship each separately.
   rewrote stored content; hero title forced left-aligned in the editor.
 - Verified: 27 interaction checks + a save-payload check (edit one field → PUT differs from the loaded
   page in exactly that field; header/footer untouched).
-- **Left for 1b:** iframe canvas (B12 — Tablet/Mobile still use desktop breakpoints inside blocks).
-  Old editor-only renderers (`BlockContent.jsx`, `HeroBlock`/`StructuredBlockEditor` in
-  `editorComponents.jsx`, `ReadOnlyBlockContent.jsx`) are now unused → delete in Phase 3.
+- **1b done (2026-11-21):** the canvas renders inside a same-origin iframe (`editor/CanvasFrame.jsx`):
+  Tablet/Mobile are real 768px/375px viewports, so blocks' responsive styles and the header's mobile
+  menu behave as on a device (B12). Canvas code uses the element's own document/window; the formatting
+  toolbar, image dialog and pickers stay in the editor window. react-rnd's `bounds="parent"` breaks
+  across realms (`instanceof HTMLElement`), so placement is clamped on drop instead.
 - **Known data quirk:** fields stored as markdown render inside `<p>` (e.g. event titles pick up
   paragraph styling on the site). Once edited inline they're saved without `<p>` and change look
   slightly. A one-off normalisation of stored content would make this consistent.
@@ -205,6 +207,23 @@ Small, independent fixes; ship each separately.
 
 ### Phase 3 — Structure & hardening (parallel with Phase 2)
 
+**Status (2026-11-21): 2, 4, 5 done; 1 deferred; 3 is the owner's call.**
+- (2) Deleted 17 dead files incl. `editorComponents.jsx` (~1,500 lines), `BlockContent`,
+  `ReadOnlyBlockContent`, `MobileLayoutInspector`, `useWebDocument`/`useWebHistory`, `gridPlacement`,
+  the empty stubs and `pages/web/InlineEditor.jsx`; legacy constants and transition CSS. The image
+  field moved to `EditableImage.jsx` — and **"Upload" now really uploads** to the asset library
+  (it used to save a temporary `blob:` URL that broke after reload and on the live site).
+- (4) App uses `createBrowserRouter`; the editor's `useBlocker` holds in-app navigation (sidebar,
+  Back) until unsaved edits are saved, asking only if the save fails. All 36 app routes smoke-tested.
+- (5) `EditorErrorBoundary` wraps the canvas and each block (a broken block shows a small card and can
+  still be deleted from its toolbar).
+- (1) Editor store refactor deferred: the undo/autosave bugs it was meant to fix are fixed and covered
+  by e2e tests; it's now a maintainability change, not a correctness one.
+- (3) `editor-lab/` left untouched (owner's experiment, untracked).
+- **Bug found:** React StrictMode (dev) ran the auto-grow effect twice on mount, so *opening* the
+  editor grew and autosaved any block whose content already overflowed. Fixed (compare content
+  identity instead of a first-run flag).
+
 1. **Editor store** with zustand + immer (already dependencies): `document`, `selection`, `history`
    (immer patches → reliable undo/redo and grouped typing). Replaces the 30 `useState`s in `WebEditor.jsx`
    and fixes B10. Either fold `useWebDocument`/`useWebHistory` into it or delete them.
@@ -214,6 +233,12 @@ Small, independent fixes; ship each separately.
 5. Wrap the canvas in `EditorErrorBoundary` so one bad block can't blank the editor.
 
 ## 5. Verification
+
+**Status (2026-11-21):** `e2e/` holds a Playwright suite (15 tests, ~1 min) run with
+`E2E_USERNAME=<admin> npm run e2e` against the local dev stack — see `e2e/README.md`. Each run uses
+a temporary unpublished, hidden page and real saves (asset uploads are intercepted so nothing hits
+blob storage). Not wired into CI: it needs the app, a database and an admin account. Public-page
+visual regression was done ad hoc (pixel-identical on all pages after every change); not yet automated.
 
 - Turn the headless probe used for this review into a Playwright E2E spec:
   load editor → select block (status stays "Saved") → edit text → drag → undo/redo → autosave → publish →

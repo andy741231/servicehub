@@ -7,6 +7,7 @@ import {
 import SiteBlock from '../../../../site/SiteBlock.jsx';
 import { gridItemStyle as siteGridItemStyle } from '../../../../site/SiteSections.jsx';
 import { SiteEditProvider } from '../siteEditBridge.jsx';
+import EditorErrorBoundary from '../EditorErrorBoundary.jsx';
 import { blockTypeLabel } from '../BlockSettingsPanel.jsx';
 
 /**
@@ -89,7 +90,7 @@ export default function FluidBlock({
   const focusBlock = () => {
     setTimeout(() => {
       if (!itemRef.current) return;
-      if (itemRef.current.contains(document.activeElement)) return; // editing text inside
+      if (itemRef.current.contains(itemRef.current.ownerDocument.activeElement)) return; // editing text inside
       itemRef.current.focus({ preventScroll: true });
     }, 0);
   };
@@ -100,12 +101,19 @@ export default function FluidBlock({
   // of letting text spill over the next block. Runs after content edits and
   // for blocks that were just added (`autoFit`) — never just because a page
   // was opened, so loading never changes it.
-  const firstRenderRef = useRef(true);
+  // Compare against the content last seen (not a "first run" flag: React
+  // StrictMode runs effects twice on mount, and a flag made the second run
+  // look like an edit — opening the editor then silently grew and saved
+  // any block that already overflowed).
+  const seenContentRef = useRef(block.content);
+  const autoFitDoneRef = useRef(false);
   useLayoutEffect(() => {
-    const first = firstRenderRef.current;
-    firstRenderRef.current = false;
+    const changed = block.content !== seenContentRef.current;
+    seenContentRef.current = block.content;
+    const fitNow = autoFit && !autoFitDoneRef.current;
+    if (fitNow) autoFitDoneRef.current = true;
     if (!interactive || !onGrow) return;
-    if (first && !autoFit) return;
+    if (!changed && !fitNow) return;
     const el = itemRef.current;
     if (!el) return;
     const needed = el.scrollHeight;
@@ -162,10 +170,11 @@ export default function FluidBlock({
   const handleDragStop = (e, d) => {
     onHideGrid();
     onGuidesChange?.({ vertical: [], horizontal: [] });
-    const newColStart = Math.max(1, Math.round(d.x / cellW) + 1);
-    const newColEnd = Math.min(gridColumns + 1, newColStart + (fluid.colEnd - fluid.colStart));
+    // Keep the block inside the grid (same width, shifted back if needed).
+    const span = fluid.colEnd - fluid.colStart;
+    const newColStart = Math.min(Math.max(1, Math.round(d.x / cellW) + 1), gridColumns + 1 - span);
     const newRowStart = Math.max(1, Math.round(d.y / cellH) + 1);
-    commitPlacement({ colStart: newColStart, colEnd: newColEnd, rowStart: newRowStart, rowEnd: newRowStart + (fluid.rowEnd - fluid.rowStart) });
+    commitPlacement({ colStart: newColStart, colEnd: newColStart + span, rowStart: newRowStart, rowEnd: newRowStart + (fluid.rowEnd - fluid.rowStart) });
   };
 
   // ── Resize handlers ─────────────────────────────────────────────────────
@@ -177,11 +186,11 @@ export default function FluidBlock({
   const handleResizeStop = (e, dir, ref, delta, position) => {
     onHideGrid();
     onGuidesChange?.({ vertical: [], horizontal: [] });
-    const colSpan = Math.max(1, Math.round((ref.offsetWidth + gapH) / cellW));
+    const newColStart = Math.min(Math.max(1, Math.round(position.x / cellW) + 1), gridColumns);
+    const colSpan = Math.min(Math.max(1, Math.round((ref.offsetWidth + gapH) / cellW)), gridColumns + 1 - newColStart);
     const rowSpan = Math.max(1, Math.round((ref.offsetHeight + gapV) / cellH));
-    const newColStart = Math.max(1, Math.round(position.x / cellW) + 1);
     const newRowStart = Math.max(1, Math.round(position.y / cellH) + 1);
-    commitPlacement({ colStart: newColStart, colEnd: Math.min(gridColumns + 1, newColStart + colSpan), rowStart: newRowStart, rowEnd: newRowStart + rowSpan });
+    commitPlacement({ colStart: newColStart, colEnd: newColStart + colSpan, rowStart: newRowStart, rowEnd: newRowStart + rowSpan });
   };
 
   // ── Layering ────────────────────────────────────────────────────────────
@@ -281,7 +290,9 @@ export default function FluidBlock({
           onEditingEnd={endEditing}
           onAddNestedBlock={block.type === 'grid' && onAddNestedBlock ? (colIndex) => onAddNestedBlock(colIndex, 'text') : undefined}
         >
-          <SiteBlock block={block} />
+          <EditorErrorBoundary compact resetKey={block.content}>
+            <SiteBlock block={block} />
+          </EditorErrorBoundary>
         </SiteEditProvider>
 
         {/* Flow mode has no overlay layer — chrome lives on the block itself. */}
@@ -297,7 +308,10 @@ export default function FluidBlock({
           size={{ width: pxW, height: pxH }}
           dragGrid={dragGrid}
           resizeGrid={resizeGrid}
-          bounds="parent"
+          // No `bounds`: react-rnd only computes them when the parent passes
+          // `instanceof HTMLElement` — false for elements inside the canvas
+          // iframe (different realm), which left the bounds at 0 and blocks
+          // impossible to drag. Placement is clamped to the grid on drop.
           dragHandleClassName={selected ? 'fluid-drag-handle' : undefined}
           onDragStart={handleDragStart}
           onDrag={handleDrag}
@@ -308,6 +322,7 @@ export default function FluidBlock({
             top: true, right: true, bottom: true, left: true,
             topLeft: true, topRight: true, bottomLeft: true, bottomRight: true,
           }}
+          resizeHandleClasses={{ right: 'fluid-resize-r', bottom: 'fluid-resize-b', bottomRight: 'fluid-resize-br' }}
           resizeHandleStyles={{
             top:    { height: '12px', top: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
             bottom: { height: '12px', bottom: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
