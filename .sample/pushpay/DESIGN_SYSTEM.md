@@ -5,7 +5,7 @@
 > 2. Read the target site's `THEME.md` for its tokens.
 > 3. Link the site's `theme.css` and use the standard Tailwind CDN config snippet below.
 >
-> Derived from `md files/PUSHPAY_CHMS_DESIGN_REF.md`.
+> Derived from `md files/design/PUSHPAY_CHMS_DESIGN_REF.md`.
 
 ---
 

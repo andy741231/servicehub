@@ -1,7 +1,7 @@
 # Pushpay ChMS — Mockup Sites
 
 Three standalone, frontend-only mockups of a Pushpay ChMS-style admin, based on
-`md files/PUSHPAY_CHMS_DESIGN_REF.md`. No build step — open any `.html` file directly
+`md files/design/PUSHPAY_CHMS_DESIGN_REF.md`. No build step — open any `.html` file directly
 in a browser (Tailwind via CDN).
 
 ## Sites

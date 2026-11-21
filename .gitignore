@@ -61,3 +61,6 @@ scratch/
 
 # Google Contacts backups (member PII — never commit)
 contacts-backup-*.json
+
+# Playwright MCP session snapshots
+.playwright-mcp/

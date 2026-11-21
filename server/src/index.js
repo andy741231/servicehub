@@ -3,7 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import routes from './routes/index.js';
 import prisma from './db/client.js';
 import { startDirectoryJobs } from './jobs/index.js';
@@ -57,15 +57,29 @@ app.get('/api/csrf-token', (req, res) => {
 let prismaReady = false;
 export const isPrismaReady = () => prismaReady;
 
+// Optional build stamp written by CI into deploy/build-info.json so smoke
+// tests and operators can verify which commit is live on each slot.
+let buildInfo = null;
+try {
+  const buildInfoPath = join(__dirname, '../build-info.json');
+  if (existsSync(buildInfoPath)) {
+    buildInfo = JSON.parse(readFileSync(buildInfoPath, 'utf8'));
+  }
+} catch {
+  buildInfo = null;
+}
+
 // Health check endpoint — used by CI smoke tests and Azure monitoring.
 // Returns 503 with a "warming_up" status until Prisma has connected, so the
 // Vite dev proxy and Azure warm-up probe don't forward requests to a server
 // whose DB pool is still being established.
 app.get('/api/health', (req, res) => {
-  if (prismaReady) {
-    return res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  }
-  res.status(503).json({ status: 'warming_up', timestamp: new Date().toISOString() });
+  const payload = {
+    status: prismaReady ? 'ok' : 'warming_up',
+    ...(buildInfo ? { commit: buildInfo.commit, builtAt: buildInfo.builtAt } : {}),
+    timestamp: new Date().toISOString(),
+  };
+  res.status(prismaReady ? 200 : 503).json(payload);
 });
 
 app.use('/api', routes);

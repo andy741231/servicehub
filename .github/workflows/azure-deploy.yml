@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: deploy-azure
+  cancel-in-progress: false
+
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
   # 1. BUILD
@@ -42,6 +46,9 @@ jobs:
 
       - name: Run Prisma generate (with Windows binary for Azure)
         run: npx prisma generate
+
+      - name: Run server unit tests
+        run: npm -w server test
 
       - name: Check for schema/migration drift
         run: |
@@ -102,14 +109,30 @@ jobs:
             delete pkg.devDependencies?.shared;
             delete pkg.workspaces;
             pkg.scripts = { start: 'node src/index.js' };
-            pkg.engines = { node: '>=22' };
+            pkg.engines = { node: '>=20' };
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+          # Stamp build metadata so /api/health reports the running commit SHA
+          node -e "
+            const fs = require('fs');
+            fs.writeFileSync('build-info.json', JSON.stringify({
+              commit: process.env.GITHUB_SHA,
+              builtAt: new Date().toISOString(),
+            }, null, 2));
           "
           # Install server production dependencies standalone (no workspaces)
           npm install --omit=dev --ignore-scripts
           # Inject the real workspace 'shared' package (npm can't install it)
           rm -rf node_modules/shared
           cp -r ../shared node_modules/shared
+          # Verify the standalone bundle imports cleanly before zipping
+          # (catches missing files like server/scripts or broken workspace deps)
+          node --input-type=module -e "
+            await import('./src/routes/index.js');
+            await import('./src/jobs/index.js');
+            console.log('Deploy bundle import verification passed.');
+            process.exit(0);
+          "
           cd ..
           echo "Deploy folder size: $(du -sh deploy | cut -f1)"
 
@@ -166,34 +189,14 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
       - name: Apply database migrations to staging
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
-
-      # Keep the second free DB schema-current too. Whichever free DB backs the
-      # staging slot, the other one gets migrated here — so swapping DBs never
-      # hits a stale schema. Non-blocking: a paused/exhausted free DB only
-      # warns (retry covers auto-pause wake-up).
-      - name: Sync dev database (non-blocking)
         run: |
-          for M in 0_init \
-            20260625_add_web_section_and_draft_templates \
-            20260629_cleanupmigrations_remove_redundant_manual_migratio \
-            20260630_feat_form_version_history \
-            20260630_fixdb_guard_updatedat_column_add_and_resolve_faile \
-            20260707_add_user_preferences \
-            20260711_add_form_folder_table; do
-            npx prisma migrate resolve --applied "$M" || true
-          done
-          npx prisma migrate resolve --rolled-back "20260925_directory_sms_and_sync" || true
           if ! npx prisma migrate deploy; then
-            echo "First attempt failed — the free DB may be auto-paused. Retrying in 30s..."
+            echo "First attempt failed — the free serverless stage DB may be auto-paused. Retrying in 30s..."
             sleep 30
-            npx prisma migrate deploy \
-              || echo "::warning::Dev DB sync failed (paused or out of free hours?). Run 'npx prisma migrate deploy' against it before use."
+            npx prisma migrate deploy
           fi
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_DEV }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
       - name: Download deployment artifact
         uses: actions/download-artifact@v4
@@ -201,37 +204,43 @@ jobs:
           name: deploy-zip
 
       - name: Deploy to staging slot via Kudu
+        id: kudu
         env:
           KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER_STAGING }}
           KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD_STAGING }}
         run: |
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          HTTP=$(curl -sS -D kudu_headers.txt -o kudu_body.txt -w "%{http_code}" -X POST \
             -u "${KUDU_USER}:${KUDU_PWD}" \
             "https://houstonservicehub-staging.scm.azurewebsites.net/api/zipdeploy?isAsync=true" \
             --data-binary @deploy.zip \
             -H "Content-Type: application/zip" \
             --max-time 300)
-          HTTP=$(echo "$RESPONSE" | tail -1)
           echo "Kudu staging response: HTTP $HTTP"
           if [ "$HTTP" != "202" ] && [ "$HTTP" != "200" ]; then
+            cat kudu_body.txt
             echo "Staging deploy request failed with HTTP $HTTP"
             exit 1
           fi
-          echo "Staging deployment accepted by Azure (async)."
+          POLL_URL=$(grep -i '^location:' kudu_headers.txt | awk '{print $2}' | tr -d '\r\n' || true)
+          if [ -z "$POLL_URL" ]; then
+            POLL_URL="https://houstonservicehub-staging.scm.azurewebsites.net/api/deployments/latest"
+          fi
+          echo "poll_url=$POLL_URL" >> "$GITHUB_OUTPUT"
+          echo "Staging deployment accepted by Azure (async). Polling: $POLL_URL"
 
       - name: Wait for staging deployment to finish
         env:
           KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER_STAGING }}
           KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD_STAGING }}
+          POLL_URL: ${{ steps.kudu.outputs.poll_url }}
         run: |
           echo "Polling Kudu for deployment status..."
-          # A zipdeploy can take over an hour on a cold SCM sandbox (observed
-          # 63 min on 2026-10-17). Poll for 40 min so we don't report a false
-          # failure while Azure keeps deploying in the background.
-          for i in $(seq 1 120); do
+          # Poll up to 40 min (160 x 15s) to survive cold SCM sandboxes while
+          # finishing quickly under WEBSITE_RUN_FROM_PACKAGE=1.
+          for i in $(seq 1 160); do
             STATUS=$(curl -s \
               -u "${KUDU_USER}:${KUDU_PWD}" \
-              "https://houstonservicehub-staging.scm.azurewebsites.net/api/deployments/latest" \
+              "$POLL_URL" \
               | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',0))" 2>/dev/null || echo "0")
             echo "Attempt $i — deployment status: $STATUS"
             # status 4 = success, status 3 = failed
@@ -243,45 +252,49 @@ jobs:
               echo "Staging deployment failed."
               exit 1
             fi
-            sleep 20
+            sleep 15
           done
           echo "Timed out waiting for staging deployment."
           exit 1
 
   # ──────────────────────────────────────────────────────────────────────────
   # 3. SMOKE TESTS
-  # Hit critical endpoints on the staging slot. If any check fails the
-  # pipeline stops and production is never touched.
+  # Hit critical endpoints on the staging slot and verify the new commit SHA
+  # is live. If any check fails the pipeline stops and production is untouched.
   # ──────────────────────────────────────────────────────────────────────────
   smoke-tests:
     needs: deploy-staging
     runs-on: ubuntu-latest
 
     steps:
-      - name: Wait for staging slot to warm up
-        run: sleep 60
+      - name: Wait for staging /api/health to report this commit (HTTP 200)
+        run: |
+          EXPECTED="${{ github.sha }}"
+          for i in $(seq 1 18); do
+            RESP=$(curl -s -w "\n%{http_code}" \
+              --max-time 30 \
+              "https://houstonservicehub-staging.azurewebsites.net/api/health" || true)
+            STATUS=$(echo "$RESP" | tail -1)
+            BODY=$(echo "$RESP" | sed '$d')
+            COMMIT=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit',''))" 2>/dev/null || true)
+            echo "Attempt $i — health HTTP $STATUS, commit=${COMMIT:-none} (expected ${EXPECTED:0:7})"
+            if [ "$STATUS" = "200" ] && [ "$COMMIT" = "$EXPECTED" ]; then
+              echo "Staging is healthy on commit ${EXPECTED:0:7}."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Staging health/commit smoke test FAILED after 18 attempts (last HTTP $STATUS, commit=${COMMIT:-none})"
+          exit 1
 
       - name: Health check — homepage (HTTP 200)
         run: |
-          for i in $(seq 1 6); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --max-time 30 \
-              "https://houstonservicehub-staging.azurewebsites.net/" || true)
-            echo "Homepage status (attempt $i): $STATUS"
-            if [ "$STATUS" = "200" ]; then exit 0; fi
-            sleep 20
-          done
-          echo "Homepage smoke test FAILED after 6 attempts (last: $STATUS)"
-          exit 1
-
-      - name: Health check — API health endpoint
-        run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             --max-time 30 \
-            "https://houstonservicehub-staging.azurewebsites.net/api/health" || true)
-          echo "API health status: $STATUS"
+            "https://houstonservicehub-staging.azurewebsites.net/" || true)
+          echo "Homepage status: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "API health smoke test FAILED (got $STATUS)"
+            echo "Homepage smoke test FAILED (got $STATUS)"
             exit 1
           fi
 
@@ -307,23 +320,44 @@ jobs:
               "https://houstonservicehub-staging.azurewebsites.net/api/web/page/home" || true)
             echo "Page data status (attempt $i): $STATUS"
             if [ "$STATUS" = "200" ]; then exit 0; fi
-            sleep 20
+            sleep 15
           done
           echo "Page data smoke test FAILED after 6 attempts (last: $STATUS)"
           exit 1
 
+      - name: Health check — Directory SMS & auth guards
+        run: |
+          SMS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            --max-time 30 \
+            "https://houstonservicehub-staging.azurewebsites.net/api/directory/sms" || true)
+          echo "Directory SMS (unsigned POST) status: $SMS_STATUS"
+          if [ "$SMS_STATUS" != "403" ]; then
+            echo "Directory SMS guard check FAILED (expected 403, got $SMS_STATUS)"
+            exit 1
+          fi
+          DIR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://houstonservicehub-staging.azurewebsites.net/api/directory/members" || true)
+          echo "Directory members (unauth GET) status: $DIR_STATUS"
+          if [ "$DIR_STATUS" != "401" ]; then
+            echo "Directory auth guard check FAILED (expected 401, got $DIR_STATUS)"
+            exit 1
+          fi
+
       - name: All smoke tests passed
-        run: echo "All staging smoke tests passed — proceeding to production swap."
+        run: echo "All staging smoke tests passed — proceeding to production deploy."
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 4. PROMOTE TO PRODUCTION
-  # Auto-swap fires automatically when staging deployment completes (configured
-  # on the slot). This job runs after smoke tests pass to:
-  #   a) Apply DB migrations to production
-  #   b) Wait for the auto-swap to propagate
-  #   c) Verify production is healthy
+  # 4. DEPLOY TO PRODUCTION (STAGING-GATED)
+  # Auto-swap is OFF (since 2026-10-18) so smoke tests gate promotion.
+  # Once staging passes every check above, this job:
+  #   a) Applies DB migrations to production
+  #   b) Deploys the exact same verified deploy.zip to production via Kudu
+  #   c) Verifies production /api/health reports this commit SHA + DB & SMS
+  # (Future upgrade: swap via OIDC `az webapp deployment slot swap` once an
+  # Azure Owner grants Website Contributor to `github-servicehub-deploy`.)
   # ──────────────────────────────────────────────────────────────────────────
-  swap-production:
+  deploy-production:
     needs: smoke-tests
     runs-on: ubuntu-latest
 
@@ -339,6 +373,8 @@ jobs:
 
       - name: Install dependencies (for Prisma CLI)
         run: npm ci
+        env:
+          HUSKY: 0
 
       - name: Resolve any failed migrations in production
         run: |
@@ -349,10 +385,6 @@ jobs:
           npx prisma migrate resolve --applied "20260630_fixdb_guard_updatedat_column_add_and_resolve_faile" || true
           npx prisma migrate resolve --applied "20260707_add_user_preferences" || true
           npx prisma migrate resolve --applied "20260711_add_form_folder_table" || true
-          # One-time rollback marker: 20260925 failed on first prod run (batch
-          # compiled CREATE INDEX before the column it referenced existed).
-          # --rolled-back lets migrate deploy retry it; nothing had applied.
-          npx prisma migrate resolve --rolled-back "20260925_directory_sms_and_sync" || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 
@@ -361,34 +393,85 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
 
-      - name: Wait for auto-swap to complete
-        run: |
-          echo "Auto-swap is configured on the staging slot — waiting for it to propagate..."
-          # Azure slot swap + iisnode cold start can take a while; give it
-          # plenty of room before we start probing production.
-          sleep 60
+      - name: Download verified deployment artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-zip
 
-      - name: Verify production is healthy after swap
+      - name: Deploy to production via Kudu
+        id: kudu
+        env:
+          KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER }}
+          KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD }}
         run: |
-          # `|| true` is critical: GitHub Actions runs this with `bash -e`,
-          # so without it a curl timeout (exit 28) aborts the whole script
-          # before the retry loop can do its job.
-          for i in $(seq 1 10); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --max-time 30 \
-              "https://houstonservicehub.azurewebsites.net/api/health" || true)
-            echo "Attempt $i — production health: $STATUS"
-            if [ "$STATUS" = "200" ]; then
-              echo "Production is healthy."
+          HTTP=$(curl -sS -D kudu_headers.txt -o kudu_body.txt -w "%{http_code}" -X POST \
+            -u "${KUDU_USER}:${KUDU_PWD}" \
+            "https://houstonservicehub.scm.azurewebsites.net/api/zipdeploy?isAsync=true" \
+            --data-binary @deploy.zip \
+            -H "Content-Type: application/zip" \
+            --max-time 300)
+          echo "Kudu production response: HTTP $HTTP"
+          if [ "$HTTP" != "202" ] && [ "$HTTP" != "200" ]; then
+            cat kudu_body.txt
+            echo "Production deploy request failed with HTTP $HTTP"
+            exit 1
+          fi
+          POLL_URL=$(grep -i '^location:' kudu_headers.txt | awk '{print $2}' | tr -d '\r\n' || true)
+          if [ -z "$POLL_URL" ]; then
+            POLL_URL="https://houstonservicehub.scm.azurewebsites.net/api/deployments/latest"
+          fi
+          echo "poll_url=$POLL_URL" >> "$GITHUB_OUTPUT"
+          echo "Production deployment accepted by Azure (async). Polling: $POLL_URL"
+
+      - name: Wait for production deployment to finish
+        env:
+          KUDU_USER: ${{ secrets.AZURE_DEPLOY_USER }}
+          KUDU_PWD: ${{ secrets.AZURE_DEPLOY_PWD }}
+          POLL_URL: ${{ steps.kudu.outputs.poll_url }}
+        run: |
+          echo "Polling Kudu for production deployment status..."
+          for i in $(seq 1 160); do
+            STATUS=$(curl -s \
+              -u "${KUDU_USER}:${KUDU_PWD}" \
+              "$POLL_URL" \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',0))" 2>/dev/null || echo "0")
+            echo "Attempt $i — deployment status: $STATUS"
+            # status 4 = success, status 3 = failed
+            if [ "$STATUS" = "4" ]; then
+              echo "Production deployment succeeded."
               exit 0
+            fi
+            if [ "$STATUS" = "3" ]; then
+              echo "Production deployment failed."
+              exit 1
             fi
             sleep 15
           done
-          echo "Production health check FAILED. Check Azure portal."
+          echo "Timed out waiting for production deployment."
           exit 1
 
-      # Same DB-backed check on production — verifies the swapped app actually
-      # serves data, not just the DB-free /api/health endpoint.
+      - name: Verify production /api/health reports this commit (HTTP 200)
+        run: |
+          EXPECTED="${{ github.sha }}"
+          for i in $(seq 1 18); do
+            RESP=$(curl -s -w "\n%{http_code}" \
+              --max-time 30 \
+              "https://houstonservicehub.azurewebsites.net/api/health" || true)
+            STATUS=$(echo "$RESP" | tail -1)
+            BODY=$(echo "$RESP" | sed '$d')
+            COMMIT=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('commit',''))" 2>/dev/null || true)
+            echo "Attempt $i — prod health HTTP $STATUS, commit=${COMMIT:-none} (expected ${EXPECTED:0:7})"
+            if [ "$STATUS" = "200" ] && [ "$COMMIT" = "$EXPECTED" ]; then
+              echo "Production is healthy on commit ${EXPECTED:0:7}."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Production health/commit check FAILED after 18 attempts (last HTTP $STATUS, commit=${COMMIT:-none})"
+          exit 1
+
+      # Same DB-backed check on production — verifies live production serves
+      # data cleanly against the migrated schema.
       - name: Verify production serves page data (DB-backed)
         run: |
           for i in $(seq 1 6); do
@@ -401,3 +484,33 @@ jobs:
           done
           echo "Production page data check FAILED (last: $STATUS)"
           exit 1
+
+      - name: Verify production Directory SMS & auth guards
+        run: |
+          SMS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            --max-time 30 \
+            "https://houstonservicehub.azurewebsites.net/api/directory/sms" || true)
+          echo "Production Directory SMS (unsigned POST) status: $SMS_STATUS"
+          if [ "$SMS_STATUS" != "403" ]; then
+            echo "Production Directory SMS guard check FAILED (expected 403, got $SMS_STATUS)"
+            exit 1
+          fi
+          DIR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://houstonservicehub.azurewebsites.net/api/directory/members" || true)
+          echo "Production Directory members (unauth GET) status: $DIR_STATUS"
+          if [ "$DIR_STATUS" != "401" ]; then
+            echo "Production Directory auth guard check FAILED (expected 401, got $DIR_STATUS)"
+            exit 1
+          fi
+
+      - name: Write deployment summary
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+          ### Deployed \`${SHORT_SHA}\` to Staging & Production
+
+          - **Staging:** https://houstonservicehub-staging.azurewebsites.net (verified on \`${SHORT_SHA}\`)
+          - **Production:** https://houstonservicehub.azurewebsites.net (verified on \`${SHORT_SHA}\`)
+          - **Checks passed:** unit tests, schema/column drift, bundle imports, staging smoke tests, prod migrations, prod health + commit SHA + DB + Directory guards
+          EOF

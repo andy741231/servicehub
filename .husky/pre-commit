@@ -59,4 +59,5 @@ if [ -n "$MISSING" ]; then
   exit 1
 fi
 
-echo "✅ All models have corresponding migrations — no drift detected."
+echo "✅ All models have corresponding migrations — checking columns..."
+node server/scripts/check-column-drift.mjs

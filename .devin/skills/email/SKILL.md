@@ -51,7 +51,7 @@ Sending, deliverability tracking, and analytics depend on a third-party ESP — 
 
 This app does not send email directly from the Express request/response cycle. Two problems rule that out: Azure App Service on iisnode is a synchronous IIS worker process (not suited to holding a request open for a bulk send), and open/click/bounce tracking requires infrastructure (tracking pixels, link rewriting, feedback loops) that's impractical to build first-party.
 
-**ESP:** send through a transactional/bulk email provider (e.g. SendGrid, Postmark, or Azure Communication Services Email) via their API, not raw SMTP. Confirm the specific provider with the user before implementing Phase 8 — this skill doesn't hardcode one, but every downstream piece (webhook payload shape, unsubscribe header support, rate limits) depends on the choice.
+**ESP:** the chosen provider is **Azure Communication Services Email** (`@azure/communication-email`, wrapped in `server/src/services/emailService.js`; setup and env vars in `startup.md` → "Azure Blob Storage & Email Setup"). Send through its API, not raw SMTP. Webhook payload shape, unsubscribe headers, and rate limits all follow ACS.
 
 **Queue:** campaign sends are enqueued as background jobs, not processed inline in the controller.
 - `POST /campaigns/:id/send` validates the campaign and recipient list, flips status to `scheduled` (or `sending`), and enqueues a job — it returns immediately, it does not send synchronously.

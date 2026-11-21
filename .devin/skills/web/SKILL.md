@@ -52,8 +52,8 @@ theme tokens as the source of truth for colors, typography, and spacing.
   positioned via grid coordinates (`colStart`/`colEnd`/`rowStart`/`rowEnd`)
   and can overlap/layer via `zIndex`. Drag and resize use `react-rnd` with
   `dragGrid`/`resizeGrid` for snap-to-grid. Press "G" to toggle the grid
-  overlay. See `web-grid.md` for the previous grid architecture and the
-  Fluid Engine design.
+  overlay. UX reviews, the editor test plan, and the Craft/Puck spike live in
+  `md files/web-editor/`.
 - **Editor chrome (mockup-driven):** `FluidSection.jsx` and `FluidBlock.jsx`
   follow `builder-mockup.html` for hover/select/edit interactions — solid
   2px `--primary` outline on hover or select, top/bottom `+ Add Section`
@@ -355,29 +355,22 @@ block content.
 
 ## 8. Templates
 
-Templates are defined in two places:
+Two different things share the word "template":
 
-- **Builder UI:** `TEMPLATES` array in `client/src/pages/web/InlineEditor.jsx`
-  (legacy copy in `OldWebBuilder.jsx`).
-- **Renderer styles:** design tokens in `client/src/index.css` / `THEME.md`,
-  applied via the Tailwind theme (there is no `THEME_STYLES` object in `Home.jsx`).
-
-### Current templates
-
-| ID | Name |
-|----|------|
-| `modern` | Clean, spacious, slate/blue |
-| `classic` | Serif, traditional business |
-| `minimal` | Monospace, black & white |
-| `escape-velocity` | HTML5 UP inspired, dark header, colored sections |
-
-### Adding a new template
-
-1. Add `{ id, name, description }` to `TEMPLATES` in the builder.
-2. Add matching styles via the design tokens in `client/src/index.css` /
-   `THEME.md` (container, hero, heroTitle, heroSubtitle, textBlock, and any
-   extra keys for other block types).
-3. Ensure `Home.jsx` has a fallback to `modern` if a saved template is missing.
+- **`WebPage.template`** — a per-page style field (default `"modern"`). Styles
+  come from the design tokens in `client/src/index.css` / `THEME.md` (there is
+  no `THEME_STYLES` object in `Home.jsx`). The old multi-template UI
+  (`TEMPLATES` array, `classic`/`minimal`/`escape-velocity` skins) no longer
+  exists in the client.
+- **`WebPageTemplate`** — reusable page snapshots stored in the DB
+  (`snapshot` JSON). Managed via `GET/POST/DELETE /api/web/page-templates`
+  and `POST /api/web/page-templates/:id/apply/:slug`
+  (`server/src/routes/web.js`), surfaced in the app at
+  `client/src/pages/web/PageTemplates.jsx`. The editor's "Save as template"
+  action posts a snapshot of the current page (`WebEditor.jsx`).
+- **Draft templates** (`WebSiteStyle.draftTemplates`) — site-wide draft
+  presets for home/page, managed in `DraftTemplates.jsx` via
+  `GET/PUT /api/web/draft-templates`.
 
 ## 9. API Endpoints
 

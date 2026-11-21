@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Church Directory — Serving Ones' Guide</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+
+<!-- ==================== COVER ==================== -->
+<div class="cover">
+  <div class="brand">The Church in Houston</div>
+  <h1>Church Directory</h1>
+  <p class="subtitle">Serving Ones' Guide</p>
+  <p class="audience">For Helpers, Approvers, and Administrators</p>
+  <hr class="rule">
+  <p class="version">Version 1.0 — September 2026</p>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#sec-1"><span class="num">1</span>Introduction</a></li>
+    <li><a href="#sec-2"><span class="num">2</span>The Spirit of This Service</a></li>
+    <li><a href="#sec-3"><span class="num">3</span>Signing In</a></li>
+    <li class="sub"><a href="#sec-3-1"><span class="num">3.1</span>On the directory website</a></li>
+    <li class="sub"><a href="#sec-3-2"><span class="num">3.2</span>By text message</a></li>
+    <li class="sub"><a href="#sec-3-3"><span class="num">3.3</span>Through the Service Hub (staff &amp; admins)</a></li>
+    <li><a href="#sec-4"><span class="num">4</span>What You Can See</a></li>
+    <li><a href="#sec-5"><span class="num">5</span>The Dashboard</a></li>
+    <li><a href="#sec-6"><span class="num">6</span>Browsing &amp; the Member Table</a></li>
+    <li><a href="#sec-7"><span class="num">7</span>Viewing a Member's Details</a></li>
+    <li><a href="#sec-8"><span class="num">8</span>Adding a New Saint</a></li>
+    <li><a href="#sec-9"><span class="num">9</span>Activating New Saints (Approvers)</a></li>
+    <li><a href="#sec-10"><span class="num">10</span>Editing Records &amp; Helping Saints Update</a></li>
+    <li><a href="#sec-11"><span class="num">11</span>Status Changes &amp; Removal</a></li>
+    <li><a href="#sec-12"><span class="num">12</span>Handling Duplicates</a></li>
+    <li><a href="#sec-13"><span class="num">13</span>Changing Roles</a></li>
+    <li><a href="#sec-14"><span class="num">14</span>Daily Email Digest</a></li>
+    <li><a href="#sec-15"><span class="num">15</span>Using Text Messages as a Serving One</a></li>
+    <li><a href="#sec-16"><span class="num">16</span>For Administrators</a></li>
+    <li><a href="#sec-17"><span class="num">17</span>Protecting Privacy</a></li>
+    <li><a href="#sec-18"><span class="num">18</span>Troubleshooting</a></li>
+    <li><a href="#sec-19"><span class="num">19</span>Quick Reference</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 1. INTRODUCTION ==================== -->
+<h2 class="section" id="sec-1">1. Introduction</h2>
+<p>The Church Directory is the church's online phone list. It lets the saints look one
+another up for fellowship, and it gives each district's serving ones a way to keep the
+records for their district accurate, complete, and secure.</p>
+<p>This guide is for the brothers and sisters who serve the directory:</p>
+<table>
+  <thead>
+    <tr><th>Role</th><th>What the role is for</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Saint</strong></td><td>Keeps their own contact info current and looks up other saints for fellowship.</td></tr>
+    <tr><td><strong>Helper</strong></td><td>Assists the saints in their district and the approvers; can add new saints (new records start as Pending).</td></tr>
+    <tr><td><strong>Approver</strong></td><td>Ensures the records in their district are accurate, complete, and secure; activates new saints after checking for duplicates; manages removals.</td></tr>
+    <tr><td><strong>Admin</strong></td><td>Maintains the directory for all roles in all districts. Service Hub platform admins and super admins are automatically directory Admins.</td></tr>
+  </tbody>
+</table>
+<p>Helpers and approvers can only perform management actions on records in their
+<strong>own district</strong> — the server enforces this, so there is no way to change
+another district's records by accident.</p>
+<p>For the saints' side of the directory (signing in, browsing, updating their own
+profile, texting), see the companion <em>Church Directory — Saints' Guide</em>. This
+guide summarizes those basics where a serving one needs them to help a saint.</p>
+<div class="callout tip">
+  <span class="label">Where things are</span>
+  <p>Saints, helpers, and approvers use the directory website:
+  <strong>https://houstonservicehub.azurewebsites.net/directory</strong>.
+  Staff who have a Service Hub account (and all admins) can also work from the Hub:
+  <strong>https://houstonservicehub.azurewebsites.net/hub-admin</strong> → sidebar
+  "Directory". The text-message phone list is at <strong>713-257-9799</strong>.</p>
+</div>
+
+<!-- ==================== 2. SPIRIT ==================== -->
+<h2 class="section" id="sec-2">2. The Spirit of This Service</h2>
+<p>The directory is a service to the saints, not just a database. A few principles from
+the church's requirements shape how we use it:</p>
+<ul>
+  <li><strong>Add in fellowship.</strong> Adding a saint should be done in fellowship with
+  the saint and the responsible brothers in the district. Always check first that the
+  person isn't already listed — perhaps by another helper or in another district.</li>
+  <li><strong>One record per person.</strong> When a saint moves to another district, there
+  should be fellowship between both districts, and the district is changed on the
+  <em>existing</em> record — never create a second record.</li>
+  <li><strong>Removal is a shepherding matter.</strong> Setting someone Not Active is done
+  in fellowship, after prayer and shepherding — when they have expressed that they no
+  longer intend to meet, or their contact information is no longer valid. If they are
+  recovered, simply reactivate the record.</li>
+  <li><strong>Records are almost never physically deleted.</strong> Records get a removal
+  status that only Approvers and Admins can see. Only <em>duplicate</em> records may be
+  physically deleted, and only after deciding which record has the most correct
+  information.</li>
+  <li><strong>Saints maintain their own data.</strong> Serving ones encourage and tutor the
+  saints, and make changes for them only when needed — for example when a saint has no
+  texting phone, has an aversion to technology, or is in ill health.</li>
+  <li><strong>Protect the saints' information.</strong> Just because you can see
+  information doesn't mean you should share it. See Section 17.</li>
+  <li><strong>Problems go up the chain.</strong> Saints ask helpers or approvers first; if
+  a problem can't be resolved there, the administrators help.</li>
+</ul>
+
+<!-- ==================== 3. SIGNING IN ==================== -->
+<h2 class="section" id="sec-3">3. Signing In</h2>
+
+<h3 id="sec-3-1">3.1 On the directory website</h3>
+<p>Go to <strong>https://houstonservicehub.azurewebsites.net/directory</strong>. The
+sign-in page is titled "The Church in Houston Directory".</p>
+<p><strong>Default method — email link:</strong> enter your email in the "Your email in
+the directory" field and click "Send me a sign-in link". The link in the email works
+<em>once</em> and expires in <strong>30 minutes</strong>. If the email doesn't arrive,
+check Junk/Spam. If you just requested one, you'll see "A link was just sent — check
+your inbox. You can request another in a minute."</p>
+<p><strong>Password sign-in:</strong> click "Sign in with a password instead" to use Email
++ Password. The "Stay signed in" checkbox is checked by default. A password only exists
+after the person has signed in once with an email link and then set a password on their
+Profile page (the "Sign-in options" card: "New password" + "Confirm password" →
+"Set password", minimum 8 characters). Setting a password signs out that person's other
+devices. If someone forgets their password, they simply sign in with the email link again
+and set a new one.</p>
+<p>A signed-in session lasts up to <strong>30 days</strong>. The "Sign out" button is at
+the top right.</p>
+<p>The bottom of the sign-in page lists the helpers and approvers (name, district, and
+"approver" where applicable) whom a saint can contact for help — useful when coaching a
+saint who can't get in.</p>
+<div class="callout important">
+  <span class="label">Important</span>
+  <p>Only <strong>Active</strong> records can sign in. If a record's status is changed away
+  from Active, that person is signed out immediately. A Pending, Inactive, or removed
+  saint cannot sign in until an approver activates (or reactivates) their record.</p>
+</div>
+
+<h3 id="sec-3-2">3.2 By text message</h3>
+<p>Text <code>ME</code> to <strong>713-257-9799</strong> from the phone number on your
+record (Phone 1). You receive a link by text: "HI JOHN, use this link to REVIEW or UPDATE
+your information:". This is often the easiest way to help a saint who doesn't use email.</p>
+
+<h3 id="sec-3-3">3.3 Through the Service Hub (staff &amp; admins)</h3>
+<p>Staff who have a Service Hub account sign in at
+<strong>https://houstonservicehub.azurewebsites.net/hub-admin</strong> and open "Directory"
+in the sidebar, which shows "Dashboard", "Browse", and "My Profile". Hub access to the
+Directory requires the Hub "Directory" app permission <em>and</em> a linked directory
+record whose status is Active — your directory role comes from that linked record. Hub
+platform admins are directory Admins everywhere. Linking a Hub login to a directory
+record is an Admin-only task.</p>
+<p>Helpers and approvers who don't have a Hub account simply use the saints' website —
+they get the same management tools there (see Section 6).</p>
+
+<!-- ==================== 4. VISIBILITY ==================== -->
+<h2 class="section" id="sec-4">4. What You Can See</h2>
+<p>What a record shows you depends on your role and on whether the record is in your
+district:</p>
+<table>
+  <thead>
+    <tr><th>Role</th><th>Records visible</th><th>Detail level</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Saint</strong></td>
+      <td>Only Active saints who are listed (opted in), church-wide.</td>
+      <td>Fields masked by each saint's privacy choices ("Hidden" / "Not provided").</td>
+    </tr>
+    <tr>
+      <td><strong>Helper</strong></td>
+      <td>All Active listed saints church-wide, <em>plus</em> every record in their own
+      district <em>except</em> removed statuses (Moved, Deceased, Negative, Duplicate, Delete).</td>
+      <td>Same privacy masking as saints for church-wide records; full unmasked details for
+      records in their own district.</td>
+    </tr>
+    <tr>
+      <td><strong>Approver</strong></td>
+      <td>All Active listed saints church-wide, plus <em>all statuses</em> in their own
+      district.</td>
+      <td>Full unmasked details for records they manage (their district).</td>
+    </tr>
+    <tr>
+      <td><strong>Admin</strong></td>
+      <td>Everything, every district, every status.</td>
+      <td>Full details everywhere.</td>
+    </tr>
+  </tbody>
+</table>
+<p>Once a helper sets a record to a removed status (e.g. Moved), it disappears from the
+helper's view — approvers and admins can still see it.</p>
+
+<!-- ==================== 5. DASHBOARD ==================== -->
+<h2 class="section" id="sec-5">5. The Dashboard</h2>
+<p>The Dashboard is available in the Service Hub (<strong>/hub-admin</strong> →
+"Directory" → "Dashboard"). It gives a quick picture of the directory:</p>
+<ul>
+  <li><strong>"Active Saints"</strong> — total count, with "N districts represented".</li>
+  <li><strong>"My District"</strong> — your district and your role.</li>
+  <li><strong>"Pending"</strong> — records "awaiting activation".</li>
+  <li><strong>"Quick Actions"</strong> — "Browse", "My Profile", "Add Member" (helpers and
+  above), and "Review Pending" (approvers/admins; opens the member table filtered to
+  Pending).</li>
+  <li>A <strong>"Pending activation"</strong> list (or "Recently added" when there is
+  nothing pending), a "Browse Directory" button, and a "Districts — Active saints by
+  district" chart.</li>
+</ul>
+<div class="callout tip">
+  <span class="label">Tip</span>
+  <p>Approvers: make the "Review Pending" quick action your first stop each day — pending
+  saints can't sign in or be seen by anyone until you activate them.</p>
+</div>
+
+<!-- ==================== 6. BROWSE / TABLE ==================== -->
+<h2 class="section" id="sec-6">6. Browsing &amp; the Member Table</h2>
+<p>On "Browse", staff default to the <strong>"Table"</strong> view; a
+"Cards"/"Table" toggle switches to the same card view the saints see. Staff also get
+extra controls: an "All statuses" filter, "Refresh", and "Add Member". Below the toolbar
+a line reads "N members · management scoped to &lt;your district&gt;" (not shown to
+admins, who manage all districts).</p>
+<h3>The table</h3>
+<ul>
+  <li>Columns: <strong>Name, District, Status, Role, Phone, Email, Added</strong>. Click a
+  name to open the member's details.</li>
+  <li>Pages of 50 rows with "Previous"/"Next".</li>
+  <li>Row actions:
+    <ul>
+      <li>A green <strong>"Activate"</strong> button (approvers/admins) on Pending or
+      Inactive rows.</li>
+      <li>A <strong>"⋮"</strong> menu with "View details", "Edit", "Set status" (options
+      depend on your role — see Section 11), "Set role" (see Section 13), and
+      "Delete permanently" (only on Duplicate records, approvers/admins only).</li>
+    </ul>
+  </li>
+  <li>Every status or role change asks for confirmation.</li>
+</ul>
+<h3>Searching and filtering</h3>
+<p>The search box ("Search by name, email, or phone…") and the "Last name A–Z" dropdown
+work the same as for saints. Staff additionally get the "All statuses" filter and the
+district buttons ("All" plus the 12 districts; several may be selected).</p>
+<table>
+  <thead>
+    <tr><th>District</th><th>Text code</th><th>District</th><th>Text code</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Central 1</td><td>C1</td><td>C - Medical Ctr</td><td>CL3</td></tr>
+    <tr><td>Central 2</td><td>C2</td><td>S - Spanish Lang</td><td>SL</td></tr>
+    <tr><td>Central 3</td><td>C3</td><td>Southwest</td><td>SW</td></tr>
+    <tr><td>C - Sugar Land</td><td>CL1</td><td>South</td><td>S</td></tr>
+    <tr><td>C - Diho</td><td>CL2</td><td>Southeast</td><td>SE</td></tr>
+    <tr><td>North</td><td>N</td><td>West</td><td>W</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== 7. DETAILS ==================== -->
+<h2 class="section" id="sec-7">7. Viewing a Member's Details</h2>
+<p>Click a member's name (table) or card to open the details dialog. It shows contact
+info, locality, spouse, the date the record was added, date of birth, and head of
+household.</p>
+<p>For staff, an extra box shows:</p>
+<ul>
+  <li>Marital status and gender;</li>
+  <li>Privacy: whether the phone and address are visible or hidden, and whether the saint
+  is opted in or out of the listing;</li>
+  <li>Provenance: "Imported from the 2024 phone list" or "Added by staff", plus
+  "verified &lt;date&gt;" or "not yet verified" with a "Mark verified" button;</li>
+  <li>"Last &lt;change&gt; by &lt;name&gt; on &lt;date&gt;" — the most recent change;</li>
+  <li>A "History" list of the latest 50 changes (date, who, what).</li>
+</ul>
+<p>An "Edit" button opens the edit form (Section 10).</p>
+<div class="callout tip">
+  <span class="label">Tip</span>
+  <p>Imported records stay "not yet verified" until a serving one confirms the details and
+  clicks "Mark verified" (any staff edit also marks the record verified). When you contact
+  a saint and confirm their info, take the extra second to verify the record.</p>
+</div>
+
+<!-- ==================== 8. ADDING ==================== -->
+<h2 class="section" id="sec-8">8. Adding a New Saint</h2>
+<p>Helpers, approvers, and admins can add saints — but only into their own district
+(unless admin). <strong>Every new record starts as Pending:</strong> it is not visible to
+the saints and cannot sign in until an approver activates it.</p>
+<h3>Step 0 — Fellowship first</h3>
+<p>Adding should be done in fellowship with the saint and the responsible brothers in the
+district. Confirm the person isn't already listed before you start.</p>
+<h3>Step 1 — "Check for an existing record"</h3>
+<p>Click "Add Member" (on Browse or the Dashboard). Helpers, approvers, and
+admins can also text <code>ADD</code> to the directory number — the reply is a
+one-time sign-in link that opens this same form. The first step searches the
+<strong>whole church</strong> — all districts, any status — by name, email, or phone
+(at least 2 characters).</p>
+<ul>
+  <li>Results show name · district · email/phone and status.</li>
+  <li>Warnings appear as needed: "Likely the same person — confirm this is really someone
+  new:" with notes like "— same phone" or "— same name", or "Possible existing
+  records:".</li>
+  <li>"No matches found — safe to add." means you're clear to proceed.</li>
+  <li>The "Continue to add" button stays disabled until a search has finished.</li>
+</ul>
+<div class="callout important">
+  <span class="label">Important</span>
+  <p>If the person already exists — even in another district, or with status Inactive —
+  <strong>do not add a second record.</strong> Fellowship instead, and have an approver
+  change the district (Section 10) or reactivate the record (Section 11).</p>
+</div>
+<h3>Step 2 — The form</h3>
+<p>Required fields: "First name *", "Last name *", and "District *" (defaults to your
+district; only approvers/admins can change it — helpers see "Only approvers/admins can
+change district").</p>
+<p>Optional fields: Middle name, Other name, Email (needed for email sign-in; must be
+unique — "A member with this email already exists"), Gender (brother/sister), Marital
+status, Date of birth, Locality (default Houston), Small group, Phone 1 (needed for
+text-message access), Phone 2, Street address, Apt #, City, State (default TX), ZIP,
+"Spouse (linked member)" (search-and-link, or spouse first/last name as free text), and
+the checkboxes "Phone visible to other saints" (default on), "Address visible to other
+saints" (default off), "Listed in the directory" (default on), and "Head of household".</p>
+<p>Click "Add member". Remind the saint their record is Pending until an approver
+activates it — then they can sign in by email link or by texting ME.</p>
+<div class="callout tip">
+  <span class="label">Tip</span>
+  <p>Enter Phone 1 carefully — the text-message service recognizes a saint by the Phone 1
+  on their record. If it changes later, update it so texting keeps working.</p>
+</div>
+
+<!-- ==================== 9. ACTIVATING ==================== -->
+<h2 class="section" id="sec-9">9. Activating New Saints (Approvers)</h2>
+<p>Approvers and admins activate Pending records. Find them via the Dashboard's
+"Review Pending" quick action, or Browse → Table → status filter "Pending".</p>
+<ol>
+  <li><strong>Before activating, verify there is no duplicate</strong> — use the Add Member
+  duplicate search or the Browse search.</li>
+  <li>Click the green "Activate" button on the row.</li>
+  <li>Confirm the dialog: "Activating makes this saint visible to everyone in the
+  directory. Verify there is no duplicate record first."</li>
+</ol>
+<p>Once Active, the saint can sign in (email link or text ME) and appears to everyone in
+the directory.</p>
+<h3>Couples</h3>
+<p>Add both spouses, activate both, then link them via Edit → "Spouse (linked member)".
+Each spouse keeps their own record and sign-in.</p>
+
+<!-- ==================== 10. EDITING ==================== -->
+<h2 class="section" id="sec-10">10. Editing Records &amp; Helping Saints Update</h2>
+<h3>Editing as staff</h3>
+<ul>
+  <li>Helpers and approvers can edit records in their own district (helpers cannot edit
+  removed records).</li>
+  <li>Changing a record's district requires approver or admin — "District changes require
+  approver role or above". A move between districts is an <em>edit</em>, never a new
+  record.</li>
+  <li>Changing the email also changes the email the person signs in with. If another
+  sign-in already uses it you'll see "Another directory sign-in already uses that
+  email".</li>
+  <li>If a saint's cell number changes, update <strong>Phone 1</strong> so the text service
+  still recognizes them.</li>
+  <li>Staff may upload a photo for members they manage.</li>
+  <li>Every change is recorded in History with who made it.</li>
+</ul>
+<h3>Helping a saint update their own info</h3>
+<p>Saints maintain their own data on the "Profile" tab — serving ones encourage and tutor
+them, and only edit for them when needed (no texting phone, technology aversion, ill
+health). The saints' guide has the full details; in brief:</p>
+<ol>
+  <li>Have them sign in (email link, or text ME to 713-257-9799).</li>
+  <li>Open the "Profile" tab — editable fields include Email, Other name, Phone 1, Phone 2,
+  street address fields, marital status, date of birth, small group, spouse names, and the
+  privacy checkboxes.</li>
+  <li>"Save changes" lights up only after something changes; success shows "Saved — your
+  info is up to date."</li>
+  <li>Their name, district, status, and role are maintained by the district's helpers and
+  approvers — they contact you to change those.</li>
+</ol>
+
+<!-- ==================== 11. STATUSES ==================== -->
+<h2 class="section" id="sec-11">11. Status Changes &amp; Removal</h2>
+<h3>The statuses</h3>
+<table>
+  <thead>
+    <tr><th>Status</th><th>Meaning</th><th>Visible to saints?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Active</strong></td><td>Normal listed saint.</td><td>Yes (if listed) — and can sign in.</td></tr>
+    <tr><td><strong>Pending</strong></td><td>Newly added, awaiting approval.</td><td>No — cannot sign in.</td></tr>
+    <tr><td><strong>Inactive</strong></td><td>Was active; now not meeting.</td><td>No — hidden from saints.</td></tr>
+    <tr><td><strong>Moved</strong></td><td>Moved away (removed status).</td><td>No — approvers/admins only.</td></tr>
+    <tr><td><strong>Deceased</strong></td><td>Deceased (removed status).</td><td>No — approvers/admins only.</td></tr>
+    <tr><td><strong>Negative</strong></td><td>Removed status.</td><td>No — approvers/admins only.</td></tr>
+    <tr><td><strong>Duplicate</strong></td><td>A second record for the same person.</td><td>No — approvers/admins only.</td></tr>
+    <tr><td><strong>Delete</strong></td><td>Marked for removal.</td><td>No — approvers/admins only.</td></tr>
+  </tbody>
+</table>
+<h3>Who may set which status (in their own district; admins anywhere)</h3>
+<table>
+  <thead>
+    <tr><th>Role</th><th>Statuses they can set</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Helper</strong></td><td>Inactive, Moved. (After a helper sets Moved, the record disappears from the helper's view.)</td></tr>
+    <tr><td><strong>Approver</strong></td><td>Active, Inactive, Moved, Deceased, Negative, Duplicate.</td></tr>
+    <tr><td><strong>Admin</strong></td><td>All — including Pending (sends a record back for review) and Delete.</td></tr>
+  </tbody>
+</table>
+<p>Set a status from the row's "⋮" menu → "Set status". Every change asks for
+confirmation.</p>
+<h3>Reactivating</h3>
+<p>If a saint is recovered, an approver or admin clicks "Activate" on the Inactive row —
+the record is Active again, visible to the saints, and the person can sign in.</p>
+<div class="callout privacy">
+  <span class="label">Privacy</span>
+  <p>Setting someone Inactive — or any removed status — is a shepherding matter done in
+  fellowship, after prayer, when they have expressed that they no longer intend to meet or
+  their contact information is no longer valid. It is not a bookkeeping shortcut.</p>
+</div>
+
+<!-- ==================== 12. DUPLICATES ==================== -->
+<h2 class="section" id="sec-12">12. Handling Duplicates</h2>
+<p>Two records for the same person should be merged, not left side by side:</p>
+<ol>
+  <li><strong>Decide which record has the most correct information</strong> — that one is
+  kept.</li>
+  <li><strong>Edit the kept record</strong> to merge in any correct details from the other
+  (phones, address, email, spouse link, etc.).</li>
+  <li><strong>Set the other record's status to Duplicate</strong> (approver; "⋮" →
+  "Set status").</li>
+  <li>An approver or admin may then choose "Delete permanently" from the "⋮" menu —
+  available <em>only</em> for Duplicate records. The confirmation warns: "Only duplicate
+  records may be physically deleted. This cannot be undone."</li>
+</ol>
+<div class="callout important">
+  <span class="label">Important</span>
+  <p>Physical deletion removes the record's sign-in account and its history, and cannot be
+  undone. When in doubt, leave the record as Duplicate — it stays invisible to everyone
+  except approvers and admins.</p>
+</div>
+
+<!-- ==================== 13. ROLES ==================== -->
+<h2 class="section" id="sec-13">13. Changing Roles</h2>
+<p>Change a member's role via the "⋮" menu → "Set role" (in your own district; admins
+anywhere). The confirmation notes: "Role changes affect what this person can see and
+manage in the directory."</p>
+<table>
+  <thead>
+    <tr><th>Change</th><th>Who can do it</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Saint → Helper</td><td>Approver</td></tr>
+    <tr><td>Approver → Helper</td><td>Approver</td></tr>
+    <tr><td>Saint → Approver</td><td>Approver</td></tr>
+    <tr><td>Helper → Approver</td><td>Approver</td></tr>
+    <tr><td>Helper → Saint</td><td>Helper or Approver</td></tr>
+    <tr><td>Approver → Saint</td><td>Approver</td></tr>
+    <tr><td>anything → Admin, or Admin → anything</td><td>Admin only</td></tr>
+  </tbody>
+</table>
+<p>Admins can make any role change. Note that a saint who is given a role keeps their
+saint listing — the role badge simply appears on their card.</p>
+
+<!-- ==================== 14. DIGEST ==================== -->
+<h2 class="section" id="sec-14">14. Daily Email Digest</h2>
+<p>Every morning at <strong>6:00 AM Central</strong>, helpers and approvers who have an
+email on file receive one email for their district containing:</p>
+<ul>
+  <li>the previous day's changes to the district's records, and</li>
+  <li>pending members re-listed every 3rd day they remain pending — a reminder to
+  activate them.</li>
+</ul>
+<p>If there is nothing to report, no email is sent.</p>
+<div class="callout tip">
+  <span class="label">Tip</span>
+  <p>Make sure your own record has a working email address, or you won't receive the
+  digest.</p>
+</div>
+
+<!-- ==================== 15. SMS FOR SERVING ONES ==================== -->
+<h2 class="section" id="sec-15">15. Using Text Messages as a Serving One</h2>
+<p>Serving ones use the same text number as the saints: <strong>713-257-9799</strong>,
+texted from the phone number that is Phone 1 on your Active record. Searching
+(<code>john</code>, <code>last smith</code>, <code>john smith</code>), <code>ME</code>,
+<code>LOCKUP</code>, <code>STOP</code>/<code>START</code>, and the reply footer all work
+the same way — see the Saints' Guide, Section 9, for the full command list.</p>
+<p>Replying <code>GET HELP</code> shows a helper or approver menu with staff topics in
+addition to the saints' topics. Numbered replies only work for 10 minutes after the menu
+appears.</p>
+<div class="callout important">
+  <span class="label">Important — retired text commands</span>
+  <p>The older staff text commands (<code>SET …</code>, <code>SETSRV …</code>,
+  <code>HIM/HER</code>, <code>ADDRESS</code>, <code>PIC</code>, <code>LIST</code>,
+  <code>SEND</code>, <code>ATTENDANCE</code>) are retired. Texting one replies
+  "This moved to the web: https://houstonservicehub.azurewebsites.net/directory".
+  Some GET HELP topics still mention those old commands — use the website steps
+  in this guide instead.</p>
+  <p><code>ADD</code> is the exception: texting it replies with a one-time
+  sign-in link that opens the Add Member form on the website (Section 8).</p>
+</div>
+<p>If the service is paused for maintenance you may receive "System is in test for a few
+minutes." — try again shortly.</p>
+
+<!-- ==================== 16. ADMINISTRATORS ==================== -->
+<h2 class="section" id="sec-16">16. For Administrators</h2>
+<p>Admins sign in through the Service Hub
+(<strong>https://houstonservicehub.azurewebsites.net/hub-admin</strong> → "Directory").
+Service Hub platform admins and super admins are automatically directory Admins.</p>
+<ul>
+  <li>See and manage <strong>all districts</strong> — no scope line on Browse.</li>
+  <li>Set <strong>any status</strong>, including Pending (sends a record back for review)
+  and Delete; use "Delete permanently" for duplicate records.</li>
+  <li>Set <strong>any role</strong> — appoint helpers and approvers via "Set role".</li>
+  <li>Grant a Hub user Directory access in Service Hub user management (the "Directory"
+  app permission). Their directory role comes from their linked directory record, and the
+  record must be Active — linking a Hub login to a directory record is an Admin-only
+  task.</li>
+  <li>Background jobs run automatically: <strong>nightly maintenance at 3:30 AM
+  Central</strong> and the <strong>district digest at 6:00 AM Central</strong>.</li>
+  <li>Help the saints, helpers, and approvers when problems can't be resolved at the
+  district level.</li>
+</ul>
+
+<!-- ==================== 17. PRIVACY ==================== -->
+<h2 class="section" id="sec-17">17. Protecting Privacy</h2>
+<div class="callout privacy">
+  <span class="label">Privacy</span>
+  <p>Just because you can see information doesn't mean you should share it. Protecting the
+  saints' information comes before fulfilling a request.</p>
+</div>
+<ul>
+  <li>Serving ones see more than the saints do — full phone numbers and addresses for the
+  district's records, including fields the saint chose to hide. Treat that access as a
+  trust.</li>
+  <li>If someone asks for a list of addresses, phone numbers, or similar — even for a
+  seemingly good purpose — <strong>seek fellowship with a responsible brother first</strong>
+  before sharing anything.</li>
+  <li>Respect each saint's privacy choices: "Show my phone number to other saints"
+  (default on), "Show my address to other saints" (default off), and "List me in the
+  directory". A saint who unchecked "List me in the directory" is still visible to staff —
+  that doesn't mean their info may be passed around.</li>
+  <li>Email addresses are always visible to signed-in saints; be aware of this when
+  helping someone choose what to share.</li>
+</ul>
+
+<!-- ==================== 18. TROUBLESHOOTING ==================== -->
+<h2 class="section" id="sec-18">18. Troubleshooting</h2>
+<h3>Website sign-in messages</h3>
+<table>
+  <thead>
+    <tr><th>Message</th><th>What it means / what to do</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>"We couldn't find a directory record for that email. Check the spelling or contact a directory helper."</td><td>That email is not on any record. Check spelling; the record may use a different email — search for the person and check their record's email.</td></tr>
+    <tr><td>"This directory record is not currently active. Contact a helper or approver in your district."</td><td>The record is Pending, Inactive, or removed. An approver should review and activate/reactivate if appropriate.</td></tr>
+    <tr><td>"This sign-in has been disabled. Contact a directory administrator."</td><td>The person's sign-in account was disabled — refer to an admin.</td></tr>
+    <tr><td>"That sign-in link is invalid or has expired. Request a new one."</td><td>Links work once and expire in 30 minutes. Request a fresh link.</td></tr>
+    <tr><td>"No password account yet — sign in with the email link first, then set a password from My Profile."</td><td>They tried password sign-in before ever setting a password. Use the email link first.</td></tr>
+    <tr><td>"Invalid email or password"</td><td>Wrong email/password combination. If forgotten, sign in with the email link and set a new password.</td></tr>
+    <tr><td>"A link was just sent — check your inbox. You can request another in a minute."</td><td>A link was already requested; wait about a minute before asking for another. Check Junk/Spam.</td></tr>
+  </tbody>
+</table>
+<h3>Text-message replies</h3>
+<table>
+  <thead>
+    <tr><th>Reply</th><th>What it means / what to do</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>"Your phone number not recognized. To be added to the phone list, contact a helper in your district."</td><td>The phone they texted from isn't Phone 1 on an Active record. Check the record's Phone 1 (and status).</td></tr>
+    <tr><td>"… is not valid -- you don't have a command active"</td><td>A numbered reply was sent more than 10 minutes after the GET HELP menu. Text GET HELP again.</td></tr>
+    <tr><td>"System is in test for a few minutes."</td><td>The text service is paused; try again shortly.</td></tr>
+    <tr><td>"This moved to the web: https://houstonservicehub.azurewebsites.net/directory"</td><td>A retired staff text command was used. Do the task on the website instead (Section 15). <code>ADD</code> is the exception — it replies with a sign-in link that opens the Add Member form.</td></tr>
+    <tr><td>"Click this link to input information for a new saint: …"</td><td>A reply to <code>ADD</code>. Tap the link to sign in and open the Add Member form. The link works once and expires in 30 minutes.</td></tr>
+  </tbody>
+</table>
+<h3>Escalation path</h3>
+<p>Saints ask their district's helpers or approvers first. If a problem can't be resolved
+there, contact an administrator.</p>
+
+<!-- ==================== 19. QUICK REFERENCE ==================== -->
+<h2 class="section" id="sec-19">19. Quick Reference</h2>
+<table>
+  <thead>
+    <tr><th>Task</th><th>Saint</th><th>Helper</th><th>Approver</th><th>Admin</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Look up Active listed saints</td><td>✔</td><td>✔</td><td>✔</td><td>✔</td></tr>
+    <tr><td>Edit own profile</td><td>✔</td><td>✔</td><td>✔</td><td>✔</td></tr>
+    <tr><td>See all records in own district</td><td>—</td><td>except removed</td><td>✔</td><td>✔ (all districts)</td></tr>
+    <tr><td>Add member (→ Pending)</td><td>—</td><td>own district</td><td>own district</td><td>any district</td></tr>
+    <tr><td>Edit a record</td><td>—</td><td>own district (not removed)</td><td>own district</td><td>anywhere</td></tr>
+    <tr><td>Change a record's district</td><td>—</td><td>—</td><td>✔</td><td>✔</td></tr>
+    <tr><td>Activate / reactivate</td><td>—</td><td>—</td><td>✔</td><td>✔</td></tr>
+    <tr><td>Set Inactive, Moved</td><td>—</td><td>✔</td><td>✔</td><td>✔</td></tr>
+    <tr><td>Set Deceased, Negative, Duplicate, Pending, Delete</td><td>—</td><td>—</td><td>except Pending/Delete</td><td>✔</td></tr>
+    <tr><td>Delete permanently</td><td>—</td><td>—</td><td>duplicates only</td><td>duplicates only</td></tr>
+    <tr><td>Set role</td><td>—</td><td>Helper → Saint only</td><td>saint/helper/approver changes</td><td>any, incl. Admin</td></tr>
+    <tr><td>Mark record verified</td><td>—</td><td>own district</td><td>own district</td><td>anywhere</td></tr>
+    <tr><td>Daily digest email (6 AM CT)</td><td>—</td><td>✔</td><td>✔</td><td>—</td></tr>
+  </tbody>
+</table>
+<p><strong>Key addresses:</strong></p>
+<ul>
+  <li>Directory website: https://houstonservicehub.azurewebsites.net/directory</li>
+  <li>Service Hub (staff/admins): https://houstonservicehub.azurewebsites.net/hub-admin → "Directory"</li>
+  <li>Text-message phone list: <strong>713-257-9799</strong> (from your Phone 1)</li>
+  <li>Sign-in methods: email link (once, 30 min) · password (after setting one on Profile) · text <code>ME</code></li>
+</ul>
+
+</body>
+</html>

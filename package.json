@@ -18,6 +18,7 @@
     "seed:users": "node prisma/seed-users.js",
     "db:usage": "node server/scripts/db-usage.mjs",
     "db:refresh": "node server/scripts/db-refresh.mjs",
+    "db:pull": "node server/scripts/db-pull-stage.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

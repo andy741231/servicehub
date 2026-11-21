@@ -6,7 +6,7 @@ description: "[directory] Guide for building the Directory sub-app."
 # Directory (`client/src/pages/directory`)
 
 ## Overview
-The Directory sub-app is a **church phone list** (per `directory-startup.md`):
+The Directory sub-app is a **church phone list** (requirements: `md files/directory/directory-startup.md`; migration plan, SMS/jobs design, and cutover runbook: `md files/directory/directory-migration.md`):
 saints look each other up for fellowship; helpers/approvers manage records
 district-scoped; privacy flags control what other saints can see. Full stack —
 Prisma models, `/api/directory` routes, and React pages are all implemented.

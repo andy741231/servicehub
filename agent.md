@@ -11,9 +11,9 @@ description: >
   best practices, interaction patterns, and UX validation when building or reviewing UI components.
   Prefer **shadcn/ui** (https://ui.shadcn.com) for accessible, Radix-based primitives — it integrates
   cleanly with the Tailwind + React stack used here. shadcn is wired as an **MCP server** (`shadcn`)
-  in `.devin/config.json` — invoke it via MCP
+  in `.devin/mcp_config.json` — invoke it via MCP
   (`mcp_call_tool` with `server_name: "shadcn"`) to generate/install components directly.
-  See `install-ux-mcp.md` for the full install + verification plan.
+  See `startup.md` → "AI Agent & Team Tooling Setup → Enable MCP Servers" for install + verification.
 ---
 
 # Service Hub — Multi-App Platform
@@ -23,10 +23,11 @@ description: >
 Service Hub is a **monorepo, single-backend, multi-frontend** web platform. All sub-apps share one auth system, one database, and one shell UI. New sub-apps plug in with minimal changes.
 
 **Stack:** Node.js · React · Azure SQL (SQL Server) · Tailwind CSS · @hello-pangea/dnd · react-hook-form + zod · react-colorful · @react-email · react-rnd
-**Local dev DB:** Azure SQL `test-servicehub` (remote, no local DB needed)  
+**Local dev DB:** SQL Server 2022 in **Docker** (`docker-compose.yml` → container `servicehub-mssql`, DB `servicehub_dev` on `localhost:1433`). Refresh it from Azure `stage` with `npm run db:pull` (BACPAC via SqlPackage). Setup: `startup.md` → Step 3.  
+**Staging DB:** Azure SQL `stage` (free serverless, auto-pauses), used by the App Service `staging` slot only. `test-servicehub` was retired 2026-10-25 (paused, not deleted).  
 **Production DB:** Azure SQL `production-servicehub`  
 **Deploy:** Azure App Service (`houstonservicehub.azurewebsites.net`)  
-**CI/CD:** GitHub Actions → Azure (push to `main` auto-deploys)  
+**CI/CD:** GitHub Actions → Azure (push to `main` builds + runs server tests & bundle check → deploys to `staging` → smoke tests verify commit SHA, DB, and Directory guards → applies prod migrations → deploys the same verified zip to `production` via Kudu → verifies prod commit SHA + health). **Auto-swap is OFF** (2026-10-18) so smoke tests gate production. Both slots run **`WEBSITE_RUN_FROM_PACKAGE=1`** (sticky): deploys mount the zip in seconds instead of ~60 min of KuduSync extraction; `wwwroot` is read-only (uploads already live in `site\uploads`, outside `wwwroot`). iisnode's own `logDirectory` can't write under RFP — use Azure **filesystem app logging** (`az webapp log config --application-logging filesystem`; auto-disables ~12 h) → `LogFiles\Application`. (Future upgrade: zero-downtime OIDC `slot swap` via `github-servicehub-deploy` once an Azure Owner grants `Website Contributor` — see `startup.md`.)
 **Version Control:** GitHub (`github.com/andy741231/servicehub`)
 
 > **Web Builder editor note:** The active visual editor is the **Fluid Engine**
@@ -34,8 +35,29 @@ Service Hub is a **monorepo, single-backend, multi-frontend** web platform. All 
 > `FluidBlock.jsx`). Each section is a 24-column CSS Grid; blocks are
 > positioned via grid coordinates (`colStart`/`colEnd`/`rowStart`/`rowEnd`)
 > and can overlap/layer via `zIndex`. Drag and resize use `react-rnd` with
-> snap-to-grid. Press "G" to toggle the grid overlay. See `web-grid.md` for
-> the previous grid architecture and the Fluid Engine design.
+> snap-to-grid. Press "G" to toggle the grid overlay. Craft.js and Puck
+> (`@measured/puck`) appear only in the experimental, untracked and unrouted
+> `pages/web/editor-lab/` spike. They are not the production editor; see
+> `md files/web-editor/ux-editor-spike.md`.
+
+---
+
+## Documentation Map
+
+| Doc | Purpose |
+|-----|---------|
+| `agent.md` (this file) | Architecture, conventions, schema workflow, deploy — the canonical rules |
+| `THEME.md` | Design tokens and component patterns (read before any UI work) |
+| `startup.md` | Developer setup, CLI/MCP install, env vars, deploy runbook, Azure services |
+| `.devin/skills/<app>/SKILL.md` | Per-sub-app blueprint and current status (web, forms, email, directory, portal, admin, auth) |
+| `md files/directory/` | Directory requirements (`directory-startup.md`) and migration plan/runbook (`directory-migration.md`, referenced by `§` in server code comments) |
+| `md files/web-editor/` | Web editor UX reviews, test plan, and Craft/Puck spike (see its `README.md` for status) |
+| `md files/design/` | Modal/dialog system spec, Pushpay ChMS design reference |
+| `md files/guides/` | Beginner guides (Git/GitHub) |
+| `docs/manuals/` | End-user Church Directory manuals (HTML → PDF) |
+| `scratch/` | Gitignored archive for superseded docs and one-off scripts |
+
+When two docs disagree, this file wins; fix the other doc.
 
 ---
 
@@ -224,7 +246,7 @@ Azure SQL does not support shadow databases, so `prisma migrate dev` (which
 auto-generates migration files) does not work. The workflow is:
 
 1. **Edit `prisma/schema.prisma`** — add/modify models
-2. **Run `npx prisma db push`** — syncs the dev DB (`test-servicehub`) directly
+2. **Run `npx prisma db push`** — syncs your local Docker DB (`servicehub_dev`) directly
 3. **Create a migration file manually** — this is the critical step that's easy
    to miss. `db push` does NOT create a migration file, but production deploy
    uses `prisma migrate deploy` which ONLY applies migration files. Without a
@@ -244,6 +266,10 @@ silently fail in production because the table/column doesn't exist. If you
 incorrectly add the migration to the resolve step (step 4), the migration gets
 marked as applied without the SQL ever running — same result. Both happened
 with the `FormFolder` table — see commits `217d1cf` and `653feb0` for the fix.
+
+> The model excerpts below are abbreviated. `prisma/schema.prisma` is the source
+> of truth (it also holds `WebPageTemplate`, `WebPageVersion`, `FormFolder`,
+> `EmailTemplate`, `InboundEmail`, and the `Directory*` models).
 
 ### Core (shared across all apps)
 ```prisma
@@ -504,7 +530,9 @@ Work through these in order. Complete each phase before moving to the next.
 
 ```bash
 # .env (local dev — never commit this file)
-DATABASE_URL="sqlserver://houstonservice-test.database.windows.net;database=test-servicehub;user=servicehub_dev;password=<ask_team>;encrypt=true;trustServerCertificate=false;"
+MSSQL_SA_PASSWORD=<local-only, see startup.md Step 2>
+DATABASE_URL="sqlserver://localhost:1433;database=servicehub_dev;user=sa;password=<MSSQL_SA_PASSWORD>;encrypt=true;trustServerCertificate=true"
+DATABASE_URL_STAGE="sqlserver://houstonservice-test.database.windows.net:1433;database=stage;user=servicehub_dev;password=<ask_team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30"   # source for npm run db:pull
 JWT_SECRET=change_me_in_production
 JWT_REFRESH_SECRET=change_me_too
 CLIENT_URL=http://localhost:3000
@@ -528,16 +556,18 @@ Production env vars are set directly on the Azure App Service (not in any commit
 | Azure Resource | Purpose |
 |----------------|---------|
 | App Service `houstonservicehub` | Hosts Express server + built React frontend (Windows, iisnode) |
-| Azure SQL `test-servicehub` | Development database |
+| Azure SQL `stage` | Staging-slot database (free serverless) + source for `npm run db:pull` |
+| Azure SQL `test-servicehub` | Retired 2026-10-25 (paused, unused) |
+| Docker `servicehub-mssql` (local) | Each developer's dev database (`servicehub_dev`) |
 | Azure SQL `production-servicehub` | Production database |
-| GitHub Actions `azure-deploy.yml` | CI/CD: builds, assembles self-contained package, deploys via Kudu ZIP API |
+| GitHub Actions `azure-deploy.yml` | CI/CD: builds, assembles self-contained package, deploys to the `staging` slot via Kudu ZIP API |
 
 **Deploy flow on push to `main`:**
-1. Install all dependencies (`npm ci`)
-2. Build React frontend (`npm run build`)
-3. Generate Prisma client with Windows + Linux binaries (`npx prisma generate`)
-4. Assemble a self-contained `deploy/` folder (no workspace symlinks — Windows compatible)
-5. Upload via Kudu ZIP Deploy API using `AZURE_DEPLOY_USER` / `AZURE_DEPLOY_PWD` secrets
+1. `build` — `npm ci`, build React frontend, `npx prisma generate` (Windows + Linux binaries), schema/migration drift check, assemble a self-contained `deploy/` folder (no workspace symlinks) and zip it
+2. `deploy-staging` — apply staging DB migrations, upload the zip to the **staging** slot via Kudu (`AZURE_DEPLOY_USER_STAGING` / `AZURE_DEPLOY_PWD_STAGING`)
+3. `smoke-tests` — homepage, `/api/health`, login page, DB-backed page API on staging
+4. `swap-production` — apply production DB migrations and check production health
+5. **Manual:** after verifying staging, promote with `az webapp deployment slot swap --resource-group App-Services-And-Related --name houstonservicehub --slot staging --target-slot production` (auto-swap is OFF — see CI/CD note at the top; run the same command to roll back)
 
 **iisnode note:** The entry point is `server/app.cjs` (a CJS shim that dynamically imports the ESM `src/index.js`). The `web.config` at root configures IIS to route all traffic through iisnode.
 

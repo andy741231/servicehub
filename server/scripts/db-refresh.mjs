@@ -1,3 +1,7 @@
+// NOTE (2026-10-25): mostly historical. `test-servicehub` is retired and local
+// dev now lives in Docker — use `npm run db:pull` (db-pull-stage.mjs) instead.
+// Only still useful to clone `stage` onto a new free DB on the same server.
+//
 // One-way refresh between the two free Azure SQL databases: drops the target
 // and recreates it as an exact copy of the source (schema + data + migration
 // history). Since the copy reuses the same name on the same server, all

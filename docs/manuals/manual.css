@@ -1,0 +1,234 @@
+/* Shared print stylesheet for the Church Directory manuals.
+   Rendered to PDF by headless Edge/Chrome (see build.mjs). */
+
+@page {
+  size: Letter;
+  margin: 0.8in 0.8in 0.85in 0.8in;
+  @bottom-center {
+    content: counter(page);
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 9pt;
+    color: #6b7280;
+  }
+}
+
+@page cover {
+  @bottom-center { content: none; }
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.5;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Large-type variant for the Saints' Guide */
+body.large { font-size: 12pt; line-height: 1.6; }
+
+/* ---------- Cover ---------- */
+
+.cover {
+  page: cover;
+  page-break-after: always;
+  text-align: center;
+  padding-top: 2.2in;
+}
+
+.cover .brand {
+  font-size: 13pt;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #0f766e;
+  margin-bottom: 14pt;
+}
+
+.cover h1 {
+  font-size: 32pt;
+  color: #0f766e;
+  margin: 0 0 10pt;
+  line-height: 1.15;
+}
+
+.cover .subtitle {
+  font-size: 15pt;
+  color: #374151;
+  margin: 0 0 6pt;
+}
+
+.cover .audience {
+  font-size: 11.5pt;
+  color: #6b7280;
+}
+
+.cover .rule {
+  width: 2.2in;
+  border: none;
+  border-top: 1.5pt solid #0f766e;
+  margin: 30pt auto;
+}
+
+.cover .version {
+  color: #6b7280;
+  font-size: 11pt;
+}
+
+/* ---------- Table of contents ---------- */
+
+.toc h2 {
+  color: #0f766e;
+  font-size: 17pt;
+  border-bottom: 1.5pt solid #0f766e;
+  padding-bottom: 4pt;
+  margin: 0 0 12pt;
+}
+
+.toc ol { list-style: none; margin: 0; padding: 0; }
+
+.toc li { margin: 3.5pt 0; }
+
+.toc li.sub { margin-left: 20pt; font-size: 0.92em; margin-top: 1.5pt; margin-bottom: 1.5pt; }
+
+.toc a { color: #1f2937; text-decoration: none; }
+
+.toc a:hover { color: #0f766e; text-decoration: underline; }
+
+.toc .num {
+  display: inline-block;
+  min-width: 22pt;
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.toc li.sub .num { min-width: 30pt; font-weight: 400; }
+
+/* ---------- Headings ---------- */
+
+h2.section {
+  page-break-before: always;
+  color: #0f766e;
+  font-size: 17pt;
+  border-bottom: 1.5pt solid #0f766e;
+  padding-bottom: 4pt;
+  margin: 0 0 10pt;
+}
+
+body.large h2.section { font-size: 19pt; }
+
+h3 {
+  color: #115e59;
+  font-size: 12.5pt;
+  margin: 14pt 0 4pt;
+}
+
+body.large h3 { font-size: 13.5pt; }
+
+h4 {
+  color: #374151;
+  font-size: 11pt;
+  margin: 10pt 0 3pt;
+}
+
+p { margin: 6pt 0; }
+
+ul, ol { margin: 6pt 0; padding-left: 22pt; }
+
+li { margin: 2.5pt 0; }
+
+strong.ui { color: #0f766e; }
+
+/* ---------- Tables ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10pt 0;
+  font-size: 0.94em;
+}
+
+thead { display: table-header-group; }
+
+th {
+  background: #0f766e;
+  color: #ffffff;
+  text-align: left;
+  padding: 5pt 7pt;
+  font-weight: 600;
+}
+
+td {
+  border: 0.75pt solid #d1d5db;
+  padding: 5pt 7pt;
+  vertical-align: top;
+}
+
+tbody tr:nth-child(even) td { background: #f9fafb; }
+
+/* ---------- Callout boxes ---------- */
+
+.callout {
+  border-radius: 6px;
+  padding: 8pt 12pt;
+  margin: 10pt 0;
+  border-left: 4pt solid;
+  page-break-inside: avoid;
+}
+
+.callout .label { font-weight: 700; display: block; margin-bottom: 2pt; }
+
+.callout p { margin: 3pt 0; }
+
+.tip { background: #f0fdfa; border-color: #0f766e; }
+.tip .label { color: #0f766e; }
+
+.important { background: #fffbeb; border-color: #d97706; }
+.important .label { color: #b45309; }
+
+.privacy { background: #eff6ff; border-color: #2563eb; }
+.privacy .label { color: #1d4ed8; }
+
+/* ---------- Monospace SMS examples ---------- */
+
+.sms {
+  font-family: Consolas, "Courier New", monospace;
+  background: #f3f4f6;
+  border: 0.75pt solid #d1d5db;
+  border-radius: 4px;
+  padding: 8pt 10pt;
+  margin: 8pt 0;
+  white-space: pre-wrap;
+  font-size: 0.9em;
+  page-break-inside: avoid;
+}
+
+code {
+  font-family: Consolas, "Courier New", monospace;
+  background: #f3f4f6;
+  padding: 0 3pt;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+/* ---------- Misc ---------- */
+
+.small { font-size: 0.88em; color: #4b5563; }
+
+.center { text-align: center; }
+
+.avoid-break { page-break-inside: avoid; }
+
+.faq h3 {
+  color: #0f766e;
+  font-size: 11.5pt;
+  margin-top: 12pt;
+}
+
+body.large .faq h3 { font-size: 12.5pt; }

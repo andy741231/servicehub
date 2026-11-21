@@ -1,6 +1,6 @@
 # Service Hub: Developer Setup Guide
 
-Welcome to **Service Hub**! This guide covers everything a new developer needs to get the app running locally and connected to Azure SQL.
+Welcome to **Service Hub**! This guide covers everything a new developer needs to get the app running locally, with a SQL Server database in Docker.
 
 ---
 
@@ -10,17 +10,17 @@ Welcome to **Service Hub**! This guide covers everything a new developer needs t
 |-------|-----------|-------|
 | Frontend | React + Vite | Runs on `localhost:3000` in dev |
 | Backend | Node.js + Express | Runs on `localhost:4000` in dev |
-| Database | Azure SQL (SQL Server) | Cloud-hosted — no local DB needed |
+| Database | SQL Server | Local dev: SQL Server 2022 in **Docker** (`docker-compose.yml`, DB `servicehub_dev`). Staging slot: Azure SQL `stage`. Production: Azure SQL `production-servicehub` |
 | ORM | Prisma | Schema at `prisma/schema.prisma` |
 | Monorepo | npm Workspaces + Turborepo | Single `npm install` at root |
 | Production | Azure App Service | `houstonservicehub.azurewebsites.net` |
-| CI/CD | GitHub Actions | Auto-deploys on push to `main` |
+| CI/CD | GitHub Actions | Push to `main` deploys to `staging`, runs smoke tests, then automatically deploys the verified zip to `production` (see [Deployment](#deployment)) |
 
-> **No Docker required.** The database runs on Azure SQL and is accessed directly over the internet. Both local dev and production share the same Azure SQL server but use separate databases.
+> **Local dev uses Docker.** Since 2026-10-25, each developer runs their own SQL Server container. The free Azure test databases needed about 30 s to wake up and had usage limits. Use `npm run db:pull` to fill your local DB with a copy of the shared Azure `stage` database. `stage` now exists only for the cloud staging slot. `test-servicehub` is retired: it is paused, not deleted.
 
 ### UX Libraries & MCPs
 
-Installed per `install-ux-mcp.md` plan (July 2026):
+Installed July 2026:
 
 | Library | Scope | Role |
 |---------|-------|------|
@@ -28,27 +28,22 @@ Installed per `install-ux-mcp.md` plan (July 2026):
 | `react-hook-form`, `zod`, `@hookform/resolvers` | Shared | Form validation (zod schemas in `formValidation.js`) |
 | `react-aria`, `react-aria-components` | Shared | Accessibility primitives (focus traps, keyboard nav) |
 | `radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge` | Shared | shadcn/ui primitives — accordion, toggle, toggle-group, separator in `client/src/components/ui/`; `cn()` helper in `client/src/lib/utils.js` |
-| `immer` | Shared | Immutable state updates (used by `craftSerializer.js`) |
+| `immer` | Shared | Immutable state updates |
 | `react-colorful` | Shared | Color picker engine (replaces custom `ColorPicker.jsx` internals) |
 | `use-debounce` | Shared | Debounced inline text edits |
 | `@react-email/components`, `@react-email/render` | Email | React Email rendering (replaces hand-rolled HTML in `emailBlocks.js`) |
 | `mjml`, `mjml-react` | Email | MJML escape hatch for complex email layouts |
 | `@azure/communication-email` | Server | Azure Communication Services Email SDK |
 | `react-confetti-canvas` | Forms | Confetti animation on form submission success screen |
-| `@craftjs/core`, `@craftjs/utils` | Web | Page-builder engine (node tree, selection, drag, serialization) |
-| `react-moveable` | Web | Drag/resize/rotate handles for canvas blocks |
-| `react-rnd` | Web | Resizable+draggable wrapper for sections |
+| `react-rnd` | Web | Drag/resize with snap-to-grid for Fluid Engine blocks |
+| `@craftjs/core`, `@measured/puck` | Web (lab only) | Used only by the experimental `editor-lab/` spike, which is untracked and not routed. Installed locally but **not declared** in `package.json` |
 
-**MCPs configured** in `.devin/config.json`: `shadcn`, `azure`.
+**MCPs configured** in `.devin/mcp_config.json`: `shadcn`, `azure` (plus standard agent MCPs — see [Enable MCP Servers](#3-enable-mcp-servers-agent-run-setup)).
 
 **Key migrations:**
 - Email builder: `compileEmailHtml` now uses `@react-email/render` with React Email components in `emailComponents/`
 - Forms: validation delegated to zod via `formValidation.js`; confetti on success screen
-- Web: Craft.js migration in progress under `client/src/pages/web/editor/`:
-  - Step 5.1: `InlineEditor.jsx` split into `WebEditor.jsx` + `editorComponents.jsx` + utils
-  - Step 5.2: 16 craft block components + `craftSerializer` (DB ↔ Craft) + `WebCraftRoot`
-  - Step 5.3: `USE_CRAFT = true` enables Craft canvas (`CraftCanvas`/`Frame`); undo/redo bridges Craft history; set `USE_CRAFT = false` to fall back to legacy `@hello-pangea/dnd` canvas
-  - Public renderer unchanged (DB shape only)
+- Web: `InlineEditor.jsx` was split into `editor/WebEditor.jsx` + `editorComponents.jsx` + utils. The active canvas is the **Fluid Engine** (`editor/fluid/`, react-rnd + a 24-column CSS Grid). The earlier Craft.js migration (`USE_CRAFT`, `craftSerializer`) was dropped. See `agent.md`.
 
 ---
 
@@ -56,20 +51,24 @@ Installed per `install-ux-mcp.md` plan (July 2026):
 
 Before starting, ensure you have installed:
 
-1. **Node.js v20+** — [nodejs.org](https://nodejs.org)
-2. **npm v9+** — bundled with Node.js
+1. **Node.js v22 LTS+** (v20+ works; v22+ matches Azure App Service) — [nodejs.org](https://nodejs.org)
+2. **npm v10+** — bundled with Node.js
 3. **Git** — [git-scm.com](https://git-scm.com)
-4. **Azure CLI** (`az`) — only needed for infrastructure tasks, not day-to-day dev
+4. **Docker** (Docker Desktop on Windows/macOS, Docker Engine on Linux). Runs the local SQL Server. Install steps are in [Step 3](#step-3-install-docker-and-start-the-local-database)
+5. **Azure CLI** (`az`) — only needed for infrastructure tasks / firewall rules, not day-to-day dev
 
 Verify with:
 ```bash
-node -v   # should print v20.x or higher
-npm -v    # should print 9.x or higher
+node -v            # should print v22.x (or v20.x+)
+npm -v             # should print 10.x (or 9.x+)
+docker --version   # any recent version; `docker info` must succeed (engine running)
 ```
 
 ---
 
 ## Step-by-Step Local Setup
+
+Follow Steps 1–6 in order to get the app running locally in ~5 minutes. Team CLI tools, skills, and MCP servers live in [AI Agent & Team Tooling Setup](#ai-agent--team-tooling-setup) below.
 
 ### Step 1: Clone the repository
 
@@ -78,116 +77,108 @@ git clone https://github.com/andy741231/servicehub.git
 cd servicehub
 ```
 
-### Step 1.5: Install CLI tools
+### Step 2: Configure environment variables (`.env`)
 
-This step covers the CLIs the team uses day-to-day. All of the CLIs below — **GitHub CLI**, **Azure CLI**, **ChatGPT/Codex**, and **Google Antigravity** — are **required** parts of the standard Service Hub dev environment.
+> **Why before Docker?** `docker-compose.yml` reads `MSSQL_SA_PASSWORD` from `.env` when initializing the SQL Server container on first boot. Creating `.env` first prevents a broken container volume.
 
-> **🤖 AI agent note — REQUIRED, do not skip:** This step is **required**, not optional. Before installing any CLI, you **MUST** present the full list of CLIs to the user and ask which ones they want installed. The user may deny any or all of them — denial is allowed and should be respected — but you must ask before proceeding, and you must not skip the ask. Use the `ask_user_question` tool (or an equivalent prompt) with the CLIs as selectable choices (multi-select, so the user can pick any subset or none). Do **not** install any CLI unprompted, and do **not** proceed past this step until the user has answered. Install only the CLIs the user explicitly approves; record any denials and continue to the next step.
+> **🤖 AI agent note — assume present, only ask if missing:** The `.env` file is gitignored and never lives in the repo, so a returning developer may already have it. **Check if `.env` exists first.** Verify it is gitignored, contains all required keys, and that `DATABASE_URL` points at the local Docker DB (`localhost`, `database=servicehub_dev`), not an Azure database. Only prompt the developer if something is missing or misconfigured.
 
-#### GitHub CLI (recommended for pushing)
+#### A. `.env` already exists (returning developer)
 
-If you plan to push changes, you need to authenticate first. The easiest method is using the GitHub CLI.
+Verify without printing secret values:
 
-**Install GitHub CLI:**
-
-- **Windows:** Download and install from https://cli.github.com/ or use winget:
-  ```bash
-  winget install --id GitHub.cli
-  ```
-
-- **macOS:** Use Homebrew:
-  ```bash
-  brew install gh
-  ```
-
-- **Linux:** Use package manager or download from https://cli.github.com/
-
-**Verify installation:**
 ```bash
-gh --version
+# 1. Confirm the file exists and is gitignored
+test -f .env && git check-ignore .env   # macOS / Linux / Git Bash
+# Windows (PowerShell):
+Test-Path .env; git check-ignore .env
+
+# 2. Confirm required keys are present
+grep -oE '^(DATABASE_URL|MSSQL_SA_PASSWORD|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)=' .env   # macOS / Linux / Git Bash
+# Windows (PowerShell):
+Select-String -Path .env -Pattern '^(DATABASE_URL|MSSQL_SA_PASSWORD|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)=' | ForEach-Object { $_.Line.Split('=')[0] }
 ```
 
-**Authenticate with GitHub:**
+If all keys are present and `DATABASE_URL` points at `localhost` with `database=servicehub_dev`, move on to Step 3. (`DATABASE_URL_STAGE` is only needed if you plan to run `npm run db:pull`.)
+
+**Older `.env` that still points at Azure** (contains `database=stage` or `database=test-servicehub`): with the developer's permission, migrate it like this:
+1. Rename the old `DATABASE_URL` key to `DATABASE_URL_STAGE`, and change `database=test-servicehub` to `database=stage` if needed.
+2. Generate a random `MSSQL_SA_PASSWORD` meeting the SQL Server rules below.
+3. Add `DATABASE_URL="sqlserver://localhost:1433;database=servicehub_dev;user=sa;password=<that password>;encrypt=true;trustServerCertificate=true"`.
+
+#### B. Fresh clone — create `.env`
+
+Start from the template:
+
 ```bash
-gh auth login
-gh auth setup-git
+cp .env.example .env
 ```
 
-**Alternative methods:**
-- **Personal Access Token:** Create a token at https://github.com/settings/tokens with `repo` scope, then push with: `git push https://<TOKEN>@github.com/andy741231/servicehub.git <branch>`
-- **SSH Keys:** Generate SSH keys and add the public key to your GitHub account, then change remote URL: `git remote set-url origin git@github.com:andy741231/servicehub.git`
+Fill in the local-only values (no teammate needed to boot localhost):
+- **`MSSQL_SA_PASSWORD`** — generate any local password: at least 8 characters mixing uppercase, lowercase, digits, and a symbol. **Use only `! * + - _ ^ ~`** as symbols (other special characters break Prisma's SQL Server connection string). Put the exact same password in `DATABASE_URL`.
+- **`JWT_SECRET`** & **`JWT_REFRESH_SECRET`** — any two distinct random strings for local dev (e.g. `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`). These only sign local session cookies on `localhost:4000`.
+- **`CLIENT_URL`** — keep `http://localhost:3000`.
+- **`DATABASE_URL_STAGE`** *(optional)* — ask a teammate only if you want to pull shared `stage` data via `npm run db:pull` (Step 5 A). Skip it if starting with an empty seeded DB (Step 5 B).
 
-#### Azure CLI (recommended for infra tasks)
+> **AI agent rule:** An agent may generate local-only values (`MSSQL_SA_PASSWORD`, local `JWT_SECRET`, local `JWT_REFRESH_SECRET`), but must **never** guess or fabricate Azure credentials (`DATABASE_URL_STAGE`, `DATABASE_URL_PROD`, ACS, or Blob Storage keys).
 
-Needed for managing Azure SQL firewall rules, viewing App Service logs, and other infrastructure tasks. Not required for day-to-day feature work.
+**Variables reference:**
 
-- **macOS:** `brew install azure-cli`
-- **Windows:** `winget install Microsoft.AzureCLI`
-- **Linux:** See https://learn.microsoft.com/cli/azure/install-azure-cli
+| Variable | Required for localhost? | Description |
+|----------|------------------------|-------------|
+| `DATABASE_URL` | Yes | `sqlserver://localhost:1433;database=servicehub_dev;user=sa;password=<MSSQL_SA_PASSWORD>;encrypt=true;trustServerCertificate=true` |
+| `MSSQL_SA_PASSWORD` | Yes | `sa` password for the Docker SQL Server container (read by `docker-compose.yml`) |
+| `JWT_SECRET` | Yes | Any random string locally (signs access tokens) |
+| `JWT_REFRESH_SECRET` | Yes | Any different random string locally (signs refresh tokens) |
+| `CLIENT_URL` | Yes | `http://localhost:3000` (local dev CORS & magic links) |
+| `DATABASE_URL_STAGE` | Only for `db:pull` | Azure `stage` connection string (ask a teammate) |
 
-**Verify:**
-```bash
-az --version
-az login
-```
+> **Note:** `.env` is gitignored — never commit it.
 
-#### ChatGPT / Codex CLI (required — ask user before installing)
+### Step 3: Install Docker and start the local database
 
-OpenAI's official terminal coding agent is the **Codex CLI** (the modern successor to the older `chatgpt` npm package). Requires an OpenAI account with API access or a ChatGPT Plus/Pro/Team subscription.
+> **🤖 AI agent note:** First check whether Docker is already installed (`docker --version`) and running (`docker info`). Only install it if missing, and **ask the user before installing** (requires admin/UAC or `sudo` and may need a reboot). When a UAC or license prompt appears, tell the user what to click, then keep polling `docker info`.
 
-- **All platforms (npm):**
-  ```bash
-  npm install -g @openai/codex
-  ```
+#### A. Install Docker (skip if `docker --version` works)
 
-**Verify:**
-```bash
-codex --version
-```
-
-First run prompts for OpenAI login — follow the on-screen instructions.
-
-Docs: https://developers.openai.com/codex/cli
-
-#### Google Antigravity CLI (required — ask user before installing)
-
-Google's terminal AI agent (`agy`), Gemini-powered. Requires a Google account.
-
-- **macOS / Linux:**
-  ```bash
-  curl -fsSL https://antigravity.google/cli/install.sh | bash
-  ```
-- **Windows (PowerShell):**
+- **Windows 10/11** (uses the WSL 2 backend):
   ```powershell
-  irm https://antigravity.google/cli/install.ps1 | iex
+  # 1. WSL 2 (skip if `wsl --status` already shows Default Version: 2). May require a reboot.
+  wsl --install --no-distribution
+  # 2. Docker Desktop
+  winget install -e --id Docker.DockerDesktop --accept-package-agreements --accept-source-agreements
+  # 3. Start it (first launch shows the Docker subscription agreement — click Accept)
+  Start-Process "$Env:ProgramFiles\Docker\Docker\Docker Desktop.exe"
   ```
-- **Windows (CMD):**
-  ```cmd
-  curl -fsSL https://antigravity.google/cli/install.cmd -o install.cmd && install.cmd && del install.cmd
+- **macOS:**
+  ```bash
+  brew install --cask docker
+  open -a Docker   # first launch asks for your password and to accept the agreement
+  ```
+  On Apple Silicon the SQL Server image is amd64-only. Enable Docker Desktop → Settings → General → **"Use Rosetta for x86_64/amd64 emulation"**.
+- **Linux (Ubuntu/Debian):**
+  ```bash
+  curl -fsSL https://get.docker.com | sudo sh
+  sudo usermod -aG docker "$USER"   # then log out/in (or `newgrp docker`)
   ```
 
-> **PATH note:** If the installer reports that `~/.local/bin` is not in your PATH, add it manually:
-> ```bash
-> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
-> ```
-
-**Verify:**
+Wait until the engine is up before continuing:
 ```bash
-agy --version
+until docker info >/dev/null 2>&1; do echo "waiting for Docker..."; sleep 5; done
 ```
 
-First run prompts for Google account login — follow the on-screen instructions.
+#### B. Start SQL Server
 
-Update later with `agy update`. Docs: https://antigravity.google/docs/home
+`docker-compose.yml` at the repo root defines a SQL Server 2022 Developer container named `servicehub-mssql`. It listens on port `1433`, reads `MSSQL_SA_PASSWORD` from `.env` (Step 2), and stores data in the `servicehub-mssql-data` volume.
 
-> **Windows + PowerShell note:** The npm-installed CLI (`codex`)
-> generates `.ps1` shims that PowerShell blocks under the default execution
-> policy, producing `running scripts is disabled on this system`. Either run
-> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or simply use
-> **Command Prompt / Git Bash** — both run the `.cmd` shims without issue.
-> `agy` is unaffected (native `.exe`, not a PS script).
+```bash
+docker compose up -d                     # first run downloads the image (~1.5 GB)
+docker compose ps                        # wait for STATUS "healthy"
+```
 
-### Step 2: Install dependencies
+The container restarts automatically with Docker (`restart: unless-stopped`). Use `docker compose stop` to stop it. `docker compose down -v` **deletes the local database** (you will need to run Step 5 again afterwards).
+
+### Step 4: Install dependencies
 
 This project uses npm Workspaces + Turborepo. Run once from the project root:
 
@@ -195,11 +186,136 @@ This project uses npm Workspaces + Turborepo. Run once from the project root:
 npm install
 ```
 
-This installs dependencies for all packages: `client/`, `server/`, and `shared/`. The `dev` script uses `concurrently` (included as a dev dependency) to start both apps in one terminal — works on both Windows and macOS.
+This installs dependencies for all packages (`client/`, `server/`, `shared/`) and automatically runs `npx prisma generate` via `postinstall`.
 
-### Step 2.5: Install the UI/UX Pro Max skill
+### Step 5: Load data into the local database
 
-The [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill provides design intelligence — accessibility rules, interaction patterns, animation guidelines, color/typography/style recommendations, and UX validation — for UI work.
+> **🤖 AI agent note:** `npm run db:pull` **drops and re-imports** the local `servicehub_dev`, so confirm with the user before running it on a machine that already has local data. `npx prisma migrate deploy` is safe to run without asking.
+
+Choose the path that matches your situation:
+
+#### A. Copy the shared `stage` database (recommended: real data, matches the staging slot)
+
+```bash
+npm run db:pull -- --yes      # Azure stage → BACPAC in scratch/ → local servicehub_dev
+npx prisma migrate deploy     # apply any migrations newer than stage (usually none)
+```
+
+`server/scripts/db-pull-stage.mjs` exports `stage` with **SqlPackage**, drops the local `servicehub_dev`, and imports the copy, then prints a row-count check for every table (every row should say `OK`). Requirements:
+- **SqlPackage** installed (if missing, `db:pull` prints platform-specific install commands):
+  - **Cross-platform (with .NET SDK):** `dotnet tool install -g microsoft.sqlpackage`
+  - **Windows standalone (Git Bash, no .NET needed):**
+    ```bash
+    curl -L https://aka.ms/sqlpackage-windows -o /tmp/sqlpackage.zip && mkdir -p "$LOCALAPPDATA/SqlPackage" && unzip -q /tmp/sqlpackage.zip -d "$LOCALAPPDATA/SqlPackage"
+    ```
+  - **macOS standalone:** `curl -L https://aka.ms/sqlpackage-macos -o /tmp/sqlpackage.zip && unzip -q /tmp/sqlpackage.zip -d ~/sqlpackage && chmod +x ~/sqlpackage/sqlpackage` (add `~/sqlpackage` to `PATH`)
+  - **Linux standalone:** `curl -L https://aka.ms/sqlpackage-linux -o /tmp/sqlpackage.zip && unzip -q /tmp/sqlpackage.zip -d ~/sqlpackage && chmod +x ~/sqlpackage/sqlpackage` (add `~/sqlpackage` to `PATH`)
+- `DATABASE_URL_STAGE` set in `.env`, and your IP allowed through the Azure SQL firewall (see [Adding your IP to Azure SQL Firewall](#adding-your-ip-to-azure-sql-firewall)).
+- `stage` is a free serverless DB that auto-pauses. If the export fails with *"database … is not currently available"*, wait ~60 s and run it again.
+- Safety: the script refuses to run if `DATABASE_URL` is not `localhost`, or if the source is `production-servicehub`.
+
+> **Privacy:** `stage` contains real directory member data (names, phones, addresses). The BACPAC lands in the gitignored `scratch/`. Don't copy it anywhere else, and delete old `scratch/stage-*.bacpac` files when no longer needed.
+
+> **Schema changes:** Always run `npx prisma migrate deploy` after pulling commits that touch `prisma/schema.prisma`. To make your own schema change, follow [Creating a new schema change](#creating-a-new-schema-change). Do not use `prisma migrate dev` (Azure SQL has no shadow database).
+
+#### B. Empty database (no Azure access needed)
+
+Use this path if you don't have `DATABASE_URL_STAGE` or Azure SQL firewall access. Works identically in macOS, Linux, Git Bash, and Windows PowerShell:
+
+```bash
+# 0. Create the empty database inside the container
+echo "IF DB_ID(N'servicehub_dev') IS NULL CREATE DATABASE servicehub_dev" | docker exec -i servicehub-mssql bash -c '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD"'
+
+# 1. Apply all migrations
+npx prisma migrate deploy
+
+# 2. Seed roles and default super-admin account (idempotent via upsert)
+npx prisma db seed
+```
+
+### Step 6: Start the development server
+
+```bash
+npm run dev
+```
+
+`concurrently` starts both apps in one terminal:
+- **Frontend (React/Vite):** `http://localhost:3000`
+- **Backend (Express API):** `http://localhost:4000` (health check: `http://localhost:4000/api/health` → `{"status":"ok",...}`)
+
+Log in at `http://localhost:3000/login` using the [Default Admin Account](#default-admin-account) below.
+
+> **⚠️ First-time setup?** If `npm run dev` fails or the server crashes on startup, see [Known Issues](#known-issues-first-time-setup) below.
+
+---
+
+## AI Agent & Team Tooling Setup
+
+The steps below are **not required** to run `localhost:3000` — complete them when setting up a full team workstation or onboarding an AI coding agent (Devin / Windsurf).
+
+### 1. Install CLI tools
+
+These are the CLIs the team uses for GitHub, Azure infra, and AI-assisted reviews: **GitHub CLI (`gh`)**, **Azure CLI (`az`)**, **ChatGPT/Codex (`codex`)**, and **Google Antigravity (`agy`)**.
+
+> **🤖 AI agent note — ask before installing:** When running full workstation onboarding, present the full list of CLIs to the user (`ask_user_question` multi-select) and ask which ones they want installed. Respect any denials; do **not** install CLIs unprompted.
+
+#### GitHub CLI (recommended for pushing & PRs)
+
+- **Windows:** `winget install --id GitHub.cli` (or https://cli.github.com/)
+- **macOS:** `brew install gh`
+- **Linux:** Use your package manager or https://cli.github.com/
+
+```bash
+gh --version
+gh auth login
+gh auth setup-git
+```
+
+**Alternatives:** Personal Access Token (`repo` scope) or SSH keys (`git remote set-url origin git@github.com:andy741231/servicehub.git`).
+
+#### Azure CLI (recommended for infra tasks)
+
+Needed for Azure SQL firewall rules, App Service logs, and slot operations. Not required for day-to-day feature work.
+
+- **macOS:** `brew install azure-cli`
+- **Windows:** `winget install Microsoft.AzureCLI`
+- **Linux:** See https://learn.microsoft.com/cli/azure/install-azure-cli
+
+```bash
+az --version
+az login
+```
+
+#### ChatGPT / Codex CLI (optional — ask user before installing)
+
+OpenAI's terminal coding agent (requires an OpenAI account with API access or ChatGPT Plus/Pro/Team):
+
+```bash
+npm install -g @openai/codex
+codex --version
+```
+
+First run prompts for OpenAI login. Docs: https://developers.openai.com/codex/cli
+
+#### Google Antigravity CLI (optional — ask user before installing)
+
+Google's terminal AI agent (`agy`, requires a Google account):
+
+- **macOS / Linux:** `curl -fsSL https://antigravity.google/cli/install.sh | bash`
+- **Windows (PowerShell):** `irm https://antigravity.google/cli/install.ps1 | iex`
+- **Windows (CMD):** `curl -fsSL https://antigravity.google/cli/install.cmd -o install.cmd && install.cmd && del install.cmd`
+
+> **PATH note:** If `~/.local/bin` is not on PATH, add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
+
+```bash
+agy --version
+```
+
+> **Windows + PowerShell note:** npm-installed CLIs (`codex`, `uipro`) generate `.ps1` shims that PowerShell blocks under the default execution policy. Either run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use **Git Bash / Command Prompt**.
+
+### 2. Install the UI/UX Pro Max skill
+
+The [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill provides design intelligence — accessibility rules, interaction patterns, animation guidelines, color/typography/style recommendations, and UX validation — for UI work. Note that `.devin/skills/ui-ux-pro-max` is tracked as a gitlink, so on a fresh clone the folder starts empty until installed below.
 
 Install it via the official CLI directly into `.devin/skills/` (Devin's canonical skill directory — no `.windsurf/` copy needed):
 
@@ -265,13 +381,13 @@ uipro init --ai windsurf --force   # regenerate the bundle into .windsurf/
 rm -rf .devin/skills/ui-ux-pro-max && mv .windsurf/skills/ui-ux-pro-max .devin/skills/ui-ux-pro-max  # move into place
 ```
 
-### Step 2.6: Enable MCP Servers (Agent-Run Setup)
+### 3. Enable MCP Servers (Agent-Run Setup)
 
-> **⚠️ This step is performed by the AI agent, not the developer.** This step is **required**, not optional. Before configuring any MCP server, the agent **MUST** present the full list of 5 MCP servers to the user and ask which ones they want enabled. The user may deny any or all of them — denial is allowed and should be respected — but the agent must ask before configuring anything, and must not skip the ask. Use the `ask_user_question` tool (or an equivalent prompt) with the 5 servers as selectable choices (multi-select, so the user can pick any subset or none). Do **not** configure any server unprompted, and do **not** proceed past this step until the user has answered. Configure only the servers the user explicitly approves; record any denials and continue to the next step.
+> **⚠️ This step is performed by the AI agent, not the developer.** Before configuring any user-level MCP server, the agent **MUST** present the full list of 5 MCP servers to the user and ask which ones they want enabled (`ask_user_question` multi-select). Respect any denials; do **not** configure any server unprompted.
 >
-> **Why:** A fresh Devin install ships with **zero** MCP servers. None of the servers below are built-in or enabled by default — they must all be added explicitly. An agent can fully set up any approved subset using only shell/file tools (no MCP tool calls, no human intervention required), because none of these 5 require OAuth or API tokens.
+> **Project-level MCPs (already in `.devin/mcp_config.json`):** `shadcn` (`@jpisnice/shadcn-ui-mcp-server`) and `azure` (`@azure/mcp@latest`) are committed at the repo level and require no extra user-level setup.
 >
-> **How:** MCP servers are configured by writing a `mcpServers` block into **two** config files — the Devin user-level config (so the Devin agent can call the servers) **and** the Windsurf MCP config (so the servers show up in the Windsurf UI: Settings → MCP Servers panel and the MCP Marketplace connect buttons). No `devin` CLI binary is required — this method works on every platform (including Windows boxes where the `devin` CLI is not on PATH). See [Write the config files](#write-the-config-files) below.
+> **Why user-level MCPs need setup:** A fresh Devin install ships with **zero** user-level MCP servers. None of the 5 servers below require OAuth or API tokens, so the agent can configure any approved subset directly by writing a `mcpServers` block into **two** config files — the Devin user-level config (so the Devin agent can call the servers) **and** the Windsurf MCP config (so the servers show up in the Windsurf UI: Settings → MCP Servers panel). See [Write the config files](#write-the-config-files) below.
 
 The following **5 MCP servers** are part of the standard Service Hub dev environment:
 
@@ -465,143 +581,35 @@ Both files must contain a `"mcpServers"` object with one entry per approved serv
 >
 > **Enabling/disabling without removing:** Set `"disabled": true` on the server entry in the config file to toggle a server without losing its config.
 
-### Step 3: Configure environment variables
-
-> **🤖 AI agent note — assume present, only ask if missing:** The `.env` file is gitignored and never lives in the repo, so the realistic way a developer gets it is from a teammate or a previous machine — not by typing secret values into a fresh file during setup. **Assume the developer already has a `.env` file.** Do **not** prompt them to fill in secret values or ask a teammate for `DATABASE_URL` / `JWT_SECRET` / `JWT_REFRESH_SECRET` unless `.env` is actually missing or malformed. "Assume present" still means **verify** — check that `.env` exists, is gitignored, contains all required keys, and that `DATABASE_URL` points at the dev DB (`test-servicehub`), not production. Only if a check fails should the agent surface it to the developer and ask how they want to proceed. Do not silently skip this step.
-
-#### A. `.env` already exists (the common case)
-
-The agent should verify, not prompt:
-
-```bash
-# 1. Confirm the file exists and is gitignored
-test -f .env && git check-ignore .env   # macOS/Linux
-# Windows (PowerShell):
-Test-Path .env; git check-ignore .env
-
-# 2. Confirm all required keys are present (without printing their values)
-grep -E '^(DATABASE_URL|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)=' .env   # macOS/Linux
-# Windows (PowerShell):
-Select-String -Path .env -Pattern '^(DATABASE_URL|JWT_SECRET|JWT_REFRESH_SECRET|CLIENT_URL)='
-```
-
-If all four keys are present and `DATABASE_URL` contains `database=test-servicehub` (dev) and **not** `production-servicehub`, this step is done — move on to Step 4. Do not ask the developer for values.
-
-If `.env` exists but is missing a key or points at the production DB, surface the specific problem to the developer and ask how they want to fix it (e.g. get the missing value from a teammate). Do not write secret values into the file yourself unless the developer explicitly provides them.
-
-#### B. `.env` is missing (only then — ask the developer)
-
-Only if `.env` does not exist at the project root should the agent guide the developer to create one. Start from the example file:
-
-```bash
-cp .env.example .env
-```
-
-Then the developer fills in the values. They should ask a team member for the `DATABASE_URL`, `JWT_SECRET`, and `JWT_REFRESH_SECRET` values, or use the reference below. **The agent should not generate or guess secret values** — it should tell the developer which keys to fill in and where to get them.
-
-**Required variables:**
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | Azure SQL connection string for `test-servicehub` (dev DB) |
-| `JWT_SECRET` | Secret for signing access tokens |
-| `JWT_REFRESH_SECRET` | Secret for signing refresh tokens |
-| `CLIENT_URL` | `http://localhost:3000` (for local dev CORS) |
-
-The `DATABASE_URL` format for Azure SQL (SQL Server via Prisma):
-```
-sqlserver://houstonservice-test.database.windows.net:1433;database=test-servicehub;user=servicehub_dev;password=<ask team>;encrypt=true;trustServerCertificate=false;connectionTimeout=30
-```
-
-> **Note:** The `.env` file is gitignored — never commit it.
-
-### Step 4: Apply migrations & seed the database
-
-> **🤖 AI agent note:** Before running `npx prisma db seed`, **ask the user first** whether the target database is brand-new and empty. Seeding an already-set-up database can create duplicate roles or fail on unique constraints. `npx prisma migrate deploy` is safe to run without asking — it only applies pending migrations and never drops or recreates tables.
-
-The test database (`test-servicehub`) is shared and already has migrations applied and seed data. **Do not run the seed command against an existing database** — it will fail or duplicate data. Follow the path below that matches your situation.
-
-#### A. Existing database (most developers — DB already set up)
-
-Only apply pending migrations. **Do not seed.**
-
-```bash
-# Apply any pending migrations to the dev database (safe — never drops/recreates tables)
-npx prisma migrate deploy
-```
-
-> **Schema changes:** Always run `npx prisma migrate deploy` after pulling changes that include `prisma/schema.prisma` modifications. To create a new migration after editing the schema, run `npx prisma migrate dev --name describe_your_change` locally first.
-
-#### B. Fresh / empty database (new DB only)
-
-Run migrations **and** seed — only if the database has no tables or seed data yet.
-
-```bash
-# 1. Apply all pending migrations to the dev database
-npx prisma migrate deploy
-
-# 2. Seed roles and default admin user (ONLY for a brand-new database)
-npx prisma db seed
-```
-
-> **Warning:** `npx prisma db seed` should only be run against a fresh database. Running it against an already-seeded database can create duplicate roles or fail on unique constraints. If you are unsure whether the DB has been seeded, check with the team or query the `Role` table first.
-
-### Step 5: Start the development server
-
-```bash
-npm run dev
-```
-
-Turborepo starts both apps in parallel:
-- **Frontend (React/Vite):** `http://localhost:3000`
-- **Backend (Express API):** `http://localhost:4000`
-
-> **⚠️ First-time setup?** If `npm run dev` fails or the server crashes on startup, see the [Known Issues](#known-issues-first-time-setup) section below — it covers the Azure SQL cold start, firewall IP whitelist, and a Windows-specific `npm run dev` bug.
-
 ---
 
 ## Known Issues (First-Time Setup)
 
-If this is your first time running the app, you will likely encounter one or more of the following issues. All are expected and have straightforward fixes.
+If this is your first time running the app, you may encounter one of the following:
 
-### 1. Azure SQL server cold start (connection timeout)
+### 1. Can't reach the local database (Docker not running)
 
-> **Note:** This is not a first-time-only issue — it can happen anytime the database has been idle. First-timers should be aware of it so it doesn't block initial setup.
+**Symptom:** `PrismaClientInitializationError: Can't reach database server at localhost:1433`, `P1001`, or `Server error during login`.
 
-**Symptom:** The server crashes on startup with a Prisma error:
-```
-PrismaClientInitializationError: Timed out fetching a new connection from the connection pool.
-(P2024)
-```
+**Cause:** Docker Desktop isn't running, or the `servicehub-mssql` container is stopped or still starting.
 
-You may also see this surfaced in the UI at login time. If a user sees any of the following:
-
-- `Server error during login` (toast / error message on the login page)
-- `POST http://localhost:3000/api/auth/login` returning `[HTTP/1.1 500 Internal Server Error 10018ms]` (note the ~10s timeout in the duration)
-
-…this is the same cold-start issue. The login request hits the database before Azure SQL has finished waking up, so the Prisma query times out and the `/api/auth/login` route returns a 500.
-
-**Cause:** The Azure SQL server (`houstonservice-test.database.windows.net`) is a serverless/paused instance. After a period of inactivity it goes to sleep and takes **~60 seconds** to wake up on the first connection. The default Prisma connection pool timeout (10s) is shorter than the cold start time.
-
-**Fix:** Simply restart the server after waiting ~1 minute. The first connection attempt wakes the server; subsequent connections will be fast. Then retry the login — it should succeed within a normal response time.
-
+**Fix:**
 ```bash
-# If the server crashed, just re-run it:
-node --watch server/src/index.js
+docker info >/dev/null 2>&1 || echo "start Docker Desktop first"
+docker compose up -d && docker compose ps   # wait for "healthy", then restart npm run dev
 ```
 
-### 2. Your IP is not in the Azure SQL firewall whitelist
+If the container keeps restarting, run `docker compose logs mssql`. The most common cause is `MSSQL_SA_PASSWORD` missing from `.env` or failing SQL Server's complexity rules (see Step 2).
 
-**Symptom:** The server crashes with:
-```
-PrismaClientInitializationError: Client with IP address 'xxx.xxx.xxx.xxx' is not allowed to access the server.
-```
+### 2. `Login failed for user 'sa'` / `Cannot open database "servicehub_dev"`
 
-**Cause:** Azure SQL has a firewall that blocks all incoming connections by default. Each developer must add their public IP address to the whitelist.
+- **Login failed:** the password in `DATABASE_URL` doesn't match `MSSQL_SA_PASSWORD`, or the password was changed after the Docker volume was initialized. SQL Server only reads `MSSQL_SA_PASSWORD` on first start. Fix the mismatch, or reset the volume with `docker compose down -v && docker compose up -d` and re-run Step 5.
+- **Cannot open database:** the container is fresh and empty. Run Step 5 (A or B).
 
-**Fix:** See the [Adding your IP to Azure SQL Firewall](#adding-your-ip-to-azure-sql-firewall) section below. You will need the Azure CLI (`az`) installed and authenticated.
+### 3. `npm run db:pull` can't reach Azure `stage`
 
-> **Note:** If your ISP uses dynamic IPs or you switch networks (home/office/VPN), you may need to re-add your IP each time it changes. Firewall rule changes can take up to 5 minutes to take effect.
+- `Client with IP address '…' is not allowed`: add your IP (see [Adding your IP to Azure SQL Firewall](#adding-your-ip-to-azure-sql-firewall)). Rules can take up to 5 minutes to take effect.
+- `Database 'stage' … is not currently available`: the free serverless DB is waking from auto-pause. Wait ~60 s and retry.
 
 ---
 
@@ -610,46 +618,49 @@ PrismaClientInitializationError: Client with IP address 'xxx.xxx.xxx.xxx' is not
 ### Default Admin Account
 | Field | Value |
 |-------|-------|
+| Username | `admin` |
 | Email | `admin@servicehub.com` |
 | Password | `Admin@2024!` |
-| Role | `admin` (access to all apps) |
+| Role | `super_admin` (access to all apps) |
 
-> This account exists in **both** the test and production databases.
+> This account is created by `npx prisma db seed` and exists in the `stage` and production databases (and therefore in any local copy made with `npm run db:pull`).
 
 ---
 
 ## Database Overview
 
-| Database | Purpose | User |
-|----------|---------|------|
-| `test-servicehub` | Local development | `servicehub_dev` |
-| `production-servicehub` | Live production | `servicehub_prod` |
+| Database | Where | Purpose | User |
+|----------|-------|---------|------|
+| `servicehub_dev` | Docker on your machine (`localhost:1433`) | Local development (your own copy) | `sa` |
+| `stage` | Azure SQL, free serverless (auto-pauses) | Cloud **staging slot** + source for `npm run db:pull` | `servicehub_dev` |
+| `production-servicehub` | Azure SQL, Basic (always on) | Live production | `servicehub_prod` |
+| `test-servicehub` | Azure SQL, free serverless | **Retired 2026-10-25**: paused, not deleted, nothing uses it | — |
 
-Both databases live on the Azure SQL server `houstonservice-test.database.windows.net`.
+All Azure databases live on the server `houstonservice-test.database.windows.net`.
 
-**To re-seed after database changes:**
+**To re-seed roles/default admin (idempotent via `upsert`):**
 ```bash
-# Seed test DB (uses DATABASE_URL from .env)
+# Seed your local DB (uses DATABASE_URL from .env)
 npx prisma db seed
 
-# Seed prod DB (for admins only — ensure DATABASE_URL_PROD is set in .env)
-export $(grep DATABASE_URL_PROD .env | xargs) && DATABASE_URL="$DATABASE_URL_PROD" npx prisma db seed
+# Seed prod DB (admins only — ensure DATABASE_URL_PROD is set in .env)
+node -e "const fs=require('fs'),{execSync}=require('child_process');const m=fs.readFileSync('.env','utf8').match(/^DATABASE_URL_PROD=[\"']?([^\"'\r\n]+)/m);if(!m)throw new Error('DATABASE_URL_PROD missing');execSync('npx prisma db seed',{stdio:'inherit',env:{...process.env,DATABASE_URL:m[1]}})"
 ```
-
-> **Note:** If http://localhost:3000/ shows "page not found" on first startup, wait up to a minute — the app uses a remote Azure SQL database which may need time to cold-start. This could  happen if the database has been inactive for an hour.
 
 ---
 
 ## Deployment
 
-Deployment is fully automated with **zero-downtime** using Azure App Service deployment slots. Push to `main` and GitHub Actions handles the rest:
+Deployment uses a **staging-gated** pipeline on Azure App Service. A push to `main` deploys to the `staging` slot first; only after staging passes all smoke tests (including commit-SHA verification) does CI migrate and deploy the exact same verified package to `production`. Auto-swap stays **OFF** (since 2026-10-18) so broken builds can never bypass smoke tests.
 
 | Stage | Job | What happens |
 |-------|-----|-------------|
-| 1 | `build` | Install deps, compile React frontend, generate Prisma client, assemble & zip deployment package |
-| 2 | `deploy-staging` | Apply staging DB migrations, push zip to the `staging` slot via Kudu, poll until complete |
-| 3 | `smoke-tests` | Hit `/`, `/api/health`, and `/login` on the staging URL — pipeline halts if any return non-200 |
-| 4 | `swap-production` | Apply production DB migrations, swap staging → production via Azure CLI, verify production health |
+| 1 | `build` | Install deps, compile React frontend, generate Prisma client, run server unit tests + schema/column drift check, stamp `build-info.json`, assemble + verify imports in the standalone bundle, and zip it |
+| 2 | `deploy-staging` | Apply staging DB migrations (with auto-pause retry), push the zip to the `staging` slot via Kudu, poll the exact deployment URL until complete |
+| 3 | `smoke-tests` | Wait for staging `/api/health` to return HTTP 200 with the **new commit SHA**, then verify `/`, `/login`, DB-backed page API, and Directory SMS/auth guards. The pipeline halts if any check fails |
+| 4 | `deploy-production` | Apply production DB migrations, push the exact same verified zip to `production` via Kudu, and verify `/api/health` reports the new commit SHA + DB + Directory guards |
+
+Both slots run `WEBSITE_RUN_FROM_PACKAGE=1` (slot-sticky), so `wwwroot` is read-only and deploys mount in seconds (~15–30s brief restart on production while the new package mounts). Staging stays live after every deploy (unlike a slot swap under RFP, which leaves staging returning 503 until the next deploy). See the CI/CD note in `agent.md` for logging under run-from-package.
 
 **Production URL:** `https://houstonservicehub.azurewebsites.net`  
 **Staging URL:** `https://houstonservicehub-staging.azurewebsites.net`
@@ -671,15 +682,15 @@ To trigger a manual deploy without a code change:
 # Go to GitHub → Actions → "Build and Deploy to Azure" → Run workflow
 ```
 
-### How zero-downtime works
+### How staging-gated promotion works
 
-1. The new build is deployed to the **staging slot** — production is untouched.
-2. Smoke tests run against staging. If they fail, production is never touched.
-3. Once tests pass, Azure performs an instant **slot swap** (staging ↔ production). The old production becomes the new staging slot, enabling instant rollback.
+1. The new build is tested in CI (unit tests, drift check, standalone import check) and deployed to the **staging slot**. Production is not touched.
+2. Smoke tests verify staging is running the **exact commit SHA**, serves DB-backed pages, and enforces Directory SMS/auth guards. If anything fails, the pipeline stops.
+3. Only then does CI apply production DB migrations, push the verified `deploy.zip` to `production`, and verify production reports the new commit SHA.
 
-### Emergency rollback
+### Emergency rollback / future zero-downtime OIDC swap
 
-If production behaves unexpectedly after a swap, swap back immediately:
+To roll back a bad release, revert the commit on `main` and push (CI deploys the revert in ~4–5 min), or use a manual slot swap if staging still holds a known-good build:
 
 ```bash
 az webapp deployment slot swap \
@@ -689,11 +700,20 @@ az webapp deployment slot swap \
   --target-slot production
 ```
 
+> **Future upgrade (zero-downtime CI slot swap via OIDC):** The Entra ID app `github-servicehub-deploy` (client ID `a3070650-42d6-44ad-be84-62e69653b768`, SP object ID `0b7e6826-fb49-431c-871d-81d56b8e3fd9`) is already registered with a GitHub OIDC federated credential for `main`. Whenever an Azure Owner grants it `Website Contributor` on `houstonservicehub`, `deploy-production` can switch from Kudu zipdeploy to `az webapp deployment slot swap` for zero-downtime swaps:
+> ```bash
+> az role assignment create \
+>   --assignee-object-id "0b7e6826-fb49-431c-871d-81d56b8e3fd9" \
+>   --assignee-principal-type ServicePrincipal \
+>   --role "Website Contributor" \
+>   --scope "/subscriptions/e66e4de3-b754-4ec5-8e17-23a849af0356/resourceGroups/App-Services-And-Related/providers/Microsoft.Web/sites/houstonservicehub"
+> ```
+
 ### Promoting database changes to production
 
 Code deploys automatically via GitHub Actions, and **database migrations now run automatically** via `npx prisma migrate deploy`:
 - Staging migrations run before deploying to the staging slot.
-- Production migrations run after smoke tests pass, right before the slot swap.
+- Production migrations run after smoke tests pass, right before `deploy-production` pushes the new zip to production. Keep migrations backward-compatible with the currently running production code during the brief deploy window.
 
 You do not need to apply migrations manually.
 
@@ -701,54 +721,15 @@ You do not need to apply migrations manually.
 
 #### Creating a new schema change
 
-> **✨ NEW: Automatic migration generation with pre-commit hooks**
-> 
-> A pre-commit hook now automatically generates migration files when you commit schema changes. No manual steps required!
+Follow the **Schema Change Workflow** in `agent.md`, which is the canonical version. In short:
 
-**Simply edit `prisma/schema.prisma` and commit:**
+1. Edit `prisma/schema.prisma`.
+2. Run `npx prisma db push` to sync your local Docker DB (`servicehub_dev`).
+3. **Hand-write** `prisma/migrations/<YYYYMMDD_descriptive_name>/migration.sql` with `IF NOT EXISTS` guards so it is idempotent. `db push` does not create this file, and production only runs migration files.
+4. Run `npx prisma migrate deploy` to record the migration locally, then commit the schema and the migration together.
+5. **Do not** run `prisma migrate resolve --applied` on new migrations. That command marks a migration as applied without executing the SQL.
 
-```bash
-git add prisma/schema.prisma
-git commit -m "feat: add new field to User model"
-git push
-```
-
-The pre-commit hook will:
-1. Detect that `prisma/schema.prisma` was modified
-2. Auto-generate the migration file using `prisma migrate diff`
-3. Name it with the current date and your commit message
-4. Mark it as applied locally (since your dev DB already has the schema)
-5. Add the migration file to your commit automatically
-
-**Your commit will include:**
-- `prisma/schema.prisma` (your schema change)
-- `prisma/migrations/20240626_add_new_field_to_user_model/migration.sql` (auto-generated)
-
-CI will automatically apply the migration to staging, run smoke tests, then apply to production before the slot swap.
-
-> **Never use `prisma db push`** — it skips the migrations system and will break production. The pre-commit hook ensures migrations are always created.
-
-> **Manual migration creation (fallback):** If the pre-commit hook fails or you need to create a migration manually, see the legacy steps below.
-
-**Legacy manual steps (only if pre-commit hook fails):**
-
-```bash
-# Create the migration folder
-mkdir -p "prisma/migrations/$(date +%Y%m%d)_describe_your_change"
-
-# Generate the SQL diff
-npx prisma migrate diff \
-  --from-schema-datasource prisma/schema.prisma \
-  --to-schema-datamodel prisma/schema.prisma \
-  --script > "prisma/migrations/$(date +%Y%m%d)_describe_your_change/migration.sql"
-
-# Mark as applied locally
-npx prisma migrate resolve --applied "$(date +%Y%m%d)_describe_your_change"
-
-# Add and commit
-git add prisma/
-git commit -m "feat: describe your change"
-```
+The Husky pre-commit hook (`.husky/pre-commit`) and the CI drift check **block** commits where a model has no `CREATE TABLE` in any migration. They do **not** generate migrations for you.
 
 #### Required GitHub secrets
 
@@ -757,13 +738,14 @@ git commit -m "feat: describe your change"
 | Secret | Description | Status |
 |--------|-------------|--------|
 | `DATABASE_URL_PROD` | Production Azure SQL connection string | ✓ Set |
-| `DATABASE_URL_STAGING` | Staging Azure SQL (`test-servicehub`) | ✓ Set |
+| `DATABASE_URL_STAGING` | Staging Azure SQL (`stage`) | ✓ Set |
+| `DATABASE_URL_DEV` | `test-servicehub`, **unused** since 2026-10-25 (its CI sync step was removed). Safe to delete | Unused |
 | `AZURE_DEPLOY_USER` | Kudu publishing username (production slot) | ✓ Set |
 | `AZURE_DEPLOY_PWD` | Kudu publishing password (production slot) | ✓ Set |
 | `AZURE_DEPLOY_USER_STAGING` | Kudu publishing username (staging slot) | ✓ Set |
 | `AZURE_DEPLOY_PWD_STAGING` | Kudu publishing password (staging slot) | ✓ Set |
 
-> **Note:** No `AZURE_CREDENTIALS` service principal is needed. The slot swap is handled by Azure's **auto-swap** feature (configured on the staging slot). The `swap-production` job applies DB migrations then polls `/api/health` to confirm production is live.
+> **Note:** No `AZURE_CREDENTIALS` service principal is needed yet. Auto-swap is **off** (2026-10-18); after staging smoke tests pass, `deploy-production` pushes the verified zip to production via the production Kudu credentials (`AZURE_DEPLOY_USER` / `AZURE_DEPLOY_PWD`). See the OIDC note above to upgrade to zero-downtime CI slot swaps later.
 
 To rotate Kudu credentials (e.g. after a publish profile reset):
 ```bash
@@ -783,8 +765,8 @@ curl -s -o /tmp/pubprofile_staging.xml -X POST \
 | Step | What was done | Verified |
 |------|--------------|---------|
 | 1 | Created `staging` slot cloned from production | `az webapp deployment slot list` shows `staging` in `Running` state |
-| 2 | Auto-swap enabled (`staging` → `production`) | `autoSwapSlotName: production` confirmed on the slot config |
-| 3 | `DATABASE_URL` on staging set to `test-servicehub` (dev DB) | `database=test-servicehub` confirmed in staging app settings |
+| 2 | Auto-swap enabled (`staging` → `production`). **Disabled again on 2026-10-18**: production now deploys via the staging-gated `deploy-production` job in CI | `autoSwapSlotName` should be empty on the slot config |
+| 3 | `DATABASE_URL` on staging set to a free test DB (now `stage`) | `database=stage` confirmed in staging app settings (2026-10-25) |
 | 4 | `DATABASE_URL` and `NODE_ENV` marked slot-sticky on both slots | Both show `slotSetting: true` on production and staging |
 
 To verify current state at any time:
@@ -802,7 +784,7 @@ az webapp config appsettings list \
   --name houstonservicehub \
   --query "[?slotSetting==\`true\`].name" -o tsv
 
-# Confirm staging DATABASE_URL points at the test DB
+# Confirm staging DATABASE_URL points at stage (prints the full string — contains a password)
 az webapp config appsettings list \
   --resource-group App-Services-And-Related \
   --name houstonservicehub \
@@ -856,11 +838,13 @@ See the `Adding a New Sub-App` checklist in `AGENT.md` (the master blueprint).
 
 ### Inspecting the database
 
-Use Azure Data Studio or the Azure portal query editor to connect to either database.
+- **Local:** `npx prisma studio`, or any SQL client (Azure Data Studio, SSMS, VS Code mssql) connected to `localhost,1433` as `sa` (trust the server certificate).
+- **Shell inside the container:** `docker exec -it servicehub-mssql bash -c '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -d servicehub_dev'`
+- **Azure (`stage` / production):** Azure Data Studio or the Azure portal query editor.
 
 ### Adding your IP to Azure SQL Firewall
 
-If you see database connection errors like "Client with IP address is not allowed to access the server", you need to add your IP to the Azure SQL firewall:
+You only need this for `npm run db:pull` and other direct access to the Azure databases. Local dev on Docker never needs it. If you see "Client with IP address is not allowed to access the server", add your IP to the Azure SQL firewall:
 
 ```bash
 # Get your current public IPv4 address
@@ -890,11 +874,12 @@ az sql server firewall-rule create \
 ### Resetting your local dev database schema
 
 ```bash
-npx prisma migrate reset
-npx prisma db seed
+npm run db:pull -- --yes      # back to a fresh copy of stage (recommended)
+# or wipe the container completely:
+docker compose down -v && docker compose up -d   # then Step 5 A or B
 ```
 
-> This only affects the test database (per your `DATABASE_URL` in `.env`). `migrate reset` drops and recreates tables then re-runs all migrations — **never run this against production**.
+> Your local DB is yours alone, so resetting it affects nobody else. Do **not** run `npx prisma migrate reset` (or `db push --force-reset`) with `DATABASE_URL` pointing at Azure: `stage` backs the staging slot, and production is production.
 
 ### Checking production logs
 
@@ -913,7 +898,9 @@ az webapp log tail \
 | `npm install` | Install all workspace dependencies |
 | `npm run dev` | Start frontend + backend in development mode |
 | `npm run build` | Build the React frontend for production |
-| `npx prisma migrate dev --name <name>` | Create a new migration from schema changes (dev only) |
+| `docker compose up -d` / `stop` | Start / stop the local SQL Server container |
+| `npm run db:pull -- --yes` | Replace local `servicehub_dev` with a fresh copy of Azure `stage` |
+| `npx prisma db push` | Sync schema to the local DB (then hand-write a migration; see agent.md) |
 | `npx prisma migrate deploy` | Apply pending migrations to the database (safe for prod) |
 | `npx prisma db seed` | Seed roles and admin user |
 | `npx prisma studio` | Open Prisma's visual DB browser |
@@ -1170,7 +1157,7 @@ az rest --method put \
 
 ## Final Verification Checklist (Agent-Run)
 
-> **🤖 AI agent note — REQUIRED, do not skip:** After walking the developer through Steps 1–5, the agent **MUST** run this final verification pass before declaring setup complete. Go through every step in order, verify the actual state of the system (do not assume — run the commands and read the output), and tick each box only when the verification command succeeds. If any check fails, stop, surface the failure to the developer with the exact error, and remediate before moving on. Do **not** mark setup complete until every checkbox below is confirmed.
+> **🤖 AI agent note — REQUIRED, do not skip:** After walking the developer through Steps 1–6 (and any approved items in AI Agent & Team Tooling Setup), the agent **MUST** run this verification pass before declaring setup complete. Verify the actual state of the system (run commands and read output) and tick each box only when confirmed.
 
 ### ✅ Step 1 — Repository cloned
 
@@ -1178,65 +1165,43 @@ az rest --method put \
 - [ ] `git remote -v` shows `origin` → `github.com/andy741231/servicehub.git`
 - [ ] Current working directory is the project root (contains `client/`, `server/`, `shared/`, `prisma/`)
 
-### ✅ Step 1.5 — CLI tools installed (only those the user approved)
+### ✅ Step 2 — Environment variables configured (`.env`)
 
-- [ ] `node -v` prints v20+ and `npm -v` prints v9+
-- [ ] For each CLI the user approved, the verify command succeeds:
-  - GitHub CLI: `gh --version` (and `gh auth status` is authenticated)
-  - Azure CLI: `az --version` (and `az account show` returns a subscription)
-  - Codex CLI: `codex --version`
-  - Google Antigravity: `agy --version`
-- [ ] Any CLI the user denied is recorded as denied and skipped — not re-prompted
-
-### ✅ Step 2 — Dependencies installed
-
-- [ ] `node_modules/` exists at the project root
-- [ ] `npm ls --depth=0 2>&1 | head` shows no `UNMET DEPENDENCY` errors for the workspace root
-- [ ] `client/node_modules/`, `server/node_modules/`, and `shared/` resolve via npm workspaces
-
-### ✅ Step 2.5 — UI/UX Pro Max skill installed
-
-- [ ] `.devin/skills/ui-ux-pro-max/SKILL.md` exists
-- [ ] (If the user approved Python) `python --version` or `python3 --version` prints 3.x
-- [ ] (If Python installed) `uipro --design-system` (or the `.cmd` shim on Windows) runs without error
-
-### ✅ Step 2.6 — MCP servers enabled (only those the user approved)
-
-- [ ] The agent asked the user which of the 5 MCP servers to enable (multi-select) and recorded approvals/denials
-- [ ] Any server the user denied is recorded as denied and skipped — not re-prompted
-- [ ] The `mcpServers` block was written/merged into the **Devin config file** (`%APPDATA%\devin\config.json` on Windows, `~/.config/devin/config.json` on macOS/Linux, or `.devin/config.json` / `.devin/config.local.json`)
-- [ ] The `mcpServers` block was **also** written/merged into the **Windsurf MCP config file** (`~/.codeium/windsurf/mcp_config.json` on all platforms) — required for UI panel & Marketplace visibility
-- [ ] For each approved server (`filesystem`, `memory`, `sequential-thinking`, `puppeteer`, `playwright`), it appears in **both** config files' `mcpServers` object
-- [ ] No denied server is present in either config file's `mcpServers` object
-- [ ] Windsurf/Devin has been restarted so the servers are picked up
-- [ ] After restart, the servers appear in Windsurf Settings → MCP Servers with active status
-
-### ✅ Step 3 — Environment variables configured
-
-- [ ] `.env` exists at the project root (and is **not** tracked by git — `git check-ignore .env` returns the path)
-- [ ] `.env` contains `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `CLIENT_URL`
+- [ ] `.env` exists at the project root and is gitignored (`git check-ignore .env` returns `.env`)
+- [ ] `.env` contains `DATABASE_URL`, `MSSQL_SA_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `CLIENT_URL`
 - [ ] `CLIENT_URL` is `http://localhost:3000`
-- [ ] `DATABASE_URL` points at `test-servicehub` (dev DB), not the production DB
-- [ ] If `.env` was already present and valid, the agent verified it and did **not** prompt the developer for secret values
-- [ ] If `.env` was missing or malformed, the agent surfaced the specific problem and guided the developer to fix it (without generating or guessing secret values itself)
+- [ ] `DATABASE_URL` points at `localhost:1433` / `servicehub_dev` (Docker), not an Azure database
+- [ ] `MSSQL_SA_PASSWORD` matches the password in `DATABASE_URL`
 
-### ✅ Step 4 — Migrations applied (and seeded only if the DB was fresh)
+### ✅ Step 3 — Docker and local SQL Server
 
+- [ ] `docker info` succeeds (engine running)
+- [ ] `docker compose ps` shows `servicehub-mssql` as `healthy`
+
+### ✅ Step 4 — Dependencies installed
+
+- [ ] `node -v` prints v22+ (or v20+) and `npm -v` prints v10+ (or v9+)
+- [ ] `node_modules/` exists at the project root and Prisma client is generated
+
+### ✅ Step 5 — Local DB loaded & migrations applied
+
+- [ ] Path A: `npm run db:pull` finished with `mismatches: 0` and `migrations match: true`
+- [ ] Path B: `servicehub_dev` created, `npx prisma migrate deploy` succeeded, and `npx prisma db seed` ran
 - [ ] `npx prisma migrate status` reports no pending migrations
-- [ ] If the database was brand-new and the user confirmed seeding: `Role` and `User` tables are populated (verify with `npx prisma studio` or a quick query)
-- [ ] If the database was already set up: `npx prisma db seed` was **not** run
 
-### ✅ Step 5 — Development server running
+### ✅ Step 6 — Development server running
 
 - [ ] `npm run dev` is running (both Vite frontend and Express backend started without fatal errors)
 - [ ] `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` returns `200`
 - [ ] `curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/api/health` returns `200`
-- [ ] The developer can load `http://localhost:3000` in a browser and reach the login page
-- [ ] Login with `admin@servicehub.com` / `Admin@2024!` succeeds and lands on the Welcome page
+- [ ] Login at `http://localhost:3000/login` with `admin@servicehub.com` / `Admin@2024!` succeeds
+
+### ✅ AI Agent & Team Tooling (only items the user approved)
+
+- [ ] **CLIs:** Asked user (multi-select) before installing; verified each approved CLI (`gh`, `az`, `codex`, `agy`); skipped denied ones
+- [ ] **UI/UX Pro Max skill:** `.devin/skills/ui-ux-pro-max/SKILL.md` exists (and if Python approved, `search.py` runs)
+- [ ] **MCP servers:** Asked user (multi-select) before configuring; approved servers written to **both** Devin config (`%APPDATA%\devin\config.json` on Windows / `~/.config/devin/config.json` on macOS/Linux) and Windsurf MCP config (`~/.codeium/windsurf/mcp_config.json`); denied servers omitted; reminded user to restart Devin/Windsurf so new MCP servers load
 
 ### 🎯 Sign-off
 
-- [ ] Every checkbox above is ticked. If any cannot be ticked, list the failure(s) and the remediation taken.
-- [ ] Summarize for the developer: which CLIs were installed, which were denied, which MCP servers were enabled, and whether the DB was seeded.
-- [ ] If any MCP servers were enabled, remind the developer to **restart Devin/Windsurf** so the new MCP config is picked up — MCP servers do not appear until the editor is restarted.
-- [ ] Only after every box is ticked, announce that local setup is complete and the developer is ready to build.
+- [ ] Every applicable checkbox above is ticked. Summarize what was set up (DB path A vs B, approved/denied CLIs & MCPs) and confirm the developer is ready to build.
