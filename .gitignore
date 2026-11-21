@@ -64,3 +64,7 @@ contacts-backup-*.json
 
 # Playwright MCP session snapshots
 .playwright-mcp/
+
+# Playwright
+e2e/test-results/
+playwright-report/
