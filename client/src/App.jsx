@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import {
+  createBrowserRouter, createRoutesFromElements, RouterProvider,
+  Route, Navigate, Outlet, useLocation,
+} from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import useDirectoryStore from './pages/directory/store/directoryStore';
 import useThemeStore from './store/themeStore';
@@ -79,6 +82,119 @@ function ThemeRouteSync() {
   return null;
 }
 
+// Root layout: app-wide route effects, then the matched route.
+function RootLayout() {
+  return (
+    <>
+      <ThemeRouteSync />
+      <Outlet />
+    </>
+  );
+}
+
+// A data router (rather than <BrowserRouter>) so screens can use
+// useBlocker — e.g. the web editor finishes saving before you navigate away.
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<RootLayout />}>
+      {/* ── Public site routes ── */}
+      <Route path="/" element={<PublicHome />} />
+      <Route path="/form/:formSlug" element={<FormView />} />
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<Login />} />
+      </Route>
+
+      {/* ── Saint-facing directory (outside hub-admin) ── */}
+      <Route path="/directory/login" element={<DirectoryLogin />} />
+      <Route path="/directory/verify" element={<DirectoryVerify />} />
+      <Route element={<SaintProtectedRoute><SaintLayout /></SaintProtectedRoute>}>
+        <Route path="/directory" element={<Directory />} />
+        <Route path="/directory/me" element={<DirectoryMyProfile />} />
+      </Route>
+
+      <Route path="/:slug" element={<PublicHome />} />
+
+      {/* ── Admin backend (/hub-admin/*) ── */}
+      <Route path="/hub-admin">
+        {/* Login at /hub-admin */}
+        <Route element={<AuthLayout />}>
+          <Route index element={<Login />} />
+        </Route>
+
+        {/* Protected sub-apps */}
+        <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+          {/* Welcome landing page (shown after login for multi-app users) */}
+          <Route path="welcome" element={<Welcome />} />
+
+          {/* Global search page */}
+          <Route path="search" element={<SearchPage />} />
+
+          {/* Web builder — nested under WebShell for tab nav */}
+          <Route path="web" element={<WebShell />}>
+            <Route index                  element={<Navigate to="/hub-admin/web/dashboard" replace />} />
+            <Route path="dashboard"       element={<WebDashboard />} />
+            <Route path="pages"           element={<WebPages />} />
+            <Route path="header-footer"   element={<WebHeaderFooter />} />
+            <Route path="styles"          element={<WebStyles />} />
+            <Route path="assets"          element={<WebAssets />} />
+            <Route path="templates"       element={<WebDraftTemplates />} />
+            <Route path="page-templates"  element={<WebPageTemplates />} />
+            <Route path="editor"         element={<Navigate to="/hub-admin/web/pages" replace />} />
+            <Route path="editor/:slug"    element={<WebIndex />} />
+          </Route>
+
+          {/* Forms — nested under FormsShell for tab nav */}
+          <Route path="forms" element={<FormsShell />}>
+            <Route index element={<Navigate to="/hub-admin/forms/dashboard" replace />} />
+            <Route path="dashboard" element={<FormsIndex />} />
+            <Route path="list" element={<FormsList />} />
+            <Route path="builder/:formSlug?" element={<FormsBuilder />} />
+            <Route path="submissions" element={<Submissions />} />
+            <Route path="analytics/:formSlug?" element={<FormAnalytics />} />
+            <Route path="templates" element={<FormTemplates />} />
+          </Route>
+
+          {/* Email — nested under EmailShell for tab nav */}
+          <Route path="email" element={<EmailShell />}>
+            <Route index element={<Navigate to="/hub-admin/email/dashboard" replace />} />
+            <Route path="dashboard" element={<EmailDashboard />} />
+            <Route path="campaigns/*" element={<EmailIndex />} />
+            <Route path="builder" element={<EmailBuilder />} />
+            <Route path="test" element={<TestEmail />} />
+            <Route path="lists" element={<MailingLists />} />
+            <Route path="templates" element={<EmailTemplates />} />
+            <Route path="templates/new" element={<EmailBuilder />} />
+            <Route path="templates/:id/edit" element={<EmailBuilder />} />
+          </Route>
+
+          {/* Directory — nested under DirectoryShell for tab nav */}
+          <Route path="directory" element={<DirectoryShell />}>
+            <Route index element={<Navigate to="/hub-admin/directory/dashboard" replace />} />
+            <Route path="dashboard" element={<DirectoryDashboard />} />
+            <Route path="browse" element={<Directory />} />
+            <Route path="members" element={<Navigate to="/hub-admin/directory/browse?view=table" replace />} />
+            <Route path="me" element={<DirectoryMyProfile />} />
+          </Route>
+
+          {/* Portal — nested under PortalShell for tab nav */}
+          <Route path="portal" element={<PortalShell />}>
+            <Route index element={<Navigate to="/hub-admin/portal/dashboard" replace />} />
+            <Route path="dashboard" element={<PortalDashboard />} />
+            <Route path="payment-reconciliation" element={<PaymentReconciliation />} />
+          </Route>
+
+          {/* Admin */}
+          <Route path="admin/users" element={<Users />} />
+
+          {/* Account settings (self-service, any authenticated user) */}
+          <Route path="settings" element={<Settings />} />
+        </Route>
+      </Route>
+    </Route>,
+  ),
+  { future: { v7_relativeSplatPath: true } },
+);
+
 export default function App() {
   const { checkAuth } = useAuthStore();
 
@@ -93,104 +209,5 @@ export default function App() {
     }
   }, [checkAuth]);
 
-  return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <ThemeRouteSync />
-      <Routes>
-        {/* ── Public site routes ── */}
-        <Route path="/" element={<PublicHome />} />
-        <Route path="/form/:formSlug" element={<FormView />} />
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-        </Route>
-
-        {/* ── Saint-facing directory (outside hub-admin) ── */}
-        <Route path="/directory/login" element={<DirectoryLogin />} />
-        <Route path="/directory/verify" element={<DirectoryVerify />} />
-        <Route element={<SaintProtectedRoute><SaintLayout /></SaintProtectedRoute>}>
-          <Route path="/directory" element={<Directory />} />
-          <Route path="/directory/me" element={<DirectoryMyProfile />} />
-        </Route>
-
-        <Route path="/:slug" element={<PublicHome />} />
-
-        {/* ── Admin backend (/hub-admin/*) ── */}
-        <Route path="/hub-admin">
-          {/* Login at /hub-admin */}
-          <Route element={<AuthLayout />}>
-            <Route index element={<Login />} />
-          </Route>
-
-          {/* Protected sub-apps */}
-          <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-            {/* Welcome landing page (shown after login for multi-app users) */}
-            <Route path="welcome" element={<Welcome />} />
-
-            {/* Global search page */}
-            <Route path="search" element={<SearchPage />} />
-
-            {/* Web builder — nested under WebShell for tab nav */}
-            <Route path="web" element={<WebShell />}>
-              <Route index                  element={<Navigate to="/hub-admin/web/dashboard" replace />} />
-              <Route path="dashboard"       element={<WebDashboard />} />
-              <Route path="pages"           element={<WebPages />} />
-              <Route path="header-footer"   element={<WebHeaderFooter />} />
-              <Route path="styles"          element={<WebStyles />} />
-              <Route path="assets"          element={<WebAssets />} />
-              <Route path="templates"       element={<WebDraftTemplates />} />
-              <Route path="page-templates"  element={<WebPageTemplates />} />
-              <Route path="editor"         element={<Navigate to="/hub-admin/web/pages" replace />} />
-              <Route path="editor/:slug"    element={<WebIndex />} />
-            </Route>
-
-            {/* Forms — nested under FormsShell for tab nav */}
-            <Route path="forms" element={<FormsShell />}>
-              <Route index element={<Navigate to="/hub-admin/forms/dashboard" replace />} />
-              <Route path="dashboard" element={<FormsIndex />} />
-              <Route path="list" element={<FormsList />} />
-              <Route path="builder/:formSlug?" element={<FormsBuilder />} />
-              <Route path="submissions" element={<Submissions />} />
-              <Route path="analytics/:formSlug?" element={<FormAnalytics />} />
-              <Route path="templates" element={<FormTemplates />} />
-            </Route>
-
-            {/* Email — nested under EmailShell for tab nav */}
-            <Route path="email" element={<EmailShell />}>
-              <Route index element={<Navigate to="/hub-admin/email/dashboard" replace />} />
-              <Route path="dashboard" element={<EmailDashboard />} />
-              <Route path="campaigns/*" element={<EmailIndex />} />
-              <Route path="builder" element={<EmailBuilder />} />
-              <Route path="test" element={<TestEmail />} />
-              <Route path="lists" element={<MailingLists />} />
-              <Route path="templates" element={<EmailTemplates />} />
-              <Route path="templates/new" element={<EmailBuilder />} />
-              <Route path="templates/:id/edit" element={<EmailBuilder />} />
-            </Route>
-
-            {/* Directory — nested under DirectoryShell for tab nav */}
-            <Route path="directory" element={<DirectoryShell />}>
-              <Route index element={<Navigate to="/hub-admin/directory/dashboard" replace />} />
-              <Route path="dashboard" element={<DirectoryDashboard />} />
-              <Route path="browse" element={<Directory />} />
-              <Route path="members" element={<Navigate to="/hub-admin/directory/browse?view=table" replace />} />
-              <Route path="me" element={<DirectoryMyProfile />} />
-            </Route>
-
-            {/* Portal — nested under PortalShell for tab nav */}
-            <Route path="portal" element={<PortalShell />}>
-              <Route index element={<Navigate to="/hub-admin/portal/dashboard" replace />} />
-              <Route path="dashboard" element={<PortalDashboard />} />
-              <Route path="payment-reconciliation" element={<PaymentReconciliation />} />
-            </Route>
-
-            {/* Admin */}
-            <Route path="admin/users" element={<Users />} />
-
-            {/* Account settings (self-service, any authenticated user) */}
-            <Route path="settings" element={<Settings />} />
-          </Route>
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+  return <RouterProvider router={router} future={{ v7_startTransition: true }} />;
 }
