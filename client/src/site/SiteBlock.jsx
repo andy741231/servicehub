@@ -29,6 +29,16 @@ const stripHtml = (s) => String(s || '')
   .replace(/\s+/g, ' ')
   .trim();
 
+// Gallery layout options (class names spelled out so Tailwind sees them).
+// The defaults — 3 columns, fixed-height photos — are the original layout.
+const GALLERY_COLS = {
+  2: 'grid-cols-1 @min-[600px]:grid-cols-2',
+  3: 'grid-cols-1 @min-[600px]:grid-cols-2 @min-[900px]:grid-cols-3',
+  4: 'grid-cols-2 @min-[900px]:grid-cols-4',
+  6: 'grid-cols-3 @min-[600px]:grid-cols-4 @min-[900px]:grid-cols-6',
+};
+const GALLERY_ASPECT = { landscape: 'aspect-[4/3]', square: 'aspect-square', portrait: 'aspect-[3/4]', wide: 'aspect-video' };
+
 const Arrow = () => <span aria-hidden="true">→</span>;
 const SpacedArrow = () => <> <span aria-hidden="true">→</span></>;
 
@@ -146,6 +156,19 @@ export default function SiteBlock({ block }) {
       );
     }
 
+    case 'divider': {
+      // A line (full or short, centred), dots, or nothing (spacer): the block's
+      // height is the space. Line colour follows the text colour when set.
+      const kind = c.style || 'line';
+      const lineColor = cs.color || 'hsl(var(--border-strong))';
+      return (
+        <section className={`flex items-center justify-center h-full px-6 ${cc}`} style={{ ...sStyle, minHeight: 24 }} role="presentation">
+          {kind === 'line' && <hr className="m-0 border-0" style={{ width: c.width === 'short' ? 96 : '100%', borderTop: `${c.thickness || 1}px solid ${lineColor}` }} />}
+          {kind === 'dots' && <span aria-hidden="true" style={{ color: lineColor, letterSpacing: '0.6em', fontSize: 18 }}>•••</span>}
+        </section>
+      );
+    }
+
     case 'button': return (
       <section
         className={`flex items-center h-full px-6 ${cc}`}
@@ -237,6 +260,12 @@ export default function SiteBlock({ block }) {
           <Text as="blockquote" path="quote" value={c.quote} prefix="“" suffix="”" placeholder="Quote" multiline />
           {/* With a custom text colour the citation follows it (it is muted grey otherwise). */}
           <Text as="cite" path="citation" value={c.citation} prefix="— " placeholder="Citation" style={cs.color ? { color: 'inherit', opacity: 0.75 } : undefined} />
+          {/* Optional button; nothing on the site until it has a label. */}
+          {(c.buttonText || edit) && (
+            <div className="mt-8">
+              <Link optional textPath="buttonText" hrefPath="buttonLink" text={c.buttonText} href={c.buttonLink} className={buttonClass(c.buttonVariant || 'outline')} after={<SpacedArrow />} placeholder="Button (optional)" />
+            </div>
+          )}
         </div>
       </section>
     );
@@ -311,15 +340,23 @@ export default function SiteBlock({ block }) {
       </section>
     );
 
-    case 'gallery': return (
+    case 'gallery': {
+      // Photo grid (default) or logo strip: whole images, small, greyscale
+      // until hovered, no captions. Columns and photo shape are optional.
+      const logos = c.layout === 'logos';
+      const cols = GALLERY_COLS[c.columns] || GALLERY_COLS[logos ? 6 : 3];
+      const imgCls = logos
+        ? 'w-full h-16 object-contain grayscale opacity-75 hover:grayscale-0 hover:opacity-100 transition duration-300'
+        : `w-full ${GALLERY_ASPECT[c.aspect] || 'h-64'} object-cover group-hover:scale-105 transition duration-300`;
+      return (
       <section className={`py-20 px-6 bg-surface-raised ${cc}`} style={sStyle}>
         <div className="max-w-6xl mx-auto">
           <Text optional as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
-          <div className="grid grid-cols-1 @min-[600px]:grid-cols-2 @min-[900px]:grid-cols-3 gap-6">
+          <div className={`grid ${cols} ${logos ? 'gap-8 items-center' : 'gap-6'}`}>
             {c.images?.map((image, i) => (!image.url && !edit) ? null : (
-              <div key={i} className="group relative overflow-hidden rounded-lg shadow-md">
-                <Image path={`images.${i}.url`} value={image.url} alt={image.alt || stripHtml(image.caption)} className="w-full h-64 object-cover group-hover:scale-105 transition duration-300" />
-                {(image.caption || edit) && (
+              <div key={i} className={logos ? 'relative' : 'group relative overflow-hidden rounded-lg shadow-md'}>
+                <Image path={`images.${i}.url`} value={image.url} alt={image.alt || stripHtml(image.caption)} className={imgCls} />
+                {!logos && (image.caption || edit) && (
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                     <Text as="p" className="text-inverse text-sm" path={`images.${i}.caption`} value={image.caption} placeholder="Caption" />
                   </div>
@@ -330,7 +367,8 @@ export default function SiteBlock({ block }) {
           <ListAdd path="images" label="Add image" make={() => ({ url: '', caption: '' })} />
         </div>
       </section>
-    );
+      );
+    }
 
     case 'testimonials': return (
       <section className={`py-20 px-6 bg-surface ${cc}`} style={sStyle}>

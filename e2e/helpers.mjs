@@ -140,7 +140,8 @@ export const inspectorTitle = (page) => page.getByRole('complementary', { name: 
 /** Select a block by clicking near its bottom-right corner (clear of text and handles). */
 export async function selectBlock(page, label) {
   const b = block(page, label);
-  await b.scrollIntoViewIfNeeded();
+  // Centre it: a block at the top edge sits under the sticky editor toolbar.
+  await b.evaluate((el) => el.scrollIntoView({ block: 'center' }));
   const box = await b.boundingBox();
   await page.mouse.click(box.x + box.width - 30, box.y + box.height - 20);
   return b;

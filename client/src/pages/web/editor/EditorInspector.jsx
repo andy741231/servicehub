@@ -12,7 +12,7 @@
  * value typed as "120" is one undo step (and one autosave), not three.
  */
 import { useEffect, useRef, useState } from 'react';
-import { X, LayoutPanelTop } from 'lucide-react';
+import { X, LayoutPanelTop, AlertTriangle } from 'lucide-react';
 import { BlockContentSettings, blockTypeLabel, ImageField } from './BlockSettingsPanel';
 import { isTextEntryTarget } from './editorUtils';
 
@@ -112,6 +112,57 @@ function Segmented({ label, value, options, onChange }) {
   );
 }
 
+// ── Contrast check ─────────────────────────────────────────────────────────
+// Reads the rendered block on the canvas: its text colour against the first
+// solid background behind it (block, section or page). Stays quiet when a
+// photo is behind the text — that can't be measured reliably.
+const parseRgb = (c) => {
+  const m = String(c || '').match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const [r, g, b, a = 1] = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+  return { r, g, b, a };
+};
+const luminance = ({ r, g, b }) => {
+  const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+};
+export const contrastRatio = (fg, bg) => {
+  const [hi, lo] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+function measureBlockContrast(blockId) {
+  const doc = document.querySelector('iframe[title="Page canvas"]')?.contentDocument;
+  const root = doc?.querySelector(`[data-block-id="${blockId}"] .site-block`);
+  if (!root) return null;
+  const win = doc.defaultView;
+  const fg = parseRgb(win.getComputedStyle(root).color);
+  for (let el = root; el && el.nodeType === 1; el = el.parentElement) {
+    const cs = win.getComputedStyle(el);
+    if (cs.backgroundImage && cs.backgroundImage !== 'none') return null; // photo / gradient
+    const bg = parseRgb(cs.backgroundColor);
+    if (bg && bg.a > 0.9) return fg ? contrastRatio(fg, bg) : null;
+  }
+  return null;
+}
+function ContrastCheck({ blockId, deps }) {
+  const [ratio, setRatio] = useState(null);
+  useEffect(() => {
+    // After the canvas re-renders with the new style.
+    const t = setTimeout(() => setRatio(measureBlockContrast(blockId)), 150);
+    return () => clearTimeout(t);
+  }, [blockId, deps]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (ratio == null || ratio >= 4.5) return null;
+  return (
+    <p className="flex items-start gap-1.5 rounded-md bg-warning-light px-2.5 py-2 text-xs text-text-base" role="status">
+      <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0 text-warning" aria-hidden="true" />
+      <span>
+        Hard to read: the text and background contrast is {ratio.toFixed(1)}:1 (aim for at least 4.5:1).
+        Change the text colour or the background{ratio < 1.6 ? ' — the text is nearly invisible' : ''}.
+      </span>
+    </p>
+  );
+}
+
 // ── Block: Design tab ──────────────────────────────────────────────────────
 function BlockDesign({ block, onStyle }) {
   const st = block.style || {};
@@ -119,6 +170,7 @@ function BlockDesign({ block, onStyle }) {
     <div className="space-y-4">
       <ColorField label="Background" value={st.backgroundColor} onCommit={(v) => onStyle({ backgroundColor: v })} />
       <ColorField label="Text color" value={st.color} onCommit={(v) => onStyle({ color: v })} />
+      <ContrastCheck blockId={block.id} deps={`${st.color}|${st.backgroundColor}`} />
       <div className="grid grid-cols-2 gap-3">
         <label className={labelCls}>Space above (px)
           <CommitInput type="number" min={0} max={400} value={st.paddingTop} placeholder="Default" onCommit={(v) => onStyle({ paddingTop: v })} />

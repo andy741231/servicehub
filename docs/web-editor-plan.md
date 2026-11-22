@@ -416,14 +416,14 @@ optional empty titles, unset images).
 ### Missing capabilities (ranked by impact on what a site owner can make)
 
 1. ~~Image block~~ — **added** (1de8621; `new-blocks-public-desktop.jpg`, `new-blocks-public-mobile.jpg`, editor: `new-blocks-desktop.jpg`). Logo strips still need a multi-image layout (see 6).
-2. ~~Button block / hero button~~ — **added** (1de8621); Quote still has no button.
+2. ~~Button block / hero button~~ — **added** (1de8621); Quote button added (ROUND9).
 3. ~~Section background image (+ overlay)~~ — **added** (1de8621): Section settings → Background photo +
    Darken (none/light/medium/dark). Stored in the section's `fluidConfig` JSON (no schema change).
 4. **Global styles that reach blocks** (U26) plus per-block type controls (font family, size,
    letter-spacing for headings) — needed for any brand that isn't the default.
 5. **Form block** (newsletter / sign-up with chosen fields and a destination).
-6. Container-aware block layouts (U27) and Gallery layouts (grid, masonry, logo strip, aspect ratio).
-7. Spacer/divider block; image alt text, focal point and asset library (U33).
+6. ~~Container-aware block layouts (U27)~~ (66dc35a) and ~~Gallery layouts~~ (ROUND9: columns 2/3/4/6, photo shape, logo strip; masonry not done).
+7. ~~Spacer/divider block~~ (ROUND9); ~~image alt text, focal point and asset library~~ (U33).
 8. Reusable saved sections (save-as-template covers whole pages only); carousel/slider.
 9. Duplicate-to-mobile and animation: low priority for this audience (alignment guides already exist).
 
@@ -439,7 +439,19 @@ optional empty titles, unset images).
   beside panels (U40), no auto-created live pages (U41).
 - **Done (0cee2b5):** U21 touch targets, U32 picker stays open.
 - **Done (557b252):** asset library and alt text for images inside blocks (U33).
-- **Next:** the remaining roadmap items below (contrast warning in the Design tab, Arrange menu, Quote button).
+- **Done (ROUND9):** roadmap items R1–R5 (below).
+- **Needs a decision before building:** Form block (where do submissions go — email, the Hub's
+  forms app, a sheet?), reusable saved sections, carousel, heading font/size controls per block.
+
+#### Roadmap items done in ROUND9
+
+| ID | Item | What changed | Test |
+|---|---|---|---|
+| R1 | Contrast warning | Design tab measures the rendered block's text colour against the solid background behind it and warns under 4.5:1 ("nearly invisible" under 1.6:1). Quiet over photos. Would have caught the live home page's white-on-cream "Find your place." | R1 |
+| R2 | Arrange menu | The four look-alike layer arrows are one **Arrange** menu (Bring to front / forward / Send backward / to back), keyboard operable | R2 |
+| R3 | Divider block | Line (full or short), dots, or empty space; height = the block | R3/R4/R5 |
+| R4 | Quote button | Optional button on the Quote block (Outline by default), nothing on the site until labelled | R3/R4/R5 |
+| R5 | Gallery layouts | Columns (automatic/2/3/4/6), photo shape (same height, 4:3, square, 3:4, 16:9), logo strip (whole images, small, greyscale until hover). Defaults reproduce the old layout | R3/R4/R5 |
 - **Content note (not a code bug):** the live home page's "Find your place." Features block has a
   saved text colour of #ffffff, so its heading is white on cream. Fix by clearing the text colour in the
   block's Design tab. A contrast warning in the Design tab would catch this.

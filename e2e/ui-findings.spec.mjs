@@ -367,6 +367,112 @@ test('U33: reuse an image from the library (canvas and inspector); alt text for 
   await expect.poll(async () => (await saved())[0].blocks.find((b) => b.type === 'hero').content.backgroundImage).toBe('/uploads/e2e-lib-1.png');
 });
 
+test('R1: the Design tab warns when text would be hard to read', async ({ page }) => {
+  // The live home page had exactly this: a Features block with white text on cream.
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Features');
+  await inspector(page).getByRole('tab', { name: 'Design' }).click();
+  const warning = inspector(page).getByRole('status').filter({ hasText: 'Hard to read' });
+  await expect(warning).toHaveCount(0);
+  const color = inspector(page).getByRole('textbox', { name: 'Text color', exact: true });
+  await color.fill('#ffffff');
+  await color.press('Enter');
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText('nearly invisible');
+  await color.fill('#152b45');
+  await color.press('Enter');
+  await expect(warning).toHaveCount(0);
+});
+
+test('R2: one Arrange menu replaces the four layer buttons (mouse and keyboard)', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Trust bar');
+  const toolbar = canvas(page).getByRole('toolbar', { name: 'Block actions' });
+  await expect(toolbar.getByRole('button', { name: /Bring|Send/ })).toHaveCount(0);
+  const arrange = toolbar.getByRole('button', { name: 'Arrange' });
+  await arrange.click();
+  const menu = canvas(page).getByRole('menu', { name: 'Arrange' });
+  await expect(menu.getByRole('menuitem')).toHaveText(['Bring to front', 'Bring forward', 'Send backward', 'Send to back']);
+  await expect(menu.getByRole('menuitem').first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.getByRole('menuitem', { name: 'Bring forward' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(arrange).toBeFocused();
+
+  // Layers only mean something with two blocks: duplicate (both start at 0).
+  let save = nextSave(page, fixture.slug);
+  await toolbar.getByRole('button', { name: 'Duplicate block' }).click();
+  await save;
+  expect((await saved())[1].blocks.map((b) => b.fluid.zIndex ?? 0)).toEqual([0, 0]);
+  await canvas(page).getByRole('toolbar', { name: 'Block actions' }).getByRole('button', { name: 'Arrange' }).click();
+  save = nextSave(page, fixture.slug);
+  await menu.getByRole('menuitem', { name: 'Send to back' }).click();
+  await save;
+  expect((await saved())[1].blocks.map((b) => b.fluid.zIndex).sort()).toEqual([0, 1]);
+  await expect(menu).toHaveCount(0);
+});
+
+test('R3/R4/R5: Divider block, Quote button, Gallery layouts', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const picker = page.getByRole('complementary', { name: 'Add block' });
+
+  // Divider: a line by default; switch to empty space.
+  let save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Divider');
+  await save;
+  await expect(block(page, 'Divider').locator('hr')).toHaveCount(1);
+  // Quote and Gallery from the still-open panel.
+  save = nextSave(page, fixture.slug);
+  await picker.getByRole('button', { name: 'Add Quote block' }).click();
+  await save;
+  save = nextSave(page, fixture.slug);
+  await picker.getByRole('button', { name: 'Add Gallery block' }).click();
+  await save;
+  await picker.getByRole('button', { name: 'Done' }).click();
+  // Closing the panel widens the canvas (its scale changes); wait until it settles.
+  const frame = page.locator('iframe[title="Page canvas"]');
+  await expect.poll(async () => {
+    const a = await frame.boundingBox();
+    await page.waitForTimeout(150);
+    const b = await frame.boundingBox();
+    return a.width === b.width && a.height === b.height;
+  }).toBe(true);
+  const added = async (type) => (await saved())[0].blocks.find((b) => b.type === type);
+
+  await selectBlock(page, 'Divider');
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByLabel('Style').selectOption('space');
+  await save;
+  await expect(block(page, 'Divider').locator('hr')).toHaveCount(0);
+  expect((await added('divider')).content.style).toBe('space');
+
+  // Quote: an optional button, placeholder only until it has a label.
+  const quote = block(page, 'Quote');
+  await expect(quote.locator('a [contenteditable="true"]')).toHaveCount(1);
+  await selectBlock(page, 'Quote');
+  await expect(inspector(page).getByLabel('Button style')).toHaveValue('outline');
+
+  // Gallery: logo strip = 6 across at desktop; photo shape = square tiles.
+  const gal = block(page, 'Gallery');
+  const cols = () => gal.locator('.grid').first().evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
+  await expect.poll(cols).toBe(3);
+  await selectBlock(page, 'Gallery');
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('combobox', { name: /^Layout/ }).selectOption('logos');
+  await save;
+  await expect.poll(cols).toBe(6);
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('combobox', { name: /^Layout/ }).selectOption('photos');
+  await save;
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByLabel('Photo shape').selectOption('square');
+  await save;
+  const tile = gal.getByRole('button', { name: /^Add image/ }).first();
+  await expect.poll(() => tile.evaluate((el) => getComputedStyle(el).aspectRatio)).toBe('1 / 1');
+  expect((await added('gallery')).content).toMatchObject({ layout: 'photos', aspect: 'square' });
+});
+
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {
   const slug = `e2e-unknown-${Date.now()}`;
   const res = await request.get(`/api/web/${slug}`);

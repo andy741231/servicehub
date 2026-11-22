@@ -35,6 +35,10 @@ export const BLOCK_SETTINGS = {
     { key: 'buttonVariant', label: 'Button style', type: 'select', options: BUTTON_VARIANTS },
     { key: 'align', label: 'Alignment', type: 'select', options: [['center', 'Center'], ['left', 'Left'], ['right', 'Right']] },
   ],
+  divider: [
+    { key: 'style', label: 'Style', type: 'select', options: [['line', 'Line'], ['dots', 'Dots'], ['space', 'Empty space (spacer)']] },
+    { key: 'width', label: 'Line width', type: 'select', options: [['full', 'Full width'], ['short', 'Short, centred']] },
+  ],
   'trust-bar': [{ key: 'items', label: 'Items', type: 'list', summary: (i) => `${i.number || ''} ${stripTags(i.label)}` }],
   'split-banner': [
     { key: 'buttonLink', label: 'Button link', type: 'text', placeholder: '/contact' },
@@ -43,6 +47,10 @@ export const BLOCK_SETTINGS = {
   ],
   events: [{ key: 'items', label: 'Events', type: 'list', summary: (e) => `${e.date || ''} · ${stripTags(e.title)}` }],
   // Quote background is set in the Design tab (one place for every block).
+  quote: [
+    { key: 'buttonLink', label: 'Button link (type the button label on the block)', type: 'text', placeholder: '/visit' },
+    { key: 'buttonVariant', label: 'Button style', type: 'select', options: BUTTON_VARIANTS, default: 'outline' },
+  ],
   map: [
     { key: 'address', label: 'Address', type: 'text' },
     { key: 'embedUrl', label: 'Map embed URL (optional)', type: 'text', placeholder: 'https://www.google.com/maps/embed?…' },
@@ -59,7 +67,11 @@ export const BLOCK_SETTINGS = {
     key: 'items', label: 'Highlights', type: 'list', summary: (h) => stripTags(h.title),
     itemFields: [{ key: 'imageAlt', label: 'Image alt text (blank = the title)' }],
   }],
-  gallery: [{
+  gallery: [
+    { key: 'layout', label: 'Layout', type: 'select', options: [['photos', 'Photo grid'], ['logos', 'Logo strip (whole images, small, greyscale)']] },
+    { key: 'columns', label: 'Columns on wide screens', type: 'select', options: [['', 'Automatic'], ['2', '2'], ['3', '3'], ['4', '4'], ['6', '6']] },
+    { key: 'aspect', label: 'Photo shape', type: 'select', options: [['', 'Same height (default)'], ['landscape', 'Landscape 4:3'], ['square', 'Square'], ['portrait', 'Portrait 3:4'], ['wide', 'Wide 16:9']] },
+  {
     key: 'images', label: 'Images', type: 'list', summary: (g, i) => stripTags(g.caption) || g.alt || `Image ${i + 1}`,
     itemFields: [{ key: 'alt', label: 'Alt text (describes the image for screen readers)' }],
   }],
@@ -227,7 +239,7 @@ export function BlockContentSettings({ block, onUpdateContent }) {
         if (f.type === 'select') {
           return (
             <label key={f.key} className="block text-xs font-medium text-muted">{f.label}
-              <select className={`${inputCls} mt-1`} value={c[f.key] || f.options[0][0]} onChange={(e) => set(f.key, e.target.value)}>
+              <select className={`${inputCls} mt-1`} value={c[f.key] || f.default || f.options[0][0]} onChange={(e) => set(f.key, e.target.value)}>
                 {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>

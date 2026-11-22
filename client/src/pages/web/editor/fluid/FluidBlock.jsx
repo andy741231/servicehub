@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect, useLayoutEffect } from 'react';
 import { Rnd } from 'react-rnd';
 import {
-  Trash2, Copy, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, GripVertical,
+  Trash2, Copy, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, GripVertical, Layers,
   Pencil, SlidersHorizontal,
 } from 'lucide-react';
 import SiteBlock from '../../../../site/SiteBlock.jsx';
@@ -259,6 +259,33 @@ export default function FluidBlock({
 
   // ── Layering ────────────────────────────────────────────────────────────
   const handleLayering = (action) => onLayer?.(action); // FluidSection.layerBlock
+  // The four layer commands live in one "Arrange" menu (they were four
+  // look-alike arrow buttons, easy to confuse with move up/down).
+  const [arrangeOpen, setArrangeOpen] = useState(false);
+  const arrangeRef = useRef(null);
+  useEffect(() => {
+    if (!arrangeOpen) return undefined;
+    const box = arrangeRef.current;
+    const doc = box?.ownerDocument;
+    box?.querySelector('[role="menuitem"]')?.focus();
+    const onDown = (e) => { if (!box?.contains(e.target)) setArrangeOpen(false); };
+    doc?.addEventListener('mousedown', onDown, true);
+    return () => doc?.removeEventListener('mousedown', onDown, true);
+  }, [arrangeOpen]);
+  useEffect(() => { if (!selected) setArrangeOpen(false); }, [selected]);
+  const arrangeKeys = (e) => {
+    const items = [...(arrangeRef.current?.querySelectorAll('[role="menuitem"]') || [])];
+    const i = items.indexOf(e.target.ownerDocument.activeElement);
+    if (e.key === 'Escape') { e.stopPropagation(); setArrangeOpen(false); arrangeRef.current?.querySelector('[aria-haspopup]')?.focus(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+  };
+  const ARRANGE = [
+    ['front', 'Bring to front', ChevronsUp],
+    ['forward', 'Bring forward', ArrowUp],
+    ['backward', 'Send backward', ArrowDown],
+    ['back', 'Send to back', ChevronsDown],
+  ];
 
   // ── Read-only (no editor chrome) ────────────────────────────────────────
   if (readOnly) {
@@ -293,10 +320,33 @@ export default function FluidBlock({
       </button>
       {interactive && (
         <>
-          <button onClick={() => handleLayering('forward')} title="Bring forward" aria-label="Bring forward" className={btn}><ArrowUp className="w-4 h-4" /></button>
-          <button onClick={() => handleLayering('backward')} title="Send backward" aria-label="Send backward" className={btn}><ArrowDown className="w-4 h-4" /></button>
-          <button onClick={() => handleLayering('front')} title="Bring to front" aria-label="Bring to front" className={btn}><ChevronsUp className="w-4 h-4" /></button>
-          <button onClick={() => handleLayering('back')} title="Send to back" aria-label="Send to back" className={btn}><ChevronsDown className="w-4 h-4" /></button>
+          <div className="relative" ref={arrangeRef} onKeyDown={arrangeKeys}>
+            <button
+              onClick={() => setArrangeOpen((v) => !v)}
+              title="Arrange (stacking order for overlapping blocks)"
+              aria-label="Arrange"
+              aria-haspopup="menu"
+              aria-expanded={arrangeOpen}
+              className={`${btn} ${arrangeOpen ? 'bg-surface-raised' : ''}`}
+            >
+              <Layers className="w-4 h-4" />
+            </button>
+            {arrangeOpen && (
+              <div role="menu" aria-label="Arrange" className="absolute left-0 top-full mt-1 min-w-[170px] rounded-lg bg-white p-1 shadow-[0_4px_16px_rgba(16,20,30,0.18)]">
+                {ARRANGE.map(([action, label, Icon]) => (
+                  <button
+                    key={action}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { handleLayering(action); setArrangeOpen(false); }}
+                    className="w-full flex items-center gap-2 px-2.5 min-h-[32px] rounded-md text-xs font-medium text-text-base hover:bg-surface-raised focus:bg-surface-raised focus:outline-none"
+                  >
+                    <Icon className="w-4 h-4 text-muted" aria-hidden="true" /> {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
       <button onClick={onDuplicate} title="Duplicate" aria-label="Duplicate block" className={btn}><Copy className="w-4 h-4" /></button>

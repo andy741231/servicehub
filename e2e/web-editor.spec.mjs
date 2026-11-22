@@ -245,7 +245,8 @@ test('send to back keeps layers non-negative and the block editable', async ({ p
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await selectBlock(page, 'Hero');
   save = nextSave(page, fixture.slug);
-  await canvas(page).getByRole('button', { name: 'Send to back' }).click();
+  await canvas(page).getByRole('button', { name: 'Arrange' }).click();
+  await canvas(page).getByRole('menuitem', { name: 'Send to back' }).click();
   await save;
   const zs = (await saved())[0].blocks.map((b) => b.fluid.zIndex);
   expect(zs.every((z) => z >= 0)).toBe(true);
