@@ -442,7 +442,7 @@ optional empty titles, unset images).
 - **Done (557b252):** asset library and alt text for images inside blocks (U33).
 - **Done (6774498):** roadmap items R1–R5 (below).
 - **Decided:** no separate form block — web pages use forms from the Forms app (R6).
-- **Done (1bb1344):** R6–R9 below. **Waiting on the owner:** apply migration
+- **Done (1d61638):** R6–R9 below. **Waiting on the owner:** apply migration
   `20261122_web_json_columns_nvarchar_max` (U42) to the local database.
 
 #### Roadmap items done in 6774498
