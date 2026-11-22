@@ -31,7 +31,10 @@ export default function Carousel({ c, cc, sStyle, edit }) {
 
   const fill = c.aspect === 'fill';
   const frame = fill ? 'h-full min-h-[240px]' : (ASPECT[c.aspect] || ASPECT.wide);
-  const arrow = 'absolute top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/90 text-[#152b45] shadow flex items-center justify-center hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white';
+  // Over the image on wider blocks; below it (beside the dots) on narrow ones,
+  // where they would cover the slide title.
+  const arrow = 'absolute top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/90 text-[#152b45] shadow hidden @min-[520px]:flex items-center justify-center hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white';
+  const smallArrow = 'w-9 h-9 rounded-full flex @min-[520px]:hidden items-center justify-center text-text-base hover:bg-surface-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
   return (
     <section
@@ -80,7 +83,8 @@ export default function Carousel({ c, cc, sStyle, edit }) {
         )}
       </div>
       {n > 1 && (
-        <div className="flex justify-center gap-1 py-3">
+        <div className="flex items-center justify-center gap-1 py-3">
+          <button type="button" className={smallArrow} onClick={() => go(-1)} aria-label="Previous slide"><ChevronLeft className="w-5 h-5" /></button>
           {slides.map((_, k) => (
             <button
               key={k}
@@ -93,6 +97,7 @@ export default function Carousel({ c, cc, sStyle, edit }) {
               <span className={`block rounded-full transition-all ${k === current ? 'w-6 h-2 bg-primary' : 'w-2 h-2 bg-border-strong'}`} />
             </button>
           ))}
+          <button type="button" className={smallArrow} onClick={() => go(1)} aria-label="Next slide"><ChevronRight className="w-5 h-5" /></button>
         </div>
       )}
       <ListAdd path="slides" label="Add slide" make={() => ({ image: '', title: 'New slide', text: '' })} />
