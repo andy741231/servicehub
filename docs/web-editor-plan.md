@@ -373,16 +373,16 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U26 | Theme | Site Styles colours never reach Tailwind token classes in blocks (`bg-primary`, `bg-surface-raised`, `bg-primary-light`…): `--color-*` is resolved at `:root` with the **admin** palette. The live site shows admin teal/mint (Intro band, Highlights/Gallery backgrounds, feature icon circles) | `p2-all-templates-desktop.jpg`, `r-tartine-public-after.jpg` | major | Redefine `--color-*` inside `.public-site` and revisit the site token mapping | M | Deferred — it changes the live home page (feature icons would turn slate on navy); needs a design decision on the token map |
 | U27 | Responsive | Blocks narrowed on the grid keep viewport breakpoints (3 cards in a 14-column block) | `r-trinity-sidebyside.png`, `r-foodbank-split-hero.png` | major | Container queries in `SiteBlock` | M | Deferred — touches every list block's public CSS |
 | U28 | Header/footer | The editor's header/footer differ from the published page for a page with an empty own header (editor: page-title logo, light footer; site: site header, dark footer) | `r-tartine-desktop-after.jpg` vs `r-tartine-public-after.jpg` | major | Resolve header/footer the way `pages/public/Home.jsx` does | M | Deferred — needs tracing of the public fallback chain |
-| U29 | Hero / Quote | No button in Hero or Quote ("See schedule", "Give now", "Learn more") | rebuild notes | major | Button block, or an optional button field | M | **Fixed** (ROUND2): Button block + optional hero button (renders nothing until labelled). Quote button not added |
-| U30 | Images | No Image block: full-bleed photos, image + text splits and logo strips are impossible | `r-king-desktop.jpg`, `r-foodbank-split-hero.png` | blocker (capability) | Image block (fit/fill, focal point, link, alt) | L | **Fixed** (ROUND2): Image block (upload, fill/fit, focus, alt, caption, link; fills its cell, keeps its height when stacked on phones) |
-| U31 | Hero | "Left" alignment leaves the subtitle in a centred max-width box | `r-tartine-desktop-after.jpg` | minor | Align the subtitle box too | S | **Fixed** (ROUND2) |
+| U29 | Hero / Quote | No button in Hero or Quote ("See schedule", "Give now", "Learn more") | rebuild notes | major | Button block, or an optional button field | M | **Fixed** (1de8621): Button block + optional hero button (renders nothing until labelled). Quote button not added |
+| U30 | Images | No Image block: full-bleed photos, image + text splits and logo strips are impossible | `r-king-desktop.jpg`, `r-foodbank-split-hero.png` | blocker (capability) | Image block (fit/fill, focal point, link, alt) | L | **Fixed** (1de8621): Image block (upload, fill/fit, focus, alt, caption, link; fills its cell, keeps its height when stacked on phones) |
+| U31 | Hero | "Left" alignment leaves the subtitle in a centred max-width box | `r-tartine-desktop-after.jpg` | minor | Align the subtitle box too | S | **Fixed** (1de8621) |
 | U32 | Block picker | Closes after every add (3 blocks = 3 round trips) | probe | minor | Keep it open with "Done", or Shift-click to add several | S | Deferred — the new block is auto-selected; a behaviour change that wants owner input |
-| U33 | Image dialog | No alt text, no asset-library browse, no crop/focal point | `r-trinity-image-dialog.png` | major | Alt field, library picker, focal point | M | **Partly fixed** (ROUND2): the Image block has alt text and a crop focus. Library browse and alt for images inside other blocks deferred |
-| U34 | Text | A grey DOM selection highlight stays on a field after Esc | `r-king-desktop.jpg` | minor | Clear the selection on blur | S | **Fixed** (ROUND2) |
-| U35 | Layers | "Move block up/down" only reorders the array — no visible effect on the desktop grid | code | minor | Remove, or relabel as mobile order | S | **Fixed** (ROUND2): removed |
-| U36 | Preview | Site nav links in Preview navigate away from the editor | `p3-preview.png` | minor | Intercept links in preview | S | **Fixed** (ROUND2): links are inert with a notice |
+| U33 | Image dialog | No alt text, no asset-library browse, no crop/focal point | `r-trinity-image-dialog.png` | major | Alt field, library picker, focal point | M | **Partly fixed** (1de8621): the Image block has alt text and a crop focus. Library browse and alt for images inside other blocks deferred |
+| U34 | Text | A grey DOM selection highlight stays on a field after Esc | `r-king-desktop.jpg` | minor | Clear the selection on blur | S | **Fixed** (1de8621) |
+| U35 | Layers | "Move block up/down" only reorders the array — no visible effect on the desktop grid | code | minor | Remove, or relabel as mobile order | S | **Fixed** (1de8621): removed |
+| U36 | Preview | Site nav links in Preview navigate away from the editor | `p3-preview.png` | minor | Intercept links in preview | S | **Fixed** (1de8621): links are inert with a notice |
 
-**Counts:** 2 blockers (U1, U30), 16 majors, 18 minors. **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in ROUND2;
+**Counts:** 2 blockers (U1, U30), 16 majors, 18 minors. **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in 1de8621;
 U21 and U33 partly). **Open:** U26, U27, U28, U32 and the rest of U21/U33.
 Public-site check: all 9 published pages, desktop + mobile, **pixel-identical** before vs after
 (`public-before/` vs `public-after/`). The intended public changes apply only to things no published
@@ -400,7 +400,7 @@ optional empty titles, unset images).
 - **Block toolbar ✎ vs clicking text:** keep — it is the keyboard route into text. Low priority.
 - **Eye/Preview vs external-link button:** different jobs (draft preview vs live page). Kept both;
   the external link is now "View live page" and only shows once the page is published (on a draft it
-  opened a 404). Done (ROUND2).
+  opened a 404). Done (1de8621).
 - **"T" keyboard-help button:** now a keyboard icon. Could also move into a single "?" help menu.
 - **Layers toolbar button:** keep — it now selects sections and blocks and stays in view.
 - **Bring forward / Send backward / Bring to front / Send to back:** four always-visible buttons on
@@ -410,9 +410,9 @@ optional empty titles, unset images).
 
 ### Missing capabilities (ranked by impact on what a site owner can make)
 
-1. ~~Image block~~ — **added** (ROUND2; `new-blocks-public-desktop.jpg`, `new-blocks-public-mobile.jpg`, editor: `new-blocks-desktop.jpg`). Logo strips still need a multi-image layout (see 6).
-2. ~~Button block / hero button~~ — **added** (ROUND2); Quote still has no button.
-3. ~~Section background image (+ overlay)~~ — **added** (ROUND2): Section settings → Background photo +
+1. ~~Image block~~ — **added** (1de8621; `new-blocks-public-desktop.jpg`, `new-blocks-public-mobile.jpg`, editor: `new-blocks-desktop.jpg`). Logo strips still need a multi-image layout (see 6).
+2. ~~Button block / hero button~~ — **added** (1de8621); Quote still has no button.
+3. ~~Section background image (+ overlay)~~ — **added** (1de8621): Section settings → Background photo +
    Darken (none/light/medium/dark). Stored in the section's `fluidConfig` JSON (no schema change).
 4. **Global styles that reach blocks** (U26) plus per-block type controls (font family, size,
    letter-spacing for headings) — needed for any brand that isn't the default.
@@ -425,7 +425,7 @@ optional empty titles, unset images).
 ### Prioritised plan
 
 - **Done on branch `web-editor-ui-test-findings`:** U1–U25 (b26a3aa); Image block, Button block,
-  hero button, section background photo, U31, U34–U36, "View live page" (ROUND2).
+  hero button, section background photo, U31, U34–U36, "View live page" (1de8621).
 - **Next:** theme token scoping (U26, with a visual check of the live home page) → header/footer
   parity (U28) → container queries (U27).
 - **Later:** asset-library browse and alt text everywhere (U33), Arrange menu,
