@@ -11,7 +11,7 @@ import { BLOCK_TYPES, BLOCK_CATEGORIES } from './editorUtils';
 
 export const BLOCK_DRAG_TYPE = 'application/x-site-block';
 
-export default function BlockPicker({ targetSectionIndex, sectionCount, onAdd, onClose }) {
+export default function BlockPicker({ targetSectionIndex, sectionCount, lastAdded, onAdd, onClose }) {
   const [query, setQuery] = useState('');
   const searchRef = useRef(null);
   useEffect(() => { searchRef.current?.focus(); }, []);
@@ -33,7 +33,11 @@ export default function BlockPicker({ targetSectionIndex, sectionCount, onAdd, o
       <div className="sticky top-0 bg-surface z-10 border-b border-border">
         <div className="flex items-center justify-between px-4 h-12">
           <h2 className="text-sm font-semibold text-text-base">Add block</h2>
-          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised text-muted" aria-label="Close add block panel" title="Close"><X className="w-4 h-4" /></button>
+          <div className="flex items-center gap-1">
+            {/* The panel stays open after adding, so say how to finish. */}
+            <button type="button" onClick={onClose} className="h-8 px-3 rounded-md text-xs font-semibold text-primary hover:bg-primary-light">Done</button>
+            <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised text-muted" aria-label="Close add block panel" title="Close"><X className="w-4 h-4" /></button>
+          </div>
         </div>
         <div className="px-4 pb-3">
           <label className="relative block">
@@ -50,7 +54,10 @@ export default function BlockPicker({ targetSectionIndex, sectionCount, onAdd, o
             />
           </label>
           <p className="mt-2 text-xs text-subtle">
-            Click to add to section {target + 1}, or drag onto the page.
+            Click to add to section {target + 1}, or drag onto the page. Add as many as you like.
+          </p>
+          <p className="mt-1 text-xs font-medium text-success min-h-[1rem]" role="status" aria-live="polite">
+            {lastAdded ? `Added ${lastAdded} to section ${target + 1}.` : ''}
           </p>
         </div>
       </div>

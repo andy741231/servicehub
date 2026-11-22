@@ -102,7 +102,7 @@ function Segmented({ label, value, options, onChange }) {
             role="radio"
             aria-checked={value === v}
             onClick={() => onChange(v)}
-            className={`flex-1 py-1.5 text-xs font-medium ${value === v ? 'bg-primary text-primary-foreground' : 'bg-surface text-muted hover:bg-surface-raised'}`}
+            className={`flex-1 min-h-[32px] py-1.5 text-xs font-medium ${value === v ? 'bg-primary text-primary-foreground' : 'bg-surface text-muted hover:bg-surface-raised'}`}
           >
             {l}
           </button>

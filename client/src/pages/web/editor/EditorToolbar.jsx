@@ -92,7 +92,7 @@ export default function EditorToolbar({
         <button
           onClick={onPublish}
           disabled={publishSaving}
-          className="flex items-center gap-1.5 text-[12px] font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+          className="flex items-center gap-1.5 h-8 px-2 rounded text-[12px] font-medium transition-colors disabled:opacity-50 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-primary"
           style={{ color: publishSaving ? 'hsl(var(--editor-chrome-muted))' : 'hsl(var(--editor-success))' }}
           title="Publish current draft to public site"
         >

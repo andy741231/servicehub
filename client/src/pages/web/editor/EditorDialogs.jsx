@@ -31,7 +31,7 @@ export default function EditorDialogs({ showKeyboardHelp, onCloseKeyboardHelp })
               <button
                 onClick={onCloseKeyboardHelp}
                 className="p-2 hover:bg-surface-tertiary rounded-lg transition-colors"
-                aria-label="Close"
+                aria-label="Close" title="Close (Esc)"
               >
                 <X className="w-5 h-5 text-muted" />
               </button>

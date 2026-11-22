@@ -43,7 +43,7 @@ export default function BuilderBreakpointSelector({ value, onChange }) {
   };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-0.5">
       <div
         className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5"
         role="radiogroup"
@@ -61,7 +61,7 @@ export default function BuilderBreakpointSelector({ value, onChange }) {
               data-idx={idx}
               onClick={() => onChange(bp.id)}
               onKeyDown={(e) => handleKeyDown(e, idx)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+              className={`flex items-center gap-1.5 px-2.5 h-8 rounded text-[11px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
                 isActive ? 'bg-white/15 text-white' : 'text-[#8a90a0] hover:text-white'
               }`}
               title={`${bp.label} — ${bp.editable ? 'editable' : 'preview only'} (${bp.widthLabel})`}
@@ -73,7 +73,7 @@ export default function BuilderBreakpointSelector({ value, onChange }) {
         })}
       </div>
       {/* Editable / preview-only indicator + canvas width */}
-      <div className="text-[10px] text-[#8a90a0] text-center min-h-[14px]" aria-live="polite">
+      <div className="text-[10px] leading-3 text-[#8a90a0] text-center min-h-[12px]" aria-live="polite">
         {active.editable ? 'Editable' : 'Preview only'} · {active.widthLabel}
       </div>
     </div>

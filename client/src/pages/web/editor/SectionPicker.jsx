@@ -48,7 +48,7 @@ export default function SectionPicker({ siteTokens, onAdd, onClose }) {
           <h3 id="section-picker-title" className="text-lg font-semibold text-text-base">Add section</h3>
           <p className="text-sm text-muted">Start from a ready-made section — everything stays editable.</p>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-surface-raised rounded-lg" aria-label="Close"><X className="w-5 h-5 text-muted" /></button>
+        <button onClick={onClose} className="p-2 hover:bg-surface-raised rounded-lg" aria-label="Close" title="Close"><X className="w-5 h-5 text-muted" /></button>
       </div>
       <div className="px-6 pt-3 flex gap-1.5 flex-wrap" role="tablist" aria-label="Section categories">
         {['All', ...SECTION_CATEGORIES].map((c) => (
@@ -58,7 +58,7 @@ export default function SectionPicker({ siteTokens, onAdd, onClose }) {
             role="tab"
             aria-selected={category === c}
             onClick={() => setCategory(c)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${category === c ? 'bg-primary text-primary-foreground' : 'bg-surface-raised text-muted hover:text-text-base'}`}
+            className={`px-3 py-1.5 min-h-[32px] rounded-full text-xs font-semibold ${category === c ? 'bg-primary text-primary-foreground' : 'bg-surface-raised text-muted hover:text-text-base'}`}
           >
             {c}
           </button>

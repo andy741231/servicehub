@@ -479,8 +479,8 @@
   top: -5px;
 }
 .inline-text-toolbar-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   border: none;
   background: transparent;
@@ -500,7 +500,7 @@
 }
 .inline-text-toolbar-btn.text {
   width: auto;
-  min-width: 30px;
+  min-width: 32px;
   padding: 0 8px;
   font-size: 13px;
   font-weight: 700;
@@ -1175,7 +1175,7 @@
 .site-editor-frame:hover > .site-editor-frame-cta,
 .site-editor-frame > .site-editor-frame-cta:focus-within { opacity: 1; }
 /* "+ Add item" and link-URL controls rendered by editable site fields. */
-.site-edit-add { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px dashed hsl(var(--border-strong)); border-radius: 999px; background: hsl(var(--surface) / .9); color: hsl(var(--text-muted)); font-size: 12px; font-weight: 600; line-height: 1.2; }
+.site-edit-add { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px dashed hsl(var(--border-strong)); border-radius: 999px; background: hsl(var(--surface) / .9); color: hsl(var(--text-muted)); font-size: 12px; font-weight: 600; line-height: 1.2; min-height: 32px; }
 .site-edit-add:hover { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
 .site-edit-link { display: inline-flex; align-items: center; gap: 6px; }
 .site-edit-link-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: hsl(var(--surface)); color: hsl(var(--text-muted)); box-shadow: 0 1px 3px rgba(16,20,30,.18); }

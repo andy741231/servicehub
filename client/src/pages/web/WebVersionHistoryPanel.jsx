@@ -51,7 +51,7 @@ export default function WebVersionHistoryPanel({ slug, onClose, onRestored }) {
     <aside className="fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col border-l border-border bg-surface shadow-2xl" role="dialog" aria-modal="true" aria-label="Page version history">
       <header className="flex items-center justify-between border-b border-border px-5 py-4">
         <div className="flex items-center gap-2"><History className="h-5 w-5 text-primary" /><h2 className="font-semibold text-base">Version History</h2></div>
-        <div className="flex gap-1"><button onClick={loadVersions} disabled={loading} className="p-2 text-muted hover:bg-surface-raised rounded" aria-label="Refresh history"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button><button onClick={onClose} className="p-2 text-muted hover:bg-surface-raised rounded" aria-label="Close history"><X className="h-4 w-4" /></button></div>
+        <div className="flex gap-1"><button onClick={loadVersions} disabled={loading} className="p-2 text-muted hover:bg-surface-raised rounded" aria-label="Refresh history" title="Refresh history"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button><button onClick={onClose} className="p-2 text-muted hover:bg-surface-raised rounded" aria-label="Close history" title="Close (Esc)"><X className="h-4 w-4" /></button></div>
       </header>
       <div className="flex-1 overflow-y-auto p-4">
         {loading && <div className="py-12 text-center text-muted">Loading versions…</div>}

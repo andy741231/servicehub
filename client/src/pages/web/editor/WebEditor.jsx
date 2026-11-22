@@ -688,7 +688,9 @@ export default function WebEditor() {
     markJustAdded([newBlock.id]);
     setSections(newSections);
     saveToHistory(newSections, header, footer);
-    setBlockPaletteTarget(null);
+    // Keep the Add block panel open (adding several blocks used to take a
+    // round trip each); further clicks add to the section just used.
+    setBlockPaletteTarget((t) => (t ? { sectionIndex: targetIdx, lastAdded: blockCatalogEntry(type)?.name || type } : t));
     handleSelectBlock(newBlock.id);
     revealAfterRender(`[data-block-id="${newBlock.id}"]`);
   };
@@ -1019,6 +1021,7 @@ export default function WebEditor() {
         {blockPaletteTarget !== null && (
           <BlockPicker
             targetSectionIndex={blockPaletteTarget.sectionIndex}
+            lastAdded={blockPaletteTarget.lastAdded}
             sectionCount={sections.length}
             onAdd={(type, sIdx, row) => addBlockToSection(sIdx, type, row)}
             onClose={() => setBlockPaletteTarget(null)}

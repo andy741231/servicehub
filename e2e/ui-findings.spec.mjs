@@ -308,6 +308,24 @@ test('U39: Header & Footer screen shows whether changes are live and publishes t
   expect(calls).toEqual(['publish', 'PUT', 'publish']);
 });
 
+test('U32: the Add block panel stays open to add several blocks; Done closes it', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const picker = page.getByRole('complementary', { name: 'Add block' });
+  let save = nextSave(page, fixture.slug);
+  await addBlock(page, 2, 'Button');
+  await save;
+  await expect(picker).toBeVisible();
+  await expect(picker.getByRole('status')).toHaveText('Added Button to section 2.');
+  save = nextSave(page, fixture.slug);
+  await picker.getByRole('button', { name: 'Add Text block' }).click();
+  await save;
+  await expect(picker.getByRole('status')).toHaveText(/Added Text/);
+  const types = (await saved())[1].blocks.map((b) => b.type);
+  expect(types).toEqual(expect.arrayContaining(['trust-bar', 'button', 'text']));
+  await picker.getByRole('button', { name: 'Done' }).click();
+  await expect(picker).toHaveCount(0);
+});
+
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {
   const slug = `e2e-unknown-${Date.now()}`;
   const res = await request.get(`/api/web/${slug}`);
