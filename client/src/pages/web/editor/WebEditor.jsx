@@ -1341,6 +1341,7 @@ export default function WebEditor() {
             page={pageData ? { id: pageData.id, title: pageData.title, slug: pageData.slug } : null}
             onUpdatePageMeta={updatePageMeta}
             onPlaceInColumns={placeInColumns}
+            siteTokens={pageData?.siteStyle?.tokens}
           />
         )}
       </div>

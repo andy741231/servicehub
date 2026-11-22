@@ -1083,6 +1083,139 @@ test('CM7: a new blank section starts with 3 columns', async ({ page }) => {
   expect(secs.slice(0, -1).every((s) => s.fluidConfig.columns === undefined)).toBe(true); // existing ones untouched
 });
 
+// ── Site color palette ─────────────────────────────────────────────────────
+// The theme is site-wide (not a temp page), so these tests answer
+// /api/web/styles themselves — the real theme is never written.
+const FAKE_TOKENS = {
+  colors: { primary: '#152b45', secondary: '#54738e', accent: '#b08a4a', background: '#f8f6f1', text: '#152b45', muted: '#647384' },
+  fonts: { heading: 'DM Sans, sans-serif', body: 'DM Sans, sans-serif', serif: 'Libre Baskerville, Georgia, serif' },
+  spacing: { base: 16 },
+  borderRadius: { default: 5 },
+  palette: [{ name: 'E2E Rose', value: '#d14d72' }, { name: 'E2E Moss', value: '#5b7553' }],
+};
+async function fakeStyles(page, tokens = FAKE_TOKENS) {
+  const puts = [];
+  let current = JSON.parse(JSON.stringify(tokens));
+  await page.route('**/api/web/styles', async (route) => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON();
+      puts.push(body.tokens);
+      current = body.tokens;
+      return route.fulfill({ json: { id: 'e2e', tokens: current } });
+    }
+    return route.fulfill({ json: { id: 'e2e', tokens: current } });
+  });
+  return puts;
+}
+
+test('P1: Styles — palette rows: add, rename, recolour, normalise, delete; presets in the token pickers', async ({ page }) => {
+  const puts = await fakeStyles(page);
+  await page.goto('/hub-admin/web/styles');
+  const section = page.getByRole('region', { name: 'Color palette' });
+  await expect(section.getByRole('textbox', { name: /^Name of palette color/ })).toHaveCount(2);
+  // Token picker shows theme + palette presets.
+  await page.getByRole('button', { name: 'Pick Primary color' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Color picker' });
+  await expect(dialog.getByRole('group', { name: 'Site colors' }).getByRole('button')).toHaveCount(8);
+  await expect(dialog.getByRole('button', { name: 'E2E Rose #d14d72' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Primary #152b45' })).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+
+  // Add → "Color 3", rename + short hex, which is normalised on save.
+  await section.getByRole('button', { name: 'Add color' }).click();
+  const name3 = section.getByRole('textbox', { name: 'Name of palette color 3' });
+  await expect(name3).toHaveValue('Color 3');
+  await name3.fill('E2E Sky');
+  await section.getByRole('textbox', { name: 'Hex value of E2E Sky' }).fill('#8CF');
+  // An unnamed color blocks saving.
+  await section.getByRole('textbox', { name: 'Name of palette color 1' }).fill('');
+  await expect(section.getByText('Give this color a name')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await section.getByRole('textbox', { name: 'Name of palette color 1' }).fill('E2E Rose');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => puts.length).toBe(1);
+  expect(puts[0].palette).toEqual([{ name: 'E2E Rose', value: '#d14d72' }, { name: 'E2E Moss', value: '#5b7553' }, { name: 'E2E Sky', value: '#88ccff' }]);
+  expect(puts[0].colors).toEqual(FAKE_TOKENS.colors); // the rest of the theme rides along untouched
+
+  // Delete all → empty state; saving an empty palette keeps it empty.
+  for (const n of ['E2E Rose', 'E2E Moss', 'E2E Sky']) await section.getByRole('button', { name: `Delete ${n}` }).click();
+  await expect(section.getByText(/No palette colors\. Add your brand colors/)).toBeVisible();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => puts.length).toBe(2);
+  expect(puts[1].palette).toEqual([]);
+});
+
+test('P1b: Styles — an older theme without a palette shows the default one (and keeps it on save)', async ({ page }) => {
+  const { palette, ...older } = FAKE_TOKENS; // eslint-disable-line no-unused-vars
+  await fakeStyles(page, older);
+  await page.goto('/hub-admin/web/styles');
+  const section = page.getByRole('region', { name: 'Color palette' });
+  await expect(section.getByRole('textbox', { name: /^Name of palette color/ })).toHaveCount(8);
+  await expect(section.getByRole('textbox', { name: 'Name of palette color 1' })).toHaveValue('White');
+});
+
+test('P2: inspector colors — site presets apply in one undo step; custom hex commits once on Done', async ({ page }) => {
+  // The editor gets the theme with the page: swap in a known palette.
+  await page.route(`**/api/web/admin/${fixture.slug}`, async (route) => {
+    const res = await route.fetch();
+    const json = await res.json();
+    json.siteStyle = { ...(json.siteStyle || {}), tokens: FAKE_TOKENS };
+    return route.fulfill({ response: res, json });
+  });
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Features');
+  await inspector(page).getByRole('tab', { name: 'Design' }).click();
+  const trigger = inspector(page).getByRole('button', { name: 'Pick Background color' });
+  await expect(trigger).toHaveAttribute('title', /theme default/);
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: 'Color picker' });
+  await expect(dialog.getByRole('group', { name: 'Site colors' }).getByRole('button')).toHaveCount(8);
+  // Unset (theme default): no preset claims to be the current color.
+  await expect(dialog.locator('[aria-pressed="true"]')).toHaveCount(0);
+  let save = nextSave(page, fixture.slug);
+  await dialog.getByRole('button', { name: 'E2E Moss #5b7553' }).click();
+  await save;
+  expect((await saved())[2].blocks[0].style).toMatchObject({ backgroundColor: '#5b7553' });
+  await expect(dialog.getByRole('button', { name: 'E2E Moss #5b7553' })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toHaveCount(0);
+  // One undo step reverts it.
+  save = nextSave(page, fixture.slug);
+  await page.keyboard.press('Control+z');
+  await save;
+  expect((await saved())[2].blocks[0].style?.backgroundColor).toBeUndefined();
+
+  // Custom hex in the popover: nothing saved while typing, one save on Done.
+  const puts = [];
+  page.on('request', (r) => { if (r.method() === 'PUT' && r.url().endsWith(`/api/web/${fixture.slug}`)) puts.push(r); });
+  await trigger.click();
+  await dialog.getByRole('textbox').fill('#123456');
+  await page.waitForTimeout(2500); // longer than the autosave pause
+  expect(puts).toHaveLength(0);
+  save = nextSave(page, fixture.slug);
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await save;
+  expect((await saved())[2].blocks[0].style).toMatchObject({ backgroundColor: '#123456' });
+  await page.waitForTimeout(500);
+  expect(puts).toHaveLength(1);
+  // Reset → back to the theme default.
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('button', { name: 'Clear Background' }).click();
+  await save;
+  expect((await saved())[2].blocks[0].style?.backgroundColor).toBeUndefined();
+});
+
+test('P3: Header & Footer color rows offer the site colors', async ({ page }) => {
+  await fakeStyles(page);
+  await page.route('**/api/web/**', (route) => (route.request().method() === 'GET' ? route.fallback() : route.abort()));
+  await page.route('**/api/web/admin/home', (route) => route.fulfill({ json: { slug: 'home', header: { logo: { text: 'E2E' }, navigation: [], styles: {} }, footer: { sections: [], styles: {} }, headerFooterLive: true } }));
+  await page.goto('/hub-admin/web/header-footer');
+  await page.getByRole('button', { name: /^Pick .* color$/ }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Color picker' });
+  await expect(dialog.getByRole('button', { name: 'E2E Rose #d14d72' })).toBeVisible();
+  await expect(dialog.getByRole('group', { name: 'Site colors' }).getByRole('button')).toHaveCount(8);
+});
+
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {
   const slug = `e2e-unknown-${Date.now()}`;
   const res = await request.get(`/api/web/${slug}`);

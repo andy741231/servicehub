@@ -16,7 +16,56 @@ export const DEFAULT_SITE_TOKENS = {
   },
   spacing: { base: 16 },
   borderRadius: { default: 5 },
+  // Site color palette: extra brand colors offered as presets in every site
+  // color picker (after the six theme colors above, which aren't repeated).
+  // Picker metadata only — no CSS variables; content stores the literal hex.
+  // Keep in sync with Styles.jsx DEFAULT_TOKENS and server webStyles.js.
+  palette: [
+    { name: 'White', value: '#ffffff' },
+    { name: 'Ink', value: '#0f1c2e' },
+    { name: 'Soft Blue', value: '#eaf0f4' },
+    { name: 'Sand', value: '#eadfc9' },
+    { name: 'Sage', value: '#8aa39b' },
+    { name: 'Warm Gray', value: '#8c857b' },
+    { name: 'Terracotta', value: '#b55d4c' },
+    { name: 'Deep Teal', value: '#2f5d62' },
+  ],
 };
+
+/** #rgb / #rrggbb / rgb(r,g,b) → '#rrggbb' (lowercase), or null. */
+export function normalizeHex(input) {
+  const v = String(input || '').trim();
+  let m = v.match(/^#?([0-9a-f]{3})$/i);
+  if (m) return `#${m[1].split('').map((c) => c + c).join('')}`.toLowerCase();
+  m = v.match(/^#?([0-9a-f]{6})$/i);
+  if (m) return `#${m[1]}`.toLowerCase();
+  m = v.match(/^rgba?\(\s*(\d{1,3})\s*[,\s]\s*(\d{1,3})\s*[,\s]\s*(\d{1,3})\s*(?:[,/]\s*[\d.]+\s*)?\)$/i);
+  if (m) return `#${[m[1], m[2], m[3]].map((n) => Math.min(255, Number(n)).toString(16).padStart(2, '0')).join('')}`;
+  return null;
+}
+
+/** Palette entries with a name and a valid 6-digit hex (others dropped). */
+export function cleanPalette(palette) {
+  return (Array.isArray(palette) ? palette : [])
+    .map((e) => ({ name: String(e?.name || '').trim(), value: normalizeHex(e?.value) }))
+    .filter((e) => e.name && e.value);
+}
+
+const SEMANTIC_PRESETS = [
+  ['primary', 'Primary'], ['secondary', 'Secondary'], ['accent', 'Accent'],
+  ['background', 'Background'], ['text', 'Body Text'], ['muted', 'Muted Text'],
+];
+/**
+ * Presets for site color pickers: the six theme colors first, then the
+ * palette. Accepts raw or resolved tokens.
+ */
+export function siteColorPresets(tokens) {
+  const t = resolveSiteTokens({ tokens: tokens || {} });
+  const semantic = SEMANTIC_PRESETS
+    .map(([key, name]) => ({ name, value: normalizeHex(t.colors[key]) }))
+    .filter((e) => e.value);
+  return [...semantic, ...cleanPalette(t.palette)];
+}
 
 export const hexToHsl = (hex) => {
   const value = String(hex || '').replace('#', '').trim();
@@ -60,6 +109,9 @@ export function resolveSiteTokens(siteStyle) {
     fonts: { ...DEFAULT_SITE_TOKENS.fonts, ...(t.fonts || {}) },
     spacing: { ...DEFAULT_SITE_TOKENS.spacing, ...(t.spacing || {}) },
     borderRadius: { ...DEFAULT_SITE_TOKENS.borderRadius, ...(t.borderRadius || {}) },
+    // An array: the stored palette when there is one (even if emptied on
+    // purpose), otherwise the default.
+    palette: Array.isArray(t.palette) ? t.palette : DEFAULT_SITE_TOKENS.palette,
   };
 }
 

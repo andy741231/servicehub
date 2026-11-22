@@ -22,6 +22,16 @@
  *
  *   // Optional:
  *   <ColorPicker value={c} onChange={setC} label="Background" allowAlpha={false} />
+ *
+ *   // Site colours as one-click presets (web theme + palette):
+ *   <ColorPicker value={c} onChange={(v, { preset }) => …} presets={[{ name: 'Navy', value: '#152b45' }]} />
+ *
+ * Optional props (all backward compatible):
+ *   presets  — [{ name, value }] shown as a "Site colors" grid; a click emits
+ *              onChange(value, { preset: true }) so callers can commit at once.
+ *   onClose  — called when the popover closes (Done / Esc / click outside);
+ *              lets a caller commit once instead of on every drag tick.
+ *   empty    — the value is unset ("theme default"): checkered trigger.
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo, forwardRef } from 'react';
@@ -94,6 +104,9 @@ export default function ColorPicker({
   allowAlpha = true,
   disabled = false,
   className = '',
+  presets,
+  onClose,
+  empty = false,
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
@@ -103,16 +116,17 @@ export default function ColorPicker({
   const display = useMemo(() => formatColor(parsed), [parsed]);
 
   const commit = useCallback(
-    (next) => {
+    (next, meta) => {
       const out = formatColor(next);
-      onChange?.(out);
+      onChange?.(out, meta || {});
     },
     [onChange]
   );
 
   const handleClose = useCallback(() => {
     setOpen(false);
-  }, []);
+    onClose?.();
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -135,7 +149,7 @@ export default function ColorPicker({
     if (!triggerRef.current) return null;
     const r = triggerRef.current.getBoundingClientRect();
     const POPOVER_W = 220;
-    const POPOVER_H = allowAlpha ? 320 : 280;
+    const POPOVER_H = (allowAlpha ? 320 : 280) + (presets?.length ? 28 + Math.ceil(presets.length / 4) * 46 : 0);
     const MARGIN = 8;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -152,12 +166,14 @@ export default function ColorPicker({
     return { top, left };
   }, setPos);
 
-  const swatchStyle = {
-    backgroundColor: display,
-    backgroundImage: parsed.a < 1 ? CHECKER_BG : undefined,
-    backgroundSize: parsed.a < 1 ? CHECKER_SIZE : undefined,
-    backgroundBlendMode: parsed.a < 1 ? 'lighten' : undefined,
-  };
+  const swatchStyle = empty
+    ? { backgroundImage: CHECKER_BG, backgroundSize: CHECKER_SIZE, backgroundColor: '#fff' }
+    : {
+      backgroundColor: display,
+      backgroundImage: parsed.a < 1 ? CHECKER_BG : undefined,
+      backgroundSize: parsed.a < 1 ? CHECKER_SIZE : undefined,
+      backgroundBlendMode: parsed.a < 1 ? 'lighten' : undefined,
+    };
 
   return (
     <div className={`relative inline-block ${className}`}>
@@ -167,6 +183,7 @@ export default function ColorPicker({
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         aria-label={label ? `Pick ${label} color` : 'Pick color'}
+        title={empty ? `${label || 'Color'}: theme default` : display}
         aria-haspopup="dialog"
         aria-expanded={open}
         className="group relative h-9 w-9 rounded-base border border-border-strong bg-surface p-0 cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
@@ -181,6 +198,8 @@ export default function ColorPicker({
           pos={pos}
           parsed={parsed}
           allowAlpha={allowAlpha}
+          presets={presets}
+          empty={empty}
           onCommit={commit}
           onClose={handleClose}
         />,
@@ -193,7 +212,7 @@ export default function ColorPicker({
 // ─── Popover body ─────────────────────────────────────────────────────────────
 
 const ColorPickerPopover = forwardRef(function ColorPickerPopover(
-  { pos, parsed, allowAlpha, onCommit, onClose },
+  { pos, parsed, allowAlpha, presets, empty, onCommit, onClose },
   ref
 ) {
   const [draft, setDraft] = useState(parsed);
@@ -202,10 +221,11 @@ const ColorPickerPopover = forwardRef(function ColorPickerPopover(
 
   useEffect(() => { setDraft(parsed); }, [parsed]);
 
-  const push = (next) => {
+  const push = (next, meta) => {
     setDraft(next);
-    onCommit(next);
+    onCommit(next, meta);
   };
+  const current = formatHexNoAlpha(draft).toLowerCase();
 
   const hexValue = allowAlpha ? formatHexAlpha(draft) : formatHexNoAlpha(draft);
 
@@ -260,6 +280,36 @@ const ColorPickerPopover = forwardRef(function ColorPickerPopover(
           <HexColorPicker color={formatHexNoAlpha(draft)} onChange={onPickerChange} />
         )}
       </div>
+
+      {/* Site colors (presets) */}
+      {presets?.length > 0 && (
+        <div className="mb-3">
+          <p className="text-label font-medium text-muted mb-1.5">Site colors</p>
+          <div className="grid grid-cols-4 gap-0.5 -mx-1" role="group" aria-label="Site colors">
+            {presets.map((c) => {
+              const hex = formatHexNoAlpha(parseColor(c.value)).toLowerCase();
+              // An unset value ("theme default") matches no preset.
+              const on = !empty && draft.a >= 1 && hex === current;
+              return (
+                <button
+                  key={`${c.name}-${c.value}`}
+                  type="button"
+                  onClick={() => push({ ...parseColor(c.value), a: 1 }, { preset: true })}
+                  title={`${c.name} ${hex}`}
+                  aria-label={`${c.name} ${hex}`}
+                  aria-pressed={on}
+                  className="group h-11 w-11 flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <span
+                    className={`h-[30px] w-[30px] rounded-full border border-black/10 ${on ? 'ring-2 ring-primary ring-offset-2 ring-offset-surface-raised' : 'group-hover:scale-110 transition-transform'}`}
+                    style={{ backgroundColor: hex }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Hex input */}
       <label className="block text-label font-medium text-muted mb-1.5">Hex</label>

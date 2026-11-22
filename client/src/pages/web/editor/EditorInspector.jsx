@@ -13,7 +13,9 @@
  * Number/text/color fields keep local state and commit on blur/Enter, so a
  * value typed as "120" is one undo step (and one autosave), not three.
  */
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import ColorPicker from '../../../components/ColorPicker';
+import { siteColorPresets } from '../../../site/siteTheme';
 import { X, LayoutPanelTop, AlertTriangle, ChevronDown, ChevronRight, LayoutTemplate, ArrowUp, ArrowDown } from 'lucide-react';
 import { BlockContentSettings, blockTypeLabel, ImageField } from './BlockSettingsPanel';
 import { isTextEntryTarget } from './editorUtils';
@@ -64,32 +66,50 @@ function CommitInput({ value, onCommit, type = 'text', placeholder, min, max, ar
   );
 }
 
-/** Color: swatch (commits when the picker closes) + hex text field. */
+// Site color presets (theme colors + palette) for every ColorField in the
+// inspector — provided once at the top instead of threaded through each panel.
+const PresetsContext = createContext(null);
+
+/**
+ * Color: shared ColorPicker (with the site's colors as presets) + hex text
+ * field. One change = one undo step / one autosave: a preset click commits at
+ * once; dragging on the wheel or typing in the popover's hex field previews in
+ * the swatch and commits once when the popover closes.
+ */
 function ColorField({ label, value, onCommit, placeholder = 'Default' }) {
-  const swatchRef = useRef(null);
-  useEffect(() => {
-    const el = swatchRef.current;
-    if (!el) return undefined;
-    // Native "change" fires once when the picker closes (React's onChange
-    // fires continuously while dragging — one undo step per pick instead).
-    const onChange = () => onCommit(el.value);
-    el.addEventListener('change', onChange);
-    return () => el.removeEventListener('change', onChange);
-  }, [onCommit]);
+  const presets = useContext(PresetsContext) || undefined;
   const isHex = /^#[0-9a-f]{6}$/i.test(value || '');
+  const [draft, setDraft] = useState(null);
+  const draftRef = useRef(null);
+  const commitDraft = () => {
+    const d = draftRef.current;
+    draftRef.current = null;
+    setDraft(null);
+    if (d && d.toLowerCase() !== (value || '').toLowerCase()) onCommit(d);
+  };
   return (
     <div>
       <span className={labelCls}>{label}</span>
       <div className="flex items-center gap-2">
-        <div className="relative mt-1 h-8 w-10 rounded border border-border bg-surface overflow-hidden" title={isHex ? value : `${label}: theme default`}>
-          {!isHex && (
-            <div
-              aria-hidden="true"
-              className="absolute inset-0"
-              style={{ background: 'repeating-conic-gradient(hsl(var(--border-strong, 215 16% 47%) / 0.45) 0% 25%, transparent 0% 50%)', backgroundSize: '8px 8px' }}
-            />
-          )}
-          <input ref={swatchRef} type="color" defaultValue={isHex ? value : '#ffffff'} key={value || 'none'} className={`h-full w-full p-0.5 bg-transparent ${isHex ? '' : 'opacity-0'}`} aria-label={`${label} picker`} />
+        <div className="mt-1 shrink-0">
+          <ColorPicker
+            value={draft || (isHex ? value : '#ffffff')}
+            empty={!draft && !isHex}
+            label={label}
+            allowAlpha={false}
+            presets={presets}
+            onChange={(v, meta) => {
+              if (meta?.preset) {
+                draftRef.current = null;
+                setDraft(null);
+                if (v.toLowerCase() !== (value || '').toLowerCase()) onCommit(v);
+              } else {
+                draftRef.current = v;
+                setDraft(v);
+              }
+            }}
+            onClose={commitDraft}
+          />
         </div>
         <div className="flex-1"><CommitInput value={value} onCommit={onCommit} placeholder={placeholder} ariaLabel={label} /></div>
         {value && (
@@ -539,9 +559,11 @@ export default function EditorInspector({
   page, // { id, title, slug }
   onUpdatePageMeta,
   onPlaceInColumns,
+  siteTokens, // the site theme (tokens) — its colors are offered as presets
 }) {
   const [tab, setTab] = useState('content');
   const [sectionTab, setSectionTab] = useState('section');
+  const presets = useMemo(() => siteColorPresets(siteTokens), [siteTokens]);
   const blockId = selection?.kind === 'block' ? selection.block.id : null;
   useEffect(() => { setTab('content'); }, [blockId]);
 
@@ -572,6 +594,7 @@ export default function EditorInspector({
   const underlineTab = (active) => `px-3 h-full min-h-[44px] text-[13px] font-semibold border-b-2 -mb-px focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${active ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text-base'}`;
 
   return (
+    <PresetsContext.Provider value={presets}>
     <aside
       className="w-80 shrink-0 border-l border-border bg-surface sticky top-[52px] self-start h-[calc(100vh-52px)] overflow-y-auto"
       aria-label="Inspector"
@@ -664,5 +687,6 @@ export default function EditorInspector({
         </div>
       )}
     </aside>
+    </PresetsContext.Provider>
   );
 }

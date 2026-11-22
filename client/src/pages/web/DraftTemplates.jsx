@@ -3,6 +3,7 @@ import { Save, Check, AlertCircle, RefreshCw, Eye, EyeOff, Home, FileX } from 'l
 import api from '../../utils/api';
 import PageHeader from '../../components/PageHeader';
 import ColorPicker from '../../components/ColorPicker';
+import useSiteColorPresets from './useSiteColorPresets';
 
 const DEFAULT = {
   homeDraft: {
@@ -145,6 +146,7 @@ function TextInput({ value, onChange, placeholder, multiline }) {
 }
 
 function ColorField({ label, value, onChange }) {
+  const presets = useSiteColorPresets(); // site theme + palette
   return (
     <div className="flex items-center gap-2">
       <ColorPicker
@@ -152,6 +154,7 @@ function ColorField({ label, value, onChange }) {
         onChange={onChange}
         label={label}
         allowAlpha={false}
+        presets={presets}
       />
       <input
         type="text"

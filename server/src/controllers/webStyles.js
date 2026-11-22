@@ -12,6 +12,14 @@ export const getSiteStyles = async (req, res) => {
             fonts: { heading: 'DM Sans, sans-serif', body: 'DM Sans, sans-serif', serif: 'Libre Baskerville, Georgia, serif' },
             spacing: { base: 16 },
             borderRadius: { default: 5 },
+            // Site color palette (picker presets). Keep in sync with
+            // client/src/site/siteTheme.js DEFAULT_SITE_TOKENS.palette.
+            palette: [
+              { name: 'White', value: '#ffffff' }, { name: 'Ink', value: '#0f1c2e' },
+              { name: 'Soft Blue', value: '#eaf0f4' }, { name: 'Sand', value: '#eadfc9' },
+              { name: 'Sage', value: '#8aa39b' }, { name: 'Warm Gray', value: '#8c857b' },
+              { name: 'Terracotta', value: '#b55d4c' }, { name: 'Deep Teal', value: '#2f5d62' },
+            ],
           })
         }
       });

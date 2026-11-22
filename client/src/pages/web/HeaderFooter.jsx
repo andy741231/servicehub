@@ -10,6 +10,7 @@ import api from '../../utils/api';
 import PageHeader from '../../components/PageHeader';
 import { useToast } from '../../components/Toast';
 import ColorPicker from '../../components/ColorPicker';
+import useSiteColorPresets from './useSiteColorPresets';
 
 const resolveUrl = (url) => {
   if (!url) return '';
@@ -64,6 +65,7 @@ function TextInput({ value, onChange, placeholder, mono }) {
 }
 
 function ColorRow({ label, value, onChange }) {
+  const presets = useSiteColorPresets(); // site theme + palette
   return (
     <div className="flex items-center justify-between py-2">
       <span className="text-sm text-text-base">{label}</span>
@@ -73,6 +75,7 @@ function ColorRow({ label, value, onChange }) {
           onChange={onChange}
           label={label}
           allowAlpha={false}
+          presets={presets}
         />
         <input
           type="text"
