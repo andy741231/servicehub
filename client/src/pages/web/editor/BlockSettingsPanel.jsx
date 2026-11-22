@@ -6,9 +6,10 @@
  *
  */
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Upload, Loader2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Upload, Loader2, Images } from 'lucide-react';
 import api from '../../../utils/api';
 import { blockCatalogEntry } from './editorUtils';
+import AssetLibrary from './AssetLibrary';
 
 const BUTTON_VARIANTS = [['gold', 'Gold'], ['outline', 'Outline'], ['default', 'Navy']];
 
@@ -54,8 +55,14 @@ export const BLOCK_SETTINGS = {
     { key: 'numbered', label: 'Show numbers instead of icons', type: 'checkbox' },
     { key: 'items', label: 'Features', type: 'list', summary: (f) => stripTags(f.title) },
   ],
-  highlights: [{ key: 'items', label: 'Highlights', type: 'list', summary: (h) => stripTags(h.title) }],
-  gallery: [{ key: 'images', label: 'Images', type: 'list', summary: (g, i) => stripTags(g.caption) || g.url || `Image ${i + 1}` }],
+  highlights: [{
+    key: 'items', label: 'Highlights', type: 'list', summary: (h) => stripTags(h.title),
+    itemFields: [{ key: 'imageAlt', label: 'Image alt text (blank = the title)' }],
+  }],
+  gallery: [{
+    key: 'images', label: 'Images', type: 'list', summary: (g, i) => stripTags(g.caption) || g.alt || `Image ${i + 1}`,
+    itemFields: [{ key: 'alt', label: 'Alt text (describes the image for screen readers)' }],
+  }],
   testimonials: [{
     key: 'testimonials', label: 'Testimonials', type: 'list', summary: (t) => stripTags(t.name),
     itemFields: [{ key: 'avatar', label: 'Avatar URL' }],
@@ -103,6 +110,7 @@ export function ImageField({ label, value, onChange }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [text, setText] = useState(value || '');
+  const [showLibrary, setShowLibrary] = useState(false);
   useEffect(() => { setText(value || ''); }, [value]);
   const upload = async (e) => {
     const file = e.target.files?.[0];
@@ -127,8 +135,10 @@ export function ImageField({ label, value, onChange }) {
         <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-[36px] text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} {value ? 'Replace' : 'Upload image'}
         </button>
+        <button type="button" onClick={() => setShowLibrary((v) => !v)} aria-expanded={showLibrary} className={`px-3 py-2 min-h-[36px] text-sm rounded-md border inline-flex items-center gap-1.5 ${showLibrary ? 'border-primary text-primary bg-primary-light' : 'border-border text-muted hover:bg-surface-raised'}`} title="Choose an image you've already uploaded"><Images className="w-4 h-4" /> Library</button>
         {value && <button type="button" onClick={() => onChange(undefined)} className="px-3 py-2 min-h-[36px] text-sm rounded-md border border-border text-muted hover:bg-surface-raised">Remove</button>}
       </div>
+      {showLibrary && <div className="mt-2"><AssetLibrary selected={value} onPick={(url) => { onChange(url); setShowLibrary(false); }} /></div>}
       <input
         className={`${inputCls} mt-2`}
         value={text}

@@ -326,6 +326,47 @@ test('U32: the Add block panel stays open to add several blocks; Done closes it'
   await expect(picker).toHaveCount(0);
 });
 
+test('U33: reuse an image from the library (canvas and inspector); alt text for gallery images', async ({ page }) => {
+  // A fake library: never list (or touch) the real asset store.
+  const LIB = [
+    { id: 'e2e-1', url: '/uploads/e2e-lib-1.png', originalName: 'e2e-lib-1.png', mimeType: 'image/png' },
+    { id: 'e2e-2', url: '/uploads/e2e-doc.pdf', originalName: 'e2e-doc.pdf', mimeType: 'application/pdf' },
+  ];
+  await page.route('**/api/web/assets', (route) => (route.request().method() === 'GET' ? route.fulfill({ json: LIB }) : route.fallback()));
+  await openEditor(page, fixture.slug);
+
+  // Canvas: an empty gallery tile → dialog → library (images only) → pick.
+  let save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Gallery');
+  await save;
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Done' }).click();
+  const gallery = block(page, 'Gallery');
+  await gallery.getByRole('button', { name: /^Add image/ }).first().click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('list', { name: 'Image library' }).getByRole('button')).toHaveCount(1);
+  save = nextSave(page, fixture.slug);
+  await dialog.getByRole('button', { name: 'Use e2e-lib-1.png' }).click();
+  await save;
+  const galleryBlock = () => saved().then((secs) => secs[0].blocks.find((b) => b.type === 'gallery'));
+  expect((await galleryBlock()).content.images[0].url).toBe('/uploads/e2e-lib-1.png');
+
+  // Alt text for that image, from the inspector list.
+  await selectBlock(page, 'Gallery');
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByLabel(/^Alt text/).first().fill('Children painting a mural');
+  await save;
+  await expect.poll(async () => (await galleryBlock()).content.images[0].alt).toBe('Children painting a mural');
+  await expect(gallery.locator('img[src="/uploads/e2e-lib-1.png"]')).toHaveAttribute('alt', 'Children painting a mural');
+
+  // Inspector image field: Library → pick.
+  await selectBlock(page, 'Hero');
+  await inspector(page).getByRole('button', { name: 'Library' }).click();
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('button', { name: 'Use e2e-lib-1.png' }).click();
+  await save;
+  await expect.poll(async () => (await saved())[0].blocks.find((b) => b.type === 'hero').content.backgroundImage).toBe('/uploads/e2e-lib-1.png');
+});
+
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {
   const slug = `e2e-unknown-${Date.now()}`;
   const res = await request.get(`/api/web/${slug}`);

@@ -6,11 +6,15 @@
  * permanent URL is saved. (The previous version saved a temporary blob: URL
  * that only existed in the current browser tab — broken after a reload and
  * on the published site.)
+ *
+ * The dialog also lists images already in the library (AssetLibrary), so an
+ * image can be reused without uploading it again.
  */
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Image as ImageIcon, Edit3, Trash2, Upload, Loader2 } from 'lucide-react';
 import api from '../../../utils/api';
+import AssetLibrary from './AssetLibrary';
 
 export default function EditableImage({
   src,
@@ -112,7 +116,7 @@ export default function EditableImage({
                 <Upload className="w-4 h-4" /> Upload
               </button>
               <button type="button" onClick={() => { setTempUrl(src || ''); setShowUrlDialog(true); }} className={`${btn} bg-surface text-text-base hover:bg-surface-raised`}>
-                <Edit3 className="w-4 h-4" /> URL
+                <Edit3 className="w-4 h-4" /> Choose…
               </button>
               <button type="button" onClick={() => { onRemove?.(); close(); }} className={`${btn} bg-danger text-white hover:opacity-90`}>
                 <Trash2 className="w-4 h-4" /> Remove
@@ -142,6 +146,10 @@ export default function EditableImage({
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 {uploading ? 'Uploading…' : 'Upload from your computer'}
               </button>
+              <div>
+                <div className="text-xs font-medium text-muted mb-1.5">Or choose from the library</div>
+                <AssetLibrary selected={src} onPick={(url) => { onChange(url); close(); }} />
+              </div>
               <div className="text-center text-xs text-subtle">or paste an image address</div>
               <label className="block">
                 <span className="sr-only">Image URL</span>

@@ -21,6 +21,14 @@ const IconMap = {
   'lucide-wrench':   Wrench,
 };
 
+/** Plain text for attributes like alt: titles/captions may hold rich-text tags and entities. */
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", nbsp: ' ' };
+const stripHtml = (s) => String(s || '')
+  .replace(/<[^>]*>/g, '')
+  .replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (_, e) => ENTITIES[e])
+  .replace(/\s+/g, ' ')
+  .trim();
+
 const Arrow = () => <span aria-hidden="true">→</span>;
 const SpacedArrow = () => <> <span aria-hidden="true">→</span></>;
 
@@ -291,7 +299,7 @@ export default function SiteBlock({ block }) {
           <div className="grid grid-cols-1 @min-[700px]:grid-cols-3 gap-8">
             {c.items?.map((item, i) => (
               <div key={i} className="bg-surface rounded-xl overflow-hidden shadow-sm hover:shadow-md transition pb-6 text-center">
-                <Image path={`items.${i}.image`} value={item.image} alt={item.title} className="w-full h-48 object-cover mb-6" />
+                <Image path={`items.${i}.image`} value={item.image} alt={stripHtml(item.imageAlt || item.title)} className="w-full h-48 object-cover mb-6" />
                 <Text as="h3" className="text-xl font-bold text-text-base mb-3 px-4" path={`items.${i}.title`} value={item.title} placeholder="Title" />
                 <Text as="p" className="text-muted mb-6 px-4" path={`items.${i}.text`} value={item.text} placeholder="Description" multiline />
                 <Link optional textPath={`items.${i}.buttonText`} hrefPath={`items.${i}.buttonLink`} text={item.buttonText} href={item.buttonLink} className={buttonClass(item.buttonVariant || 'outline')} placeholder="Button" />
@@ -310,7 +318,7 @@ export default function SiteBlock({ block }) {
           <div className="grid grid-cols-1 @min-[600px]:grid-cols-2 @min-[900px]:grid-cols-3 gap-6">
             {c.images?.map((image, i) => (!image.url && !edit) ? null : (
               <div key={i} className="group relative overflow-hidden rounded-lg shadow-md">
-                <Image path={`images.${i}.url`} value={image.url} alt={image.caption || `Gallery ${i + 1}`} className="w-full h-64 object-cover group-hover:scale-105 transition duration-300" />
+                <Image path={`images.${i}.url`} value={image.url} alt={image.alt || stripHtml(image.caption)} className="w-full h-64 object-cover group-hover:scale-105 transition duration-300" />
                 {(image.caption || edit) && (
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                     <Text as="p" className="text-inverse text-sm" path={`images.${i}.caption`} value={image.caption} placeholder="Caption" />
