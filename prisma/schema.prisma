@@ -61,8 +61,8 @@ model WebPage {
   slug        String     @unique
   title       String
   template    String     @default("modern")
-  header      String?    // JSON serialized — parsed/serialized in controller
-  footer      String?    // JSON serialized — parsed/serialized in controller
+  header      String?    @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
+  footer      String?    @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
   isPublished Boolean    @default(true)
   publishedSnapshot String? @db.NVarChar(Max) // JSON snapshot of published content (header, footer, sections+blocks). Null = use live sections/blocks as published (backward compat).
   navLabel    String?
@@ -124,7 +124,7 @@ model WebBlock {
   sectionId String?
   type      String      // "hero" | "text" | "image" | "features" | ...
   order     Int
-  content   String      // JSON serialized — parsed/serialized in controller
+  content   String      @db.NVarChar(Max) // JSON serialized — parsed/serialized in controller
   page      WebPage     @relation(fields: [pageId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   section   WebSection? @relation(fields: [sectionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -272,8 +272,8 @@ model InboundEmail {
 
 model WebSiteStyle {
   id             String   @id @default(uuid())
-  tokens         String   // JSON: { colors: { primary, secondary, accent, background, text }, fonts: { heading, body }, spacing: { base } }
-  draftTemplates String?  // JSON: { homeDraft: {...}, pageDraft: {...} }
+  tokens         String   @db.NVarChar(Max) // JSON: { colors: { primary, secondary, accent, background, text }, fonts: { heading, body }, spacing: { base } }
+  draftTemplates String?  @db.NVarChar(Max) // JSON: { homeDraft: {...}, pageDraft: {...} }
   updatedAt      DateTime @updatedAt
 }
 

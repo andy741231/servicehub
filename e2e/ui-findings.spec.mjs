@@ -5,7 +5,7 @@
  */
 import { test, expect } from '@playwright/test';
 import {
-  authenticate, createFixturePage, resetFixturePage, deleteFixturePage, getPage, api,
+  authenticate, createFixturePage, resetFixturePage, deleteFixturePage, getPage, api, FIXTURE_SECTIONS,
   canvas, openEditor, block, section, selectBlock, inspectorTitle, nextSave,
 } from './helpers.mjs';
 
@@ -471,6 +471,172 @@ test('R3/R4/R5: Divider block, Quote button, Gallery layouts', async ({ page }) 
   const tile = gal.getByRole('button', { name: /^Add image/ }).first();
   await expect.poll(() => tile.evaluate((el) => getComputedStyle(el).aspectRatio)).toBe('1 / 1');
   expect((await added('gallery')).content).toMatchObject({ layout: 'photos', aspect: 'square' });
+});
+
+test('R6: the Contact block shows a form from the Forms app (no dead built-in form)', async ({ page, browser }) => {
+  // Fake forms list: never read or touch real forms.
+  await page.route('**/api/forms', (route) => route.fulfill({ json: { forms: [{ id: 'e2e-form-1', title: 'E2E sign-up' }] } }));
+  await openEditor(page, fixture.slug);
+  let save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Contact');
+  await save;
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Done' }).click();
+  const contact = block(page, 'Contact');
+  await expect(contact.locator('form')).toHaveCount(0); // the old fake form is gone
+  await selectBlock(page, 'Contact');
+  const picker = inspector(page).getByRole('combobox', { name: /^Form \(from the Forms app\)/ });
+  await expect(picker.locator('option')).toHaveText(['No form', 'E2E sign-up']);
+  save = nextSave(page, fixture.slug);
+  await picker.selectOption('e2e-form-1');
+  await save;
+  const content = (await saved())[0].blocks.find((b) => b.type === 'contact').content;
+  expect(content).toMatchObject({ formId: 'e2e-form-1', formTitle: 'E2E sign-up' });
+  const frame = contact.locator('iframe[title="E2E sign-up"]');
+  await expect(frame).toHaveAttribute('src', '/form/e2e-form-1?embed=1');
+  // Embed mode: the form page drops its full-screen height so the frame fits the form.
+  const v = await browser.newPage();
+  await v.goto('/form/e2e-form-1?embed=1');
+  await expect(v.locator('html')).toHaveClass(/form-embed/);
+  await v.close();
+});
+
+test('R7: per-block heading size, weight and font (Design tab)', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const h2 = block(page, 'Features').locator('h2').first();
+  const before = await h2.evaluate((el) => getComputedStyle(el).fontSize);
+  await selectBlock(page, 'Features');
+  await inspector(page).getByRole('tab', { name: 'Design' }).click();
+  const size = inspector(page).getByRole('spinbutton', { name: /^Size \(px\)/ }).first();
+  let save = nextSave(page, fixture.slug);
+  await size.fill('56');
+  await size.press('Enter');
+  await save;
+  await expect.poll(() => h2.evaluate((el) => getComputedStyle(el).fontSize)).toBe('56px');
+  expect(before).not.toBe('56px');
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('combobox', { name: /^Weight/ }).first().selectOption('800');
+  await save;
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('combobox', { name: /^Font/ }).selectOption('serif');
+  await save;
+  await expect.poll(() => h2.evaluate((el) => getComputedStyle(el).fontWeight)).toBe('800');
+  await expect.poll(() => h2.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/Baskerville|Georgia|serif/);
+  expect((await saved())[2].blocks[0].style).toMatchObject({ headingFontSize: 56, headingFontWeight: '800', headingFont: 'serif' });
+});
+
+test('R8: save a section and reuse it from Add section → Saved', async ({ page }) => {
+  // Saved sections live in the templates table (outside the temp page), so the
+  // UI test answers those calls itself — nothing real is written.
+  const store = [];
+  await page.route('**/api/web/page-templates**', async (route) => {
+    const req = route.request();
+    const url = new URL(req.url());
+    if (req.method() === 'POST') {
+      const body = req.postDataJSON();
+      const row = { id: `e2e-saved-${store.length + 1}`, name: body.name, snapshot: body.snapshot };
+      store.push(row);
+      return route.fulfill({ status: 201, json: row });
+    }
+    if (req.method() === 'GET' && url.searchParams.get('kind') === 'section') return route.fulfill({ json: { templates: store } });
+    if (req.method() === 'DELETE') { store.splice(store.findIndex((r) => url.pathname.endsWith(r.id)), 1); return route.fulfill({ json: { ok: true } }); }
+    return route.abort();
+  });
+  await openEditor(page, fixture.slug);
+
+  // Save section 3 (Features) under a name.
+  const s3 = section(page, 3);
+  await s3.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await s3.hover();
+  await s3.getByRole('button', { name: 'Save section' }).click();
+  const dlg = page.getByRole('dialog');
+  await dlg.getByRole('textbox').fill('E2E features band');
+  await dlg.getByRole('button', { name: 'Save section' }).click();
+  await expect.poll(() => store.length).toBe(1);
+  expect(store[0].snapshot.kind).toBe('section');
+  expect(store[0].snapshot.sections).toHaveLength(1);
+  expect(store[0].snapshot.sections[0].blocks[0]).toMatchObject({ type: 'features' });
+  expect(store[0].snapshot.sections[0].blocks[0].id).toBeUndefined();
+
+  // Insert it at the end of the page from the Saved tab.
+  await canvas(page).getByRole('button', { name: /^Add Section$/ }).last().click();
+  const picker = page.getByRole('dialog');
+  await picker.getByRole('tab', { name: 'Saved' }).click();
+  const save = nextSave(page, fixture.slug);
+  await picker.getByRole('button', { name: 'Add E2E features band section' }).click();
+  await save;
+  const secs = await saved();
+  expect(secs).toHaveLength(FIXTURE_SECTIONS.length + 1);
+  expect(secs.at(-1).blocks[0].type).toBe('features');
+  expect(secs.at(-1).blocks[0].content.title).toBe(secs[2].blocks[0].content.title);
+
+  // Delete it from the Saved tab.
+  await canvas(page).getByRole('button', { name: /^Add Section$/ }).last().click();
+  await picker.getByRole('tab', { name: 'Saved' }).click();
+  await picker.getByRole('button', { name: 'Delete saved section E2E features band' }).click();
+  await page.getByRole('alertdialog').or(page.getByRole('dialog').filter({ hasText: 'keep their copy' })).getByRole('button', { name: 'Delete' }).click();
+  await expect(picker.getByText('No saved sections yet')).toBeVisible();
+  expect(store).toHaveLength(0);
+});
+
+test('R8: saved sections stay out of the page-template list; malformed ones are refused', async () => {
+  const pageTemplates = (await api('GET', '/page-templates')).templates;
+  expect(pageTemplates.every((t) => t.snapshot?.kind !== 'section')).toBe(true);
+  await expect(api('POST', '/page-templates', { name: 'e2e bad', snapshot: { kind: 'section', sections: [] } })).rejects.toThrow(/400/);
+});
+
+test('R9: Slideshow block — arrows, dots and keyboard, in the editor and on the site', async ({ page, browser }) => {
+  await openEditor(page, fixture.slug);
+  let save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Slideshow');
+  await save;
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Done' }).click();
+  const show = block(page, 'Slideshow');
+  const visibleTitle = () => show.locator('[aria-roledescription="slide"][aria-hidden="false"] h3').innerText();
+  await expect(show.getByRole('button', { name: /^Show slide/ })).toHaveCount(3);
+  await expect.poll(visibleTitle).toBe('Welcome');
+  await selectBlock(page, 'Slideshow');
+  await show.getByRole('button', { name: 'Next slide' }).click();
+  await expect.poll(visibleTitle).toBe('Join us on Sunday');
+  await expect(show.getByRole('button', { name: 'Show slide 2' })).toHaveAttribute('aria-current', 'true');
+  await show.getByRole('button', { name: 'Previous slide' }).click();
+  await show.getByRole('button', { name: 'Previous slide' }).click();
+  await expect.poll(visibleTitle).toBe('Serve the city'); // wraps around
+
+  // Published, as a visitor: arrow keys move between slides; auto-advance is off.
+  await api('POST', `/${fixture.slug}/publish`);
+  try {
+    const visitor = await browser.newContext();
+    const v = await visitor.newPage();
+    await v.goto(`/${fixture.slug}`);
+    const pub = v.locator('[aria-roledescription="carousel"]:visible');
+    const title = () => pub.locator('[aria-roledescription="slide"][aria-hidden="false"] h3').innerText();
+    await expect.poll(title).toBe('Welcome');
+    await pub.getByRole('button', { name: 'Next slide' }).focus();
+    await v.keyboard.press('ArrowRight');
+    await expect.poll(title).toBe('Join us on Sunday');
+    await v.keyboard.press('ArrowLeft');
+    await expect.poll(title).toBe('Welcome');
+    await v.waitForTimeout(6500);
+    expect(await title()).toBe('Welcome');
+    await visitor.close();
+  } finally {
+    await api('POST', `/${fixture.slug}/unpublish`);
+  }
+});
+
+test('U42: a block with long content saves (needs migration 20261122_web_json_columns_nvarchar_max)', async () => {
+  // WebBlock.content was NVARCHAR(1000): a few paragraphs of text could not be saved.
+  // KNOWN FAILING until the migration is applied to this database
+  // (`npx prisma migrate deploy`). Then this test passes, Playwright reports
+  // the expected failure as unexpected — delete the next line.
+  test.fail(true, 'database column still NVARCHAR(1000) — apply migration 20261122_web_json_columns_nvarchar_max');
+  const long = `<p>${'A welcoming community learning to follow Jesus. '.repeat(80)}</p>`; // ~4,000 chars
+  const sections = FIXTURE_SECTIONS.map((s, i) => (i !== 0 ? s : {
+    ...s, blocks: [...s.blocks, { type: 'text', fluid: { colStart: 1, colEnd: 25, rowStart: 6, rowEnd: 12, zIndex: 0 }, content: { html: long } }],
+  }));
+  await api('PUT', `/${fixture.slug}`, { header: {}, footer: {}, sections });
+  const text = (await saved())[0].blocks.find((b) => b.type === 'text');
+  expect(text.content.html).toBe(long);
 });
 
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {

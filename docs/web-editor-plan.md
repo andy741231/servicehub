@@ -385,9 +385,10 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U38 | Header & Footer | The Header & Footer screen loaded the home page's **published** copy but saves to the **draft**, so saving could undo unpublished header/footer edits | code | minor | Load from `/web/admin/home` (the draft) | S | **Fixed** (e044188) |
 | U39 | Header & Footer | Header & Footer changes reach visitors only after the **home page** is published; the screen just says "saved" | code | major | Publish header/footer separately (own snapshot), or say "Publish the home page to make this live" with a button | M | **Fixed** (a3f3633): Header & Footer has its own **Publish** (saves first if needed) and a status line ("Live on the site" / "Saved, not live yet" / "Unsaved changes"). New `POST /api/web/:slug/publish-header-footer` copies only the draft header/footer into the page's published snapshot, leaving its content unpublished |
 | U40 | Canvas | Opening the inspector narrows the desktop canvas from 1440 to ~1120px; now that blocks follow their own width, a half-width list block can show 1 column in the editor but 2 on the live page | `u27-half-width-after.png` vs the U27 test | minor | Overlay the inspector, or render the canvas at the target width and scale it | M | **Fixed** (a3f3633): the desktop canvas lays out at the window width and scales down beside side panels (`CanvasFrame` `layoutWidth`); the text toolbar maps coordinates through the scale. Evidence `u40-inspector-open-after.png`, `u40-text-toolbar-scaled.png` |
-| U41 | Server | `GET /api/web/admin/:slug` created any unknown page with the schema defaults: **published and in the site navigation**. A typo'd editor URL, or a late request for a just-deleted page, put a placeholder page on the live nav. Found when a deleted e2e temp page reappeared published in the nav (removed at once) | probe | blocker | Only auto-create `home` (unpublished); other slugs 404 (the editor shows "Page not found") | S | **Fixed** (a3f3633) |
+| U41 | Server | `GET /api/web/admin/:slug` created any unknown page with the schema defaults: **published and in the site navigation**. A typo'd editor URL, or a late request for a just-deleted page, put a placeholder page on the live nav. Found when a deleted e2e temp page reappeared published in the nav of the local site (local database; removed at once) | probe | blocker | Only auto-create `home` (unpublished); other slugs 404 (the editor shows "Page not found") | S | **Fixed** (a3f3633) |
+| U42 | Server / database | `WebBlock.content` (and `WebPage.header/footer`, `WebSiteStyle.tokens/draftTemplates`) were plain `String` = **NVARCHAR(1000)** on SQL Server. A block over ~1,000 characters of JSON — a Text block with a few paragraphs, a long Features list, slide captions — **could not be saved** (PUT 500, the editor shows a failed save) | probe: largest saving Text block ≈ 915 characters of HTML | blocker | Widen to NVARCHAR(MAX) | S | **Fix ready, not applied** (ROUND10): migration `20261122_web_json_columns_nvarchar_max` + schema. Applying it to the local database was left to the owner; production gets it from `prisma migrate deploy` on the next deploy. Test U42 is marked expected-to-fail until then |
 
-**Counts:** 3 blockers (U1, U30, U41), 18 majors, 20 minors (U37–U39 added in round 4, U40 in round 5, U41 in round 6). **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in 1de8621;
+**Counts:** 4 blockers (U1, U30, U41, U42), 18 majors, 20 minors (U37–U39 added in round 4, U40 in round 5, U41 in round 6, U42 in round 10). **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in 1de8621;
 U21 and U33 partly). **Open:** none of U1–U41 (crop-in-dialog from U33 is the only remainder). U33 completed in 557b252. U39–U41 fixed in a3f3633. U27 fixed in 66dc35a. U26 fixed in d310ff4; U28, U37, U38 in e044188.
 Public-site check: all 9 published pages, desktop + mobile, **pixel-identical** before vs after
 (`public-before/` vs `public-after/`). The intended public changes apply only to things no published
@@ -440,8 +441,9 @@ optional empty titles, unset images).
 - **Done (0cee2b5):** U21 touch targets, U32 picker stays open.
 - **Done (557b252):** asset library and alt text for images inside blocks (U33).
 - **Done (6774498):** roadmap items R1–R5 (below).
-- **Needs a decision before building:** Form block (where do submissions go — email, the Hub's
-  forms app, a sheet?), reusable saved sections, carousel, heading font/size controls per block.
+- **Decided:** no separate form block — web pages use forms from the Forms app (R6).
+- **Done (ROUND10):** R6–R9 below. **Waiting on the owner:** apply migration
+  `20261122_web_json_columns_nvarchar_max` (U42) to the local database.
 
 #### Roadmap items done in 6774498
 
@@ -451,6 +453,10 @@ optional empty titles, unset images).
 | R2 | Arrange menu | The four look-alike layer arrows are one **Arrange** menu (Bring to front / forward / Send backward / to back), keyboard operable | R2 |
 | R3 | Divider block | Line (full or short), dots, or empty space; height = the block | R3/R4/R5 |
 | R4 | Quote button | Optional button on the Quote block (Outline by default), nothing on the site until labelled | R3/R4/R5 |
+| R6 | Forms app on pages | The Contact block's built-in form was fake (submit discarded what visitors typed; no live page used it). It now embeds a form chosen from the Forms app (`/form/:id?embed=1` in a self-sizing same-origin frame); submissions land in Forms → Submissions | R6 |
+| R7 | Heading controls | Design tab → Heading (size, weight, font) for every block with a section heading; size shrinks with narrow blocks (container units) | R7 |
+| R8 | Saved sections | Section toolbar → **Save section**; Add section → **Saved** inserts a copy (content, layout, styles) or deletes it. Stored as `{ kind: 'section' }` page templates (no schema change); hidden from Page Templates; can't be applied as a whole page | R8 ×2 |
+| R9 | Slideshow block | One slide at a time: arrows, dots, arrow keys; optional auto-advance (off by default, pauses on hover/focus, never with reduced motion); shape 16:9 / 4:3 / 3:4 / fill; alt text per slide | R9 |
 | R5 | Gallery layouts | Columns (automatic/2/3/4/6), photo shape (same height, 4:3, square, 3:4, 16:9), logo strip (whole images, small, greyscale until hover). Defaults reproduce the old layout | R3/R4/R5 |
 - **Content note (not a code bug):** the live home page's "Find your place." Features block has a
   saved text colour of #ffffff, so its heading is white on cream. Fix by clearing the text colour in the
