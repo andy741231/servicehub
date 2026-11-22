@@ -5,7 +5,7 @@
  */
 import { test, expect } from '@playwright/test';
 import {
-  authenticate, createFixturePage, resetFixturePage, deleteFixturePage, getPage,
+  authenticate, createFixturePage, resetFixturePage, deleteFixturePage, getPage, api,
   canvas, openEditor, block, section, selectBlock, inspectorTitle, nextSave,
 } from './helpers.mjs';
 
@@ -180,6 +180,45 @@ test('U14: preview is full screen (no admin navigation)', async ({ page }) => {
   const box = await page.locator('.public-site').first().boundingBox();
   expect(box.x).toBe(0);
   expect(box.width).toBeGreaterThanOrEqual(1400);
+});
+
+test('U28: the canvas shows the same shared header and footer as the published page', async ({ page, browser }) => {
+  // The fixture page has an empty own header/footer, like a newly made page.
+  // Publish it briefly and read it as an anonymous visitor.
+  await api('POST', `/${fixture.slug}/publish`);
+  const norm = (s) => s.replace(/\s+/g, ' ').trim();
+  let pubHeader; let pubFooter;
+  try {
+    const visitor = await browser.newContext();
+    const v = await visitor.newPage();
+    await v.goto(`/${fixture.slug}`);
+    await v.locator('.public-site header').waitFor();
+    pubHeader = norm(await v.locator('.public-site header').innerText());
+    pubFooter = norm(await v.locator('.public-site footer').innerText());
+    await visitor.close();
+  } finally {
+    await api('POST', `/${fixture.slug}/unpublish`);
+  }
+  await openEditor(page, fixture.slug);
+  expect(norm(await canvas(page).locator('.site-editor-frame header').innerText())).toBe(pubHeader);
+  expect(norm(await canvas(page).locator('.site-editor-frame footer').innerText())).toBe(pubFooter);
+
+  // Saving never copies the shared header/footer into the page's own.
+  const save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Button');
+  await save;
+  const own = await getPage(fixture.slug);
+  expect(own.header?.logo?.text ?? null).toBeNull();
+  expect(own.footer?.sections?.length ?? 0).toBe(0);
+});
+
+test('U37: visiting an unknown URL does not create a page', async ({ request }) => {
+  const slug = `e2e-unknown-${Date.now()}`;
+  const res = await request.get(`/api/web/${slug}`);
+  expect(res.status()).toBe(404);
+  const pages = await api('GET', '/pages');
+  const list = Array.isArray(pages) ? pages : (pages.pages || pages.data || []);
+  expect(list.some((p) => p.slug === slug)).toBe(false);
 });
 
 test('U15/U16: layers panel selects sections, uses picker names, has no fake hide toggle', async ({ page }) => {

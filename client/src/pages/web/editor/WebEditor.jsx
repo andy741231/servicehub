@@ -142,6 +142,11 @@ export default function WebEditor() {
   // Site theme for the canvas — same tokens/fonts as the public site.
   const siteTokens = resolveSiteTokens(pageData?.siteStyle);
   useSiteFonts(siteTokens, !!pageData);
+  // The canvas shows the shared site header/footer (the home page's), as the
+  // public page does. `header`/`footer` state stays the page's own for saving.
+  const siteChromeData = pageSlug === 'home' || !pageData
+    ? { ...pageData, header, footer }
+    : { ...pageData, header: pageData.siteHeader ?? header, footer: pageData.siteFooter ?? footer };
 
   const isDirty = saveStatus === 'dirty' || saveStatus === 'error' || saveStatus === 'saving';
   useEffect(() => {
@@ -1050,7 +1055,7 @@ export default function WebEditor() {
               <EditorErrorBoundary>
               <div className="public-site site-editor bg-surface text-text-base" style={siteThemeStyle(siteTokens)}>
               <SiteFrame label="Header" note="Shared across all pages">
-                <SiteHeader pageData={{ ...pageData, header, footer }} currentPath={pageSlug === 'home' ? '/' : `/${pageSlug}`} sticky={false} />
+                <SiteHeader pageData={siteChromeData} currentPath={pageSlug === 'home' ? '/' : `/${pageSlug}`} sticky={false} />
               </SiteFrame>
 
               {/* Empty state */}
@@ -1122,7 +1127,7 @@ export default function WebEditor() {
               )}
 
               <SiteFrame label="Footer" note="Shared across all pages">
-                <SiteFooter pageData={{ ...pageData, header, footer }} />
+                <SiteFooter pageData={siteChromeData} />
               </SiteFrame>
               </div>
               </EditorErrorBoundary>

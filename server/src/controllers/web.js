@@ -95,42 +95,11 @@ export const getPageBySlug = async (req, res) => {
       return res.status(404).json({ error: 'Page not found' });
     }
 
-    // Create a default page if it doesn't exist yet
+    // Unknown slug: 404. This route is public, so creating a page here let any
+    // visitor add rows (and admin page-list entries) just by visiting a URL.
+    // Editors create pages from the Pages screen or the admin endpoint.
     if (!page) {
-      page = await prisma.webPage.create({
-        data: {
-          slug,
-          title: slug.charAt(0).toUpperCase() + slug.slice(1) + ' Page',
-          template: 'modern',
-        },
-        include: {
-          sections: { orderBy: { order: 'asc' }, include: { blocks: { orderBy: { order: 'asc' } } } },
-          blocks: { orderBy: { order: 'asc' } },
-        },
-      });
-
-      // Create a default section with a hero block
-      const section = await prisma.webSection.create({
-        data: {
-          pageId: page.id,
-          order: 0,
-          ...DEFAULT_SECTION,
-          blocks: {
-            create: [{
-              pageId: page.id,
-              type: 'hero',
-              order: 0,
-              content: JSON.stringify({
-                title: 'Welcome to our platform',
-                subtitle: 'Discover amazing features and build your online presence.',
-              }),
-            }],
-          },
-        },
-        include: { blocks: { orderBy: { order: 'asc' } } },
-      });
-
-      page.sections = [section];
+      return res.status(404).json({ error: 'Page not found' });
     }
 
     // ── Migrate legacy page-level blocks into a section if none exist yet ───
@@ -505,10 +474,28 @@ export const getAdminPage = async (req, res) => {
     // Theme + nav so the editor canvas renders exactly like the public site.
     const { siteStyle, nav } = await loadSiteContext();
 
+    // The site header/footer are shared: the public page always shows the home
+    // page's (see getPageBySlug). The editor shows them read-only on the canvas,
+    // so hand it the same ones. `header`/`footer` stay the page's own so saving
+    // never copies the home page's into this page.
+    const ownHeader = parseJsonField(page.header);
+    const ownFooter = parseJsonField(page.footer);
+    let siteHeader = ownHeader;
+    let siteFooter = ownFooter;
+    if (slug !== 'home') {
+      const homePage = await prisma.webPage.findUnique({ where: { slug: 'home' }, select: { header: true, footer: true } });
+      if (homePage) {
+        siteHeader = parseJsonField(homePage.header) || ownHeader;
+        siteFooter = parseJsonField(homePage.footer) || ownFooter;
+      }
+    }
+
     res.json({
       ...page,
-      header: parseJsonField(page.header),
-      footer: parseJsonField(page.footer),
+      header: ownHeader,
+      footer: ownFooter,
+      siteHeader,
+      siteFooter,
       sections: page.sections.map(parseSection),
       blocks: page.blocks.map(parseBlock),
       hasPublishedSnapshot,

@@ -189,7 +189,10 @@ export default function HeaderFooter() {
   const { toast, ToastMount } = useToast();
 
   useEffect(() => {
-    api.get('/web/home').then(({ data }) => {
+    // The admin endpoint returns the draft, which is what Save writes to. (The
+    // public endpoint returns the published copy, so saving could undo
+    // unpublished header/footer edits.)
+    api.get('/web/admin/home').then(({ data }) => {
       const h = data.header || DEFAULT_HEADER;
       const f = data.footer || DEFAULT_FOOTER;
       const merged = {
