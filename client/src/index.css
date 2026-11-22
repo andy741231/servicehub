@@ -178,6 +178,9 @@
   background: hsl(var(--background));
   color: hsl(var(--text-base));
 }
+/* Editor controls on a scaled canvas (CanvasFrame) keep their real size:
+   --ui-scale is 1 / canvas scale, set on the canvas document. */
+.site-editor-ui { scale: var(--ui-scale, 1); }
 /* Tailwind's @theme resolves --color-* once on :root (admin palette), so the
    site theme set inline on .public-site never reached token classes such as
    bg-primary-light or bg-surface-raised. Resolve them again here — and again

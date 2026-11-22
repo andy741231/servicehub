@@ -358,7 +358,23 @@ export default function EditorInspector({
   const blockId = selection?.kind === 'block' ? selection.block.id : null;
   useEffect(() => { setTab('content'); }, [blockId]);
 
-  if (!selection) return null;
+  // Nothing selected: keep the column (with a hint) instead of removing it —
+  // the canvas used to zoom in and out every time a block was selected or
+  // deselected, moving the block away from the cursor.
+  if (!selection) {
+    return (
+      <aside className="w-80 shrink-0 border-l border-border bg-surface sticky top-[52px] self-start h-[calc(100vh-52px)]" aria-label="Inspector">
+        <div className="flex items-center justify-between px-4 h-12 border-b border-border">
+          <h2 className="text-sm font-semibold text-text-base flex items-center gap-2"><LayoutPanelTop className="w-4 h-4 text-muted shrink-0" />Inspector</h2>
+          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised text-muted" aria-label="Close inspector" title="Close (more room for the page)"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 text-sm text-muted space-y-2">
+          <p className="text-text-base font-medium">Nothing selected</p>
+          <p>Click a block to change its settings, design and layout. Hover a section and use its gear for background and spacing.</p>
+        </div>
+      </aside>
+    );
+  }
 
   const title = selection.kind === 'block'
     ? `${blockTypeLabel(selection.block.type)} block`

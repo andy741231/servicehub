@@ -210,6 +210,10 @@ test('U28: the canvas shows the same shared header and footer as the published p
   const own = await getPage(fixture.slug);
   expect(own.header?.logo?.text ?? null).toBeNull();
   expect(own.footer?.sections?.length ?? 0).toBe(0);
+  // …and after that save the canvas still shows the shared ones (it used to
+  // switch to the page's own empty header/footer after the first autosave).
+  expect(norm(await canvas(page).locator('.site-editor-frame header').innerText())).toBe(pubHeader);
+  expect(norm(await canvas(page).locator('.site-editor-frame footer').innerText())).toBe(pubFooter);
 });
 
 test('U27: list blocks lay out by their own width; narrowing grows the block to fit', async ({ page }) => {
@@ -238,20 +242,41 @@ test('U27: list blocks lay out by their own width; narrowing grows the block to 
   expect(f.colEnd).toBeLessThanOrEqual(14);
 });
 
-test('U40: with the inspector open the desktop canvas keeps the window width (scaled to fit)', async ({ page }) => {
+test('U40/V1: the canvas never shrinks below 80%, controls keep their size, selecting doesn\'t zoom', async ({ page }) => {
   await openEditor(page, fixture.slug);
-  await selectBlock(page, 'Features');
-  await expect(inspector(page)).toBeVisible();
   const frame = page.locator('iframe[title="Page canvas"]');
-  // Laid out at the window width, like the live page in this window…
+  const scale = async () => Number(await frame.getAttribute('data-canvas-scale'));
+  // The inspector column is there even with nothing selected…
+  await expect(inspector(page)).toBeVisible();
+  const before = await scale();
+  // …so selecting a block doesn't change the zoom (the page used to jump).
+  await selectBlock(page, 'Features');
+  await expect.poll(() => inspectorTitle(page)).toMatch(/Features block/);
+  expect(await scale()).toBe(before);
+  // Near the window width (1440) and never below 80%.
+  expect(before).toBeGreaterThanOrEqual(0.8);
   const inner = await canvas(page).locator('body').evaluate((b) => b.ownerDocument.defaultView.innerWidth);
-  expect(inner).toBe(await page.evaluate(() => document.documentElement.clientWidth));
-  // …and scaled to the room left beside the inspector, so nothing is cut off.
-  const scale = Number(await frame.getAttribute('data-canvas-scale'));
-  expect(scale).toBeLessThan(1);
+  expect(inner).toBeGreaterThanOrEqual(1300);
+  // Nothing cut off behind the inspector.
   const fb = await frame.boundingBox();
   const ib = await inspector(page).boundingBox();
   expect(fb.x + fb.width).toBeLessThanOrEqual(ib.x + 1);
+  // Editor controls on the canvas keep their real size on screen.
+  const tbBtn = await canvas(page).getByRole('toolbar', { name: 'Block actions' }).getByRole('button').nth(1).boundingBox();
+  expect(Math.round(tbBtn.height)).toBeGreaterThanOrEqual(32);
+
+  // Add block + inspector: still at least 80%; and only one left panel at a time.
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  const s3 = section(page, 3);
+  await s3.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await s3.hover();
+  await s3.getByRole('button', { name: 'Add Block', exact: true }).click();
+  const picker = page.getByRole('complementary', { name: 'Add block' });
+  await expect(picker).toBeVisible();
+  expect(await scale()).toBeGreaterThanOrEqual(0.8);
+  await page.getByRole('button', { name: 'Toggle layers panel' }).click();
+  await expect(page.getByRole('complementary', { name: 'Layers panel' })).toBeVisible();
+  await expect(picker).toHaveCount(0);
   // Raw mouse coordinates (from the block's on-screen box) still hit the right block.
   await selectBlock(page, 'Hero');
   await expect.poll(() => inspectorTitle(page)).toMatch(/Hero block/);
@@ -637,6 +662,46 @@ test('U42: a block with long content saves (needs migration 20261122_web_json_co
   await api('PUT', `/${fixture.slug}`, { header: {}, footer: {}, sections });
   const text = (await saved())[0].blocks.find((b) => b.type === 'text');
   expect(text.content.html).toBe(long);
+});
+
+test('V5: a refused save explains itself, stops retrying, and undo gets saving going again', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const heroId = (await saved())[0].blocks[0].id;
+  // The server refuses saves as "too long" (what the 1,000-character column did).
+  let refuse = true;
+  let puts = 0;
+  await page.route(`**/api/web/${fixture.slug}`, (route) => {
+    if (route.request().method() !== 'PUT') return route.fallback();
+    puts += 1;
+    if (!refuse) return route.fallback();
+    return route.fulfill({ status: 422, json: { error: 'Part of this page is too long to save.', code: 'TOO_LONG', column: 'content', blockId: heroId, blockType: 'hero' } });
+  });
+
+  // Any edit triggers a save, which the server refuses.
+  await selectBlock(page, 'Hero');
+  const h1 = block(page, 'Hero').locator('h1[contenteditable="true"]');
+  await h1.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' now');
+  await page.keyboard.press('Escape');
+  const bar = page.getByRole('alert').filter({ hasText: 'aren’t saved' });
+  await expect(bar).toBeVisible();
+  await expect(bar).toContainText('the Hero block is too long to save');
+  // No futile automatic retries (they used to run every 10 s forever).
+  const before = puts;
+  await page.waitForTimeout(11500);
+  expect(puts).toBe(before);
+
+  // Show block selects it; undoing the refused change saves the page again.
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await bar.getByRole('button', { name: 'Show block' }).click();
+  await expect.poll(() => inspectorTitle(page)).toMatch(/Hero block/);
+  refuse = false;
+  const save = nextSave(page, fixture.slug);
+  await bar.getByRole('button', { name: 'Undo last change' }).click();
+  await save;
+  await expect(bar).toHaveCount(0);
+  expect((await saved())[0].blocks[0].content.title).not.toContain(' now');
 });
 
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {

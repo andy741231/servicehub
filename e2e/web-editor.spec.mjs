@@ -102,7 +102,9 @@ test('Esc walks the selection up: block → section → nothing', async ({ page 
   await page.keyboard.press('Escape');
   await expect.poll(() => inspectorTitle(page)).toMatch(/Section 2/);
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('complementary', { name: 'Inspector' })).toHaveCount(0);
+  // Nothing selected: the inspector column stays (so the canvas doesn't zoom)
+  // and says so.
+  await expect(page.getByRole('complementary', { name: 'Inspector' }).getByText('Nothing selected')).toBeVisible();
 });
 
 test('inspector: design and section settings persist', async ({ page }) => {

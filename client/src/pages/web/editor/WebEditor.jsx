@@ -23,6 +23,16 @@ import FluidSection from './fluid/FluidSection.jsx';
 import { isTypingTarget, isTextEntryTarget } from './editorUtils';
 import { blockTypeLabel } from './BlockSettingsPanel';
 
+// Save / restore responses carry the page only. Keep the site context loaded
+// with it (theme, nav, and the shared header/footer the canvas shows) — the
+// canvas used to switch to the page's own empty header/footer after the first
+// autosave.
+const SITE_CONTEXT_KEYS = ['siteStyle', 'nav', 'siteHeader', 'siteFooter', 'headerFooterLive'];
+const keepSiteContext = (prev, data) => ({
+  ...data,
+  ...Object.fromEntries(SITE_CONTEXT_KEYS.map((k) => [k, data?.[k] ?? prev?.[k]])),
+});
+
 const MAX_HISTORY = 50; // Bound undo history to prevent memory growth
 
 /**
@@ -67,6 +77,10 @@ export default function WebEditor() {
   const [addSectionAfterIndex, setAddSectionAfterIndex] = useState(null);
   const [saveStatus, setSaveStatus] = useState('clean'); // 'clean' | 'dirty' | 'saving' | 'saved' | 'error'
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  // Why the last save failed: { transient, code, message, blockId, blockType }.
+  // Transient (offline / server error) → keep retrying; anything else can't
+  // succeed by retrying, so the banner explains it and offers a way out.
+  const [saveError, setSaveError] = useState(null);
   const [isPublished, setIsPublished] = useState(true);
   // Undo history lives in a ref (always current — no stale closures from
   // keyboard handlers or timers); historyVersion re-renders undo/redo buttons.
@@ -271,8 +285,9 @@ export default function WebEditor() {
       savedSeqRef.current = seq;
       savedSnapshotRef.current = { sections: secs, header: hdr, footer: ftr };
       // The save response has no siteStyle/nav — keep the ones we loaded.
-      setPageData((prev) => ({ ...data, siteStyle: data.siteStyle ?? prev?.siteStyle, nav: data.nav ?? prev?.nav }));
+      setPageData((prev) => keepSiteContext(prev, data));
       setLastSavedAt(new Date());
+      setSaveError(null);
       if (changeSeqRef.current !== seq) {
         setSaveStatus('dirty'); // edited during the request — autosave again
       } else {
@@ -281,6 +296,14 @@ export default function WebEditor() {
       }
     } catch (error) {
       console.error('Failed to save page:', error);
+      const res = error?.response;
+      setSaveError({
+        transient: !res || res.status >= 500,
+        code: res?.data?.code || null,
+        message: res?.data?.error || null,
+        blockId: res?.data?.blockId || null,
+        blockType: res?.data?.blockType || null,
+      });
       setSaveStatus('error');
       throw error;
     }
@@ -310,7 +333,7 @@ export default function WebEditor() {
       } catch {
         const ok = await confirmDialog({
           title: "Couldn't save your latest changes",
-          message: 'Your most recent edits could not be saved. Leave anyway and lose them?',
+          message: `Your edits since ${lastSavedAt ? lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'you opened this page'} could not be saved. Leave anyway and lose them?`,
           confirmLabel: 'Leave without saving',
           cancelLabel: 'Stay',
           variant: 'warning',
@@ -322,12 +345,15 @@ export default function WebEditor() {
     return () => { cancelled = true; };
   }, [blocker.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Autosave after a pause in editing; retry a failed save every 10s.
+  // Autosave after a pause in editing; retry a failed save every 10s — but
+  // only when retrying can help (offline / server error). A new edit (e.g.
+  // undoing the change that was refused) sets 'dirty' and saves again.
   useEffect(() => {
     if (saveStatus !== 'dirty' && saveStatus !== 'error') return undefined;
+    if (saveStatus === 'error' && saveError && !saveError.transient) return undefined;
     const t = setTimeout(() => saveNow({ autosave: true }).catch(() => {}), saveStatus === 'error' ? 10000 : 1500);
     return () => clearTimeout(t);
-  }, [saveStatus, lastChangeTime]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [saveStatus, lastChangeTime, saveError]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePublish = async () => {
     if (publishSaving) return;
@@ -1005,10 +1031,36 @@ export default function WebEditor() {
         templateSaving={templateSaving}
         onShowVersionHistory={() => setShowVersionHistory(true)}
         onShowKeyboardHelp={() => setShowKeyboardHelp(true)}
-        onToggleLayersPanel={() => setShowLayersPanel(s => !s)}
+        // One left panel at a time: Layers and Add block side by side left
+        // the page a sliver (U40 review).
+        onToggleLayersPanel={() => { if (!showLayersPanel) setBlockPaletteTarget(null); setShowLayersPanel(!showLayersPanel); }}
         showLayersPanel={showLayersPanel}
         toast={toast}
       />
+
+      {/* Save failed: say why, since when nothing has been saved, and what to do. */}
+      {saveStatus === 'error' && saveError && (() => {
+        const since = lastSavedAt ? `since ${lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'since you opened this page';
+        const blockExists = saveError.blockId && sections.some((sec) => (sec.blocks || []).some((b) => b.id === saveError.blockId));
+        const what = saveError.code === 'TOO_LONG'
+          ? `the ${blockTypeLabel(saveError.blockType) || 'block'} block is too long to save. Shorten it, or undo the last change.`
+          : saveError.transient
+            ? 'the server can’t be reached right now. Retrying every 10 seconds — keep this tab open.'
+            : `the server refused them (${saveError.message || 'unknown error'}). Undo the last change or try again.`;
+        const btn = 'px-3 min-h-[32px] rounded-md text-xs font-semibold border border-danger/30 bg-white text-danger hover:bg-danger-light';
+        return (
+          <div role="alert" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] w-[min(760px,calc(100vw-32px))] flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 rounded-xl bg-danger-light border border-danger/30 shadow-[0_8px_24px_rgba(16,20,30,0.18)] text-sm text-text-base">
+            <span className="flex-1 min-w-[240px]"><strong className="text-danger">Your changes {since} aren’t saved:</strong> {what}</span>
+            <span className="flex gap-2">
+              {blockExists && (
+                <button type="button" className={btn} onClick={() => { handleSelectBlock(saveError.blockId); setInspectorOpen(true); revealAfterRender(`[data-block-id="${saveError.blockId}"]`); }}>Show block</button>
+              )}
+              <button type="button" className={btn} onClick={handleUndo} disabled={historyRef.current.index <= 0}>Undo last change</button>
+              <button type="button" className={btn} onClick={() => saveRef.current()}>Retry</button>
+            </span>
+          </div>
+        );
+      })()}
 
       {showVersionHistory && (
         <WebVersionHistoryPanel
@@ -1022,7 +1074,7 @@ export default function WebEditor() {
               header: page?.header || { logo: { text: '', imageUrl: '' }, navigation: [], styles: {} },
               footer: page?.footer || { sections: [], copyright: '', styles: {} },
             };
-            if (page) setPageData((prev) => ({ ...page, siteStyle: page.siteStyle ?? prev?.siteStyle, nav: page.nav ?? prev?.nav }));
+            if (page) setPageData((prev) => keepSiteContext(prev, page));
             setSections(restored.sections);
             setHeader(restored.header);
             setFooter(restored.footer);
@@ -1130,7 +1182,7 @@ export default function WebEditor() {
                   onUpdateSection={updateSection}
                   onDeleteBlock={deleteBlock}
                   onDuplicateBlock={duplicateBlock}
-                  onAddBlock={(sIdx) => setBlockPaletteTarget({ sectionIndex: sIdx })}
+                  onAddBlock={(sIdx) => { setShowLayersPanel(false); setBlockPaletteTarget({ sectionIndex: sIdx }); }}
                   onDropBlock={(sIdx, type, row) => addBlockToSection(sIdx, type, row)}
                   isJustAdded={isJustAdded}
                   onDeleteSection={deleteSection}

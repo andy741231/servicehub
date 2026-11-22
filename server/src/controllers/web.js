@@ -300,6 +300,21 @@ export const updatePage = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating web page:', error);
+    // A value longer than its column (Prisma P2000). Retrying can't help, so
+    // say so, and point at the largest block (almost certainly the culprit)
+    // so the editor can take the person to it.
+    if (error?.code === 'P2000') {
+      const blocks = (req.body?.sections || []).flatMap((s) => s.blocks || []);
+      const size = (b) => JSON.stringify(b.content ?? '').length;
+      const largest = blocks.reduce((max, b) => (!max || size(b) > size(max) ? b : max), null);
+      return res.status(422).json({
+        error: 'Part of this page is too long to save.',
+        code: 'TOO_LONG',
+        column: error.meta?.column_name || null,
+        blockId: largest?.id || null,
+        blockType: largest?.type || null,
+      });
+    }
     res.status(500).json({ error: 'Failed to update web page' });
   }
 };

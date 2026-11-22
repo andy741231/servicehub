@@ -335,9 +335,9 @@ export default function FluidSection({
       {/* ── Top-center: + Add Section (above) ───────────────────────────── */}
       {!readOnly && (
         <div
-          className="site-editor-chrome absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100"
+          className="site-editor-chrome site-editor-ui absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100"
           // First section sits under the sticky toolbar — keep its pill inside.
-          style={{ top: sectionIndex === 0 ? 8 : -14, ...chromeStyle }}
+          style={{ top: sectionIndex === 0 ? 8 : -14, transformOrigin: sectionIndex === 0 ? 'top center' : 'center', ...chromeStyle }}
         >
           <button
             onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex - 1); }}
@@ -353,10 +353,10 @@ export default function FluidSection({
       {/* ── Top-left: section settings + Add Block ─────────────────────── */}
       {!readOnly && (
         <div
-          className="site-editor-chrome absolute left-4 flex items-center gap-2 z-[2000] transition-opacity duration-100"
+          className="site-editor-chrome site-editor-ui absolute left-4 flex items-center gap-2 z-[2000] transition-opacity duration-100"
           // First section: its "Add Section" pill sits inside at the top, so
           // start this cluster below it (they collide on narrow canvases).
-          style={{ top: sectionIndex === 0 ? 56 : 16, ...chromeStyle }}
+          style={{ top: sectionIndex === 0 ? 56 : 16, transformOrigin: 'top left', ...chromeStyle }}
         >
           <button
             onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
@@ -383,7 +383,7 @@ export default function FluidSection({
           click meant for a block could land on Remove.) Section settings and
           height live in the inspector; "add below" is the bottom pill. */}
       {!readOnly && (
-        <div className="site-editor-chrome absolute right-4 flex gap-2 z-[2000] transition-opacity duration-100" style={{ top: sectionIndex === 0 ? 56 : 16, ...chromeStyle }}>
+        <div className="site-editor-chrome site-editor-ui absolute right-4 flex gap-2 z-[2000] transition-opacity duration-100" style={{ top: sectionIndex === 0 ? 56 : 16, transformOrigin: 'top right', ...chromeStyle }}>
             <div className={`bg-white rounded-lg ${pillShadow} flex items-center p-0.5`} role="toolbar" aria-label="Section actions">
               <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="w-8 h-8 flex items-center justify-center rounded text-text-base hover:bg-surface-raised">
                 <Copy className="w-3.5 h-3.5" />
@@ -426,7 +426,7 @@ export default function FluidSection({
 
       {/* ── Mobile layout mode (mobile view only) ──────────────────────── */}
       {!readOnly && isMobile && blocks.length > 0 && (
-        <div className="site-editor-chrome absolute bottom-3 left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={chromeStyle}>
+        <div className="site-editor-chrome site-editor-ui absolute bottom-3 left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={{ transformOrigin: 'bottom center', ...chromeStyle }}>
           {mobileAuto ? (
             <button
               onClick={(e) => { e.stopPropagation(); customizeMobile(); }}
@@ -449,7 +449,7 @@ export default function FluidSection({
 
       {/* ── Bottom-center: + Add Section (below; omitted on last section where the page-level CTA sits) */}
       {!readOnly && !isLastSection && (
-        <div className="site-editor-chrome absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={{ bottom: -14, ...chromeStyle }}>
+        <div className="site-editor-chrome site-editor-ui absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={{ bottom: -14, transformOrigin: 'center', ...chromeStyle }}>
           <button
             onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}
             className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} text-white`}

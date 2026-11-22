@@ -25,6 +25,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+const MIN_SCALE = 0.8;
 const SRC_DOC = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
 
 export default function CanvasFrame({ width = '100%', layoutWidth, minHeight, onDocument, title = 'Page canvas', className = '', children }) {
@@ -39,9 +40,22 @@ export default function CanvasFrame({ width = '100%', layoutWidth, minHeight, on
     setBoxWidth(box.clientWidth);
     return () => ro.disconnect();
   }, []);
-  const scale = layoutWidth && boxWidth && boxWidth < layoutWidth ? boxWidth / layoutWidth : 1;
+  // Never shrink the page below MIN_SCALE: with several panels open it became
+  // unreadable (0.3 at 1280px, a 128px sliver at 1024). Below that, lay the
+  // page out narrower instead (as before scaling existed).
+  let scale = 1;
+  let frameWidth = layoutWidth;
+  if (layoutWidth && boxWidth && boxWidth < layoutWidth) {
+    scale = Math.max(MIN_SCALE, boxWidth / layoutWidth);
+    frameWidth = Math.round(boxWidth / scale);
+  }
   const [mountNode, setMountNode] = useState(null);
   const [height, setHeight] = useState(0);
+  // Editor controls drawn on the canvas (.site-editor-ui) undo the scale via
+  // this variable, so toolbars, labels and handles keep their real size.
+  useEffect(() => {
+    mountNode?.ownerDocument.documentElement.style.setProperty('--ui-scale', String(1 / scale));
+  }, [mountNode, scale]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -120,7 +134,7 @@ export default function CanvasFrame({ width = '100%', layoutWidth, minHeight, on
         data-canvas-scale={scale}
         className={`block border-0 ${scaled ? '' : 'mx-auto'} ${className}`}
         style={scaled
-          ? { width: layoutWidth, height: height || undefined, minHeight: minHeight ? `calc((${minHeight}) / ${scale})` : undefined, transform: `scale(${scale})`, transformOrigin: '0 0' }
+          ? { width: frameWidth, height: height || undefined, minHeight: minHeight ? `calc((${minHeight}) / ${scale})` : undefined, transform: `scale(${scale})`, transformOrigin: '0 0' }
           : { width, height: height || undefined, minHeight, transition: 'width .2s ease' }}
       />
       {mountNode && createPortal(children, mountNode)}

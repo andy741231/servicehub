@@ -194,7 +194,8 @@ export default function FluidBlock({
 
   const atLeftEdge = fluid.colStart <= 1;
   const atRightEdge = fluid.colEnd >= gridColumns + 1;
-  const corner = { width: '9px', height: '9px', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto' };
+  const corner = { width: '9px', height: '9px', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto', scale: 'var(--ui-scale, 1)' };
+  const edge = 'calc(12px * var(--ui-scale, 1))';
 
   const dragGrid = [Math.round(cellW), Math.round(cellH)];
   const resizeGrid = [Math.round(cellW), Math.round(cellH)];
@@ -305,8 +306,8 @@ export default function FluidBlock({
 
   const toolbar = selected && !isEditing && (
     <div
-      className="site-editor-chrome absolute z-[100] flex items-center gap-0.5 bg-white rounded-lg shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] p-1"
-      style={{ ...(chromeInside ? { top: 8, right: 8 } : { top: -46, left: 0 }), pointerEvents: 'auto' }}
+      className="site-editor-chrome site-editor-ui absolute z-[100] flex items-center gap-0.5 bg-white rounded-lg shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] p-1"
+      style={{ ...(chromeInside ? { top: 8, right: 8, transformOrigin: 'top right' } : { top: -46, left: 0, transformOrigin: 'bottom left' }), pointerEvents: 'auto' }}
       role="toolbar"
       aria-label="Block actions"
       onMouseDown={(e) => e.stopPropagation()}
@@ -357,8 +358,8 @@ export default function FluidBlock({
   // Hover label (block type), like Squarespace's block name tag.
   const hoverLabel = isHovered && !selected && !isEditing && (
     <span
-      className="site-editor-chrome absolute z-[100] px-2 py-0.5 rounded text-[11px] font-semibold text-white pointer-events-none"
-      style={{ top: chromeInside ? 6 : -24, left: chromeInside ? 6 : 0, background: 'hsl(var(--admin-primary))' }}
+      className="site-editor-chrome site-editor-ui absolute z-[100] px-2 py-0.5 rounded text-[11px] font-semibold text-white pointer-events-none"
+      style={{ top: chromeInside ? 6 : -24, left: chromeInside ? 6 : 0, background: 'hsl(var(--admin-primary))', transformOrigin: chromeInside ? 'top left' : 'bottom left' }}
     >
       {typeLabel}
     </span>
@@ -442,10 +443,10 @@ export default function FluidBlock({
           // the canvas clips horizontal overflow (B16), which cut a full-width
           // block's side handle in half and hid its corner handles entirely.
           resizeHandleStyles={{
-            top:    { height: '12px', top: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
-            bottom: { height: '12px', bottom: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
-            left:   { width: '12px', left: atLeftEdge ? '0px' : '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
-            right:  { width: '12px', right: atRightEdge ? '0px' : '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
+            top:    { height: edge, top: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
+            bottom: { height: edge, bottom: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
+            left:   { width: edge, left: atLeftEdge ? '0px' : '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
+            right:  { width: edge, right: atRightEdge ? '0px' : '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
             topLeft:    { ...corner, top: '-11px', left: atLeftEdge ? '1px' : '-11px', cursor: 'nwse-resize' },
             topRight:   { ...corner, top: '-11px', right: atRightEdge ? '1px' : '-11px', cursor: 'nesw-resize' },
             bottomLeft: { ...corner, bottom: '-11px', left: atLeftEdge ? '1px' : '-11px', cursor: 'nesw-resize' },
@@ -480,8 +481,8 @@ export default function FluidBlock({
           {/* Drag handle — keeps pointer events while the overlay body doesn't. */}
           {selected && !isEditing && (
             <div
-              className={`fluid-drag-handle site-editor-chrome absolute ${chromeInside ? 'top-2' : '-top-7'} left-1/2 -translate-x-1/2 flex items-center justify-center w-10 h-6 bg-primary text-primary-foreground rounded-md shadow-lg cursor-grab active:cursor-grabbing`}
-              style={{ pointerEvents: 'auto' }}
+              className={`fluid-drag-handle site-editor-chrome site-editor-ui absolute ${chromeInside ? 'top-2' : '-top-7'} left-1/2 -translate-x-1/2 flex items-center justify-center w-10 h-6 bg-primary text-primary-foreground rounded-md shadow-lg cursor-grab active:cursor-grabbing`}
+              style={{ pointerEvents: 'auto', transformOrigin: chromeInside ? 'top center' : 'bottom center' }}
               title="Drag to move"
             >
               <GripVertical className="w-3.5 h-3.5" />
