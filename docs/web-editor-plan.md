@@ -370,7 +370,7 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U23 | Empty section | Two "Add Block" buttons (pill + empty state) | `p2-block-picker.png` | minor | Hide the pill when the section is empty | S | **Fixed** (b26a3aa) |
 | U24 | Titles | Gallery/Highlights/Testimonials/Video titles couldn't be removed (a blank title left an empty heading and its margin) | Tartine rebuild | minor | Optional titles | S | **Fixed** (b26a3aa) |
 | U25 | Images | An unset image rendered a broken `<img>` on the site | code | minor | Render nothing; the gallery skips empty tiles | S | **Fixed** (b26a3aa) |
-| U26 | Theme | Site Styles colours never reach Tailwind token classes in blocks (`bg-primary`, `bg-surface-raised`, `bg-primary-light`…): `--color-*` is resolved at `:root` with the **admin** palette. The live site shows admin teal/mint (Intro band, Highlights/Gallery backgrounds, feature icon circles) | `p2-all-templates-desktop.jpg`, `r-tartine-public-after.jpg` | major | Redefine `--color-*` inside `.public-site` and revisit the site token mapping | M | **Fixed** (ROUND3): `--color-*` resolved again on `.public-site` (and on editor chrome, which stays admin). Token map: `--primary-light` is now a pale tint of the primary (was the secondary slate), `--primary-hover` a shade of it, `--surface-tertiary` one step darker than the background. Live changes: Intro band teal → site navy; feature number circles mint/teal → pale navy/navy (white on the blue card); mobile menu icon colour. Evidence `u26-*-before/after.png` |
+| U26 | Theme | Site Styles colours never reach Tailwind token classes in blocks (`bg-primary`, `bg-surface-raised`, `bg-primary-light`…): `--color-*` is resolved at `:root` with the **admin** palette. The live site shows admin teal/mint (Intro band, Highlights/Gallery backgrounds, feature icon circles) | `p2-all-templates-desktop.jpg`, `r-tartine-public-after.jpg` | major | Redefine `--color-*` inside `.public-site` and revisit the site token mapping | M | **Fixed** (d310ff4): `--color-*` resolved again on `.public-site` (and on editor chrome, which stays admin). Token map: `--primary-light` is now a pale tint of the primary (was the secondary slate), `--primary-hover` a shade of it, `--surface-tertiary` one step darker than the background. Live changes: Intro band teal → site navy; feature number circles mint/teal → pale navy/navy (white on the blue card); mobile menu icon colour. Evidence `u26-*-before/after.png` |
 | U27 | Responsive | Blocks narrowed on the grid keep viewport breakpoints (3 cards in a 14-column block) | `r-trinity-sidebyside.png`, `r-foodbank-split-hero.png` | major | Container queries in `SiteBlock` | M | Deferred — touches every list block's public CSS |
 | U28 | Header/footer | The editor's header/footer differ from the published page for a page with an empty own header (editor: page-title logo, light footer; site: site header, dark footer) | `r-tartine-desktop-after.jpg` vs `r-tartine-public-after.jpg` | major | Resolve header/footer the way `pages/public/Home.jsx` does | M | Deferred — needs tracing of the public fallback chain |
 | U29 | Hero / Quote | No button in Hero or Quote ("See schedule", "Give now", "Learn more") | rebuild notes | major | Button block, or an optional button field | M | **Fixed** (1de8621): Button block + optional hero button (renders nothing until labelled). Quote button not added |
@@ -383,7 +383,7 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U36 | Preview | Site nav links in Preview navigate away from the editor | `p3-preview.png` | minor | Intercept links in preview | S | **Fixed** (1de8621): links are inert with a notice |
 
 **Counts:** 2 blockers (U1, U30), 16 majors, 18 minors. **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in 1de8621;
-U21 and U33 partly). **Open:** U27, U28, U32 and the rest of U21/U33. U26 fixed in ROUND3.
+U21 and U33 partly). **Open:** U27, U28, U32 and the rest of U21/U33. U26 fixed in d310ff4.
 Public-site check: all 9 published pages, desktop + mobile, **pixel-identical** before vs after
 (`public-before/` vs `public-after/`). The intended public changes apply only to things no published
 page uses today (Contact colours, photo hero fill and subtitle, Quote background precedence,
@@ -426,7 +426,7 @@ optional empty titles, unset images).
 
 - **Done on branch `web-editor-ui-test-findings`:** U1–U25 (b26a3aa); Image block, Button block,
   hero button, section background photo, U31, U34–U36, "View live page" (1de8621).
-- **Done (ROUND3):** theme token scoping (U26), with before/after of all 9 published pages.
+- **Done (d310ff4):** theme token scoping (U26), with before/after of all 9 published pages.
 - **Next:** header/footer parity (U28) → container queries (U27).
 - **Content note (not a code bug):** the live home page's "Find your place." Features block has a
   saved text colour of #ffffff, so its heading is white on cream. Fix by clearing the text colour in the
