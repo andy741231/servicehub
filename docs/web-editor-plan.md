@@ -373,16 +373,17 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U26 | Theme | Site Styles colours never reach Tailwind token classes in blocks (`bg-primary`, `bg-surface-raised`, `bg-primary-light`…): `--color-*` is resolved at `:root` with the **admin** palette. The live site shows admin teal/mint (Intro band, Highlights/Gallery backgrounds, feature icon circles) | `p2-all-templates-desktop.jpg`, `r-tartine-public-after.jpg` | major | Redefine `--color-*` inside `.public-site` and revisit the site token mapping | M | Deferred — it changes the live home page (feature icons would turn slate on navy); needs a design decision on the token map |
 | U27 | Responsive | Blocks narrowed on the grid keep viewport breakpoints (3 cards in a 14-column block) | `r-trinity-sidebyside.png`, `r-foodbank-split-hero.png` | major | Container queries in `SiteBlock` | M | Deferred — touches every list block's public CSS |
 | U28 | Header/footer | The editor's header/footer differ from the published page for a page with an empty own header (editor: page-title logo, light footer; site: site header, dark footer) | `r-tartine-desktop-after.jpg` vs `r-tartine-public-after.jpg` | major | Resolve header/footer the way `pages/public/Home.jsx` does | M | Deferred — needs tracing of the public fallback chain |
-| U29 | Hero / Quote | No button in Hero or Quote ("See schedule", "Give now", "Learn more") | rebuild notes | major | Button block, or an optional button field | M | Deferred → Button block |
-| U30 | Images | No Image block: full-bleed photos, image + text splits and logo strips are impossible | `r-king-desktop.jpg`, `r-foodbank-split-hero.png` | blocker (capability) | Image block (fit/fill, focal point, link, alt) | L | Deferred — new block, top of the roadmap |
-| U31 | Hero | "Left" alignment leaves the subtitle in a centred max-width box | `r-tartine-desktop-after.jpg` | minor | Align the subtitle box too | S | Deferred (changes left-aligned heroes on the site) |
+| U29 | Hero / Quote | No button in Hero or Quote ("See schedule", "Give now", "Learn more") | rebuild notes | major | Button block, or an optional button field | M | **Fixed** (ROUND2): Button block + optional hero button (renders nothing until labelled). Quote button not added |
+| U30 | Images | No Image block: full-bleed photos, image + text splits and logo strips are impossible | `r-king-desktop.jpg`, `r-foodbank-split-hero.png` | blocker (capability) | Image block (fit/fill, focal point, link, alt) | L | **Fixed** (ROUND2): Image block (upload, fill/fit, focus, alt, caption, link; fills its cell, keeps its height when stacked on phones) |
+| U31 | Hero | "Left" alignment leaves the subtitle in a centred max-width box | `r-tartine-desktop-after.jpg` | minor | Align the subtitle box too | S | **Fixed** (ROUND2) |
 | U32 | Block picker | Closes after every add (3 blocks = 3 round trips) | probe | minor | Keep it open with "Done", or Shift-click to add several | S | Deferred — the new block is auto-selected; a behaviour change that wants owner input |
-| U33 | Image dialog | No alt text, no asset-library browse, no crop/focal point | `r-trinity-image-dialog.png` | major | Alt field, library picker, focal point | M | Deferred |
-| U34 | Text | A grey DOM selection highlight stays on a field after Esc | `r-king-desktop.jpg` | minor | Clear the selection on blur | S | Deferred |
-| U35 | Layers | "Move block up/down" only reorders the array — no visible effect on the desktop grid | code | minor | Remove, or relabel as mobile order | S | Deferred (recommend removing) |
-| U36 | Preview | Site nav links in Preview navigate away from the editor | `p3-preview.png` | minor | Intercept links in preview | S | Deferred |
+| U33 | Image dialog | No alt text, no asset-library browse, no crop/focal point | `r-trinity-image-dialog.png` | major | Alt field, library picker, focal point | M | **Partly fixed** (ROUND2): the Image block has alt text and a crop focus. Library browse and alt for images inside other blocks deferred |
+| U34 | Text | A grey DOM selection highlight stays on a field after Esc | `r-king-desktop.jpg` | minor | Clear the selection on blur | S | **Fixed** (ROUND2) |
+| U35 | Layers | "Move block up/down" only reorders the array — no visible effect on the desktop grid | code | minor | Remove, or relabel as mobile order | S | **Fixed** (ROUND2): removed |
+| U36 | Preview | Site nav links in Preview navigate away from the editor | `p3-preview.png` | minor | Intercept links in preview | S | **Fixed** (ROUND2): links are inert with a notice |
 
-**Counts:** 2 blockers (U1, U30), 16 majors, 18 minors. **Fixed:** 25 (U1–U25; U21 partly).
+**Counts:** 2 blockers (U1, U30), 16 majors, 18 minors. **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in ROUND2;
+U21 and U33 partly). **Open:** U26, U27, U28, U32 and the rest of U21/U33.
 Public-site check: all 9 published pages, desktop + mobile, **pixel-identical** before vs after
 (`public-before/` vs `public-after/`). The intended public changes apply only to things no published
 page uses today (Contact colours, photo hero fill and subtitle, Quote background precedence,
@@ -397,9 +398,9 @@ optional empty titles, unset images).
   the inspector's labelled *Height: Fit content / Tall* is now the one place.
 - **"Edit Section" (menu) vs the sliders button (top-left) → merged** into the sliders button.
 - **Block toolbar ✎ vs clicking text:** keep — it is the keyboard route into text. Low priority.
-- **Eye/Preview vs external-link button:** different jobs (draft preview vs live page). Keep both,
-  but relabel the external link "View live page" and hide it until the page has been published (on a
-  draft it opens a 404). Not done yet.
+- **Eye/Preview vs external-link button:** different jobs (draft preview vs live page). Kept both;
+  the external link is now "View live page" and only shows once the page is published (on a draft it
+  opened a 404). Done (ROUND2).
 - **"T" keyboard-help button:** now a keyboard icon. Could also move into a single "?" help menu.
 - **Layers toolbar button:** keep — it now selects sections and blocks and stays in view.
 - **Bring forward / Send backward / Bring to front / Send to back:** four always-visible buttons on
@@ -409,9 +410,10 @@ optional empty titles, unset images).
 
 ### Missing capabilities (ranked by impact on what a site owner can make)
 
-1. **Image block** — full-bleed photos, image + text splits, logo strips. Blocked part of every rebuild.
-2. **Button block / buttons in Hero and Quote** — every reference hero has a call to action.
-3. **Section background image (+ overlay)** — text over photos without abusing the Hero block.
+1. ~~Image block~~ — **added** (ROUND2; `new-blocks-public-desktop.jpg`, `new-blocks-public-mobile.jpg`, editor: `new-blocks-desktop.jpg`). Logo strips still need a multi-image layout (see 6).
+2. ~~Button block / hero button~~ — **added** (ROUND2); Quote still has no button.
+3. ~~Section background image (+ overlay)~~ — **added** (ROUND2): Section settings → Background photo +
+   Darken (none/light/medium/dark). Stored in the section's `fluidConfig` JSON (no schema change).
 4. **Global styles that reach blocks** (U26) plus per-block type controls (font family, size,
    letter-spacing for headings) — needed for any brand that isn't the default.
 5. **Form block** (newsletter / sign-up with chosen fields and a destination).
@@ -422,9 +424,13 @@ optional empty titles, unset images).
 
 ### Prioritised plan
 
-- **Now (done on branch `web-editor-ui-test-findings`):** U1–U25.
-- **Next:** Image block (U30) → Button block / hero button (U29) → section background image →
-  theme token scoping (U26, with a visual check of the live home page) → header/footer parity (U28).
-- **Later:** container queries (U27), image dialog alt/library/focal point (U33), Arrange menu,
+- **Done on branch `web-editor-ui-test-findings`:** U1–U25 (b26a3aa); Image block, Button block,
+  hero button, section background photo, U31, U34–U36, "View live page" (ROUND2).
+- **Next:** theme token scoping (U26, with a visual check of the live home page) → header/footer
+  parity (U28) → container queries (U27).
+- **Later:** asset-library browse and alt text everywhere (U33), Arrange menu,
   form block, gallery layouts, the remaining minors (U31–U36).
-- Tests: `e2e/ui-findings.spec.mjs` covers U1–U8, U9/U10, U11–U17 (12 tests).
+- Tests: `e2e/ui-findings.spec.mjs` covers U1–U17, the new blocks (N1–N3) and U34/U36 (16 tests).
+- Public check, round 2: 8 of 9 published pages pixel-identical before vs after. The 9th,
+  `nonexistent-page-xyz`, changed because its content was edited and published by another user
+  (version 1, saved by Andy Chan at 02:07 UTC) during the session — not by these changes.

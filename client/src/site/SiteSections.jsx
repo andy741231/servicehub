@@ -4,12 +4,30 @@
  * at the same place in both.
  */
 import SiteBlock from './SiteBlock';
+import { resolveUrl } from './siteRichText';
 
 export const MOBILE_GRID_COLUMNS = 6;
+
+/** Darkening layer over a section photo, so text on top stays readable. */
+export const SECTION_OVERLAYS = { none: 0, light: 0.25, medium: 0.45, dark: 0.65 };
+
+/** Section background photo (kept in the fluidConfig JSON — no schema change). */
+function sectionBackground(section) {
+  const cfg = section.fluidConfig || {};
+  if (!cfg.backgroundImage) return {};
+  const o = SECTION_OVERLAYS[cfg.backgroundOverlay] ?? 0;
+  const url = `url("${resolveUrl(cfg.backgroundImage)}")`;
+  return {
+    backgroundImage: o ? `linear-gradient(rgba(0,0,0,${o}), rgba(0,0,0,${o})), ${url}` : url,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+}
 
 /** Outer box (padding/margins/background) of a section. Defaults are 0. */
 export function sectionBoxStyle(section) {
   return {
+    ...sectionBackground(section),
     paddingTop:      section.paddingTop     ?? 0,
     paddingBottom:   section.paddingBottom  ?? 0,
     paddingLeft:     section.paddingLeft    ?? 0,

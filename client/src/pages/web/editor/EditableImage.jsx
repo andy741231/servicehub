@@ -20,6 +20,8 @@ export default function EditableImage({
   onEditingStart,
   onEditingEnd,
   className = '',
+  style,
+  wrapperClassName = '', // replaces the default `relative` wrapper (must position the overlay)
   placeholder = 'Click to add image',
 }) {
   const [showControls, setShowControls] = useState(false);
@@ -73,11 +75,12 @@ export default function EditableImage({
   const btn = 'px-3 py-2 min-h-[40px] rounded-md flex items-center gap-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
   return (
-    <div className="relative">
+    <div className={wrapperClassName || 'relative'}>
       {src ? (
         <img
           src={src}
           alt={alt || ''}
+          style={style}
           className={`${className} cursor-pointer hover:opacity-90 transition-opacity`}
           onClick={open}
           onKeyDown={keyOpen}

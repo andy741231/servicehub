@@ -13,7 +13,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { X, LayoutPanelTop } from 'lucide-react';
-import { BlockContentSettings, blockTypeLabel } from './BlockSettingsPanel';
+import { BlockContentSettings, blockTypeLabel, ImageField } from './BlockSettingsPanel';
 import { isTextEntryTarget } from './editorUtils';
 
 const inputCls = 'w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-surface text-text-base focus:outline-none focus:ring-2 focus:ring-primary';
@@ -211,6 +211,15 @@ function SectionSettings({ section, onUpdate }) {
   return (
     <div className="space-y-4">
       <ColorField label="Background" value={section.backgroundColor || undefined} onCommit={(v) => onUpdate({ backgroundColor: v || null })} />
+      <ImageField label="Background photo" value={cfg.backgroundImage} onChange={(v) => setCfg({ backgroundImage: v })} />
+      {cfg.backgroundImage && (
+        <Segmented
+          label="Darken photo (keeps text readable)"
+          value={cfg.backgroundOverlay || 'none'}
+          options={[['none', 'None'], ['light', 'Light'], ['medium', 'Medium'], ['dark', 'Dark']]}
+          onChange={(v) => setCfg({ backgroundOverlay: v })}
+        />
+      )}
       <div className="grid grid-cols-2 gap-3">
         <label className={labelCls}>Space above (px)
           <CommitInput type="number" min={0} max={600} value={section.paddingTop ?? 0} onCommit={(v) => onUpdate({ paddingTop: v ?? 0 })} />

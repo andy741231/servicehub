@@ -30,7 +30,6 @@ export default function LayersPanel({
   onMoveSection,
   onDuplicateSection,
   onDeleteSection,
-  onMoveBlock,
   onDuplicateBlock,
   onDeleteBlock,
   onClose,
@@ -158,25 +157,9 @@ export default function LayersPanel({
                     <span className={`flex-1 text-sm truncate text-text-base`}>
                       {getBlockLabel(block, sIdx, bIdx)}
                     </span>
+                    {/* No move up/down: block order is the grid position (drag on the
+                        canvas or the Layout tab), so reordering the list did nothing. */}
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onMoveBlock?.(sIdx, bIdx, -1); }}
-                        disabled={bIdx === 0}
-                        className="p-1 hover:bg-surface rounded transition-colors disabled:opacity-30"
-                        aria-label="Move block up"
-                        title="Move up"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5 text-muted" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onMoveBlock?.(sIdx, bIdx, 1); }}
-                        disabled={bIdx === sectionBlocks.length - 1}
-                        className="p-1 hover:bg-surface rounded transition-colors disabled:opacity-30"
-                        aria-label="Move block down"
-                        title="Move down"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5 text-muted" />
-                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onDuplicateBlock?.(sIdx, bIdx); }}
                         className="p-1 hover:bg-surface rounded transition-colors"

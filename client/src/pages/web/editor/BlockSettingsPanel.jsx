@@ -16,7 +16,24 @@ const stripTags = (s) => String(s || '').replace(/<[^>]*>/g, '').replace(/\s+/g,
 
 /** Per block type: non-inline settings. `list` entries manage array items. */
 export const BLOCK_SETTINGS = {
-  hero: [{ key: 'backgroundImage', label: 'Background image', type: 'image' }],
+  hero: [
+    { key: 'backgroundImage', label: 'Background image', type: 'image' },
+    { key: 'buttonLink', label: 'Button link (type the button label on the block)', type: 'text', placeholder: '/visit' },
+    { key: 'buttonVariant', label: 'Button style', type: 'select', options: BUTTON_VARIANTS },
+  ],
+  image: [
+    { key: 'url', label: 'Image', type: 'image' },
+    { key: 'alt', label: 'Alt text (describes the image for people using screen readers)', type: 'text', placeholder: 'e.g. Families sharing a meal in the courtyard' },
+    { key: 'fit', label: 'Sizing', type: 'select', options: [['cover', 'Fill the block (crops the edges)'], ['contain', 'Show the whole image']] },
+    { key: 'focus', label: 'Keep in view when cropping', type: 'select', options: [['center', 'Center'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right']] },
+    { key: 'caption', label: 'Caption (optional)', type: 'text' },
+    { key: 'link', label: 'Link (optional)', type: 'text', placeholder: '/about or https://…' },
+  ],
+  button: [
+    { key: 'buttonLink', label: 'Button link (type the label on the block)', type: 'text', placeholder: '/give' },
+    { key: 'buttonVariant', label: 'Button style', type: 'select', options: BUTTON_VARIANTS },
+    { key: 'align', label: 'Alignment', type: 'select', options: [['center', 'Center'], ['left', 'Left'], ['right', 'Right']] },
+  ],
   'trust-bar': [{ key: 'items', label: 'Items', type: 'list', summary: (i) => `${i.number || ''} ${stripTags(i.label)}` }],
   'split-banner': [
     { key: 'buttonLink', label: 'Button link', type: 'text', placeholder: '/contact' },
@@ -81,7 +98,7 @@ function CsvInput({ value, onCommit }) {
  * library, or paste an address. Uploading used to be impossible here — the
  * only option was typing a URL.
  */
-function ImageField({ label, value, onChange }) {
+export function ImageField({ label, value, onChange }) {
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

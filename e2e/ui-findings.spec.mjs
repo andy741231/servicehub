@@ -215,3 +215,81 @@ test('U8: list blocks from the picker start with content', async ({ page }) => {
   await save;
   await expect(block(page, 'Features').locator('.public-feature-card')).toHaveCount(3);
 });
+
+// ── New capabilities (Image block, Button block, hero button, section photo) ──
+
+test('N1: Image block — upload fills the block; alt text and sizing are saved', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  let save = nextSave(page, fixture.slug);
+  await addBlock(page, 2, 'Image');
+  await save;
+  const img = block(page, 'Image');
+  save = nextSave(page, fixture.slug);
+  await img.locator('input[type="file"]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: png });
+  await save;
+  const shown = img.locator('img').first();
+  await expect(shown).toBeVisible();
+  const [ib, bb] = [await shown.boundingBox(), await img.boundingBox()];
+  expect(Math.abs(ib.height - bb.height)).toBeLessThan(2);
+  expect(Math.abs(ib.width - bb.width)).toBeLessThan(2);
+  const alt = inspector(page).getByRole('textbox', { name: /Alt text/ });
+  await alt.fill('Families at the picnic');
+  save = nextSave(page, fixture.slug);
+  await alt.blur();
+  await save;
+  const saved1 = (await saved())[1].blocks.find((b) => b.type === 'image');
+  expect(saved1.content).toMatchObject({ url: '/uploads/e2e-bg.png', alt: 'Families at the picnic', fit: 'cover' });
+});
+
+test('N2: Button block and the optional hero button', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  // Hero: placeholder button in the editor only; label it to make it real.
+  const heroBtn = block(page, 'Hero').locator('a [contenteditable="true"]');
+  await expect(heroBtn).toHaveCount(1);
+  await selectBlock(page, 'Hero');
+  await heroBtn.click();
+  await page.keyboard.type('Plan a visit');
+  let save = nextSave(page, fixture.slug);
+  await page.keyboard.press('Escape');
+  await save;
+  expect((await saved())[0].blocks[0].content.buttonText).toBe('Plan a visit');
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  save = nextSave(page, fixture.slug);
+  await addBlock(page, 2, 'Button');
+  await save;
+  await expect(block(page, 'Button').locator('a')).toContainText('Learn more');
+});
+
+test('N3: section background photo with overlay is saved and rendered', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const s1 = section(page, 1);
+  await s1.hover();
+  await s1.getByRole('button', { name: 'Section settings' }).click();
+  let save = nextSave(page, fixture.slug);
+  await inspector(page).locator('input[type="file"]').setInputFiles({ name: 'bg.png', mimeType: 'image/png', buffer: png });
+  await save;
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('radiogroup', { name: /Darken photo/ }).getByRole('radio', { name: 'Dark' }).click();
+  await save;
+  expect((await saved())[0].fluidConfig).toMatchObject({ backgroundImage: '/uploads/e2e-bg.png', backgroundOverlay: 'dark' });
+  await expect.poll(() => s1.evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/linear-gradient.*e2e-bg\.png/);
+});
+
+test('U34/U36/live link: selection cleared after editing; preview links inert; no live-page button on a draft', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  // Draft page (never published): nothing to open.
+  await expect(page.getByRole('button', { name: 'View live page' })).toHaveCount(0);
+  await selectBlock(page, 'Hero');
+  const h1 = block(page, 'Hero').locator('h1[contenteditable="true"]');
+  await h1.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Escape');
+  const leftover = await page.locator('iframe[title="Page canvas"]').evaluate((f) => f.contentDocument.getSelection().toString());
+  expect(leftover).toBe('');
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  const url = page.url();
+  await page.locator('.public-site a[href]').first().click();
+  await expect(page.getByText(/Links are disabled in preview/)).toBeVisible();
+  expect(page.url()).toBe(url);
+});

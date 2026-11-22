@@ -135,14 +135,18 @@ export default function EditorToolbar({
         >
           <Layers className="w-4 h-4" />
         </button>
-        <button
-          onClick={() => window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank')}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
-          title="Open published page in a new tab"
-          aria-label="Open published page in a new tab"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </button>
+        {/* Only once there is a live page to open (on a draft it was a 404).
+            Preview shows the draft; this shows what visitors see now. */}
+        {hasPublishedSnapshot && isPublished && (
+          <button
+            onClick={() => window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank')}
+            className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
+            title="View live page (new tab)"
+            aria-label="View live page"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );

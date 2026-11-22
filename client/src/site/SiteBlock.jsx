@@ -87,7 +87,9 @@ export default function SiteBlock({ block }) {
           />
           <Text
             as="p" path="subtitle" value={c.subtitle} placeholder="Hero subtitle" multiline
-            className="text-xl max-w-2xl mx-auto"
+            // The subtitle box follows the alignment (it stayed centred under a
+            // left-aligned title).
+            className={`text-xl max-w-2xl ${{ left: 'mr-auto', right: 'ml-auto' }[cs.subtitleTextAlign || cs.textAlign] || 'mx-auto'}`}
             style={{
               // Muted grey is unreadable on a photo — use light text there.
               color: sStyle?.color || (c.backgroundImage ? 'hsl(var(--text-inverse) / 0.9)' : 'hsl(var(--text-muted))'),
@@ -98,7 +100,48 @@ export default function SiteBlock({ block }) {
               fontStyle: cs.subtitleFontStyle || undefined,
             }}
           />
+          {/* Optional call to action — nothing is rendered on the site until
+              it has a label (existing heroes are unchanged). */}
+          {(c.buttonText || edit) && (
+            <div className="mt-8">
+              <Link optional textPath="buttonText" hrefPath="buttonLink" text={c.buttonText} href={c.buttonLink} className={buttonClass(c.buttonVariant || 'gold')} after={<SpacedArrow />} placeholder="Button (optional)" />
+            </div>
+          )}
         </div>
+      </section>
+    );
+
+    case 'image': {
+      // A photo that fills its block (grid cell on desktop; on phones the
+      // auto-stacked item's min-height, inherited). `fit: contain` shows the
+      // whole image (logos, posters) instead of cropping it.
+      const fit = c.fit === 'contain' ? 'object-contain' : 'object-cover';
+      const img = (
+        <Image
+          path="url" value={c.url} alt={c.alt || ''}
+          className={`absolute inset-0 w-full h-full ${fit}`}
+          wrapperClassName="absolute inset-0"
+          style={{ objectPosition: c.focus || 'center' }}
+        />
+      );
+      return (
+        <figure className={`relative w-full h-full m-0 overflow-hidden ${cc}`} style={{ ...sStyle, minHeight: 'inherit' }}>
+          {!edit && c.link ? <a href={c.link} aria-label={c.alt || undefined} className="absolute inset-0">{img}</a> : img}
+          {c.caption && (
+            <figcaption className="absolute bottom-0 left-0 right-0 px-4 py-3 text-sm bg-gradient-to-t from-black/60 to-transparent pointer-events-none" style={{ color: 'hsl(var(--text-inverse))' }}>
+              {c.caption}
+            </figcaption>
+          )}
+        </figure>
+      );
+    }
+
+    case 'button': return (
+      <section
+        className={`flex items-center h-full px-6 ${cc}`}
+        style={{ ...sStyle, justifyContent: { left: 'flex-start', right: 'flex-end' }[c.align] || 'center' }}
+      >
+        <Link textPath="buttonText" hrefPath="buttonLink" text={c.buttonText} href={c.buttonLink} className={buttonClass(c.buttonVariant || 'gold')} after={<SpacedArrow />} placeholder="Button" />
       </section>
     );
 

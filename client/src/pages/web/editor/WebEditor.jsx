@@ -751,16 +751,6 @@ export default function WebEditor() {
     setAnnouncement(`${blockTypeLabel(block.type) || 'Block'} duplicated`);
   };
 
-  const moveBlock = (sIdx, bIdx, direction) => {
-    const sec = sections[sIdx];
-    if (!sec?.blocks) return;
-    const newIdx = bIdx + direction;
-    if (newIdx < 0 || newIdx >= sec.blocks.length) return;
-    const newBlocks = [...sec.blocks];
-    [newBlocks[bIdx], newBlocks[newIdx]] = [newBlocks[newIdx], newBlocks[bIdx]];
-    updateSectionBlocks(sIdx, newBlocks);
-  };
-
   const addNestedBlock = (sIdx, parentBIdx, colIndex, type) => {
     const sec = sections[sIdx];
     const block = sec.blocks[parentBIdx];
@@ -865,8 +855,18 @@ export default function WebEditor() {
           </div>
         </div>
 
-        {/* Live preview — render the actual public site */}
-        <div className="bg-surface">
+        {/* Live preview — render the actual public site. Links stay inert:
+            following one left the editor (U36). */}
+        <div
+          className="bg-surface"
+          onClickCapture={(e) => {
+            const a = e.target.closest?.('a[href]');
+            if (!a) return;
+            e.preventDefault();
+            e.stopPropagation();
+            toast(`Links are disabled in preview (${a.getAttribute('href')})`, 'info');
+          }}
+        >
           {sections.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
               <p className="text-muted">This page has no content yet</p>
@@ -882,6 +882,7 @@ export default function WebEditor() {
             <PublicHome previewMode previewData={previewData} />
           )}
         </div>
+        {ToastMount}
       </div>
     );
   }
@@ -1022,7 +1023,6 @@ export default function WebEditor() {
             onMoveSection={moveSection}
             onDuplicateSection={duplicateSection}
             onDeleteSection={deleteSection}
-            onMoveBlock={moveBlock}
             onDuplicateBlock={duplicateBlock}
             onDeleteBlock={deleteBlock}
             onClose={() => setShowLayersPanel(false)}

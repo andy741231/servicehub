@@ -1,6 +1,6 @@
 import {
   AlignLeft, Star, Hand, Quote, Award, LayoutList, Clock, CalendarDays,
-  MapPin, Images, Sparkles, MessageSquare, Mail, Video
+  MapPin, Images, Sparkles, MessageSquare, Mail, Video, Image as ImageIcon, MousePointerClick
 } from 'lucide-react';
 
 /**
@@ -23,6 +23,8 @@ export function generateClientId(prefix = 'entity') {
 export const BLOCK_CATEGORIES = ['Basics', 'Lists & features', 'Community', 'Media'];
 export const BLOCK_TYPES = [
   { id: 'hero',         name: 'Hero',         Icon: Sparkles,      category: 'Basics',           rows: 6, description: 'Large headline with a subtitle', keywords: 'banner header title welcome' },
+  { id: 'image',        name: 'Image',        Icon: ImageIcon,     category: 'Basics',           rows: 5, description: 'A photo that fills its space', keywords: 'photo picture banner full width logo poster' },
+  { id: 'button',       name: 'Button',       Icon: MousePointerClick, category: 'Basics',       rows: 1, description: 'A call-to-action button', keywords: 'cta link action donate give' },
   { id: 'text',         name: 'Text',         Icon: AlignLeft,     category: 'Basics',           rows: 3, description: 'Paragraphs, headings and lists', keywords: 'paragraph copy body rich' },
   { id: 'intro',        name: 'Introduction', Icon: Hand,          category: 'Basics',           rows: 5, description: 'Colored band with a title and button', keywords: 'call to action cta button' },
   { id: 'quote',        name: 'Quote',        Icon: Quote,         category: 'Basics',           rows: 3, description: 'Large pull quote', keywords: 'testimonial citation' },
@@ -62,6 +64,8 @@ export const DEFAULT_SECTION = {
 export const makeDefaultBlockContent = (type) => {
   switch (type) {
     case 'hero':         return { title: 'Your Hero Title', subtitle: 'Add a compelling subtitle here' };
+    case 'image':        return { url: '', alt: '', caption: '', link: '', fit: 'cover', focus: 'center' };
+    case 'button':       return { buttonText: 'Learn more', buttonLink: '#', buttonVariant: 'gold', align: 'center' };
     case 'text':         return { content: 'Start writing your content here...' };
     case 'trust-bar':    return { items: [{ number: '01', label: 'One welcoming community' }, { number: '03', label: 'Ways to connect each week' }, { number: '∞', label: 'Room for your next step' }] };
     case 'split-banner': return { eyebrow: 'Your first Sunday', title: 'Come curious. Leave encouraged.', body: 'There is no dress code, no perfect background required, and no pressure to have all the answers.', buttonText: 'What to expect', buttonLink: '#', buttonVariant: 'gold', times: [{ label: 'Sunday morning', value: '9:00 AM · 11:00 AM' }, { label: 'Midweek table', value: 'Wednesdays · 6:30 PM' }] };

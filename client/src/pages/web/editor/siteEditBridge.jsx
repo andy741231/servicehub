@@ -92,13 +92,15 @@ function EditText({ as: Tag, path, value, className, style, placeholder, multili
   return editor;
 }
 
-function EditImage({ path, value, alt, className }) {
+function EditImage({ path, value, alt, className, style, wrapperClassName }) {
   const { update, startEditing, endEditing } = useSiteEdit();
   return (
     <EditableImage
       src={value}
       alt={alt}
       className={className}
+      style={style}
+      wrapperClassName={wrapperClassName}
       onChange={(url) => update(path, url)}
       onRemove={() => update(path, '')}
       onEditingStart={startEditing}

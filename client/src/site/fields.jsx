@@ -43,12 +43,12 @@ export function Text({ as: Tag = 'div', path, value, className, style, placehold
 }
 
 /** Image field (`value` is the image URL). */
-export function Image({ path, value, alt, className }) {
+export function Image({ path, value, alt, className, style, wrapperClassName }) {
   const edit = useSiteEdit();
-  if (edit?.Image) return <edit.Image path={path} value={value} alt={alt} className={className} />;
+  if (edit?.Image) return <edit.Image path={path} value={value} alt={alt} className={className} style={style} wrapperClassName={wrapperClassName} />;
   // An image nobody has chosen yet renders nothing (not a broken <img>).
   if (!value) return null;
-  return <img src={value} alt={alt} className={className} />;
+  return <img src={value} alt={alt} className={className} style={style} />;
 }
 
 /**

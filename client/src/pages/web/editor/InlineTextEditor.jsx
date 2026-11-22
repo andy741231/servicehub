@@ -155,6 +155,10 @@ export default function InlineTextEditor({
       if (after !== before) onChange?.(after);
     }
     editedRef.current = false;
+    // The browser keeps the text selection after blur, leaving a grey
+    // highlight on the field once editing has ended (U34).
+    const sel = el.ownerDocument.getSelection?.();
+    if (sel && sel.rangeCount && el.contains(sel.anchorNode)) sel.removeAllRanges();
     onEditingEnd?.(e);
     setVisible(false);
   }, [multiline, stripLineBreaks, onChange, onEditingEnd]);
