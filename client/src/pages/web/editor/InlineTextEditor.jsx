@@ -199,9 +199,11 @@ export default function InlineTextEditor({
     // the canvas iframe's coordinates.
     const frameEl = winOf().frameElement;
     const off = frameEl ? frameEl.getBoundingClientRect() : { left: 0, top: 0 };
+    // The desktop canvas may be scaled down to fit beside side panels.
+    const k = Number(frameEl?.dataset?.canvasScale) || 1;
     const rect = {
-      top: frameRect.top + off.top, bottom: frameRect.bottom + off.top,
-      left: frameRect.left + off.left, width: frameRect.width,
+      top: frameRect.top * k + off.top, bottom: frameRect.bottom * k + off.top,
+      left: frameRect.left * k + off.left, width: frameRect.width * k,
     };
     const vw = window.innerWidth;
     const vh = window.innerHeight;

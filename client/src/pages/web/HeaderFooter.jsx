@@ -5,7 +5,7 @@
  * here propagate everywhere automatically.
  */
 import { useState, useEffect, useRef } from 'react';
-import { Save, Check, AlertCircle, Plus, Trash2, GripVertical, Globe, RefreshCw, Upload } from 'lucide-react';
+import { Save, Check, AlertCircle, Send, Plus, Trash2, GripVertical, Globe, RefreshCw, Upload } from 'lucide-react';
 import api from '../../utils/api';
 import PageHeader from '../../components/PageHeader';
 import { useToast } from '../../components/Toast';
@@ -181,6 +181,10 @@ export default function HeaderFooter() {
   const [original, setOriginal] = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  // Do visitors see the saved header/footer? (They live on the home page and
+  // go live with "Publish" here, or when the home page is published.)
+  const [live, setLive] = useState(true);
   const [tab,      setTab]      = useState('header'); // 'header' | 'footer'
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState('');
@@ -207,6 +211,7 @@ export default function HeaderFooter() {
       setHeader(merged.header);
       setFooter(merged.footer);
       setOriginal(merged);
+      setLive(data.headerFooterLive !== false);
     }).catch(() => {
       setOriginal({ header: DEFAULT_HEADER, footer: DEFAULT_FOOTER });
     }).finally(() => setLoading(false));
@@ -214,17 +219,39 @@ export default function HeaderFooter() {
 
   const isDirty = original && JSON.stringify({ header, footer }) !== JSON.stringify(original);
 
+  const saveDraft = async () => {
+    await api.put('/web/home', { header, footer });
+    setOriginal({ header, footer });
+    const { data } = await api.get('/web/admin/home');
+    setLive(data.headerFooterLive !== false);
+    return data.headerFooterLive !== false;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put('/web/home', { header, footer });
-      const snap = { header, footer };
-      setOriginal(snap);
-      toast('Header & footer saved.');
+      const isLive = await saveDraft();
+      toast(isLive ? 'Header & footer saved.' : 'Saved. Publish to show these changes on the site.');
     } catch {
       toast('Failed to save. Please try again.', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Saves (if needed) and makes the header/footer live on every page, without
+  // publishing the home page's content.
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      if (isDirty) await saveDraft();
+      await api.post('/web/home/publish-header-footer');
+      setLive(true);
+      toast('Header & footer are live on the site.');
+    } catch {
+      toast('Failed to publish. Please try again.', 'error');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -276,6 +303,13 @@ export default function HeaderFooter() {
   return (
     <div className="max-w-7xl mx-auto p-6 lg:p-8">
       <PageHeader>
+        <span className="text-xs text-muted flex items-center gap-1.5 mr-1" role="status">
+          {isDirty
+            ? 'Unsaved changes'
+            : live
+              ? <><Check className="w-3.5 h-3.5 text-success" /> Live on the site</>
+              : <><span className="w-2 h-2 rounded-full bg-warning" aria-hidden="true" /> Saved, not live yet</>}
+        </span>
         {isDirty && (
           <button onClick={handleReset} className="btn-ghost">
             <RefreshCw className="w-4 h-4" /> Reset
@@ -284,13 +318,23 @@ export default function HeaderFooter() {
         <button
           onClick={handleSave}
           disabled={!isDirty || saving}
-          className="btn-primary"
+          className="btn-secondary"
+          title="Save without changing the live site"
         >
             {saving
               ? <AlertCircle className="w-4 h-4 animate-spin" />
               : <Save className="w-4 h-4" />}
             {saving ? 'Saving…' : 'Save'}
           </button>
+        <button
+          onClick={handlePublish}
+          disabled={(!isDirty && live) || publishing || saving}
+          className="btn-primary"
+          title="Show this header and footer on every page of the live site"
+        >
+          {publishing ? <AlertCircle className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          {publishing ? 'Publishing…' : 'Publish'}
+        </button>
       </PageHeader>
 
       {/* Tab switcher */}

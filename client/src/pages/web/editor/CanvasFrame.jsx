@@ -14,14 +14,32 @@
  *
  * Code running on the canvas must use the element's own document/window
  * (`el.ownerDocument`, `el.ownerDocument.defaultView`), not the globals.
+ *
+ * `layoutWidth` (desktop): lay the page out at this width even when side
+ * panels leave less room, and scale it down to fit. Blocks follow their own
+ * width (container queries), so laying out at the narrower width showed
+ * different layouts than visitors get (a half-width block: 1 column in the
+ * editor, 2 on the site). The scale is exposed as `data-canvas-scale` on the
+ * iframe for code that maps canvas coordinates into the editor window.
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 const SRC_DOC = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
 
-export default function CanvasFrame({ width = '100%', minHeight, onDocument, title = 'Page canvas', className = '', children }) {
+export default function CanvasFrame({ width = '100%', layoutWidth, minHeight, onDocument, title = 'Page canvas', className = '', children }) {
   const iframeRef = useRef(null);
+  const boxRef = useRef(null);
+  const [boxWidth, setBoxWidth] = useState(0);
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return undefined;
+    const ro = new ResizeObserver(() => setBoxWidth(box.clientWidth));
+    ro.observe(box);
+    setBoxWidth(box.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+  const scale = layoutWidth && boxWidth && boxWidth < layoutWidth ? boxWidth / layoutWidth : 1;
   const [mountNode, setMountNode] = useState(null);
   const [height, setHeight] = useState(0);
 
@@ -90,16 +108,22 @@ export default function CanvasFrame({ width = '100%', minHeight, onDocument, tit
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const scaled = scale < 1;
   return (
-    <>
+    // With a layoutWidth the wrapper never takes the iframe's width (clip +
+    // min-width 0), or a 1440px iframe would widen it and undo the scale.
+    <div ref={boxRef} style={layoutWidth ? { minWidth: 0, overflow: 'clip', height: scaled && height ? height * scale : undefined } : undefined}>
       <iframe
         ref={iframeRef}
         title={title}
         srcDoc={SRC_DOC}
-        className={`block border-0 mx-auto ${className}`}
-        style={{ width, height: height || undefined, minHeight, transition: 'width .2s ease' }}
+        data-canvas-scale={scale}
+        className={`block border-0 ${scaled ? '' : 'mx-auto'} ${className}`}
+        style={scaled
+          ? { width: layoutWidth, height: height || undefined, minHeight: minHeight ? `calc((${minHeight}) / ${scale})` : undefined, transform: `scale(${scale})`, transformOrigin: '0 0' }
+          : { width, height: height || undefined, minHeight, transition: 'width .2s ease' }}
       />
       {mountNode && createPortal(children, mountNode)}
-    </>
+    </div>
   );
 }

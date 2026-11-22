@@ -219,8 +219,7 @@ test('U27: list blocks lay out by their own width; narrowing grows the block to 
   await expect.poll(cols).toBe(3); // full width at 1440
   const rowsBefore = (await saved())[2].blocks[0].fluid.rowEnd;
 
-  // Narrow it to ~70% with the right-hand resize handle (the canvas is ~1120px
-  // wide with the inspector open, so that leaves room for two cards).
+  // Narrow it to about half with the right-hand resize handle.
   await selectBlock(page, 'Features');
   const handle = section(page, 3).locator('.fluid-resize-r').first();
   await handle.scrollIntoViewIfNeeded();
@@ -228,7 +227,7 @@ test('U27: list blocks lay out by their own width; narrowing grows the block to 
   await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
   await page.mouse.down();
   const bb = await feat().boundingBox();
-  await page.mouse.move(bb.x + bb.width * 0.7, hb.y + hb.height / 2, { steps: 12 });
+  await page.mouse.move(bb.x + bb.width * 0.5, hb.y + hb.height / 2, { steps: 12 });
   await page.mouse.up();
 
   await expect.poll(cols).toBe(2); // two cards across, not three
@@ -236,13 +235,86 @@ test('U27: list blocks lay out by their own width; narrowing grows the block to 
   await expect.poll(() => overflowPx(feat())).toBeLessThanOrEqual(1);
   await expect.poll(async () => (await saved())[2].blocks[0].fluid.rowEnd, { timeout: 10000 }).toBeGreaterThan(rowsBefore);
   const f = (await saved())[2].blocks[0].fluid;
-  expect(f.colEnd).toBeLessThan(25);
+  expect(f.colEnd).toBeLessThanOrEqual(14);
 });
 
-test('U37: visiting an unknown URL does not create a page', async ({ request }) => {
+test('U40: with the inspector open the desktop canvas keeps the window width (scaled to fit)', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Features');
+  await expect(inspector(page)).toBeVisible();
+  const frame = page.locator('iframe[title="Page canvas"]');
+  // Laid out at the window width, like the live page in this window…
+  const inner = await canvas(page).locator('body').evaluate((b) => b.ownerDocument.defaultView.innerWidth);
+  expect(inner).toBe(await page.evaluate(() => document.documentElement.clientWidth));
+  // …and scaled to the room left beside the inspector, so nothing is cut off.
+  const scale = Number(await frame.getAttribute('data-canvas-scale'));
+  expect(scale).toBeLessThan(1);
+  const fb = await frame.boundingBox();
+  const ib = await inspector(page).boundingBox();
+  expect(fb.x + fb.width).toBeLessThanOrEqual(ib.x + 1);
+  // Raw mouse coordinates (from the block's on-screen box) still hit the right block.
+  await selectBlock(page, 'Hero');
+  await expect.poll(() => inspectorTitle(page)).toMatch(/Hero block/);
+});
+
+test('U39: the header/footer publish on their own, without the page content', async ({ request }) => {
+  const slug = fixture.slug;
+  try {
+    await api('POST', `/${slug}/publish`);
+    const published = (await getPage(slug)).sections;
+    expect((await getPage(slug)).headerFooterLive).toBe(true);
+
+    // Draft edits to the header AND the content.
+    const sections = published.map((s, i) => (i !== 0 ? s : {
+      ...s, blocks: [{ ...s.blocks[0], content: { ...s.blocks[0].content, title: 'Draft-only title' } }],
+    }));
+    await api('PUT', `/${slug}`, { header: { logo: { text: 'E2E new header' } }, footer: {}, sections });
+    expect((await getPage(slug)).headerFooterLive).toBe(false);
+
+    await api('POST', `/${slug}/publish-header-footer`);
+    expect((await getPage(slug)).headerFooterLive).toBe(true);
+    // The content edit is still a draft: visitors see the published title.
+    const pub = await (await request.get(`/api/web/${slug}`)).json();
+    expect(JSON.stringify(pub.sections)).not.toContain('Draft-only title');
+  } finally {
+    await api('POST', `/${slug}/unpublish`);
+  }
+});
+
+test('U39: Header & Footer screen shows whether changes are live and publishes them', async ({ page }) => {
+  // Never touch the real home page: every home request is answered here.
+  const calls = [];
+  let live = false;
+  await page.route('**/api/web/**', (route) => (route.request().method() === 'GET' ? route.continue() : route.abort()));
+  await page.route('**/api/web/admin/home', (route) => route.fulfill({ json: {
+    slug: 'home', header: { logo: { text: 'E2E Church' }, navigation: [], styles: {} }, footer: { sections: [], styles: {} }, headerFooterLive: live,
+  } }));
+  await page.route('**/api/web/home', (route) => { calls.push(route.request().method()); return route.fulfill({ json: {} }); });
+  await page.route('**/api/web/home/publish-header-footer', (route) => { calls.push('publish'); live = true; return route.fulfill({ json: { headerFooterLive: true } }); });
+
+  await page.goto('/hub-admin/web/header-footer');
+  await expect(page.getByRole('status').filter({ hasText: 'not live yet' })).toBeVisible();
+  const publish = page.getByRole('button', { name: 'Publish' });
+  await publish.click();
+  await expect(page.getByRole('status').filter({ hasText: /^\s*Live on the site\s*$/ })).toBeVisible();
+  await expect(publish).toBeDisabled();
+  expect(calls).toEqual(['publish']); // nothing unsaved, so no save first
+
+  // An edit is saved first, then published.
+  await page.locator('input[value="E2E Church"]').fill('E2E Church 2');
+  await expect(page.getByRole('status').filter({ hasText: 'Unsaved changes' })).toBeVisible();
+  await publish.click();
+  await expect(page.getByRole('status').filter({ hasText: /^\s*Live on the site\s*$/ })).toBeVisible();
+  expect(calls).toEqual(['publish', 'PUT', 'publish']);
+});
+
+test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {
   const slug = `e2e-unknown-${Date.now()}`;
   const res = await request.get(`/api/web/${slug}`);
   expect(res.status()).toBe(404);
+  // Nor does opening the editor on it (that brought deleted temp pages back,
+  // published and in the nav).
+  await expect(api('GET', `/admin/${slug}`)).rejects.toThrow(/404/);
   const pages = await api('GET', '/pages');
   const list = Array.isArray(pages) ? pages : (pages.pages || pages.data || []);
   expect(list.some((p) => p.slug === slug)).toBe(false);

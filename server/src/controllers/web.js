@@ -365,6 +365,38 @@ export const unpublishPage = async (req, res) => {
   }
 };
 
+// Are the page's draft header/footer the ones visitors see? Without a published
+// snapshot the public site renders the draft, so it is live by definition.
+const headerFooterIsLive = (page) => {
+  if (!page.publishedSnapshot) return true;
+  const snap = typeof page.publishedSnapshot === 'string' ? JSON.parse(page.publishedSnapshot) : page.publishedSnapshot;
+  return JSON.stringify(parseJsonField(page.header) ?? null) === JSON.stringify(snap.header ?? null)
+    && JSON.stringify(parseJsonField(page.footer) ?? null) === JSON.stringify(snap.footer ?? null);
+};
+
+// POST /api/web/:slug/publish-header-footer — make the draft header/footer live
+// without publishing the page's content. The site header/footer live on the
+// home page, so this lets them go live on their own (Header & Footer screen).
+export const publishHeaderFooter = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const page = await prisma.webPage.findUnique({ where: { slug } });
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+    // No snapshot yet: visitors already see the draft. Creating a snapshot here
+    // would have no sections and blank the page, so there is nothing to do.
+    if (page.publishedSnapshot) {
+      const snap = typeof page.publishedSnapshot === 'string' ? JSON.parse(page.publishedSnapshot) : page.publishedSnapshot;
+      snap.header = parseJsonField(page.header);
+      snap.footer = parseJsonField(page.footer);
+      await prisma.webPage.update({ where: { slug }, data: { publishedSnapshot: JSON.stringify(snap) } });
+    }
+    res.json({ headerFooterLive: true });
+  } catch (error) {
+    console.error('Error publishing header/footer:', error);
+    res.status(500).json({ error: 'Failed to publish header and footer' });
+  }
+};
+
 // GET /api/web/admin/:slug — always returns the live draft (for the editor)
 /**
  * Site-wide data every rendered page needs: the theme (siteStyle) and the
@@ -413,12 +445,21 @@ export const getAdminPage = async (req, res) => {
       },
     });
 
+    // Only the home page is created on demand (first visit to the editor on a
+    // fresh install). Any other unknown slug is a 404: pages come from the
+    // Pages screen. Creating them here made a typo'd URL — or a late request
+    // for a page that was just deleted — bring it back published and in the
+    // site navigation (the schema defaults). Home starts unpublished too.
+    if (!page && slug !== 'home') {
+      return res.status(404).json({ error: 'Page not found' });
+    }
     if (!page) {
       page = await prisma.webPage.create({
         data: {
           slug,
           title: slug.charAt(0).toUpperCase() + slug.slice(1) + ' Page',
           template: 'modern',
+          isPublished: false,
         },
         include: {
           sections: { orderBy: { order: 'asc' }, include: { blocks: { orderBy: { order: 'asc' } } } },
@@ -496,6 +537,7 @@ export const getAdminPage = async (req, res) => {
       footer: ownFooter,
       siteHeader,
       siteFooter,
+      headerFooterLive: headerFooterIsLive(page),
       sections: page.sections.map(parseSection),
       blocks: page.blocks.map(parseBlock),
       hasPublishedSnapshot,

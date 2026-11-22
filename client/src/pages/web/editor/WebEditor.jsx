@@ -124,6 +124,14 @@ export default function WebEditor() {
   // section selection are mutually exclusive; the inspector shows whichever.
   const [selectedSectionIndex, setSelectedSectionIndex] = useState(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  // Desktop canvas lays out at the window's width (what a visitor with this
+  // window sees) and scales down when side panels take room (U40).
+  const [windowWidth, setWindowWidth] = useState(() => document.documentElement.clientWidth);
+  useEffect(() => {
+    const onResize = () => setWindowWidth(document.documentElement.clientWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   // Document inside the canvas iframe (CanvasFrame) — keyboard shortcuts and
   // DOM lookups must also cover it.
   const [canvasDoc, setCanvasDoc] = useState(null);
@@ -1033,12 +1041,13 @@ export default function WebEditor() {
             onClose={() => setShowLayersPanel(false)}
           />
         )}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className={`min-h-screen ${(previewDevice !== 'desktop' || viewport === 'mobile') ? 'py-8 bg-surface-raised' : ''}`}>
             {/* The canvas is an iframe so Tablet/Mobile are real 768px/390px
                 viewports: blocks' responsive styles behave as on a device. */}
             <CanvasFrame
               width={viewport === 'mobile' ? 375 : previewDevice === 'tablet' ? 768 : '100%'}
+              layoutWidth={viewport === 'mobile' || previewDevice === 'tablet' ? undefined : windowWidth}
               minHeight="calc(100vh - 52px)"
               onDocument={setCanvasDoc}
               className={(viewport === 'mobile' || previewDevice === 'tablet') ? 'rounded-xl shadow-dropdown bg-surface' : 'bg-surface'}

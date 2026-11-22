@@ -383,11 +383,12 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U36 | Preview | Site nav links in Preview navigate away from the editor | `p3-preview.png` | minor | Intercept links in preview | S | **Fixed** (1de8621): links are inert with a notice |
 | U37 | Server | `GET /api/web/:slug` (public, no auth) created a page row for any unknown slug, so any visitor could add pages, which then appear in the admin page list (how `nonexistent-page-xyz` was most likely born) | probe: `GET /api/web/e2e-…` | major | Return 404; pages are created from the Pages screen / admin endpoint | S | **Fixed** (e044188) |
 | U38 | Header & Footer | The Header & Footer screen loaded the home page's **published** copy but saves to the **draft**, so saving could undo unpublished header/footer edits | code | minor | Load from `/web/admin/home` (the draft) | S | **Fixed** (e044188) |
-| U39 | Header & Footer | Header & Footer changes reach visitors only after the **home page** is published; the screen just says "saved" | code | major | Publish header/footer separately (own snapshot), or say "Publish the home page to make this live" with a button | M | Deferred — needs a product decision on how shared chrome is published |
-| U40 | Canvas | Opening the inspector narrows the desktop canvas from 1440 to ~1120px; now that blocks follow their own width, a half-width list block can show 1 column in the editor but 2 on the live page | `u27-half-width-after.png` vs the U27 test | minor | Overlay the inspector, or render the canvas at the target width and scale it | M | Deferred |
+| U39 | Header & Footer | Header & Footer changes reach visitors only after the **home page** is published; the screen just says "saved" | code | major | Publish header/footer separately (own snapshot), or say "Publish the home page to make this live" with a button | M | **Fixed** (ROUND6): Header & Footer has its own **Publish** (saves first if needed) and a status line ("Live on the site" / "Saved, not live yet" / "Unsaved changes"). New `POST /api/web/:slug/publish-header-footer` copies only the draft header/footer into the page's published snapshot, leaving its content unpublished |
+| U40 | Canvas | Opening the inspector narrows the desktop canvas from 1440 to ~1120px; now that blocks follow their own width, a half-width list block can show 1 column in the editor but 2 on the live page | `u27-half-width-after.png` vs the U27 test | minor | Overlay the inspector, or render the canvas at the target width and scale it | M | **Fixed** (ROUND6): the desktop canvas lays out at the window width and scales down beside side panels (`CanvasFrame` `layoutWidth`); the text toolbar maps coordinates through the scale. Evidence `u40-inspector-open-after.png`, `u40-text-toolbar-scaled.png` |
+| U41 | Server | `GET /api/web/admin/:slug` created any unknown page with the schema defaults: **published and in the site navigation**. A typo'd editor URL, or a late request for a just-deleted page, put a placeholder page on the live nav. Found when a deleted e2e temp page reappeared published in the nav (removed at once) | probe | blocker | Only auto-create `home` (unpublished); other slugs 404 (the editor shows "Page not found") | S | **Fixed** (ROUND6) |
 
-**Counts:** 2 blockers (U1, U30), 18 majors, 20 minors (U37–U39 added in round 4, U40 in round 5). **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in 1de8621;
-U21 and U33 partly). **Open:** U32, U39, U40 and the rest of U21/U33. U27 fixed in 66dc35a. U26 fixed in d310ff4; U28, U37, U38 in e044188.
+**Counts:** 3 blockers (U1, U30, U41), 18 majors, 20 minors (U37–U39 added in round 4, U40 in round 5, U41 in round 6). **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in 1de8621;
+U21 and U33 partly). **Open:** U32 and the rest of U21/U33. U39–U41 fixed in ROUND6. U27 fixed in 66dc35a. U26 fixed in d310ff4; U28, U37, U38 in e044188.
 Public-site check: all 9 published pages, desktop + mobile, **pixel-identical** before vs after
 (`public-before/` vs `public-after/`). The intended public changes apply only to things no published
 page uses today (Contact colours, photo hero fill and subtitle, Quote background precedence,
@@ -434,8 +435,9 @@ optional empty titles, unset images).
 - **Done (e044188):** header/footer parity (U28); unknown URLs no longer create pages (U37); Header &
   Footer screen loads the draft (U38).
 - **Done (66dc35a):** container queries (U27).
-- **Next:** Header & Footer publishing (U39, needs a decision) → canvas width with the inspector
-  open (U40) → keep the block picker open (U32).
+- **Done (ROUND6):** Header & Footer publish on their own (U39), canvas keeps the window width
+  beside panels (U40), no auto-created live pages (U41).
+- **Next:** keep the block picker open (U32).
 - **Content note (not a code bug):** the live home page's "Find your place." Features block has a
   saved text colour of #ffffff, so its heading is white on cream. Fix by clearing the text colour in the
   block's Design tab. A contrast warning in the Design tab would catch this.
