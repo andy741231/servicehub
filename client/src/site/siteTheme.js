@@ -38,6 +38,15 @@ export const hexToHsl = (hex) => {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
 
+/** Same hue, new lightness (and optionally capped saturation): an HSL triplet. */
+export const shade = (hex, lightness, maxSat = 100) => {
+  const hsl = hexToHsl(hex);
+  if (!hsl) return null;
+  const [h, sat, l] = hsl.split(' ').map(parseFloat);
+  const L = typeof lightness === 'function' ? lightness(l) : lightness;
+  return `${h} ${Math.min(sat, maxSat)}% ${Math.max(0, Math.min(100, Math.round(L)))}%`;
+};
+
 const fontFamilyUrl = (font) => {
   const family = String(font || '').split(',')[0].trim();
   return family ? family.replace(/ /g, '+') : '';
@@ -58,14 +67,18 @@ export function resolveSiteTokens(siteStyle) {
 export function siteThemeStyle(siteTokens) {
   const colorVars = Object.fromEntries([
     ['--primary', siteTokens.colors.primary],
-    ['--primary-hover', siteTokens.colors.primary],
+    // Hover: the primary a little darker (or lighter when it is already very dark).
+    ['--primary-hover', shade(siteTokens.colors.primary, l => (l < 20 ? l + 8 : l - 8)) || siteTokens.colors.primary],
     ['--accent', siteTokens.colors.accent],
-    ['--primary-light', siteTokens.colors.secondary],
+    // A pale tint of the primary (icon circles, active nav pill). It used to be the
+    // secondary colour, which put primary-coloured icons on a mid-tone circle.
+    ['--primary-light', shade(siteTokens.colors.primary, 94, 45) || siteTokens.colors.secondary],
     ['--primary-foreground', '#fffefa'],
     ['--background', siteTokens.colors.background],
     ['--surface', '#fffefa'],
     ['--surface-raised', siteTokens.colors.background],
-    ['--surface-tertiary', siteTokens.colors.secondary],
+    // One step darker than the page background (placeholders, skeletons).
+    ['--surface-tertiary', shade(siteTokens.colors.background, l => l - 6) || siteTokens.colors.secondary],
     ['--border', '#d9dde0'],
     ['--border-soft', '#edf0f1'],
     ['--border-strong', '#cbd1d6'],

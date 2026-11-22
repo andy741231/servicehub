@@ -216,6 +216,37 @@ test('U8: list blocks from the picker start with content', async ({ page }) => {
   await expect(block(page, 'Features').locator('.public-feature-card')).toHaveCount(3);
 });
 
+test('U26: site colours reach token classes in blocks; editor chrome keeps the admin palette', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Features');
+  await save;
+  const icon = block(page, 'Features').locator('.public-feature-icon').first();
+  const { fg, bg, sitePrimary } = await icon.evaluate((el) => {
+    const site = el.closest('.public-site');
+    const probe = document.createElement('span');
+    probe.style.color = 'hsl(var(--primary))';
+    site.appendChild(probe);
+    const sitePrimary = getComputedStyle(probe).color;
+    probe.remove();
+    return { fg: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor, sitePrimary };
+  });
+  // text-primary is the site's primary, not the admin teal.
+  expect(fg).toBe(sitePrimary);
+  // bg-primary-light is a pale tint of it: same hue family, never the admin mint (240, 253, 250).
+  expect(bg).not.toBe('rgb(240, 253, 250)');
+  const [r, g, b] = bg.match(/\d+/g).map(Number);
+  expect(Math.min(r, g, b)).toBeGreaterThan(200);
+  expect(b).toBeGreaterThanOrEqual(r);
+  // Chrome inside the canvas still resolves tokens to the admin palette.
+  await selectBlock(page, 'Features');
+  const [chrome, root] = await canvas(page).locator('.site-editor-chrome').first().evaluate((el) => [
+    getComputedStyle(el).getPropertyValue('--color-primary').trim(),
+    getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),
+  ]);
+  expect(chrome).toBe(root);
+});
+
 // ── New capabilities (Image block, Button block, hero button, section photo) ──
 
 test('N1: Image block — upload fills the block; alt text and sizing are saved', async ({ page }) => {

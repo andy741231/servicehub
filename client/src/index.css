@@ -178,6 +178,30 @@
   background: hsl(var(--background));
   color: hsl(var(--text-base));
 }
+/* Tailwind's @theme resolves --color-* once on :root (admin palette), so the
+   site theme set inline on .public-site never reached token classes such as
+   bg-primary-light or bg-surface-raised. Resolve them again here — and again
+   on editor chrome, which switches the raw variables back to the admin set. */
+.public-site,
+.public-site .site-editor-chrome {
+  --color-primary:            hsl(var(--primary));
+  --color-primary-hover:      hsl(var(--primary-hover));
+  --color-primary-light:      hsl(var(--primary-light));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-background:         hsl(var(--background));
+  --color-surface:            hsl(var(--surface));
+  --color-surface-raised:     hsl(var(--surface-raised));
+  --color-surface-tertiary:   hsl(var(--surface-tertiary));
+  --color-border:             hsl(var(--border));
+  --color-border-soft:        hsl(var(--border-soft));
+  --color-border-strong:      hsl(var(--border-strong));
+  --color-text-base:          hsl(var(--text-base));
+  --color-muted:              hsl(var(--text-muted));
+  --color-text-subtle:        hsl(var(--text-subtle));
+  --color-subtle:             hsl(var(--text-subtle));
+  --color-text-inverse:       hsl(var(--text-inverse));
+  --color-inverse:            hsl(var(--text-inverse));
+}
 .public-site h1,
 .public-site h2,
 .public-site h3,
@@ -288,6 +312,7 @@
 .public-site .public-service-times span { color: rgba(255,255,255,.75); font-size: 13px; }
 .public-site .public-feature-card { padding: 31px 28px; min-height: 255px; border: 1px solid hsl(var(--border)); border-radius: 5px; background: #fffefa; box-shadow: 0 6px 18px rgba(20,43,69,.07); }
 .public-site .public-feature-card--blue { background: #eaf0f4; }
+.public-site .public-feature-card--blue .public-feature-icon { background: #fffefa; }
 .public-site .public-feature-card--navy { background: hsl(var(--primary)); color: hsl(var(--text-inverse)); }
 .public-site .public-feature-card--navy h3 { color: hsl(var(--text-inverse)); }
 .public-site .public-feature-card--navy p { color: rgba(255,255,255,.75); }

@@ -269,7 +269,7 @@ export default function SiteBlock({ block }) {
             const bodyKey = item.text != null || item.description == null ? 'text' : 'description';
             return (
               <div key={i} className={`public-feature-card public-feature-card--${item.variant || 'default'}`}>
-                <div className="w-14 h-14 bg-primary-light text-primary rounded-full flex items-center justify-center mb-5">
+                <div className="public-feature-icon w-14 h-14 bg-primary-light text-primary rounded-full flex items-center justify-center mb-5">
                   {c.numbered ? <span className="font-bold">{item.number || String(i + 1).padStart(2, '0')}</span> : <IconComp className="w-7 h-7" />}
                 </div>
                 <Text as="h3" className="text-xl font-bold text-text-base mb-3" path={`items.${i}.title`} value={item.title} placeholder="Feature title" />
