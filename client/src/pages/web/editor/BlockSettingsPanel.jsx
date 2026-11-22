@@ -13,6 +13,12 @@ import AssetLibrary from './AssetLibrary';
 
 const BUTTON_VARIANTS = [['gold', 'Gold'], ['outline', 'Outline'], ['default', 'Navy']];
 
+const SOCIAL_NAMES = { facebook: 'Facebook', instagram: 'Instagram', youtube: 'YouTube', x: 'X (Twitter)', linkedin: 'LinkedIn', tiktok: 'TikTok', email: 'Email', website: 'Website' };
+// Blocks with nothing to set here, and what to do instead.
+const NO_SETTINGS_NOTE = {
+  spacer: 'A spacer is empty space. Drag its bottom edge on the page to make it taller or shorter.',
+};
+
 const stripTags = (s) => String(s || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
 /** Per block type: non-inline settings. `list` entries manage array items. */
@@ -48,6 +54,29 @@ export const BLOCK_SETTINGS = {
     { key: 'style', label: 'Style', type: 'select', options: [['line', 'Line'], ['dots', 'Dots'], ['space', 'Empty space (spacer)']] },
     { key: 'width', label: 'Line width', type: 'select', options: [['full', 'Full width'], ['short', 'Short, centred']] },
   ],
+  accordion: [
+    { key: 'openFirst', label: 'Show the first answer open', type: 'checkbox' },
+    { key: 'items', label: 'Questions', type: 'list', summary: (q, i) => stripTags(q.question) || `Question ${i + 1}` },
+  ],
+  embed: [
+    { key: 'code', label: 'Embed code (HTML or an <iframe>)', type: 'code', placeholder: '<iframe src="https://…"></iframe>' },
+    { key: 'height', label: 'Height (px)', type: 'number', min: 80, max: 2000, default: 360 },
+    { key: 'label', label: 'Name for screen readers (e.g. "Sermon playlist")', type: 'text', placeholder: 'Embedded content' },
+  ],
+  audio: [
+    { key: 'url', label: 'Audio file (MP3, M4A, WAV or OGG)', type: 'media', kind: 'audio' },
+  ],
+  social: [
+    { key: 'align', label: 'Alignment', type: 'select', options: [['center', 'Center'], ['left', 'Left'], ['right', 'Right']] },
+    {
+      key: 'links', label: 'Links (empty ones are hidden on the site)', type: 'list', summary: (l) => SOCIAL_NAMES[l.network] || 'Link',
+      itemFields: [
+        { key: 'network', label: 'Network', type: 'select', options: Object.entries(SOCIAL_NAMES) },
+        { key: 'url', label: 'Address', placeholder: 'https://…' },
+      ],
+    },
+  ],
+  form: [{ key: 'formId', label: 'Form (from the Forms app)', type: 'hubForm' }],
   'trust-bar': [{ key: 'items', label: 'Items', type: 'list', summary: (i) => `${i.number || ''} ${stripTags(i.label)}` }],
   'split-banner': [
     { key: 'buttonLink', label: 'Button link', type: 'text', placeholder: '/contact' },
@@ -99,6 +128,53 @@ export const BLOCK_SETTINGS = {
 
 export const hasBlockSettings = (type) => (BLOCK_SETTINGS[type] || []).length > 0;
 
+/** Raw code (embed block): kept exactly as typed — committed on blur. */
+function CodeInput({ value, onCommit, placeholder, label }) {
+  const [text, setText] = useState(value || '');
+  useEffect(() => { setText(value || ''); }, [value]);
+  return (
+    <textarea
+      className="w-full mt-1 px-2.5 py-2 text-xs font-mono leading-relaxed border border-border rounded-md bg-surface text-text-base focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+      rows={8}
+      spellCheck={false}
+      value={text}
+      placeholder={placeholder}
+      aria-label={label}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => { if (text !== (value || '')) onCommit(text); }}
+    />
+  );
+}
+
+/** Number field, committed on blur / Enter and clamped. */
+function NumberInput({ value, onCommit, min, max, placeholder }) {
+  const [text, setText] = useState(value ?? '');
+  useEffect(() => { setText(value ?? ''); }, [value]);
+  const commit = () => {
+    if (String(text) === String(value ?? '')) return;
+    if (String(text).trim() === '') return onCommit(undefined);
+    let n = Number(text);
+    if (!Number.isFinite(n)) { setText(value ?? ''); return undefined; }
+    if (min != null) n = Math.max(min, n);
+    if (max != null) n = Math.min(max, n);
+    return onCommit(n);
+  };
+  return (
+    <input
+      className={`${inputCls} mt-1`}
+      type="number"
+      inputMode="numeric"
+      value={text}
+      min={min}
+      max={max}
+      placeholder={placeholder}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+    />
+  );
+}
+
 const inputCls = 'w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-surface text-text-base focus:outline-none focus:ring-2 focus:ring-primary';
 
 // Comma-separated list. Keeps its own text while typing (re-joining on every
@@ -124,7 +200,9 @@ function CsvInput({ value, onCommit }) {
  * library, or paste an address. Uploading used to be impossible here — the
  * only option was typing a URL.
  */
-export function ImageField({ label, value, onChange }) {
+export function ImageField({ label, value, onChange, kind = 'image' }) {
+  const isVideo = kind === 'video';
+  const isAudio = kind === 'audio';
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -149,26 +227,30 @@ export function ImageField({ label, value, onChange }) {
   return (
     <div>
       <div className="text-xs font-medium text-muted mb-1">{label}</div>
-      {value && <img src={value} alt="" className="w-full h-28 object-cover rounded-md border border-border mb-2" />}
+      {value && (isAudio
+        ? <audio src={value} controls preload="none" className="w-full mb-2" />
+        : isVideo
+        ? <video src={value} muted playsInline preload="metadata" className="w-full h-28 object-cover rounded-md border border-border mb-2 bg-surface-raised" aria-hidden="true" />
+        : <img src={value} alt="" className="w-full h-28 object-cover rounded-md border border-border mb-2" />)}
       <div className="flex gap-2">
         <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-[36px] text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} {value ? 'Replace' : 'Upload image'}
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} {value ? `Change ${isAudio ? 'file' : kind}` : `Upload ${isAudio ? 'audio' : kind}`}
         </button>
-        <button type="button" onClick={() => setShowLibrary((v) => !v)} aria-expanded={showLibrary} className={`px-3 py-2 min-h-[36px] text-sm rounded-md border inline-flex items-center gap-1.5 ${showLibrary ? 'border-primary text-primary bg-primary-light' : 'border-border text-muted hover:bg-surface-raised'}`} title="Choose an image you've already uploaded"><Images className="w-4 h-4" /> Library</button>
+        <button type="button" onClick={() => setShowLibrary((v) => !v)} aria-expanded={showLibrary} className={`px-3 py-2 min-h-[36px] text-sm rounded-md border inline-flex items-center gap-1.5 ${showLibrary ? 'border-primary text-primary bg-primary-light' : 'border-border text-muted hover:bg-surface-raised'}`} title={`Choose ${isVideo ? 'a video' : isAudio ? 'an audio file' : 'an image'} you've already uploaded`}><Images className="w-4 h-4" /> Library</button>
         {value && <button type="button" onClick={() => onChange(undefined)} className="px-3 py-2 min-h-[36px] text-sm rounded-md border border-border text-muted hover:bg-surface-raised">Remove</button>}
       </div>
-      {showLibrary && <div className="mt-2"><AssetLibrary selected={value} onPick={(url) => { onChange(url); setShowLibrary(false); }} /></div>}
+      {showLibrary && <div className="mt-2"><AssetLibrary kind={kind} selected={value} onPick={(url) => { onChange(url); setShowLibrary(false); }} /></div>}
       <input
         className={`${inputCls} mt-2`}
         value={text}
-        placeholder="or paste an image address"
+        placeholder={`or paste ${isVideo ? 'a video' : isAudio ? 'an audio file' : 'an image'} address`}
         aria-label={`${label} URL`}
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
       />
       {error && <p className="mt-1 text-xs text-danger" role="alert">{error}</p>}
-      <input ref={inputRef} type="file" accept="image/*" onChange={upload} className="hidden" aria-hidden="true" tabIndex={-1} />
+      <input ref={inputRef} type="file" accept={isVideo ? 'video/mp4,video/webm' : isAudio ? 'audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg' : 'image/*'} onChange={upload} className="hidden" aria-hidden="true" tabIndex={-1} />
     </div>
   );
 }
@@ -196,11 +278,22 @@ function ListField({ field, items, onChange }) {
             </div>
             {field.itemFields?.map((f) => (
               <label key={f.key} className="block mt-1.5 text-xs text-muted">{f.label}
-                <input
-                  className={`${inputCls} mt-0.5`}
-                  value={item[f.key] || ''}
-                  onChange={(e) => onChange(items.map((it, j) => (j === i ? { ...it, [f.key]: e.target.value } : it)))}
-                />
+                {f.type === 'select' ? (
+                  <select
+                    className={`${inputCls} mt-0.5`}
+                    value={item[f.key] || f.options[0][0]}
+                    onChange={(e) => onChange(items.map((it, j) => (j === i ? { ...it, [f.key]: e.target.value } : it)))}
+                  >
+                    {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    className={`${inputCls} mt-0.5`}
+                    value={item[f.key] || ''}
+                    placeholder={f.placeholder}
+                    onChange={(e) => onChange(items.map((it, j) => (j === i ? { ...it, [f.key]: e.target.value } : it)))}
+                  />
+                )}
               </label>
             ))}
           </li>
@@ -264,13 +357,28 @@ export function BlockContentSettings({ block, onUpdateContent }) {
   const set = (key, value) => onUpdateContent({ [key]: value });
 
   if (fields.length === 0) {
-    return <p className="text-sm text-muted">Everything in this block is edited directly on the page — click its text to type.</p>;
+    return <p className="text-sm text-muted">{NO_SETTINGS_NOTE[block.type] || 'Everything in this block is edited directly on the page — click its text to type.'}</p>;
   }
   return (
     <div className="space-y-3">
       <p className="text-xs text-subtle">Text, images and button labels are edited directly on the block.</p>
       {fields.map((f) => {
         if (f.type === 'image') return <ImageField key={f.key} label={f.label} value={c[f.key]} onChange={(v) => set(f.key, v)} />;
+        if (f.type === 'media') return <ImageField key={f.key} kind={f.kind} label={f.label} value={c[f.key]} onChange={(v) => set(f.key, v)} />;
+        if (f.type === 'code') {
+          return (
+            <label key={f.key} className="block text-xs font-medium text-muted">{f.label}
+              <CodeInput value={c[f.key]} placeholder={f.placeholder} label={f.label} onCommit={(v) => set(f.key, v)} />
+            </label>
+          );
+        }
+        if (f.type === 'number') {
+          return (
+            <label key={f.key} className="block text-xs font-medium text-muted">{f.label}
+              <NumberInput value={c[f.key] ?? f.default} min={f.min} max={f.max} onCommit={(v) => set(f.key, v)} />
+            </label>
+          );
+        }
         if (f.type === 'list') return <ListField key={f.key} field={f} items={c[f.key] || []} onChange={(v) => set(f.key, v)} />;
         if (f.type === 'checkbox') {
           return (

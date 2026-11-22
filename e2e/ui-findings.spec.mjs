@@ -6,7 +6,7 @@
 import { test, expect } from '@playwright/test';
 import {
   authenticate, createFixturePage, resetFixturePage, deleteFixturePage, getPage, api, FIXTURE_SECTIONS,
-  canvas, openEditor, block, section, selectBlock, inspectorTitle, nextSave,
+  canvas, openEditor, block, section, selectBlock, inspectorTitle, nextSave, pickBlock,
 } from './helpers.mjs';
 
 test.describe.configure({ mode: 'serial' });
@@ -40,7 +40,7 @@ async function addBlock(page, n, name) {
   await s.hover();
   await s.getByRole('button', { name: 'Add Block', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Add block' })).toBeVisible();
-  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: `Add ${name} block` }).click();
+  await (await pickBlock(page, name)).click();
 }
 /** Bottom of the block's rendered content minus the block's own bottom (≤ 0 = fits). */
 const overflowPx = (loc) => loc.evaluate((el) => {
@@ -167,7 +167,8 @@ test('U12/U13: Esc from the inspector walks the selection up; version history cl
   await inspector(page).getByRole('tab', { name: 'Design' }).click(); // focus is now in the inspector
   await page.keyboard.press('Escape');
   await expect.poll(() => inspectorTitle(page)).toMatch(/Section 2/);
-  await page.getByRole('button', { name: 'Version history' }).click();
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('menuitem', { name: 'Version history' }).click();
   await expect(page.getByRole('dialog', { name: 'Page version history' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Page version history' })).toHaveCount(0);
@@ -342,12 +343,12 @@ test('U32: the Add block panel stays open to add several blocks; Done closes it'
   await expect(picker).toBeVisible();
   await expect(picker.getByRole('status')).toHaveText('Added Button to section 2.');
   save = nextSave(page, fixture.slug);
-  await picker.getByRole('button', { name: 'Add Text block' }).click();
+  await (await pickBlock(page, 'Text')).click();
   await save;
   await expect(picker.getByRole('status')).toHaveText(/Added Text/);
   const types = (await saved())[1].blocks.map((b) => b.type);
   expect(types).toEqual(expect.arrayContaining(['trust-bar', 'button', 'text']));
-  await picker.getByRole('button', { name: 'Done' }).click();
+  await picker.getByRole('button', { name: 'Close add block panel' }).click();
   await expect(picker).toHaveCount(0);
 });
 
@@ -364,7 +365,7 @@ test('U33: reuse an image from the library (canvas and inspector); alt text for 
   let save = nextSave(page, fixture.slug);
   await addBlock(page, 1, 'Gallery');
   await save;
-  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Close add block panel' }).click();
   const gallery = block(page, 'Gallery');
   await gallery.getByRole('button', { name: /^Add image/ }).first().click();
   const dialog = page.getByRole('dialog');
@@ -449,12 +450,12 @@ test('R3/R4/R5: Divider block, Quote button, Gallery layouts', async ({ page }) 
   await expect(block(page, 'Divider').locator('hr')).toHaveCount(1);
   // Quote and Gallery from the still-open panel.
   save = nextSave(page, fixture.slug);
-  await picker.getByRole('button', { name: 'Add Quote block' }).click();
+  await (await pickBlock(page, 'Quote')).click();
   await save;
   save = nextSave(page, fixture.slug);
-  await picker.getByRole('button', { name: 'Add Gallery block' }).click();
+  await (await pickBlock(page, 'Gallery')).click();
   await save;
-  await picker.getByRole('button', { name: 'Done' }).click();
+  await picker.getByRole('button', { name: 'Close add block panel' }).click();
   // Closing the panel widens the canvas (its scale changes); wait until it settles.
   const frame = page.locator('iframe[title="Page canvas"]');
   await expect.poll(async () => {
@@ -505,7 +506,7 @@ test('R6: the Contact block shows a form from the Forms app (no dead built-in fo
   let save = nextSave(page, fixture.slug);
   await addBlock(page, 1, 'Contact');
   await save;
-  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Close add block panel' }).click();
   const contact = block(page, 'Contact');
   await expect(contact.locator('form')).toHaveCount(0); // the old fake form is gone
   await selectBlock(page, 'Contact');
@@ -572,7 +573,8 @@ test('R8: save a section and reuse it from Add section → Saved', async ({ page
   const s3 = section(page, 3);
   await s3.evaluate((el) => el.scrollIntoView({ block: 'center' }));
   await s3.hover();
-  await s3.getByRole('button', { name: 'Save section' }).click();
+  await s3.getByRole('button', { name: /^Section menu/ }).click();
+  await canvas(page).getByRole('menuitem', { name: 'Save section' }).click();
   const dlg = page.getByRole('dialog');
   await dlg.getByRole('textbox').fill('E2E features band');
   await dlg.getByRole('button', { name: 'Save section' }).click();
@@ -614,7 +616,7 @@ test('R9: Slideshow block — arrows, dots and keyboard, in the editor and on th
   let save = nextSave(page, fixture.slug);
   await addBlock(page, 1, 'Slideshow');
   await save;
-  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Close add block panel' }).click();
   const show = block(page, 'Slideshow');
   const visibleTitle = () => show.locator('[aria-roledescription="slide"][aria-hidden="false"] h3').innerText();
   await expect(show.getByRole('button', { name: /^Show slide/ })).toHaveCount(3);
@@ -702,6 +704,208 @@ test('V5: a refused save explains itself, stops retrying, and undo gets saving g
   await save;
   await expect(bar).toHaveCount(0);
   expect((await saved())[0].blocks[0].content.title).not.toContain(' now');
+});
+
+// ── Reskin (docs/editor-ui-reskin-prompt.md) ───────────────────────────────
+
+/** Publish the fixture, run `fn` with a visitor page, then unpublish. */
+async function asVisitor(browser, fn) {
+  await api('POST', `/${fixture.slug}/publish`);
+  const ctx = await browser.newContext();
+  try {
+    const v = await ctx.newPage();
+    await v.goto(`/${fixture.slug}`);
+    await v.locator('.public-site').waitFor();
+    await fn(v);
+  } finally {
+    await ctx.close();
+    await api('POST', `/${fixture.slug}/unpublish`);
+  }
+}
+
+test('RS1: top bar — icon device switcher, solid Publish, rarer actions in the ⚙ menu', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  for (const n of [/^Desktop/, /^Tablet/, /^Mobile/]) await expect(page.getByRole('radio', { name: n })).toBeVisible();
+  const publish = page.getByRole('button', { name: 'Publish' });
+  const bg = await publish.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bg).not.toBe('rgba(0, 0, 0, 0)'); // filled, not text + dot
+  await page.getByRole('button', { name: 'More actions' }).click();
+  const menu = page.getByRole('menu', { name: 'More actions' });
+  await expect(menu.getByRole('menuitem')).toHaveText(['Version history', 'Save as template', 'Keyboard shortcuts']);
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'More actions' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Toggle layers panel' })).toBeVisible();
+});
+
+test('RS2: Add Block — category rail with tiles; search spans categories; Enter adds the first match', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const s1 = section(page, 1);
+  await s1.hover();
+  await s1.getByRole('button', { name: 'Add Block', exact: true }).click();
+  const picker = page.getByRole('complementary', { name: 'Add block' });
+  const rail = picker.getByRole('tablist', { name: 'Block categories' });
+  await expect(rail.getByRole('tab')).toHaveText(['Basics', 'Media', 'Lists & features', 'Community', 'Forms', 'Embed', 'Social']);
+  // Every category has blocks (no empty rail entries).
+  for (const tab of await rail.getByRole('tab').all()) {
+    await tab.click();
+    expect(await picker.getByRole('tabpanel').getByRole('button').count()).toBeGreaterThan(0);
+  }
+  await rail.getByRole('tab', { name: 'Media' }).click();
+  await expect(picker.getByRole('button', { name: 'Add Audio block' })).toBeVisible();
+  await expect(picker.getByRole('button', { name: 'Add Text block' })).toHaveCount(0);
+  await picker.getByRole('searchbox').fill('faq');
+  await expect(picker.getByRole('button', { name: 'Add Accordion block' })).toBeVisible();
+  const save = nextSave(page, fixture.slug);
+  await picker.getByRole('searchbox').press('Enter');
+  await save;
+  expect((await saved())[0].blocks.some((b) => b.type === 'accordion')).toBe(true);
+  await expect(picker.getByRole('status')).toHaveText(/Added Accordion/);
+});
+
+test('RS3: hide a section — dimmed in the editor, gone from the published page', async ({ page, browser }) => {
+  await openEditor(page, fixture.slug);
+  const s2 = section(page, 2);
+  await s2.hover();
+  let save = nextSave(page, fixture.slug);
+  await s2.getByRole('button', { name: 'Hide section on the site' }).click();
+  await save;
+  expect((await saved())[1].fluidConfig.hidden).toBe(true);
+  await expect(s2.getByText('Hidden on the site')).toBeVisible();
+  await asVisitor(browser, async (v) => {
+    await expect(v.locator('.public-site').getByText('One community')).toHaveCount(0); // the trust bar
+    await expect(v.locator('.public-site').getByText('Find your place.').first()).toBeVisible(); // others still there
+  });
+  await s2.hover();
+  save = nextSave(page, fixture.slug);
+  await s2.getByRole('button', { name: 'Show section on the site' }).click();
+  await save;
+  expect((await saved())[1].fluidConfig.hidden).toBe(false);
+});
+
+test('RS4/RS5: section inspector — spacing, content width, overlay % (old values still read)', async ({ page, browser }) => {
+  // An older page: overlay stored as 'dark'.
+  const sections = FIXTURE_SECTIONS.map((s, i) => (i !== 0 ? s : { ...s, fluidConfig: { ...s.fluidConfig, backgroundImage: '/uploads/e2e-bg.png', backgroundOverlay: 'dark' } }));
+  await api('PUT', `/${fixture.slug}`, { header: {}, footer: {}, sections });
+  await openEditor(page, fixture.slug);
+  const s1 = section(page, 1);
+  await s1.hover();
+  await s1.getByRole('button', { name: 'Section settings' }).click();
+  await expect(inspector(page).getByRole('tab', { name: 'Section' })).toHaveAttribute('aria-selected', 'true');
+  await expect(inspector(page).getByRole('radio', { name: 'Image' })).toHaveAttribute('aria-checked', 'true');
+  await expect(inspector(page).getByRole('slider', { name: 'Overlay darkness' })).toHaveValue('65');
+  await expect.poll(() => s1.evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/rgba\(0, 0, 0, 0\.65\)/);
+
+  let save = nextSave(page, fixture.slug);
+  const left = inspector(page).getByRole('spinbutton', { name: /^Left/ });
+  await left.fill('40');
+  await left.press('Enter');
+  await save;
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('radiogroup', { name: 'Content width' }).getByRole('radio', { name: 'Narrow' }).click();
+  await save;
+  const s = (await saved())[0];
+  expect(s.paddingLeft).toBe(40);
+  expect(s.fluidConfig.contentWidth).toBe('narrow');
+  await expect.poll(() => s1.locator(':scope > div[style*="grid"]').first().evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(761);
+  await asVisitor(browser, async (v) => {
+    const grid = v.locator('.fluid-grid-desktop').first();
+    expect(await grid.evaluate((el) => getComputedStyle(el).maxWidth)).toBe('760px');
+    await expect.poll(() => v.locator('.public-site main > div').first().evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/rgba\(0, 0, 0, 0\.65\)/);
+  });
+});
+
+test('RS6: Page tab — rename the page (the address stays on the Pages screen)', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const s1 = section(page, 1);
+  await s1.hover();
+  await s1.getByRole('button', { name: 'Section settings' }).click();
+  await inspector(page).getByRole('tab', { name: 'Page' }).click();
+  const title = inspector(page).getByRole('textbox', { name: /^Page title/ });
+  const patched = page.waitForResponse((r) => r.request().method() === 'PATCH' && /\/api\/web\/pages\//.test(r.url()) && r.ok());
+  await title.fill('E2E renamed page');
+  await title.press('Enter');
+  await patched;
+  expect((await getPage(fixture.slug)).title).toBe('E2E renamed page');
+  await expect(inspector(page).getByText(`/${fixture.slug}`)).toBeVisible();
+  await api('PATCH', `/pages/${fixture.id}`, { title: 'E2E editor page' });
+});
+
+test('RS7: new blocks — Accordion, Code, Audio, Social links, Spacer, Form — in the editor and on the site', async ({ page, browser }) => {
+  await page.route('**/api/forms', (route) => route.fulfill({ json: { forms: [{ id: 'e2e-form-1', title: 'E2E sign-up' }] } }));
+  await openEditor(page, fixture.slug);
+  // Each one can be added from the panel.
+  const s1 = section(page, 1);
+  await s1.hover();
+  await s1.getByRole('button', { name: 'Add Block', exact: true }).click();
+  for (const name of ['Accordion', 'Code', 'Audio', 'Social links', 'Spacer', 'Form']) {
+    const save = nextSave(page, fixture.slug);
+    await (await pickBlock(page, name)).click();
+    await save;
+  }
+  const types = (await saved())[0].blocks.map((b) => b.type);
+  expect(types).toEqual(expect.arrayContaining(['accordion', 'embed', 'audio', 'social', 'spacer', 'form']));
+  await expect(block(page, 'Spacer').getByText('Spacer')).toBeVisible(); // visible while editing
+
+  // Content for the site check, set directly (each block on its own rows).
+  const raw = '<div id="e2e-raw">Hello <b>embed</b></div><script>document.getElementById("e2e-raw").dataset.ran = "1"</script>';
+  const blocks = [
+    { type: 'accordion', content: { title: 'FAQ', openFirst: true, items: [{ question: 'Q one', answer: 'A one' }, { question: 'Q two', answer: 'A two' }] } },
+    { type: 'embed', content: { code: raw, height: 200, label: 'Raw embed' } },
+    { type: 'embed', content: { code: '<iframe src="https://www.example.com/widget" title="Example widget" allowfullscreen></iframe>', height: 200 } },
+    { type: 'audio', content: { title: 'Sermon', url: '/uploads/e2e-sermon.mp3' } },
+    { type: 'social', content: { links: [{ network: 'facebook', url: 'https://facebook.com/e2e' }, { network: 'instagram', url: '' }] } },
+    { type: 'spacer', content: {} },
+    { type: 'form', content: { formId: 'e2e-form-1', formTitle: 'E2E sign-up' } },
+  ].map((b, i) => ({ ...b, fluid: { colStart: 1, colEnd: 25, rowStart: 1 + i * 4, rowEnd: 5 + i * 4, zIndex: 0 } }));
+  await api('PUT', `/${fixture.slug}`, { header: {}, footer: {}, sections: [{ ...FIXTURE_SECTIONS[0], blocks }] });
+  expect((await saved())[0].blocks[1].content.code).toBe(raw); // stored exactly as typed
+
+  for (const width of [1440, 390]) {
+    await asVisitor(browser, async (v) => {
+      await v.setViewportSize({ width, height: 900 });
+      const site = v.locator(width > 700 ? '.fluid-grid-desktop' : '.fluid-grid-mobile').first();
+      // Accordion: native disclosure, first open
+      await expect(site.locator('details')).toHaveCount(2);
+      await expect(site.locator('details').first()).toHaveAttribute('open', '');
+      await site.locator('summary', { hasText: 'Q two' }).click();
+      await expect(site.locator('details').nth(1)).toHaveAttribute('open', '');
+      // Code: raw HTML in a sandbox without same-origin; a lone https iframe passes through
+      const rawFrame = site.locator('iframe[title="Raw embed"]');
+      expect(await rawFrame.getAttribute('sandbox')).not.toContain('allow-same-origin');
+      await expect(rawFrame.contentFrame().locator('#e2e-raw')).toHaveAttribute('data-ran', '1');
+      await expect(site.locator('iframe[src="https://www.example.com/widget"]')).toHaveCount(1);
+      // Audio
+      await expect(site.locator('audio[src="/uploads/e2e-sermon.mp3"]')).toHaveCount(1);
+      // Social: only links with an address
+      await expect(site.getByRole('link', { name: 'Facebook' })).toHaveAttribute('href', 'https://facebook.com/e2e');
+      await expect(site.getByRole('link', { name: 'Instagram' })).toHaveCount(0);
+      // Spacer: nothing visible
+      await expect(site.getByText('Spacer', { exact: true })).toHaveCount(0);
+      // Form from the Forms app
+      await expect(site.locator('iframe[title="E2E sign-up"]')).toHaveAttribute('src', '/form/e2e-form-1?embed=1');
+    });
+  }
+});
+
+test('RS8: section video background — set in the inspector, plays on the site', async ({ page, browser }) => {
+  await openEditor(page, fixture.slug);
+  const s1 = section(page, 1);
+  await s1.hover();
+  await s1.getByRole('button', { name: 'Section settings' }).click();
+  await inspector(page).getByRole('radio', { name: 'Video' }).click();
+  const save = nextSave(page, fixture.slug);
+  const url = inspector(page).getByRole('textbox', { name: /URL$/ });
+  await url.fill('/uploads/e2e-loop.mp4');
+  await url.press('Enter');
+  await save;
+  expect((await saved())[0].fluidConfig.backgroundVideo).toBe('/uploads/e2e-loop.mp4');
+  await expect(s1.locator('video[src="/uploads/e2e-loop.mp4"]')).toHaveCount(1);
+  await asVisitor(browser, async (v) => {
+    const video = v.locator('.public-site video').first();
+    await expect(video).toHaveAttribute('src', '/uploads/e2e-loop.mp4');
+    expect(await video.evaluate((el) => [el.muted, el.loop, el.autoplay, el.closest('[aria-hidden="true"]') != null])).toEqual([true, true, true, true]);
+  });
 });
 
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {
@@ -830,13 +1034,14 @@ test('N3: section background photo with overlay is saved and rendered', async ({
   const s1 = section(page, 1);
   await s1.hover();
   await s1.getByRole('button', { name: 'Section settings' }).click();
+  await inspector(page).getByRole('radio', { name: 'Image' }).click();
   let save = nextSave(page, fixture.slug);
   await inspector(page).locator('input[type="file"]').setInputFiles({ name: 'bg.png', mimeType: 'image/png', buffer: png });
   await save;
   save = nextSave(page, fixture.slug);
-  await inspector(page).getByRole('radiogroup', { name: /Darken photo/ }).getByRole('radio', { name: 'Dark' }).click();
+  await inspector(page).getByRole('slider', { name: 'Overlay darkness' }).fill('65');
   await save;
-  expect((await saved())[0].fluidConfig).toMatchObject({ backgroundImage: '/uploads/e2e-bg.png', backgroundOverlay: 'dark' });
+  expect((await saved())[0].fluidConfig).toMatchObject({ backgroundImage: '/uploads/e2e-bg.png', backgroundOverlay: 65 });
   await expect.poll(() => s1.evaluate((el) => getComputedStyle(el).backgroundImage)).toMatch(/linear-gradient.*e2e-bg\.png/);
 });
 

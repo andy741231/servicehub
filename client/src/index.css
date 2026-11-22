@@ -166,6 +166,8 @@
     --editor-guide:          340 82% 52%;     /* pink — grid/drag guides */
     --editor-handle:         175 84% 32%;     /* teal-600 — resize handles */
     --editor-success:        141 69% 58%;     /* #7ee08a — publish indicator */
+    --editor-chrome-raised:  225 16% 18%;     /* segmented track / hover on the dark bar */
+    --editor-chrome-active:  225 14% 28%;     /* selected segment on the dark bar */
     --editor-toolbar-radius: 8px;
     --editor-elevation:      0 6px 18px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.18);
   }
@@ -652,6 +654,8 @@
     --editor-chrome:         225 24% 8%;      /* even darker chrome in dark mode */
     --editor-chrome-text:    220 13% 91%;     /* #E5E7EB */
     --editor-chrome-muted:   220 9% 55%;      /* #8a90a0 */
+    --editor-chrome-raised:  225 18% 15%;
+    --editor-chrome-active:  225 14% 24%;
     --editor-canvas:         225 21% 11%;     /* #171A23 — dark canvas */
     --editor-selection:      258 90% 66%;     /* violet — matches dark primary */
     --editor-guide:          340 82% 62%;     /* brighter pink for dark mode */

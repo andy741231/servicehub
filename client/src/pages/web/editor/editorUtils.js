@@ -1,6 +1,8 @@
 import {
   AlignLeft, Star, Hand, Quote, Award, LayoutList, Clock, CalendarDays,
-  MapPin, Images, Sparkles, MessageSquare, Mail, Video, Image as ImageIcon, MousePointerClick, SeparatorHorizontal, GalleryHorizontal
+  MapPin, Images, Sparkles, MessageSquare, Mail, Video, Image as ImageIcon, MousePointerClick, SeparatorHorizontal, GalleryHorizontal,
+  ListCollapse, Code, Music, Share2, MoveVertical, ClipboardList,
+  Shapes, LayoutGrid, Users, FileInput, Globe
 } from 'lucide-react';
 
 /**
@@ -20,26 +22,37 @@ export function generateClientId(prefix = 'entity') {
  * 80px layout grid (new blocks are then fitted to their content), `category`
  * groups the picker, `keywords` help search. Legacy 'grid' is not offered.
  */
-export const BLOCK_CATEGORIES = ['Basics', 'Lists & features', 'Community', 'Media'];
+// Categories in picker-rail order, each with a rail icon. Only categories
+// that have blocks are listed (an empty rail entry is worse than none).
+export const BLOCK_CATEGORIES = ['Basics', 'Media', 'Lists & features', 'Community', 'Forms', 'Embed', 'Social'];
+export const CATEGORY_ICONS = {
+  Basics: Shapes, Media: Images, 'Lists & features': LayoutGrid, Community: Users, Forms: FileInput, Embed: Code, Social: Globe,
+};
 export const BLOCK_TYPES = [
-  { id: 'hero',         name: 'Hero',         Icon: Sparkles,      category: 'Basics',           rows: 6, description: 'Large headline with a subtitle', keywords: 'banner header title welcome' },
+  { id: 'text',         name: 'Text',         Icon: AlignLeft,     category: 'Basics',           rows: 3, description: 'Paragraphs, headings and lists', keywords: 'paragraph copy body rich' },
   { id: 'image',        name: 'Image',        Icon: ImageIcon,     category: 'Basics',           rows: 5, description: 'A photo that fills its space', keywords: 'photo picture banner full width logo poster' },
   { id: 'button',       name: 'Button',       Icon: MousePointerClick, category: 'Basics',       rows: 1, description: 'A call-to-action button', keywords: 'cta link action donate give' },
-  { id: 'divider',      name: 'Divider',      Icon: SeparatorHorizontal, category: 'Basics',     rows: 1, description: 'A line or empty space between blocks', keywords: 'spacer separator rule line gap space hr' },
-  { id: 'text',         name: 'Text',         Icon: AlignLeft,     category: 'Basics',           rows: 3, description: 'Paragraphs, headings and lists', keywords: 'paragraph copy body rich' },
+  { id: 'divider',      name: 'Divider',      Icon: SeparatorHorizontal, category: 'Basics',     rows: 1, description: 'A line between blocks', keywords: 'separator rule line hr dots' },
+  { id: 'spacer',       name: 'Spacer',       Icon: MoveVertical,  category: 'Basics',           rows: 1, description: 'Empty vertical space', keywords: 'space gap blank whitespace padding' },
+  { id: 'hero',         name: 'Hero',         Icon: Sparkles,      category: 'Basics',           rows: 6, description: 'Large headline with a subtitle', keywords: 'banner header title welcome' },
   { id: 'intro',        name: 'Introduction', Icon: Hand,          category: 'Basics',           rows: 5, description: 'Colored band with a title and button', keywords: 'call to action cta button' },
   { id: 'quote',        name: 'Quote',        Icon: Quote,         category: 'Basics',           rows: 3, description: 'Large pull quote', keywords: 'testimonial citation' },
-  { id: 'trust-bar',    name: 'Trust bar',    Icon: Award,          category: 'Lists & features', rows: 2, description: 'Short numbered proof points', keywords: 'stats numbers points' },
-  { id: 'features',     name: 'Features',     Icon: Star,          category: 'Lists & features', rows: 7, description: 'Cards with an icon or number', keywords: 'cards grid services ministries' },
-  { id: 'highlights',   name: 'Highlights',   Icon: LayoutList,      category: 'Lists & features', rows: 7, description: 'Image cards with a button', keywords: 'cards images programs' },
-  { id: 'testimonials', name: 'Testimonials', Icon: MessageSquare, category: 'Lists & features', rows: 5, description: 'What people say', keywords: 'quotes reviews stories' },
-  { id: 'split-banner', name: 'Service times',Icon: Clock,         category: 'Community',        rows: 5, description: 'Callout with a list of times', keywords: 'split banner sunday schedule worship' },
-  { id: 'events',       name: 'Events',       Icon: CalendarDays,         category: 'Community',        rows: 6, description: 'Upcoming events list', keywords: 'calendar dates' },
-  { id: 'contact',      name: 'Contact',      Icon: Mail,          category: 'Community',        rows: 6, description: 'Email, phone, address and a form', keywords: 'email phone address form' },
-  { id: 'map',          name: 'Map',          Icon: MapPin,    category: 'Community',        rows: 5, description: 'Location with an embedded map', keywords: 'address directions location' },
-  { id: 'carousel',     name: 'Slideshow',    Icon: GalleryHorizontal, category: 'Media',      rows: 7, description: 'Photos one at a time, with arrows', keywords: 'carousel slider slides rotating banner' },
-  { id: 'gallery',      name: 'Gallery',      Icon: Images,    category: 'Media',            rows: 6, description: 'Grid of images with captions', keywords: 'photos images pictures' },
+  { id: 'gallery',      name: 'Gallery',      Icon: Images,        category: 'Media',            rows: 6, description: 'Grid of images with captions', keywords: 'photos images pictures logos' },
+  { id: 'carousel',     name: 'Slideshow',    Icon: GalleryHorizontal, category: 'Media',        rows: 7, description: 'Photos one at a time, with arrows', keywords: 'carousel slider slides rotating banner' },
   { id: 'video',        name: 'Video',        Icon: Video,         category: 'Media',            rows: 7, description: 'YouTube or Vimeo video', keywords: 'youtube vimeo sermon' },
+  { id: 'audio',        name: 'Audio',        Icon: Music,         category: 'Media',            rows: 2, description: 'Sermon recording or podcast player', keywords: 'sermon podcast mp3 sound recording listen' },
+  { id: 'trust-bar',    name: 'Trust bar',    Icon: Award,         category: 'Lists & features', rows: 2, description: 'Short numbered proof points', keywords: 'stats numbers points' },
+  { id: 'features',     name: 'Features',     Icon: Star,          category: 'Lists & features', rows: 7, description: 'Cards with an icon or number', keywords: 'cards grid services ministries' },
+  { id: 'highlights',   name: 'Highlights',   Icon: LayoutList,    category: 'Lists & features', rows: 7, description: 'Image cards with a button', keywords: 'cards images programs' },
+  { id: 'testimonials', name: 'Testimonials', Icon: MessageSquare, category: 'Lists & features', rows: 5, description: 'What people say', keywords: 'quotes reviews stories' },
+  { id: 'accordion',    name: 'Accordion',    Icon: ListCollapse,  category: 'Lists & features', rows: 5, description: 'Questions that open to show answers', keywords: 'faq questions answers collapse expand toggle' },
+  { id: 'split-banner', name: 'Service times',Icon: Clock,         category: 'Community',        rows: 5, description: 'Callout with a list of times', keywords: 'split banner sunday schedule worship' },
+  { id: 'events',       name: 'Events',       Icon: CalendarDays,  category: 'Community',        rows: 6, description: 'Upcoming events list', keywords: 'calendar dates' },
+  { id: 'form',         name: 'Form',         Icon: ClipboardList, category: 'Forms',            rows: 7, description: 'A form from the Forms app', keywords: 'signup sign up rsvp register prayer request survey' },
+  { id: 'contact',      name: 'Contact',      Icon: Mail,          category: 'Forms',            rows: 6, description: 'Email, phone, address and a form', keywords: 'email phone address form' },
+  { id: 'embed',        name: 'Code',         Icon: Code,          category: 'Embed',            rows: 5, description: 'Embed HTML or a widget', keywords: 'embed html iframe widget code script playlist' },
+  { id: 'map',          name: 'Map',          Icon: MapPin,        category: 'Embed',            rows: 5, description: 'Location with an embedded map', keywords: 'address directions location' },
+  { id: 'social',       name: 'Social links', Icon: Share2,        category: 'Social',           rows: 1, description: 'Icons linking to your social pages', keywords: 'facebook instagram youtube twitter x linkedin tiktok follow' },
 ];
 export const blockCatalogEntry = (type) => BLOCK_TYPES.find((b) => b.id === type);
 
@@ -69,6 +82,18 @@ export const makeDefaultBlockContent = (type) => {
     case 'image':        return { url: '', alt: '', caption: '', link: '', fit: 'cover', focus: 'center' };
     case 'button':       return { buttonText: 'Learn more', buttonLink: '#', buttonVariant: 'gold', align: 'center' };
     case 'divider':      return { style: 'line', width: 'full' };
+    case 'spacer':       return {};
+    case 'accordion':    return { title: 'Frequently asked questions', items: [
+      { question: 'What time are services?', answer: 'Sundays at 9:00 and 11:00 AM.' },
+      { question: 'Is there something for kids?', answer: 'Yes — kids have their own programme during both services.' },
+      { question: 'Where do I park?', answer: 'Free parking behind the building.' },
+    ] };
+    case 'embed':        return { code: '', height: 360, label: '' };
+    case 'audio':        return { title: 'Latest sermon', url: '', description: '' };
+    case 'social':       return { align: 'center', links: [
+      { network: 'facebook', url: '' }, { network: 'instagram', url: '' }, { network: 'youtube', url: '' },
+    ] };
+    case 'form':         return { formId: '', formTitle: '' };
     case 'carousel':     return { aspect: 'wide', autoplay: false, interval: '6', slides: [
       { image: '', title: 'Welcome', text: 'Add a photo and a short line for each slide.' },
       { image: '', title: 'Join us on Sunday', text: '' },

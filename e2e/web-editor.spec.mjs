@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 import {
   authenticate, createFixturePage, resetFixturePage, deleteFixturePage, getPage,
   FIXTURE_SECTIONS, comparable, diffPaths, canvas, openEditor, block, section,
-  selectBlock, inspectorTitle, nextSave,
+  selectBlock, inspectorTitle, nextSave, pickBlock,
 } from './helpers.mjs';
 
 test.describe.configure({ mode: 'serial' });
@@ -175,7 +175,7 @@ test('block picker: search + Enter adds below; drag inserts and pushes blocks do
   const grid = s3.locator(':scope > div.relative').last();
   const gb = await grid.boundingBox();
   save = nextSave(page, fixture.slug);
-  await picker.getByRole('button', { name: 'Add Quote block' }).dragTo(grid, { targetPosition: { x: gb.width / 2, y: 20 } });
+  await (await pickBlock(page, 'Quote')).dragTo(grid, { targetPosition: { x: gb.width / 2, y: 20 } });
   await save;
   await page.waitForTimeout(800); // fit-to-content follows as a second save
   s = await saved();
@@ -242,7 +242,7 @@ test('send to back keeps layers non-negative and the block editable', async ({ p
   await s1.hover();
   await s1.getByRole('button', { name: 'Add Block', exact: true }).click();
   let save = nextSave(page, fixture.slug);
-  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Add Text block' }).click();
+  await (await pickBlock(page, 'Text')).click();
   await save;
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await selectBlock(page, 'Hero');
@@ -296,7 +296,7 @@ test('image upload saves the uploaded asset URL (not a temporary blob: URL)', as
   await s5.hover();
   await s5.getByRole('button', { name: 'Add Block', exact: true }).click();
   let save = nextSave(page, fixture.slug);
-  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Add Gallery block' }).click();
+  await (await pickBlock(page, 'Gallery')).click();
   await save;
   const gallery = block(page, 'Gallery');
   // New galleries start with three empty image tiles.

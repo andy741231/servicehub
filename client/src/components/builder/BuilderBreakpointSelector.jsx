@@ -42,10 +42,12 @@ export default function BuilderBreakpointSelector({ value, onChange }) {
     }
   };
 
+  // Icon-only segmented control (reskin). Name, editable/preview-only state
+  // and width are in each option's label/tooltip and announced below.
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex items-center">
       <div
-        className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5"
+        className="flex items-center gap-0.5 rounded-lg bg-[color:hsl(var(--editor-chrome-raised))] p-0.5"
         role="radiogroup"
         aria-label="Breakpoint"
         data-group-id="breakpoint-radiogroup"
@@ -58,24 +60,21 @@ export default function BuilderBreakpointSelector({ value, onChange }) {
               type="button"
               role="radio"
               aria-checked={isActive}
+              aria-label={`${bp.label} — ${bp.editable ? 'editable' : 'preview only'}, ${bp.widthLabel}`}
               data-idx={idx}
               onClick={() => onChange(bp.id)}
               onKeyDown={(e) => handleKeyDown(e, idx)}
-              className={`flex items-center gap-1.5 px-2.5 h-8 rounded text-[11px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
-                isActive ? 'bg-white/15 text-white' : 'text-[#8a90a0] hover:text-white'
+              className={`flex items-center justify-center w-11 h-10 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                isActive ? 'bg-[color:hsl(var(--editor-chrome-active))] text-white shadow-sm' : 'text-[color:hsl(var(--editor-chrome-muted))] hover:text-white'
               }`}
               title={`${bp.label} — ${bp.editable ? 'editable' : 'preview only'} (${bp.widthLabel})`}
             >
-              <bp.Icon className="w-3.5 h-3.5" />
-              {bp.label}
+              <bp.Icon className="w-[18px] h-[18px]" aria-hidden="true" />
             </button>
           );
         })}
       </div>
-      {/* Editable / preview-only indicator + canvas width */}
-      <div className="text-[10px] leading-3 text-[#8a90a0] text-center min-h-[12px]" aria-live="polite">
-        {active.editable ? 'Editable' : 'Preview only'} · {active.widthLabel}
-      </div>
+      <span className="sr-only" aria-live="polite">{active.label}: {active.editable ? 'editable' : 'preview only'}, {active.widthLabel}</span>
     </div>
   );
 }

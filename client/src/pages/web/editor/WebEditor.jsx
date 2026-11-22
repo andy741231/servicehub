@@ -631,6 +631,20 @@ export default function WebEditor() {
     }
   };
 
+  // Page tab (title): page details, saved straight away —
+  // not part of the page content, its autosave or undo history.
+  const updatePageMeta = async (patch) => {
+    if (!pageData?.id) return;
+    try {
+      await api.patch(`/web/pages/${pageData.id}`, patch);
+      setPageData((prev) => ({ ...prev, ...patch }));
+      toast('Page details saved', 'success');
+    } catch (error) {
+      console.error('Failed to save page details:', error);
+      toast('Could not save the page details. Please try again.', 'error');
+    }
+  };
+
   const deleteSection = (sIdx) => {
     const deletedSection = sections[sIdx];
     if (!deletedSection) return;
@@ -1230,6 +1244,8 @@ export default function WebEditor() {
             onUpdateBlock={updateBlock}
             onUpdateSection={updateSection}
             onClose={() => setInspectorOpen(false)}
+            page={pageData ? { id: pageData.id, title: pageData.title, slug: pageData.slug } : null}
+            onUpdatePageMeta={updatePageMeta}
           />
         )}
       </div>

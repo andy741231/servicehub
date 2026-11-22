@@ -483,3 +483,31 @@ Fresh pass after U1–U42 and R1–R9, on temp pages at 1440, 1280×800 and 1024
 - Public check, round 2: 8 of 9 published pages pixel-identical before vs after. The 9th,
   `nonexistent-page-xyz`, changed because its content was edited and published by another user
   (version 1, saved by Andy Chan at 02:07 UTC) during the session — not by these changes.
+
+## Editor reskin (2026-11-22, branch `web-editor-reskin`)
+
+Brief: `docs/editor-ui-reskin-prompt.md`. Evidence: `docs/ui-test-evidence/reskin/before/` and
+`after/`. Tests RS1–RS8 in `e2e/ui-findings.spec.mjs`.
+
+- **Top bar:** icon-only device switcher; borderless undo/redo (new `size="chrome"` on the shared
+  history controls — Forms/Email unchanged); solid Publish; Layers stays; Version history, Save as
+  template, Keyboard shortcuts and View live page moved into a ⚙ menu. Preview stays on the left
+  (the brief keeps the left side as is; a second Preview on the right would duplicate it).
+- **Add Block:** category rail + tile grid; search spans categories; one close ✕ (the duplicate
+  Done went, V17). No Custom tab — saved sections live in Add section → Saved.
+- **Section chrome:** left pill (settings · "Hero ▾" menu with Save / Move up / Move down · Add
+  Block), right pill (hide · duplicate · remove), outlined "+ Add Section" pills. No drag grip:
+  sections are reordered with Move up/down, and a grip that doesn't drag would be fake.
+- **Inspector:** Section | Page tabs; Background Color / Image / Video, overlay slider (0–80 %; old
+  none/light/medium/dark still read as 0/25/45/65); Spacing (all four paddings, px); Content width;
+  collapsible Design and Advanced. Page tab: title (saved at once) and the address (read-only —
+  changing it is on the Pages screen). **No SEO description: WebPage has no such column** (adding
+  one needs a migration).
+- **Sanctioned site changes (no schema change — all in the `fluidConfig` JSON):** section hide
+  (`hidden`, skipped by SiteSections), content width (`contentWidth`: narrow 760 / medium 1100 /
+  wide = full, the old behaviour), video background (`backgroundVideo`, muted loop, paused for
+  reduced motion), overlay stored as a percentage.
+- **New blocks:** Accordion (native details), Code (a lone https iframe passes through; anything
+  else runs in a sandbox without same-origin; code stored verbatim), Audio (the server now accepts
+  audio uploads), Social links, Spacer (labelled in the editor), Form (Forms app).
+  **Skipped:** Columns (the 24-column grid does it), the Section tile, empty categories, button rows.

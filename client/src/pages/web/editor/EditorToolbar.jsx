@@ -6,13 +6,73 @@
  * - Center: page title + publish status
  * - Right: breakpoint selector, undo/redo, publish, secondary actions
  *
- * All icon buttons have 44px touch targets and aria-labels.
+ * All icon buttons have 44px touch targets and aria-labels. Rarely used
+ * actions live in the ⚙ "More actions" menu.
  */
 
-import { Keyboard, Copy, History, Eye, Layers, ExternalLink } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, Copy, History, Eye, Layers, ExternalLink, Settings } from 'lucide-react';
 import BuilderBreakpointSelector from '../../../components/builder/BuilderBreakpointSelector';
 import BuilderHistoryControls from '../../../components/builder/BuilderHistoryControls';
 import BuilderSaveStatus from '../../../components/builder/BuilderSaveStatus';
+
+const chromeIcon = 'inline-flex items-center justify-center w-11 h-11 rounded-md text-[color:hsl(var(--editor-chrome-muted))] hover:text-white hover:bg-[color:hsl(var(--editor-chrome-raised))] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary';
+
+/**
+ * ⚙ overflow for the less frequent actions (version history, save as
+ * template, keyboard shortcuts, view live page). Menu button pattern:
+ * arrows move, Esc / outside click closes and returns focus.
+ */
+function MoreMenu({ items }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+  const btnRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    boxRef.current?.querySelector('[role="menuitem"]:not([disabled])')?.focus();
+    const onDown = (e) => { if (!boxRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+  const onKeyDown = (e) => {
+    const list = [...(boxRef.current?.querySelectorAll('[role="menuitem"]:not([disabled])') || [])];
+    const i = list.indexOf(document.activeElement);
+    if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); btnRef.current?.focus(); }
+    else if (e.key === 'ArrowDown' && open) { e.preventDefault(); list[(i + 1) % list.length]?.focus(); }
+    else if (e.key === 'ArrowUp' && open) { e.preventDefault(); list[(i - 1 + list.length) % list.length]?.focus(); }
+  };
+  return (
+    <div className="relative" ref={boxRef} onKeyDown={onKeyDown}>
+      <button
+        ref={btnRef}
+        onClick={() => setOpen((v) => !v)}
+        className={`${chromeIcon} ${open ? 'text-white bg-[color:hsl(var(--editor-chrome-active))]' : ''}`}
+        title="More: version history, templates, shortcuts"
+        aria-label="More actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <Settings className="w-[18px] h-[18px]" />
+      </button>
+      {open && (
+        <div role="menu" aria-label="More actions" className="absolute right-0 top-full mt-2 z-50 min-w-[220px] rounded-lg bg-surface text-text-base border border-border shadow-[0_8px_24px_rgba(16,20,30,0.22)] p-1">
+          {items.map(({ label, Icon, onSelect, disabled }) => (
+            <button
+              key={label}
+              type="button"
+              role="menuitem"
+              disabled={disabled}
+              onClick={() => { setOpen(false); onSelect?.(); }}
+              className="w-full flex items-center gap-2.5 px-3 min-h-[40px] rounded-md text-[13px] text-left hover:bg-surface-raised focus:bg-surface-raised focus:outline-none disabled:opacity-50"
+            >
+              <Icon className="w-4 h-4 text-muted" aria-hidden="true" /> {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EditorToolbar({
   // Save
@@ -77,76 +137,45 @@ export default function EditorToolbar({
         </div>
       </div>
 
-      {/* Right — unified breakpoint selector + actions */}
-      <div className="flex items-center gap-1.5 xl:gap-4 shrink-0 text-[color:hsl(var(--editor-chrome-muted))]">
+      {/* Right — device switcher, history, Layers, ⚙ overflow, Publish (reskin) */}
+      <div className="flex items-center gap-1.5 xl:gap-2.5 shrink-0 text-[color:hsl(var(--editor-chrome-muted))]">
         <BuilderBreakpointSelector
           value={viewport === 'mobile' ? 'mobile' : previewDevice}
           onChange={onBreakpointChange}
         />
 
-        <BuilderHistoryControls onUndo={onUndo} onRedo={onRedo} canUndo={canUndo} canRedo={canRedo} />
+        <div className="w-px h-6 bg-white/10 mx-0.5 xl:mx-1" />
+        <BuilderHistoryControls size="chrome" onUndo={onUndo} onRedo={onRedo} canUndo={canUndo} canRedo={canRedo} />
 
-        <div className="w-px h-5 bg-white/10" />
-
-        {/* Publish */}
-        <button
-          onClick={onPublish}
-          disabled={publishSaving}
-          className="flex items-center gap-1.5 h-8 px-2 rounded text-[12px] font-medium transition-colors disabled:opacity-50 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-primary"
-          style={{ color: publishSaving ? 'hsl(var(--editor-chrome-muted))' : 'hsl(var(--editor-success))' }}
-          title="Publish current draft to public site"
-        >
-          <div className={`w-1.5 h-1.5 rounded-full ${publishSaving ? 'bg-[color:hsl(var(--editor-chrome-muted))] animate-pulse' : 'bg-[color:hsl(var(--editor-success))]'}`} />
-          {publishSaving ? 'Publishing…' : 'Publish'}
-        </button>
-
-        {/* Secondary icon actions */}
-        <button
-          onClick={onSaveTemplate}
-          disabled={templateSaving}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors disabled:opacity-50 p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
-          title="Save this page as a reusable template"
-          aria-label="Save as template"
-        >
-          <Copy className="w-4 h-4" />
-        </button>
-        <button
-          onClick={onShowVersionHistory}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
-          title="Version history"
-          aria-label="Version history"
-        >
-          <History className="w-4 h-4" />
-        </button>
-        <button
-          onClick={onShowKeyboardHelp}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
-          title="Keyboard shortcuts"
-          aria-label="Keyboard shortcuts"
-        >
-          <Keyboard className="w-4 h-4" />
-        </button>
         <button
           onClick={onToggleLayersPanel}
-          className={`transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary ${showLayersPanel ? 'text-white' : 'text-[color:hsl(var(--editor-chrome-muted))] hover:text-white'}`}
+          className={`${chromeIcon} ${showLayersPanel ? 'text-white bg-[color:hsl(var(--editor-chrome-active))]' : ''}`}
           title="Toggle layers panel"
           aria-label="Toggle layers panel"
           aria-pressed={showLayersPanel}
         >
-          <Layers className="w-4 h-4" />
+          <Layers className="w-[18px] h-[18px]" />
         </button>
-        {/* Only once there is a live page to open (on a draft it was a 404).
-            Preview shows the draft; this shows what visitors see now. */}
-        {hasPublishedSnapshot && isPublished && (
-          <button
-            onClick={() => window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank')}
-            className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
-            title="View live page (new tab)"
-            aria-label="View live page"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </button>
-        )}
+
+        <MoreMenu
+          items={[
+            { label: 'Version history', Icon: History, onSelect: onShowVersionHistory },
+            { label: templateSaving ? 'Saving template…' : 'Save as template', Icon: Copy, onSelect: onSaveTemplate, disabled: templateSaving },
+            { label: 'Keyboard shortcuts', Icon: Keyboard, onSelect: onShowKeyboardHelp },
+            // Only once there is a live page to open (on a draft it was a 404).
+            ...(hasPublishedSnapshot && isPublished ? [{ label: 'View live page', Icon: ExternalLink, onSelect: () => window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank') }] : []),
+          ]}
+        />
+
+        {/* Publish — solid primary (the text + dot treatment was too quiet) */}
+        <button
+          onClick={onPublish}
+          disabled={publishSaving}
+          className="ml-1 inline-flex items-center justify-center h-10 min-w-[88px] px-4 rounded-[8px] bg-primary text-primary-foreground text-[13px] font-semibold shadow-sm hover:bg-primary-hover transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[color:hsl(var(--editor-chrome))] whitespace-nowrap"
+          title="Publish current draft to public site"
+        >
+          {publishSaving ? 'Publishing…' : 'Publish'}
+        </button>
       </div>
     </div>
   );

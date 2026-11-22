@@ -118,6 +118,8 @@ const SECTION_KEYS = ['columns', 'gap', 'paddingTop', 'paddingBottom', 'paddingL
 /** A page section → what gets stored (no ids; content, layout and styles kept). */
 export function sectionToSaved(section) {
   const sec = Object.fromEntries(SECTION_KEYS.filter((k) => section[k] !== undefined).map((k) => [k, section[k]]));
+  // A saved section is always inserted visible.
+  if (sec.fluidConfig?.hidden) sec.fluidConfig = { ...sec.fluidConfig, hidden: undefined };
   return {
     ...sec,
     blocks: (section.blocks || []).map((b) => ({

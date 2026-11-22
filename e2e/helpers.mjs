@@ -147,6 +147,16 @@ export async function selectBlock(page, label) {
   return b;
 }
 
+/**
+ * A tile in the Add Block panel. The panel shows one category at a time
+ * (reskin), so search for the block first — then its tile is on screen.
+ */
+export async function pickBlock(page, name) {
+  const picker = page.getByRole('complementary', { name: 'Add block' });
+  await picker.getByRole('searchbox').fill(name);
+  return picker.getByRole('button', { name: `Add ${name} block`, exact: true });
+}
+
 /** Resolves when the next save of `slug` has completed. */
 export const nextSave = (page, slug) => page.waitForResponse(
   (r) => r.request().method() === 'PUT' && r.url().endsWith(`/api/web/${slug}`) && r.ok(),

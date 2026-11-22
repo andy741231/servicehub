@@ -12,6 +12,7 @@ import { SiteEditContext, useSiteEdit, Text, Image, Link, ListAdd } from './fiel
 import { rt, renderRichText, buttonClass, resolveUrl } from './siteRichText';
 import FormEmbed from './FormEmbed';
 import Carousel from './Carousel';
+import { Spacer, Accordion, Embed, Audio, SocialLinks, FormBlock } from './NewBlocks';
 
 const IconMap = {
   'lucide-star':     Star,
@@ -168,6 +169,12 @@ export default function SiteBlock({ block }) {
     }
 
     case 'carousel': return <Carousel c={c} cc={cc} sStyle={sStyle} edit={edit} />;
+    case 'spacer': return <Spacer cc={cc} sStyle={sStyle} edit={edit} />;
+    case 'accordion': return <Accordion c={c} cc={cc} sStyle={sStyle} edit={edit} />;
+    case 'embed': return <Embed c={c} cc={cc} sStyle={sStyle} edit={edit} />;
+    case 'audio': return <Audio c={c} cc={cc} sStyle={sStyle} edit={edit} />;
+    case 'social': return <SocialLinks c={c} cc={cc} sStyle={sStyle} edit={edit} />;
+    case 'form': return <FormBlock c={c} cc={cc} sStyle={sStyle} edit={edit} />;
 
     case 'divider': {
       // A line (full or short, centred), dots, or nothing (spacer): the block's

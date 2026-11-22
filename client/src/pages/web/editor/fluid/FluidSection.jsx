@@ -1,11 +1,69 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Plus, Copy, Trash2, MoveUp, MoveDown,
-  SlidersHorizontal, Smartphone, RotateCcw, BookmarkPlus,
+  SlidersHorizontal, Smartphone, RotateCcw, BookmarkPlus, ChevronDown, Eye, EyeOff,
 } from 'lucide-react';
+import { blockTypeLabel } from '../BlockSettingsPanel.jsx';
+
+/**
+ * Section menu (the "Hero ▾" chip): less frequent section actions. Lives in
+ * the canvas iframe, so it listens on its own document for outside clicks.
+ */
+function SectionMenu({ label, items }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const box = boxRef.current;
+    box?.querySelector('[role="menuitem"]:not([disabled])')?.focus();
+    const doc = box?.ownerDocument;
+    const onDown = (e) => { if (!box?.contains(e.target)) setOpen(false); };
+    doc?.addEventListener('mousedown', onDown, true);
+    return () => doc?.removeEventListener('mousedown', onDown, true);
+  }, [open]);
+  const onKeyDown = (e) => {
+    const list = [...(boxRef.current?.querySelectorAll('[role="menuitem"]:not([disabled])') || [])];
+    const i = list.indexOf(e.target.ownerDocument.activeElement);
+    if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); boxRef.current?.querySelector('[aria-haspopup]')?.focus(); }
+    else if (e.key === 'ArrowDown' && open) { e.preventDefault(); list[(i + 1) % list.length]?.focus(); }
+    else if (e.key === 'ArrowUp' && open) { e.preventDefault(); list[(i - 1 + list.length) % list.length]?.focus(); }
+  };
+  return (
+    <div className="relative" ref={boxRef} onKeyDown={onKeyDown}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Section menu: ${label}`}
+        title="More section actions"
+        className={`inline-flex items-center gap-1 h-9 px-2.5 rounded-md text-[12px] font-semibold text-text-base hover:bg-surface-raised ${open ? 'bg-surface-raised' : ''}`}
+      >
+        {label} <ChevronDown className="w-3.5 h-3.5 text-muted" />
+      </button>
+      {open && (
+        <div role="menu" aria-label="Section menu" className="absolute left-0 top-full mt-1 min-w-[190px] rounded-lg bg-white p-1 shadow-[0_4px_16px_rgba(16,20,30,0.18)]">
+          {items.map(({ label: l, Icon, onSelect, disabled }) => (
+            <button
+              key={l}
+              type="button"
+              role="menuitem"
+              disabled={disabled}
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onSelect(); }}
+              className="w-full flex items-center gap-2 px-2.5 min-h-[32px] rounded-md text-xs font-medium text-text-base text-left hover:bg-surface-raised focus:bg-surface-raised focus:outline-none disabled:opacity-40"
+            >
+              <Icon className="w-4 h-4 text-muted" aria-hidden="true" /> {l}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 import FluidBlock from './FluidBlock.jsx';
 import {
   fluidGridMetrics, sectionBoxStyle, fluidSectionMinHeight, isMobileAuto, mobileAutoFlow,
+  sectionContentWidthStyle, SectionVideo,
 } from '../../../../site/SiteSections.jsx';
 
 const DEFAULT_CFG = {
@@ -230,6 +288,10 @@ export default function FluidSection({
   // "Add Block" / "Edit Section" over a block selected the block instead.
   const chromeStyle = { opacity: chromeVisible ? 1 : 0, pointerEvents: chromeVisible ? 'auto' : 'none' };
   const pillShadow = 'shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)]';
+  // Chip label: what the section is, from its first block ("Hero", "Gallery").
+  const sectionTypeLabel = blocks.length ? blockTypeLabel(blocks[0].type) : 'Empty section';
+  // Hidden on the public site (fluidConfig.hidden; SiteSections skips it).
+  const hidden = !!cfg?.hidden;
 
   const sectionAccessibleName = `Section ${sectionIndex + 1}${blocks.length > 0 ? `, ${blocks.length} block${blocks.length !== 1 ? 's' : ''}` : ''}`;
 
@@ -341,8 +403,8 @@ export default function FluidSection({
         >
           <button
             onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex - 1); }}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} text-white`}
-            style={{ background: 'hsl(var(--admin-primary))' }}
+            className={`inline-flex items-center gap-1.5 h-8 px-4 rounded-full bg-white text-[12px] font-semibold border ${pillShadow}`}
+            style={{ color: 'hsl(var(--admin-primary))', borderColor: 'hsl(var(--admin-primary))' }}
             title="Add section above"
           >
             <Plus className="w-3 h-3" /> Add Section
@@ -358,23 +420,33 @@ export default function FluidSection({
           // start this cluster below it (they collide on narrow canvases).
           style={{ top: sectionIndex === 0 ? 56 : 16, transformOrigin: 'top left', ...chromeStyle }}
         >
-          <button
-            onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
-            title="Section settings: background, spacing, height"
-            aria-label="Section settings"
-            // Icon-only: a labelled pill covered more of the section's content.
-            className={`w-9 h-9 bg-white rounded-lg flex items-center justify-center ${pillShadow} text-text-base hover:bg-surface-raised`}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </button>
-          {/* An empty section shows its own big "Add Block" button. */}
-          {blocks.length > 0 && <button
-            onClick={(e) => { e.stopPropagation(); onAddBlock(sectionIndex); }}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white text-text-base text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} hover:bg-surface-raised`}
-            title="Add block to this section"
-          >
-            <Plus className="w-3 h-3" /> Add Block
-          </button>}
+          <div className={`bg-white rounded-lg ${pillShadow} flex items-center gap-0.5 p-0.5`} role="toolbar" aria-label="Section tools">
+            <button
+              onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
+              title="Section settings: background, spacing, width"
+              aria-label="Section settings"
+              className="w-9 h-9 rounded-md flex items-center justify-center text-text-base hover:bg-surface-raised"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+            <SectionMenu
+              label={sectionTypeLabel}
+              items={[
+                ...(onSaveSection ? [{ label: 'Save section', Icon: BookmarkPlus, onSelect: () => onSaveSection(sectionIndex) }] : []),
+                { label: 'Move section up', Icon: MoveUp, onSelect: () => onMoveSectionUp(sectionIndex), disabled: sectionIndex === 0 },
+                { label: 'Move section down', Icon: MoveDown, onSelect: () => onMoveSectionDown(sectionIndex), disabled: isLastSection },
+              ]}
+            />
+            {/* An empty section shows its own big "Add Block" button. */}
+            {blocks.length > 0 && <button
+              onClick={(e) => { e.stopPropagation(); onAddBlock(sectionIndex); }}
+              className="inline-flex items-center gap-1 h-9 px-2.5 rounded-md text-[12px] font-semibold hover:bg-surface-raised"
+              style={{ color: 'hsl(var(--admin-primary))' }}
+              title="Add block to this section"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Block
+            </button>}
+          </div>
         </div>
       )}
 
@@ -385,40 +457,28 @@ export default function FluidSection({
       {!readOnly && (
         <div className="site-editor-chrome site-editor-ui absolute right-4 flex gap-2 z-[2000] transition-opacity duration-100" style={{ top: sectionIndex === 0 ? 56 : 16, transformOrigin: 'top right', ...chromeStyle }}>
             <div className={`bg-white rounded-lg ${pillShadow} flex items-center p-0.5`} role="toolbar" aria-label="Section actions">
-              <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="w-8 h-8 flex items-center justify-center rounded text-text-base hover:bg-surface-raised">
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-              {onSaveSection && (
-                <button onClick={(e) => { e.stopPropagation(); onSaveSection(sectionIndex); }} title="Save section to reuse on other pages" aria-label="Save section" className="w-8 h-8 flex items-center justify-center rounded text-text-base hover:bg-surface-raised">
-                  <BookmarkPlus className="w-3.5 h-3.5" />
+              {cfg && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, hidden: !hidden } }); }}
+                  title={hidden ? 'Hidden on the site — click to show it again' : 'Hide this section on the site (keeps it in the editor)'}
+                  aria-label={hidden ? 'Show section on the site' : 'Hide section on the site'}
+                  aria-pressed={hidden}
+                  className={`w-9 h-9 flex items-center justify-center rounded-md hover:bg-surface-raised ${hidden ? 'text-warning' : 'text-text-base'}`}
+                >
+                  {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               )}
-              <button
-                onClick={(e) => { e.stopPropagation(); onMoveSectionUp(sectionIndex); }}
-                disabled={sectionIndex === 0}
-                title="Move section up"
-                aria-label="Move section up"
-                className={`w-8 h-8 flex items-center justify-center rounded text-text-base ${sectionIndex === 0 ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
-              >
-                <MoveUp className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onMoveSectionDown(sectionIndex); }}
-                disabled={isLastSection}
-                title="Move section down"
-                aria-label="Move section down"
-                className={`w-8 h-8 flex items-center justify-center rounded text-text-base ${isLastSection ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
-              >
-                <MoveDown className="w-3.5 h-3.5" />
+              <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="w-9 h-9 flex items-center justify-center rounded-md text-text-base hover:bg-surface-raised">
+                <Copy className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onDeleteSection(sectionIndex); }}
                 title="Remove section"
                 aria-label="Remove section"
-                className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised"
+                className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-surface-raised"
                 style={{ color: 'hsl(var(--danger, 0 84% 60%))' }}
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
         </div>
@@ -452,8 +512,8 @@ export default function FluidSection({
         <div className="site-editor-chrome site-editor-ui absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={{ bottom: -14, transformOrigin: 'center', ...chromeStyle }}>
           <button
             onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-[0.06em] ${pillShadow} text-white`}
-            style={{ background: 'hsl(var(--admin-primary))' }}
+            className={`inline-flex items-center gap-1.5 h-8 px-4 rounded-full bg-white text-[12px] font-semibold border ${pillShadow}`}
+            style={{ color: 'hsl(var(--admin-primary))', borderColor: 'hsl(var(--admin-primary))' }}
             title="Add section below"
           >
             <Plus className="w-3 h-3" /> Add Section
@@ -461,10 +521,19 @@ export default function FluidSection({
         </div>
       )}
 
+      <SectionVideo cfg={cfg} />
+
+      {hidden && !readOnly && (
+        <div className="site-editor-chrome site-editor-ui absolute left-4 bottom-3 z-[1999] inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-white text-[11px] font-semibold text-warning shadow pointer-events-none" style={{ transformOrigin: 'bottom left' }}>
+          <EyeOff className="w-3.5 h-3.5" aria-hidden="true" /> Hidden on the site
+        </div>
+      )}
+
       {/* The layout container: grid, or the auto mobile flow */}
       <div
         ref={gridRef}
-        style={gridStyle}
+        // Content width, the video layer and the hidden look apply only when set.
+        style={{ ...gridStyle, ...sectionContentWidthStyle(cfg), ...(cfg.backgroundVideo ? { zIndex: 1 } : {}), ...(hidden ? { opacity: 0.45 } : {}) }}
         {...dropHandlers}
         className="relative"
         onMouseDown={(e) => {

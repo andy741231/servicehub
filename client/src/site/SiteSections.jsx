@@ -3,6 +3,7 @@
  * interactive grid (pages/web/editor/fluid/FluidSection.jsx), so a block sits
  * at the same place in both.
  */
+import { useEffect, useRef } from 'react';
 import SiteBlock from './SiteBlock';
 import { resolveUrl } from './siteRichText';
 
@@ -11,11 +12,60 @@ export const MOBILE_GRID_COLUMNS = 6;
 /** Darkening layer over a section photo, so text on top stays readable. */
 export const SECTION_OVERLAYS = { none: 0, light: 0.25, medium: 0.45, dark: 0.65 };
 
+/**
+ * Darkening over a background photo/video, 0–1. Stored as a percentage
+ * (inspector slider) or, on older pages, as none/light/medium/dark.
+ */
+export function sectionOverlayAlpha(cfg = {}) {
+  const v = cfg.backgroundOverlay;
+  if (typeof v === 'number') return Math.max(0, Math.min(90, v)) / 100;
+  return SECTION_OVERLAYS[v] ?? 0;
+}
+
+/**
+ * Content width (inspector → Content width): caps the section's layout grid
+ * and centres it. Unset = full width, as every section was before.
+ */
+export const SECTION_CONTENT_WIDTHS = { narrow: 760, medium: 1100 };
+export function sectionContentWidthStyle(cfg = {}) {
+  const w = SECTION_CONTENT_WIDTHS[cfg.contentWidth];
+  return w ? { maxWidth: w, marginLeft: 'auto', marginRight: 'auto' } : {};
+}
+
+/**
+ * Looping, muted background video (fluidConfig.backgroundVideo) behind the
+ * section's content, with the same darkening as photos. Paused for people
+ * who prefer reduced motion. Decorative: hidden from assistive tech.
+ */
+export function SectionVideo({ cfg }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const reduce = v.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) v.pause();
+  }, [cfg?.backgroundVideo]);
+  if (!cfg?.backgroundVideo) return null;
+  const o = sectionOverlayAlpha(cfg);
+  return (
+    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
+      <video
+        ref={ref}
+        src={resolveUrl(cfg.backgroundVideo)}
+        poster={cfg.backgroundImage ? resolveUrl(cfg.backgroundImage) : undefined}
+        autoPlay muted loop playsInline preload="metadata"
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      />
+      {o > 0 && <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${o})` }} />}
+    </div>
+  );
+}
+
 /** Section background photo (kept in the fluidConfig JSON — no schema change). */
 function sectionBackground(section) {
   const cfg = section.fluidConfig || {};
   if (!cfg.backgroundImage) return {};
-  const o = SECTION_OVERLAYS[cfg.backgroundOverlay] ?? 0;
+  const o = sectionOverlayAlpha(cfg);
   const url = `url("${resolveUrl(cfg.backgroundImage)}")`;
   return {
     backgroundImage: o ? `linear-gradient(rgba(0,0,0,${o}), rgba(0,0,0,${o})), ${url}` : url,
@@ -152,10 +202,14 @@ function FluidSectionView({ section }) {
   const blocks = section.blocks || [];
   const desktop = fluidGridMetrics(section);
   const mobile = fluidGridMetrics(section, { mobile: true });
+  const hasVideo = !!cfg?.backgroundVideo;
+  // Only sections that use these settings get extra styles.
+  const layer = { ...sectionContentWidthStyle(cfg), ...(hasVideo ? { position: 'relative', zIndex: 1 } : {}) };
   return (
-    <div style={{ ...sectionBoxStyle(section), minHeight: fluidSectionMinHeight(cfg) }}>
+    <div style={{ ...sectionBoxStyle(section), minHeight: fluidSectionMinHeight(cfg), ...(hasVideo ? { position: 'relative' } : {}) }}>
+      <SectionVideo cfg={cfg} />
       {/* Desktop / tablet layout (>= 768px) */}
-      <div className="fluid-grid-desktop" style={desktop.gridStyle}>
+      <div className="fluid-grid-desktop" style={{ ...desktop.gridStyle, ...layer }}>
         {blocks.map((block, bIdx) => (
           <div key={block.id || bIdx} style={gridItemStyle(block.fluid || {}, desktop.columns)}>
             <SiteBlock block={block} />
@@ -167,7 +221,7 @@ function FluidSectionView({ section }) {
       {isMobileAuto(blocks) ? (() => {
         const flow = mobileAutoFlow(section);
         return (
-          <div className="fluid-grid-mobile" style={flow.containerStyle}>
+          <div className="fluid-grid-mobile" style={{ ...flow.containerStyle, ...layer }}>
             {flow.order.map((bIdx) => (
               <div key={blocks[bIdx].id || bIdx} style={flow.itemStyle(bIdx)}>
                 <SiteBlock block={blocks[bIdx]} />
@@ -176,7 +230,7 @@ function FluidSectionView({ section }) {
           </div>
         );
       })() : (
-        <div className="fluid-grid-mobile" style={mobile.gridStyle}>
+        <div className="fluid-grid-mobile" style={{ ...mobile.gridStyle, ...layer }}>
           {blocks.map((block, bIdx) => (
             <div key={block.id || bIdx} style={gridItemStyle(mobile.placements[bIdx], mobile.columns)}>
               <SiteBlock block={block} />
@@ -194,6 +248,8 @@ const renderBlockList = (blocks) => (blocks || []).map((block) => <SiteBlock key
 export default function SiteSections({ pageData }) {
   if (pageData.sections && pageData.sections.length > 0) {
     return pageData.sections.map((section, sIdx) => {
+      // Hidden in the editor (section eye toggle): not shown on the site.
+      if (section.fluidConfig?.hidden) return null;
       if (section.fluidConfig) return <FluidSectionView key={section.id || sIdx} section={section} />;
       // Legacy column-based section
       return (

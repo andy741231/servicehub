@@ -7,26 +7,26 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import api from '../../../utils/api';
 
-export default function AssetLibrary({ onPick, selected }) {
+export default function AssetLibrary({ onPick, selected, kind = 'image' }) {
   const [assets, setAssets] = useState(null); // null = loading
   const [error, setError] = useState('');
 
   useEffect(() => {
     let alive = true;
     api.get('/web/assets')
-      .then(({ data }) => { if (alive) setAssets((Array.isArray(data) ? data : []).filter((a) => String(a.mimeType || '').startsWith('image/') && a.url)); })
+      .then(({ data }) => { if (alive) setAssets((Array.isArray(data) ? data : []).filter((a) => String(a.mimeType || '').startsWith(`${kind}/`) && a.url)); })
       .catch(() => { if (alive) { setAssets([]); setError('Could not load the library.'); } });
     return () => { alive = false; };
-  }, []);
+  }, [kind]);
 
   if (assets === null) {
     return <p className="flex items-center gap-2 text-xs text-muted py-3"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading library…</p>;
   }
   if (error) return <p className="text-xs text-danger py-2" role="alert">{error}</p>;
-  if (assets.length === 0) return <p className="text-xs text-subtle py-2">No images uploaded yet — upload one and it will appear here.</p>;
+  if (assets.length === 0) return <p className="text-xs text-subtle py-2">No {kind === 'video' ? 'videos' : 'images'} uploaded yet — upload one and it will appear here.</p>;
 
   return (
-    <ul className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto p-0.5" aria-label="Image library">
+    <ul className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto p-0.5" aria-label={kind === 'video' ? 'Video library' : 'Image library'}>
       {assets.map((a) => {
         const name = a.originalName || a.filename || 'image';
         const isSel = selected && selected === a.url;
@@ -40,7 +40,9 @@ export default function AssetLibrary({ onPick, selected }) {
               aria-pressed={!!isSel}
               title={name}
             >
-              <img src={a.url} alt="" loading="lazy" className="w-full h-full object-cover" />
+              {kind === 'video'
+                ? <video src={a.url} muted preload="metadata" className="w-full h-full object-cover" />
+                : <img src={a.url} alt="" loading="lazy" className="w-full h-full object-cover" />}
             </button>
           </li>
         );

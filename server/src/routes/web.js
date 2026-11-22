@@ -16,6 +16,8 @@ const upload = multer({
     const allowed = [
       'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
       'video/mp4', 'video/webm', 'video/ogg',
+      // Audio block (sermon recordings, podcasts)
+      'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/x-wav', 'audio/ogg',
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
