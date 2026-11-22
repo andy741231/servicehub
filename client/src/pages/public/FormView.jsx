@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import useFormStore from '../forms/store/formStore';
 import FormRenderer from '../forms/components/FormRenderer';
@@ -7,6 +7,15 @@ import FormRenderer from '../forms/components/FormRenderer';
 export default function FormView() {
   const { formSlug } = useParams();
   const navigate = useNavigate();
+  // ?embed=1: shown inside a site page (FormEmbed). No full-screen height, so
+  // the page can size the frame to the form; redirects move the whole page.
+  const [params] = useSearchParams();
+  const embedded = params.get('embed') === '1';
+  useEffect(() => {
+    if (!embedded) return undefined;
+    document.documentElement.classList.add('form-embed');
+    return () => document.documentElement.classList.remove('form-embed');
+  }, [embedded]);
   const { forms, addSubmission, fetchForm } = useFormStore();
   const [form, setForm] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -50,11 +59,11 @@ export default function FormView() {
     const redirectUrl = form.theme?.redirectUrl;
     if (redirectUrl) {
       const timer = setTimeout(() => {
-        window.location.href = redirectUrl;
+        (embedded ? window.top : window).location.href = redirectUrl;
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [form]);
+  }, [form, embedded]);
 
   const handleSubmit = (submissionData) => {
     addSubmission(form.id, submissionData);

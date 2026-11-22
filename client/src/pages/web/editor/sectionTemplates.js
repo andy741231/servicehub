@@ -112,7 +112,41 @@ export const SECTION_TEMPLATES = [
 ];
 
 /** Build a new section (fresh ids) from a template. */
+// ── Saved sections (the user's own, stored as { kind: 'section' } templates) ──
+const SECTION_KEYS = ['columns', 'gap', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'marginTop', 'marginBottom', 'backgroundColor', 'fluidConfig'];
+
+/** A page section → what gets stored (no ids; content, layout and styles kept). */
+export function sectionToSaved(section) {
+  const sec = Object.fromEntries(SECTION_KEYS.filter((k) => section[k] !== undefined).map((k) => [k, section[k]]));
+  return {
+    ...sec,
+    blocks: (section.blocks || []).map((b) => ({
+      type: b.type, fluid: b.fluid, fluidMobile: b.fluidMobile ?? null,
+      ...(b.style ? { style: b.style } : {}), content: b.content || {},
+    })),
+  };
+}
+
+/** A stored saved-section row → a picker template (category "Saved"). */
+export function savedToTemplate(row) {
+  const sec = row.snapshot?.sections?.[0] || { blocks: [] };
+  const { blocks = [], ...section } = sec;
+  return { id: `saved-${row.id}`, savedId: row.id, saved: true, name: row.name, category: 'Saved', description: 'Your saved section', section, blocks };
+}
+
 export function sectionFromTemplate(template) {
+  if (template.saved) {
+    // Keep the section's own grid, background and the blocks' styles/phone layout.
+    return createSection({
+      ...template.section,
+      blocks: template.blocks.map((b) => ({
+        ...createBlock(b.type, { fluid: { ...b.fluid } }),
+        content: { ...(b.content || {}) },
+        ...(b.style ? { style: { ...b.style } } : {}),
+        fluidMobile: b.fluidMobile ? { ...b.fluidMobile } : null,
+      })),
+    });
+  }
   return createSection({
     ...template.section,
     fluidConfig: { ...DEFAULT_SECTION.fluidConfig },
@@ -126,6 +160,13 @@ export function sectionFromTemplate(template) {
 
 /** Section object for the live preview thumbnail (no ids needed). */
 export function previewSection(template) {
+  if (template.saved) {
+    return {
+      ...DEFAULT_SECTION,
+      ...template.section,
+      blocks: template.blocks.map((b, i) => ({ id: `preview-${template.id}-${i}`, type: b.type, fluid: b.fluid, style: b.style, content: b.content || {} })),
+    };
+  }
   return {
     ...DEFAULT_SECTION,
     ...template.section,

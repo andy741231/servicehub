@@ -35,6 +35,15 @@ export const BLOCK_SETTINGS = {
     { key: 'buttonVariant', label: 'Button style', type: 'select', options: BUTTON_VARIANTS },
     { key: 'align', label: 'Alignment', type: 'select', options: [['center', 'Center'], ['left', 'Left'], ['right', 'Right']] },
   ],
+  carousel: [
+    { key: 'aspect', label: 'Shape', type: 'select', options: [['wide', 'Wide 16:9'], ['landscape', 'Landscape 4:3'], ['tall', 'Portrait 3:4'], ['fill', 'Fill the block']] },
+    { key: 'autoplay', label: 'Advance automatically (pauses on hover; off for people who prefer reduced motion)', type: 'checkbox' },
+    { key: 'interval', label: 'Seconds per slide', type: 'select', options: [['6', '6'], ['4', '4'], ['8', '8'], ['10', '10']] },
+    {
+      key: 'slides', label: 'Slides', type: 'list', summary: (sl, i) => stripTags(sl.title) || `Slide ${i + 1}`,
+      itemFields: [{ key: 'alt', label: 'Image alt text (blank = the title)' }],
+    },
+  ],
   divider: [
     { key: 'style', label: 'Style', type: 'select', options: [['line', 'Line'], ['dots', 'Dots'], ['space', 'Empty space (spacer)']] },
     { key: 'width', label: 'Line width', type: 'select', options: [['full', 'Full width'], ['short', 'Short, centred']] },
@@ -80,12 +89,10 @@ export const BLOCK_SETTINGS = {
     itemFields: [{ key: 'avatar', label: 'Avatar URL' }],
   }],
   contact: [
-    { key: 'showForm', label: 'Show contact form', type: 'checkbox' },
-    { key: 'reasonOptions', label: 'Form reasons (comma separated)', type: 'csv' },
+    { key: 'formId', label: 'Form (from the Forms app)', type: 'hubForm' },
     { key: 'emailLabel', label: 'Email label', type: 'text', placeholder: 'Email' },
     { key: 'phoneLabel', label: 'Phone label', type: 'text', placeholder: 'Phone' },
     { key: 'addressLabel', label: 'Address label', type: 'text', placeholder: 'Address' },
-    { key: 'buttonVariant', label: 'Form button style', type: 'select', options: BUTTON_VARIANTS },
   ],
   video: [{ key: 'videoUrl', label: 'YouTube or Vimeo URL', type: 'text', placeholder: 'https://www.youtube.com/watch?v=…' }],
 };
@@ -203,6 +210,43 @@ function ListField({ field, items, onChange }) {
   );
 }
 
+/**
+ * Pick a form from the Hub's Forms app (GET /api/forms). Stores its id (the
+ * stable key; slugs live inside each form) and title for display.
+ */
+function HubFormField({ label, value, onPick }) {
+  const [forms, setForms] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let alive = true;
+    api.get('/forms')
+      .then(({ data }) => { if (alive) setForms((data?.forms || data || []).map((f) => ({ id: f.id, title: f.title || 'Untitled form' }))); })
+      .catch(() => { if (alive) { setForms([]); setError('Could not load forms.'); } });
+    return () => { alive = false; };
+  }, []);
+  const missing = value && forms && !forms.some((f) => f.id === value);
+  return (
+    <div>
+      <label className="block text-xs font-medium text-muted">{label}
+        <select
+          className={`${inputCls} mt-1`}
+          value={value || ''}
+          disabled={!forms}
+          onChange={(e) => { const f = forms.find((x) => x.id === e.target.value); onPick(f ? { formId: f.id, formTitle: f.title } : { formId: undefined, formTitle: undefined }); }}
+        >
+          <option value="">{forms ? 'No form' : 'Loading forms…'}</option>
+          {(forms || []).map((f) => <option key={f.id} value={f.id}>{f.title}</option>)}
+        </select>
+      </label>
+      {missing && <p className="mt-1 text-xs text-danger" role="alert">The chosen form was deleted — pick another.</p>}
+      {error && <p className="mt-1 text-xs text-danger" role="alert">{error}</p>}
+      <p className="mt-1 text-xs text-subtle">
+        Submissions go to Forms → Submissions. <a href="/hub-admin/forms" target="_blank" rel="noreferrer" className="text-primary hover:underline">Create or edit forms</a>
+      </p>
+    </div>
+  );
+}
+
 /** Human-readable block type name, e.g. "split-banner" → "Split banner". */
 export const blockTypeLabel = (type) => {
   // Same name as the block picker (e.g. split-banner → "Service times");
@@ -236,6 +280,7 @@ export function BlockContentSettings({ block, onUpdateContent }) {
             </label>
           );
         }
+        if (f.type === 'hubForm') return <HubFormField key={f.key} label={f.label} value={c.formId} onPick={(v) => onUpdateContent(v)} />;
         if (f.type === 'select') {
           return (
             <label key={f.key} className="block text-xs font-medium text-muted">{f.label}

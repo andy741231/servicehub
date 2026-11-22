@@ -5,12 +5,13 @@
  * components (src/site) in the site's theme, scaled down — so the preview is
  * exactly what gets inserted.
  */
-import { useMemo, useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { X, Plus, Trash2 } from 'lucide-react';
+import api from '../../../utils/api';
 import { AccessibleModal } from '../../../components/Dialog';
 import SiteSections from '../../../site/SiteSections';
 import { siteThemeStyle } from '../../../site/siteTheme';
-import { SECTION_TEMPLATES, SECTION_CATEGORIES, previewSection } from './sectionTemplates';
+import { SECTION_TEMPLATES, SECTION_CATEGORIES, previewSection, savedToTemplate } from './sectionTemplates';
 
 const THUMB_W = 260;
 const RENDER_W = 1280;
@@ -36,10 +37,29 @@ function Thumbnail({ template, themeStyle }) {
   );
 }
 
-export default function SectionPicker({ siteTokens, onAdd, onClose }) {
+export default function SectionPicker({ siteTokens, onAdd, onClose, confirm }) {
   const [category, setCategory] = useState('All');
   const themeStyle = useMemo(() => siteThemeStyle(siteTokens), [siteTokens]);
-  const shown = category === 'All' ? SECTION_TEMPLATES : SECTION_TEMPLATES.filter((t) => t.category === category);
+  // The user's saved sections (section toolbar → Save section).
+  const [saved, setSaved] = useState([]);
+  const [savedError, setSavedError] = useState('');
+  useEffect(() => {
+    let alive = true;
+    api.get('/web/page-templates', { params: { kind: 'section' } })
+      .then(({ data }) => { if (alive) setSaved((data?.templates || []).map(savedToTemplate)); })
+      .catch(() => { if (alive) setSavedError('Could not load your saved sections.'); });
+    return () => { alive = false; };
+  }, []);
+  const removeSaved = async (t) => {
+    const ok = await confirm({ title: `Delete "${t.name}"?`, message: 'Pages that already use this section keep their copy.', confirmLabel: 'Delete' });
+    if (!ok) return;
+    try {
+      await api.delete(`/web/page-templates/${t.savedId}`);
+      setSaved((list) => list.filter((x) => x.savedId !== t.savedId));
+    } catch { setSavedError('Could not delete that saved section.'); }
+  };
+  const all = [...saved, ...SECTION_TEMPLATES];
+  const shown = category === 'All' ? all : all.filter((t) => t.category === category);
 
   return (
     <AccessibleModal onClose={onClose} labelledById="section-picker-title" maxWidth="max-w-5xl" className="max-h-[88vh] flex flex-col">
@@ -51,7 +71,7 @@ export default function SectionPicker({ siteTokens, onAdd, onClose }) {
         <button onClick={onClose} className="p-2 hover:bg-surface-raised rounded-lg" aria-label="Close" title="Close"><X className="w-5 h-5 text-muted" /></button>
       </div>
       <div className="px-6 pt-3 flex gap-1.5 flex-wrap" role="tablist" aria-label="Section categories">
-        {['All', ...SECTION_CATEGORIES].map((c) => (
+        {['All', 'Saved', ...SECTION_CATEGORIES].map((c) => (
           <button
             key={c}
             type="button"
@@ -65,9 +85,24 @@ export default function SectionPicker({ siteTokens, onAdd, onClose }) {
         ))}
       </div>
       <div className="p-6 overflow-y-auto flex-1">
+        {savedError && <p className="mb-3 text-sm text-danger" role="alert">{savedError}</p>}
+        {category === 'Saved' && saved.length === 0 && !savedError && (
+          <p className="text-sm text-muted">No saved sections yet. Hover a section on the page and choose <strong>Save section</strong> in its toolbar to reuse it on other pages.</p>
+        )}
         <ul className="grid gap-5" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${THUMB_W}px, 1fr))` }}>
           {shown.map((t) => (
-            <li key={t.id}>
+            <li key={t.id} className="relative">
+              {t.saved && (
+                <button
+                  type="button"
+                  onClick={() => removeSaved(t)}
+                  className="absolute right-1 top-1 z-10 w-8 h-8 flex items-center justify-center rounded-md bg-white/95 text-danger shadow hover:bg-danger-light"
+                  aria-label={`Delete saved section ${t.name}`}
+                  title="Delete saved section"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => onAdd(t)}

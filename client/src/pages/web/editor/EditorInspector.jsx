@@ -163,6 +163,9 @@ function ContrastCheck({ blockId, deps }) {
   );
 }
 
+// Blocks with a section heading (h2) that the Design tab's Heading group styles.
+const HEADING_BLOCKS = new Set(['intro', 'features', 'highlights', 'gallery', 'testimonials', 'contact', 'video', 'events', 'split-banner', 'text']);
+
 // ── Block: Design tab ──────────────────────────────────────────────────────
 function BlockDesign({ block, onStyle }) {
   const st = block.style || {};
@@ -185,6 +188,34 @@ function BlockDesign({ block, onStyle }) {
         options={[[undefined, 'Default'], ['left', 'Left'], ['center', 'Center'], ['right', 'Right']]}
         onChange={(v) => onStyle({ textAlign: v })}
       />
+      {HEADING_BLOCKS.has(block.type) && (
+        <div className="pt-2 border-t border-border space-y-3">
+          <div className="text-xs font-semibold text-text-base">Heading</div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className={labelCls}>Size (px)
+              <CommitInput type="number" min={12} max={120} value={st.headingFontSize} placeholder="Default" onCommit={(v) => onStyle({ headingFontSize: v })} />
+            </label>
+            <label className={labelCls}>Weight
+              <select className={`${inputCls} mt-1`} value={st.headingFontWeight || ''} onChange={(e) => onStyle({ headingFontWeight: e.target.value || undefined })}>
+                <option value="">Default</option>
+                <option value="400">Regular</option>
+                <option value="500">Medium</option>
+                <option value="600">Semibold</option>
+                <option value="700">Bold</option>
+                <option value="800">Extra bold</option>
+              </select>
+            </label>
+          </div>
+          <label className={`${labelCls} block`}>Font
+            <select className={`${inputCls} mt-1`} value={st.headingFont || ''} onChange={(e) => onStyle({ headingFont: e.target.value || undefined })}>
+              <option value="">Default</option>
+              <option value="heading">Site heading font</option>
+              <option value="body">Site body font</option>
+              <option value="serif">Site serif font</option>
+            </select>
+          </label>
+        </div>
+      )}
       {block.type === 'hero' && (
         <div className="pt-2 border-t border-border space-y-3">
           <div className="text-xs font-semibold text-text-base">Title</div>

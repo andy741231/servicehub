@@ -202,6 +202,14 @@
   --color-text-inverse:       hsl(var(--text-inverse));
   --color-inverse:            hsl(var(--text-inverse));
 }
+/* A Forms-app form embedded in a site page (FormView ?embed=1). */
+.form-embed .min-h-screen { min-height: 0 !important; }
+.form-embed body { background: transparent; }
+/* Per-block heading style (Design tab → Heading). The size shrinks with a
+   narrow block (container units) so a big heading still fits on a phone. */
+.public-site .site-block.bh-size h2 { font-size: min(var(--bh-size), 12cqi); line-height: 1.15; }
+.public-site .site-block.bh-weight h2 { font-weight: var(--bh-weight); }
+.public-site .site-block.bh-font h2 { font-family: var(--bh-font); }
 /* Every block is a size container; its inner grids use @min-[…] container
    variants, so layout follows the block's own width rather than the window. */
 .public-site .site-block { container-type: inline-size; }

@@ -66,10 +66,18 @@ const serializePage = (page) => ({
   blocks: page.blocks.map(parseBlock),
 });
 
-export const listWebTemplates = async (_req, res) => {
+// Saved sections share this table: their snapshot is { kind: 'section',
+// sections: [one section] }. ?kind=section lists those; the default list is
+// page templates only (so the Page Templates screen never shows a section).
+const templateKind = (snapshot) => (snapshot?.kind === 'section' ? 'section' : 'page');
+
+export const listWebTemplates = async (req, res) => {
   try {
+    const kind = req.query.kind === 'section' ? 'section' : 'page';
     const templates = await prisma.webPageTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
-    res.json({ templates: templates.map((template) => ({ ...template, snapshot: parseJsonField(template.snapshot) })) });
+    res.json({ templates: templates
+      .map((template) => ({ ...template, snapshot: parseJsonField(template.snapshot) }))
+      .filter((template) => templateKind(template.snapshot) === kind) });
   } catch (error) {
     console.error('Error listing web page templates:', error);
     res.status(500).json({ error: 'Failed to list web page templates' });
@@ -81,6 +89,9 @@ export const createWebTemplate = async (req, res) => {
     const { name, description = null, snapshot } = req.body;
     if (!name?.trim() || !snapshot || !Array.isArray(snapshot.sections)) {
       return res.status(400).json({ error: 'name and a valid page snapshot are required' });
+    }
+    if (templateKind(snapshot) === 'section' && snapshot.sections.length !== 1) {
+      return res.status(400).json({ error: 'a saved section holds exactly one section' });
     }
     const savedBy = await getSavedBy(prisma, req.user?.id);
     const template = await prisma.webPageTemplate.create({
@@ -145,6 +156,10 @@ export const applyWebTemplate = async (req, res) => {
       include: { sections: { orderBy: { order: 'asc' }, include: { blocks: { orderBy: { order: 'asc' } } }, }, blocks: { orderBy: { order: 'asc' } } },
     });
     if (!template || !page) return res.status(404).json({ error: 'Template or page not found' });
+    // A saved section is inserted from the editor, never applied as a whole page.
+    if (templateKind(parseJsonField(template.snapshot)) === 'section') {
+      return res.status(400).json({ error: 'This is a saved section — add it from Add section in the editor' });
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       const savedBy = await getSavedBy(tx, req.user?.id);

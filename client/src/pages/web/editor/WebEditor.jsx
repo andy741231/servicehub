@@ -8,7 +8,7 @@ import EditorToolbar from './EditorToolbar';
 import EditorDialogs from './EditorDialogs';
 import BlockPicker from './BlockPicker';
 import SectionPicker from './SectionPicker';
-import { sectionFromTemplate } from './sectionTemplates';
+import { sectionFromTemplate, sectionToSaved } from './sectionTemplates';
 import LayersPanel from './LayersPanel';
 import EditorInspector from './EditorInspector';
 import CanvasFrame from './CanvasFrame';
@@ -583,6 +583,28 @@ export default function WebEditor() {
     revealAfterRender(`[role="group"][aria-label^="Section ${insertAt + 1}"]`);
   };
 
+  // Save a section for reuse (Add section → Saved). Stored as a { kind: 'section' }
+  // template: content, layout and styles, no ids.
+  const saveSection = async (sIdx) => {
+    const section = sections[sIdx];
+    if (!section) return;
+    const name = await promptDialog({
+      title: 'Save section',
+      message: 'Reuse this section on other pages from Add section → Saved. Later edits here do not change the saved copy.',
+      defaultValue: `${pageData?.title || pageSlug} section ${sIdx + 1}`,
+      placeholder: 'Section name',
+      confirmLabel: 'Save section',
+    });
+    if (!name?.trim()) return;
+    try {
+      await api.post('/web/page-templates', { name: name.trim(), snapshot: { kind: 'section', sections: [sectionToSaved(section)] } });
+      toast(`Saved "${name.trim()}" — find it in Add section → Saved`, 'success');
+    } catch (error) {
+      console.error('Failed to save section:', error);
+      toast('Failed to save the section. Please try again.', 'error');
+    }
+  };
+
   const deleteSection = (sIdx) => {
     const deletedSection = sections[sIdx];
     if (!deletedSection) return;
@@ -1113,6 +1135,7 @@ export default function WebEditor() {
                   isJustAdded={isJustAdded}
                   onDeleteSection={deleteSection}
                   onDuplicateSection={duplicateSection}
+                  onSaveSection={saveSection}
                   onMoveSectionUp={(i) => moveSection(i, -1)}
                   onMoveSectionDown={(i) => moveSection(i, 1)}
                   onAddSectionBelow={(i) => setAddSectionAfterIndex(i)}
@@ -1163,6 +1186,7 @@ export default function WebEditor() {
       {addSectionAfterIndex !== null && (
         <SectionPicker
           siteTokens={siteTokens}
+          confirm={confirmDialog}
           onAdd={(template) => addSectionFromTemplate(template, addSectionAfterIndex)}
           onClose={() => setAddSectionAfterIndex(null)}
         />

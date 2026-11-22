@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Plus, Copy, Trash2, MoveUp, MoveDown,
-  SlidersHorizontal, Smartphone, RotateCcw,
+  SlidersHorizontal, Smartphone, RotateCcw, BookmarkPlus,
 } from 'lucide-react';
 import FluidBlock from './FluidBlock.jsx';
 import {
@@ -47,6 +47,7 @@ export default function FluidSection({
   onAddBlock,
   onDeleteSection,
   onDuplicateSection,
+  onSaveSection,
   onMoveSectionUp,
   onMoveSectionDown,
   onAddSectionBelow,
@@ -387,6 +388,11 @@ export default function FluidSection({
               <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="w-8 h-8 flex items-center justify-center rounded text-text-base hover:bg-surface-raised">
                 <Copy className="w-3.5 h-3.5" />
               </button>
+              {onSaveSection && (
+                <button onClick={(e) => { e.stopPropagation(); onSaveSection(sectionIndex); }} title="Save section to reuse on other pages" aria-label="Save section" className="w-8 h-8 flex items-center justify-center rounded text-text-base hover:bg-surface-raised">
+                  <BookmarkPlus className="w-3.5 h-3.5" />
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); onMoveSectionUp(sectionIndex); }}
                 disabled={sectionIndex === 0}

@@ -10,6 +10,8 @@
 import { Star, Image as ImageIcon, Check, Settings, MessageCircle, RefreshCw, Wrench } from 'lucide-react';
 import { SiteEditContext, useSiteEdit, Text, Image, Link, ListAdd } from './fields';
 import { rt, renderRichText, buttonClass, resolveUrl } from './siteRichText';
+import FormEmbed from './FormEmbed';
+import Carousel from './Carousel';
 
 const IconMap = {
   'lucide-star':     Star,
@@ -72,10 +74,19 @@ export default function SiteBlock({ block }) {
   const edit = useSiteEdit();
   const cs = block.style || {};
   const c = block.content || {};
-  const sStyle = blockOuterStyle(block);
+  // Heading style (Design tab → Heading) for the block's section headings
+  // (h2): set as CSS variables, applied by .site-block.bh-* rules in index.css.
+  const HEADING_FONTS = { heading: 'var(--font-heading)', body: 'var(--font-body)', serif: 'var(--font-serif)' };
+  const headingVars = {
+    ...(cs.headingFontSize ? { '--bh-size': `${cs.headingFontSize}px` } : {}),
+    ...(cs.headingFontWeight ? { '--bh-weight': cs.headingFontWeight } : {}),
+    ...(HEADING_FONTS[cs.headingFont] ? { '--bh-font': HEADING_FONTS[cs.headingFont] } : {}),
+  };
+  const sStyle = { ...blockOuterStyle(block), ...headingVars };
+  const headingCls = [cs.headingFontSize && 'bh-size', cs.headingFontWeight && 'bh-weight', HEADING_FONTS[cs.headingFont] && 'bh-font'].filter(Boolean).join(' ');
   // site-block: each block is a size container, so its layout follows the
   // block's own width (a half-width block no longer shows 3 cards across).
-  const cc = `${cs.className || ''} public-reveal site-block`;
+  const cc = `${cs.className || ''} public-reveal site-block ${headingCls}`;
 
   switch (block.type) {
     case 'hero': return (
@@ -155,6 +166,8 @@ export default function SiteBlock({ block }) {
         </figure>
       );
     }
+
+    case 'carousel': return <Carousel c={c} cc={cc} sStyle={sStyle} edit={edit} />;
 
     case 'divider': {
       // A line (full or short, centred), dots, or nothing (spacer): the block's
@@ -427,14 +440,18 @@ export default function SiteBlock({ block }) {
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
                 edit ? editValue('address', '123 Main St', true) : <p className="opacity-90">{c.address}</p>)}
             </div>
-            {c.showForm && (
-              <form className="public-contact-form mt-12 mx-auto max-w-2xl" onSubmit={event => event.preventDefault()} style={edit ? { pointerEvents: 'none' } : undefined}>
-                <div className="grid grid-cols-1 @min-[600px]:grid-cols-2 gap-4"><input required placeholder="Your name" /><input required type="email" placeholder="Email address" /></div>
-                <select required defaultValue="" aria-label="Reason for contacting us"><option value="" disabled>What can we help with?</option>{(c.reasonOptions || ['General question', 'Visit planning', 'Community care']).map(reason => <option key={reason}>{reason}</option>)}</select>
-                <textarea rows="4" placeholder="Your message" />
-                <button type="submit" className={buttonClass(c.buttonVariant || 'gold')}>Send message <span aria-hidden="true">→</span></button>
-              </form>
-            )}
+            {/* The form comes from the Forms app (submissions land in Forms →
+                Submissions). The old built-in form only looked real: it had no
+                destination and discarded what visitors typed. */}
+            {c.formId ? (
+              <div className="mt-12 mx-auto max-w-2xl text-left">
+                <FormEmbed formId={c.formId} title={c.formTitle || 'Contact form'} inert={!!edit} />
+              </div>
+            ) : (edit && c.showForm) ? (
+              <p className="site-editor-chrome mt-12 mx-auto max-w-md rounded-lg bg-white/90 px-4 py-3 text-sm text-text-base">
+                Choose a form from the Forms app in this block's settings. Until then no form is shown on the site.
+              </p>
+            ) : null}
           </div>
         </section>
       );

@@ -1,6 +1,6 @@
 import {
   AlignLeft, Star, Hand, Quote, Award, LayoutList, Clock, CalendarDays,
-  MapPin, Images, Sparkles, MessageSquare, Mail, Video, Image as ImageIcon, MousePointerClick, SeparatorHorizontal
+  MapPin, Images, Sparkles, MessageSquare, Mail, Video, Image as ImageIcon, MousePointerClick, SeparatorHorizontal, GalleryHorizontal
 } from 'lucide-react';
 
 /**
@@ -37,6 +37,7 @@ export const BLOCK_TYPES = [
   { id: 'events',       name: 'Events',       Icon: CalendarDays,         category: 'Community',        rows: 6, description: 'Upcoming events list', keywords: 'calendar dates' },
   { id: 'contact',      name: 'Contact',      Icon: Mail,          category: 'Community',        rows: 6, description: 'Email, phone, address and a form', keywords: 'email phone address form' },
   { id: 'map',          name: 'Map',          Icon: MapPin,    category: 'Community',        rows: 5, description: 'Location with an embedded map', keywords: 'address directions location' },
+  { id: 'carousel',     name: 'Slideshow',    Icon: GalleryHorizontal, category: 'Media',      rows: 7, description: 'Photos one at a time, with arrows', keywords: 'carousel slider slides rotating banner' },
   { id: 'gallery',      name: 'Gallery',      Icon: Images,    category: 'Media',            rows: 6, description: 'Grid of images with captions', keywords: 'photos images pictures' },
   { id: 'video',        name: 'Video',        Icon: Video,         category: 'Media',            rows: 7, description: 'YouTube or Vimeo video', keywords: 'youtube vimeo sermon' },
 ];
@@ -68,6 +69,11 @@ export const makeDefaultBlockContent = (type) => {
     case 'image':        return { url: '', alt: '', caption: '', link: '', fit: 'cover', focus: 'center' };
     case 'button':       return { buttonText: 'Learn more', buttonLink: '#', buttonVariant: 'gold', align: 'center' };
     case 'divider':      return { style: 'line', width: 'full' };
+    case 'carousel':     return { aspect: 'wide', autoplay: false, interval: '6', slides: [
+      { image: '', title: 'Welcome', text: 'Add a photo and a short line for each slide.' },
+      { image: '', title: 'Join us on Sunday', text: '' },
+      { image: '', title: 'Serve the city', text: '' },
+    ] };
     case 'text':         return { content: 'Start writing your content here...' };
     case 'trust-bar':    return { items: [{ number: '01', label: 'One welcoming community' }, { number: '03', label: 'Ways to connect each week' }, { number: '∞', label: 'Room for your next step' }] };
     case 'split-banner': return { eyebrow: 'Your first Sunday', title: 'Come curious. Leave encouraged.', body: 'There is no dress code, no perfect background required, and no pressure to have all the answers.', buttonText: 'What to expect', buttonLink: '#', buttonVariant: 'gold', times: [{ label: 'Sunday morning', value: '9:00 AM · 11:00 AM' }, { label: 'Midweek table', value: 'Wednesdays · 6:30 PM' }] };
