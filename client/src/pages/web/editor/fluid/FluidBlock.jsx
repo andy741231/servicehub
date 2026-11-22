@@ -157,6 +157,17 @@ export default function FluidBlock({
     }
     measureRef.current?.();
   }, [block.content]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Narrowing a block reflows its content (container queries: fewer cards
+  // across, more lines of text), so it gets taller — grow it to fit, like an
+  // edit. Grow only: a width change never shrinks a block's height.
+  const seenColsRef = useRef(`${fluid.colStart}-${fluid.colEnd}`);
+  useLayoutEffect(() => {
+    const cols = `${fluid.colStart}-${fluid.colEnd}`;
+    if (cols === seenColsRef.current) return;
+    seenColsRef.current = cols;
+    armRef.current = { until: Date.now() + 3000, mode: 'grow' };
+    measureRef.current?.();
+  }, [fluid.colStart, fluid.colEnd]);
   useEffect(() => {
     const el = itemRef.current;
     if (!el || !interactive) return undefined;

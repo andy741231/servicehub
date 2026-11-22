@@ -55,7 +55,9 @@ export default function SiteBlock({ block }) {
   const cs = block.style || {};
   const c = block.content || {};
   const sStyle = blockOuterStyle(block);
-  const cc = `${cs.className || ''} public-reveal`;
+  // site-block: each block is a size container, so its layout follows the
+  // block's own width (a half-width block no longer shows 3 cards across).
+  const cc = `${cs.className || ''} public-reveal site-block`;
 
   switch (block.type) {
     case 'hero': return (
@@ -75,7 +77,7 @@ export default function SiteBlock({ block }) {
         <div className="relative z-10">
           <Text
             as="h1" path="title" value={c.title} placeholder="Hero title"
-            className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6"
+            className="text-5xl @min-[700px]:text-6xl font-extrabold tracking-tight mb-6"
             style={{
               color: sStyle?.color || (c.backgroundImage ? 'hsl(var(--text-inverse))' : 'hsl(var(--text-base))'),
               fontFamily: cs.titleFontFamily || undefined,
@@ -163,7 +165,7 @@ export default function SiteBlock({ block }) {
 
     case 'trust-bar': return (
       <section className={`public-trust-bar ${cc}`} style={sStyle}>
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 @min-[600px]:grid-cols-3 gap-6">
           {(c.items || []).map((item, index) => (
             <div key={index} className="public-trust-item">
               <Text as="strong" plain path={`items.${index}.number`} value={item.number} placeholder="01" />
@@ -262,7 +264,7 @@ export default function SiteBlock({ block }) {
           <Text as="h2" className="text-3xl font-bold mb-2" path="title" value={c.title} placeholder="Title" />
           <Text as="p" className="text-subtle" path="subtitle" value={c.subtitle} placeholder="Subtitle" multiline />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 @min-[600px]:grid-cols-2 @min-[900px]:grid-cols-3 gap-10">
           {c.items?.map((item, i) => {
             const IconComp = IconMap[item.icon] || Star;
             // Older content stored the body under `description`; edit whichever exists.
@@ -286,7 +288,7 @@ export default function SiteBlock({ block }) {
       <section className={`bg-surface-raised py-20 px-6 ${cc}`} style={sStyle}>
         <div className="max-w-6xl mx-auto">
           <Text optional as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 @min-[700px]:grid-cols-3 gap-8">
             {c.items?.map((item, i) => (
               <div key={i} className="bg-surface rounded-xl overflow-hidden shadow-sm hover:shadow-md transition pb-6 text-center">
                 <Image path={`items.${i}.image`} value={item.image} alt={item.title} className="w-full h-48 object-cover mb-6" />
@@ -305,7 +307,7 @@ export default function SiteBlock({ block }) {
       <section className={`py-20 px-6 bg-surface-raised ${cc}`} style={sStyle}>
         <div className="max-w-6xl mx-auto">
           <Text optional as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 @min-[600px]:grid-cols-2 @min-[900px]:grid-cols-3 gap-6">
             {c.images?.map((image, i) => (!image.url && !edit) ? null : (
               <div key={i} className="group relative overflow-hidden rounded-lg shadow-md">
                 <Image path={`images.${i}.url`} value={image.url} alt={image.caption || `Gallery ${i + 1}`} className="w-full h-64 object-cover group-hover:scale-105 transition duration-300" />
@@ -326,7 +328,7 @@ export default function SiteBlock({ block }) {
       <section className={`py-20 px-6 bg-surface ${cc}`} style={sStyle}>
         <div className="max-w-6xl mx-auto">
           <Text optional as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 @min-[600px]:grid-cols-2 @min-[900px]:grid-cols-3 gap-8">
             {c.testimonials?.map((t, i) => (
               <div key={i} className="bg-surface-raised rounded-lg p-6 shadow-sm">
                 <div className="flex items-center gap-4 mb-4">
@@ -368,7 +370,7 @@ export default function SiteBlock({ block }) {
           <div className="max-w-4xl mx-auto text-center">
             <Text as="h2" className="text-3xl font-bold mb-4" style={onDark} path="title" value={c.title} placeholder="Title" />
             <Text as="p" className="text-xl opacity-80 mb-12" style={onDark} path="subtitle" value={c.subtitle} placeholder="Subtitle" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 @min-[600px]:grid-cols-3 gap-8">
               {(c.email || edit) && contactItem('email', 'emailLabel', 'Email',
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
                 edit ? editValue('email', 'email@example.com') : <a href={`mailto:${c.email}`} className="underline underline-offset-4 opacity-90 hover:opacity-100" style={onDark}>{c.email}</a>)}
@@ -381,7 +383,7 @@ export default function SiteBlock({ block }) {
             </div>
             {c.showForm && (
               <form className="public-contact-form mt-12 mx-auto max-w-2xl" onSubmit={event => event.preventDefault()} style={edit ? { pointerEvents: 'none' } : undefined}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><input required placeholder="Your name" /><input required type="email" placeholder="Email address" /></div>
+                <div className="grid grid-cols-1 @min-[600px]:grid-cols-2 gap-4"><input required placeholder="Your name" /><input required type="email" placeholder="Email address" /></div>
                 <select required defaultValue="" aria-label="Reason for contacting us"><option value="" disabled>What can we help with?</option>{(c.reasonOptions || ['General question', 'Visit planning', 'Community care']).map(reason => <option key={reason}>{reason}</option>)}</select>
                 <textarea rows="4" placeholder="Your message" />
                 <button type="submit" className={buttonClass(c.buttonVariant || 'gold')}>Send message <span aria-hidden="true">→</span></button>

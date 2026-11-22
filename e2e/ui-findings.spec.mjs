@@ -212,6 +212,33 @@ test('U28: the canvas shows the same shared header and footer as the published p
   expect(own.footer?.sections?.length ?? 0).toBe(0);
 });
 
+test('U27: list blocks lay out by their own width; narrowing grows the block to fit', async ({ page }) => {
+  const feat = () => block(page, 'Features');
+  const cols = () => feat().locator('.public-feature-card').first().evaluate((el) => getComputedStyle(el.parentElement).gridTemplateColumns.split(' ').length);
+  await openEditor(page, fixture.slug);
+  await expect.poll(cols).toBe(3); // full width at 1440
+  const rowsBefore = (await saved())[2].blocks[0].fluid.rowEnd;
+
+  // Narrow it to ~70% with the right-hand resize handle (the canvas is ~1120px
+  // wide with the inspector open, so that leaves room for two cards).
+  await selectBlock(page, 'Features');
+  const handle = section(page, 3).locator('.fluid-resize-r').first();
+  await handle.scrollIntoViewIfNeeded();
+  const hb = await handle.boundingBox();
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  const bb = await feat().boundingBox();
+  await page.mouse.move(bb.x + bb.width * 0.7, hb.y + hb.height / 2, { steps: 12 });
+  await page.mouse.up();
+
+  await expect.poll(cols).toBe(2); // two cards across, not three
+  // The third card wraps to a new row; the block grows instead of spilling over.
+  await expect.poll(() => overflowPx(feat())).toBeLessThanOrEqual(1);
+  await expect.poll(async () => (await saved())[2].blocks[0].fluid.rowEnd, { timeout: 10000 }).toBeGreaterThan(rowsBefore);
+  const f = (await saved())[2].blocks[0].fluid;
+  expect(f.colEnd).toBeLessThan(25);
+});
+
 test('U37: visiting an unknown URL does not create a page', async ({ request }) => {
   const slug = `e2e-unknown-${Date.now()}`;
   const res = await request.get(`/api/web/${slug}`);

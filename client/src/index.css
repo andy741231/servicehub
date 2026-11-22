@@ -202,6 +202,9 @@
   --color-text-inverse:       hsl(var(--text-inverse));
   --color-inverse:            hsl(var(--text-inverse));
 }
+/* Every block is a size container; its inner grids use @min-[…] container
+   variants, so layout follows the block's own width rather than the window. */
+.public-site .site-block { container-type: inline-size; }
 .public-site h1,
 .public-site h2,
 .public-site h3,
