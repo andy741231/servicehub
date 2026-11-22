@@ -37,15 +37,15 @@ export default function EditorToolbar({
 }) {
   return (
     <div
-      className="sticky top-0 z-40 flex items-center justify-between gap-4 px-5 text-[13px]"
+      className="sticky top-0 z-40 flex items-center justify-between gap-2 xl:gap-4 px-3 xl:px-5 text-[13px]"
       style={{ height: 52, background: 'hsl(var(--editor-chrome))', color: 'hsl(var(--editor-chrome-text))' }}
     >
       {/* Left — Exit + Preview + autosave status + page title (title truncates; it used to be
           absolutely centered and ran underneath the breakpoint switcher). */}
-      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+      <div className="flex items-center gap-1.5 xl:gap-3.5 min-w-0 flex-1 overflow-hidden">
         <button
           onClick={onExit}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors text-[13px] px-3 py-2 rounded min-h-[44px] flex items-center focus:outline-none focus:ring-2 focus:ring-primary"
+          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors text-[13px] px-2 xl:px-3 py-2 rounded min-h-[44px] flex items-center shrink-0 focus:outline-none focus:ring-2 focus:ring-primary"
           title="Save and return to Pages"
           aria-label="Exit editor"
         >
@@ -53,21 +53,21 @@ export default function EditorToolbar({
         </button>
         <button
           onClick={onPreview}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors text-[13px] px-3 py-2 rounded min-h-[44px] flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors text-[13px] px-2 xl:px-3 py-2 rounded min-h-[44px] flex items-center gap-1.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-primary"
           title="Preview this page without editor controls"
           aria-label="Preview"
         >
           <Eye className="w-4 h-4" /> Preview
         </button>
-        <div className="min-w-[110px] flex justify-center shrink-0">
+        <div className="flex justify-center shrink-0 whitespace-nowrap">
           <BuilderSaveStatus
             status={saveStatus}
             lastSavedAt={lastSavedAt}
             onRetry={() => saveRef.current()}
           />
         </div>
-        <div className="w-px h-5 bg-white/10 shrink-0" />
-        <div className="min-w-0">
+        <div className="w-px h-5 bg-white/10 shrink-0 hidden lg:block" />
+        <div className="min-w-0 hidden lg:block">
           <div className="font-semibold text-white text-[14px] leading-tight truncate" title={pageTitle || pageSlug}>
             {pageTitle || pageSlug}
           </div>
@@ -78,7 +78,7 @@ export default function EditorToolbar({
       </div>
 
       {/* Right — unified breakpoint selector + actions */}
-      <div className="flex items-center gap-4 shrink-0 text-[color:hsl(var(--editor-chrome-muted))]">
+      <div className="flex items-center gap-1.5 xl:gap-4 shrink-0 text-[color:hsl(var(--editor-chrome-muted))]">
         <BuilderBreakpointSelector
           value={viewport === 'mobile' ? 'mobile' : previewDevice}
           onChange={onBreakpointChange}
@@ -92,7 +92,7 @@ export default function EditorToolbar({
         <button
           onClick={onPublish}
           disabled={publishSaving}
-          className="flex items-center gap-1.5 text-[12px] font-medium transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 text-[12px] font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
           style={{ color: publishSaving ? 'hsl(var(--editor-chrome-muted))' : 'hsl(var(--editor-success))' }}
           title="Publish current draft to public site"
         >
@@ -100,11 +100,11 @@ export default function EditorToolbar({
           {publishSaving ? 'Publishing…' : 'Publish'}
         </button>
 
-        {/* Secondary icon actions — 44px touch targets via padding */}
+        {/* Secondary icon actions */}
         <button
           onClick={onSaveTemplate}
           disabled={templateSaving}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors disabled:opacity-50 p-2.5 rounded min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
+          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors disabled:opacity-50 p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
           title="Save this page as a reusable template"
           aria-label="Save as template"
         >
@@ -112,7 +112,7 @@ export default function EditorToolbar({
         </button>
         <button
           onClick={onShowVersionHistory}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2.5 rounded min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
+          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
           title="Version history"
           aria-label="Version history"
         >
@@ -120,7 +120,7 @@ export default function EditorToolbar({
         </button>
         <button
           onClick={onShowKeyboardHelp}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2.5 rounded min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
+          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
           title="Keyboard shortcuts"
           aria-label="Keyboard shortcuts"
         >
@@ -128,7 +128,7 @@ export default function EditorToolbar({
         </button>
         <button
           onClick={onToggleLayersPanel}
-          className={`transition-colors p-2.5 rounded min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary ${showLayersPanel ? 'text-white' : 'text-[color:hsl(var(--editor-chrome-muted))] hover:text-white'}`}
+          className={`transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary ${showLayersPanel ? 'text-white' : 'text-[color:hsl(var(--editor-chrome-muted))] hover:text-white'}`}
           title="Toggle layers panel"
           aria-label="Toggle layers panel"
           aria-pressed={showLayersPanel}
@@ -137,7 +137,7 @@ export default function EditorToolbar({
         </button>
         <button
           onClick={() => window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank')}
-          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2.5 rounded min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
+          className="text-[color:hsl(var(--editor-chrome-muted))] hover:text-white transition-colors p-2 xl:p-2.5 rounded min-w-[36px] xl:min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary"
           title="Open published page in a new tab"
           aria-label="Open published page in a new tab"
         >

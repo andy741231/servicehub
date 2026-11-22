@@ -245,3 +245,78 @@ visual regression was done ad hoc (pixel-identical on all pages after every chan
   assert the public page shows the change. Run in CI.
 - Visual-regression snapshots: public page vs. editor canvas (chrome hidden), desktop + mobile.
 - Unit tests for the store (history grouping, undo across delete, auto-grow pushdown).
+
+## 6. Second interactive review — 2026-11-21
+
+_Hands-on pass over `/hub-admin/web/editor/home` in a real browser (Playwright): every toolbar control,
+panel, breakpoint and block interaction exercised._
+
+### Verified working
+
+Login → editor loads 6 sections with read-only site header/footer · autosave → DB (verified) ·
+toolbar undo/redo · inline text editing + floating toolbar (B/I/U/S/link/clear, active-state toggles) ·
+block select / drag (snaps 88px/row) / resize (snaps) / delete with Undo toast · inspector
+Content/Design/Layout tabs · BlockPicker (search, categories, adds at next free row, auto-selects) ·
+SectionPicker (13 templates, live mini-previews, category filters, correct insert position) · section
+hover chrome (Add Section pills, Edit / Add Below / Duplicate / height toggle / move / Remove) ·
+`G` grid overlay on all sections · keyboard-shortcuts modal · Preview mode (chrome-free + "Back to
+editor") · breakpoints: Desktop editable, Tablet = preview-only 768px, Mobile = editable 375px with
+its own `fluidMobile` layout and hamburger header · Layers tree panel · Version History panel ·
+Publish · aria-labels / aria-pressed / `role=status` toasts / SR live region.
+
+### New bugs (fixed 2026-11-21)
+
+| # | Severity | Bug | Fix |
+|---|---|---|---|
+| B16 ★ | **High** | **Canvas jitter loop:** the iframe gained/lost its vertical scrollbar several times a second → ~8px horizontal oscillation of the whole canvas. Cause: block resize handles (`.fluid-resize-r/-br`, negative offsets) protrude past the viewport → `scrollWidth` 1588 vs viewport 1563 → scrollbar appear/disappear feedback with `CanvasFrame` auto-height. Made every Playwright hover/click time out ("element not stable") — i.e. the editor was effectively untestable and imprecise for real users too. | `overflow-x: clip` on the iframe `html`+`body` in `CanvasFrame.jsx` — document scrollWidth can no longer exceed the viewport |
+| B17 ★ | Med | `Duplicate block` placed the copy at identical `rowStart`/`colStart` — invisible under the original. | Copy is now placed directly below the original (own height offset on `fluid` + `fluidMobile`) and auto-selected |
+| B18 ★ | Med | Layering controls asymmetric: Bring forward / Bring to front / Send to back — no **Send backward**. | Added to the block toolbar (`layerBlock` already supported `'backward'`) |
+| B19 ★ | Med | Inspector color pickers showed `#ffffff` for unset Background/Text colors while the rendered block was dark navy — misleading "theme default" state. | Unset colors now show a checkerboard "theme default" swatch instead of white |
+| B20 ★ | Low | **Publish** fired instantly — one misclick ships the site live. | Added a confirm dialog ("Publish this page?") before the request |
+| B21 ★ | Low | "Save as template" used a native `window.prompt` — inconsistent with the custom dialogs. | Now uses the shared `usePrompt` PromptDialog |
+| B22 ★ | Low | `/favicon.ico` 404 (no icon declared). | Inline SVG favicon in `index.html` |
+
+### Open / watch items
+
+- `GET /api/web/pages/home` → 404 seen once in console; **not reproducible** on reload — likely a
+  transient/stale fetch from a specific interaction. No client call site found; revisit if it recurs.
+- `WebPageVersion` rows grow unboundedly (v214+). Server already caps autosave snapshots to ~10 min;
+  consider pruning old versions per page.
+- `Ctrl+Z` inside `contentEditable` is native text-undo only (by design — `isTextEntryTarget` guard);
+  structural undo is the toolbar button. Worth a docs note so users don't expect it while typing.
+- Block toolbar is flush to the canvas edge for column-1 blocks (cosmetic; B16's clip keeps it inside).
+- In-block item editors (add feature/event/item), "Open published page" external link, and
+  keyboard-only canvas navigation were not fully exercised this round.
+
+## 7. Third interactive review — 2026-11-21
+
+_Follow-up pass after B16–B22 covering dark-mode contrast, full-page scroll audit, Tablet/Mobile
+modes, keyboard shortcuts, inline link editing, and narrower laptop viewports (`1280px` / `1024px`)._
+
+### Verified working (post-B16–B22)
+
+B16 stability holds (`element is visible, enabled and stable` in Playwright; zero horizontal
+overflow across Desktop `1578px`, Tablet `768px`, Mobile `375px`) · `?` / `+` / `ArrowDown` nudge +
+`Ctrl+Z` / `Esc` walk-up chain (`text → block → section → none`) · Mobile `Auto layout · Customize`
+→ 6-col grid → `Reset to auto layout` · Design inspector alignment edit + undo.
+
+### New bugs (fixed 2026-11-21)
+
+| # | Severity | Bug | Fix |
+|---|---|---|---|
+| B23 ★ | **High** | **Dark-mode bleed into canvas iframe (~1.25:1 contrast):** `CanvasFrame.jsx` mirrored `html.dark` from the admin shell into the iframe, turning `text-text-base` to `#e5e7eb` on `bg-white` canvas chrome (block toolbar icons, `+ Add Block`, `Edit Section`, `Auto layout · Customize`, `Edit header/footer`) AND on public Feature card titles (`Sunday worship`, `Groups`, `Serve the city` rendered light gray on white instead of dark charcoal). | Force `light` (`colorScheme = 'light'`, never mirror `dark`) on the iframe `documentElement` in `CanvasFrame.jsx` |
+| B24 ★ | **High** | **Stuck / resurrecting inline text toolbar:** `InlineTextEditor` `scroll` listener called `computePosition()` without checking `activeElement === target`; because browsers retain the last `Selection` after blur, scrolling resurrected the dark `B I U S` toolbar over unrelated sections. Clicking parent UI also left it open, and scrolling while editing clamped it over the 52px top toolbar. | Guard `computePosition()` with `docOf().activeElement === target`, blur editor on parent/outside capture `mousedown`, and clamp `top >= 60px` (`InlineTextEditor.jsx`) |
+| B25 ★ | **High** | **Desktop hover outline & block type label never appeared:** `onMouseEnter`/`onMouseLeave` were only on the grid item under `<Rnd>`'s transparent click-catcher (`pointerEvents: auto`), so hovering unselected blocks never set `isHovered`. | Added `onMouseEnter`/`onMouseLeave` to `<Rnd>`'s click-catcher (`FluidBlock.jsx`) |
+| B26 ★ | Med | **Tablet mode labeled "Preview only · 768 px" was fully editable:** `WebEditor.jsx` hardcoded `readOnly={false}`, leaving 54 `contenteditable` fields, 6 `<Rnd>` overlays, 33 chrome controls, and the Inspector active. | Pass `readOnly={previewDevice === 'tablet'}` to `FluidSection` and hide the Inspector & bottom Add Section CTA in tablet preview |
+| B27 ★ | Med | **Top toolbar overlapped at `1024px` (B4 regression):** `"Saved · HH:MM"` collided with `[Desktop]` and the page title collapsed to `0px`. | Tightened responsive gaps/button widths below `xl`, added `overflow-hidden` on the left flex group, and kept title visible from `lg` up (`EditorToolbar.jsx`) |
+| B28 ★ | Med | **Mobile text click edited without selecting block:** `InlineTextEditor` stopped `mousedown` propagation so clicking a heading in Mobile auto-layout entered edit mode while the Inspector stayed on the previous section. | `FluidBlock.startEditing` now calls `onSelect(false)` if not already selected |
+| B29 ★ | Med | **`Ctrl/Cmd + P` opened the published site in a new tab** instead of toggling in-editor Preview (contradicting the Shortcuts modal label and hiding unpublished draft edits). | Changed `Ctrl/Cmd + P` to toggle `viewMode` (`live` ↔ `edit`) (`WebEditor.jsx`) |
+| B30 ★ | Low | Inline link editor (`EditLink` in `siteEditBridge.jsx`) still used native `window.prompt()`. | Replaced with an inline URL popover with validation, Apply/Cancel, and `Escape` / outside-click dismiss |
+| B31 ★ | Low | Redundant stacked `+ Add Section` buttons at the bottom of the page (last section's floating bottom pill 8px above the page-level `+ Add Section` CTA). | Omit the floating bottom pill on `isLastSection` (`FluidSection.jsx`) |
+| B32 ★ | Low | Mobile hover section menu (`168px` vertical card) covered half the Hero headline at `375px`. | Render a compact single-row icon bar on mobile (`FluidSection.jsx`) |
+
+### Data note
+
+- Section 3's `"Find your place."` `<h2>` is saved with `#ffffff` text on cream even on the live `/`
+  page (likely an artifact from the pre-B19 white-default color picker) — content data issue, not an
+  editor bug.

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { Plus, Edit3, Rows3, AlertCircle } from 'lucide-react';
 import api from '../../../utils/api';
-import { useConfirm } from '../../../components/Dialog';
+import { useConfirm, usePrompt } from '../../../components/Dialog';
 import { useToast } from '../../../components/Toast';
 import EditorToolbar from './EditorToolbar';
 import EditorDialogs from './EditorDialogs';
@@ -21,6 +21,7 @@ import { mobilePlacements, isMobileAuto, MOBILE_GRID_COLUMNS } from '../../../si
 import { SiteHeader, SiteFooter } from '../../../site/SiteChrome';
 import FluidSection from './fluid/FluidSection.jsx';
 import { isTypingTarget, isTextEntryTarget } from './editorUtils';
+import { blockTypeLabel } from './BlockSettingsPanel';
 
 const MAX_HISTORY = 50; // Bound undo history to prevent memory growth
 
@@ -129,6 +130,7 @@ export default function WebEditor() {
 
   // Accessible confirm dialog (replaces window.confirm)
   const { confirmDialog, ConfirmDialogMount } = useConfirm();
+  const { promptDialog, PromptDialogMount } = usePrompt();
   // Toast notifications (used for delete-undo pattern)
   const { toast, ToastMount } = useToast();
 
@@ -316,6 +318,12 @@ export default function WebEditor() {
 
   const handlePublish = async () => {
     if (publishSaving) return;
+    const ok = await confirmDialog({
+      title: 'Publish this page?',
+      message: 'Your saved changes will go live on the public site immediately.',
+      confirmLabel: 'Publish',
+    });
+    if (!ok) return;
     setPublishSaving(true);
     try {
       // Save first (waits for any in-flight save) — never publish stale drafts
@@ -477,10 +485,10 @@ export default function WebEditor() {
         setSelectedBlockIds(new Set());
       }
 
-      // Ctrl/Cmd + P: Preview
+      // Ctrl/Cmd + P: toggle in-editor Preview (matches the Preview toolbar button)
       if (mod && key === 'p') {
         e.preventDefault();
-        window.open(pageSlug === 'home' ? '/' : `/${pageSlug}`, '_blank');
+        setViewMode((m) => (m === 'live' ? 'edit' : 'live'));
       }
 
       // + : Add section
@@ -719,8 +727,19 @@ export default function WebEditor() {
     const sec = sections[sIdx];
     const block = sec.blocks[bIdx];
     const newBlock = duplicateBlockEntity(block);
+    // Place the copy directly below the original so it's visible — at the
+    // same grid coordinates it renders hidden under the source block.
+    const shiftDown = (f) => {
+      if (!f) return f;
+      const span = (f.rowEnd ?? 3) - (f.rowStart ?? 1);
+      return { ...f, rowStart: (f.rowEnd ?? 3), rowEnd: (f.rowEnd ?? 3) + span };
+    };
+    if (newBlock.fluid) newBlock.fluid = shiftDown(newBlock.fluid);
+    if (newBlock.fluidMobile) newBlock.fluidMobile = shiftDown(newBlock.fluidMobile);
     const newBlocks = [...sec.blocks.slice(0, bIdx + 1), newBlock, ...sec.blocks.slice(bIdx + 1)];
     updateSectionBlocks(sIdx, newBlocks);
+    setSelectedBlockIds(new Set([newBlock.id]));
+    setAnnouncement(`${blockTypeLabel(block.type) || 'Block'} duplicated`);
   };
 
   const moveBlock = (sIdx, bIdx, direction) => {
@@ -917,7 +936,13 @@ export default function WebEditor() {
         onPublish={handlePublish}
         publishSaving={publishSaving}
         onSaveTemplate={async () => {
-          const name = window.prompt('Name this reusable page template:', pageData?.title || pageSlug);
+          const name = await promptDialog({
+            title: 'Save as page template',
+            message: 'Reuse this page layout (header, footer and sections) on other pages.',
+            defaultValue: pageData?.title || pageSlug,
+            placeholder: 'Template name',
+            confirmLabel: 'Save template',
+          });
           if (!name?.trim() || templateSaving) return;
           setTemplateSaving(true);
           try {
@@ -1066,13 +1091,13 @@ export default function WebEditor() {
                   onMoveSectionDown={(i) => moveSection(i, 1)}
                   onAddSectionBelow={(i) => setAddSectionAfterIndex(i)}
                   onAddNestedBlock={(sIdx, bIdx, colIndex, type) => addNestedBlock(sIdx, bIdx, colIndex, type)}
-                  readOnly={false}
+                  readOnly={previewDevice === 'tablet'}
                   viewport={viewport}
                 />
               ))}
 
               {/* Bottom add-section hint */}
-              {sections.length > 0 && (
+              {sections.length > 0 && previewDevice !== 'tablet' && (
                 <div className="site-editor-chrome py-8 text-center">
                   <button
                     onClick={() => setAddSectionAfterIndex(sections.length - 1)}
@@ -1096,7 +1121,7 @@ export default function WebEditor() {
           </div>
         </div>
         {/* Inspector — settings for the selected block or section */}
-        {inspectorOpen && (
+        {inspectorOpen && previewDevice !== 'tablet' && (
           <EditorInspector
             selection={inspectorSelection}
             isMobile={viewport === 'mobile'}
@@ -1125,6 +1150,7 @@ export default function WebEditor() {
 
       {/* Accessible confirm dialog mount (dirty-exit protection) */}
       {ConfirmDialogMount}
+      {PromptDialogMount}
       {/* Toast notifications (delete undo, etc.) */}
       {ToastMount}
       {/* Screen-reader-only live region for announcements (selection, deletion, etc.) */}

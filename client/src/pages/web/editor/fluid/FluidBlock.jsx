@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect, useLayoutEffect } from 'react';
 import { Rnd } from 'react-rnd';
 import {
-  Trash2, Copy, ArrowUp, ChevronsUp, ChevronsDown, GripVertical,
+  Trash2, Copy, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, GripVertical,
   Pencil, SlidersHorizontal,
 } from 'lucide-react';
 import SiteBlock from '../../../../site/SiteBlock.jsx';
@@ -56,8 +56,13 @@ export default function FluidBlock({
   const [isEditing, setIsEditing] = useState(false);
 
   // Inline text/image editing inside the block (dashed outline, no resize
-  // handles while active). Called by the editable site fields.
-  const startEditing = useCallback(() => setIsEditing(true), []);
+  // handles while active). Called by the editable site fields. Also ensures
+  // the block is selected (in mobile auto-layout, clicking text directly
+  // enters editing without hitting the grid click handler).
+  const startEditing = useCallback(() => {
+    setIsEditing(true);
+    if (!selected) onSelect?.(false);
+  }, [selected, onSelect]);
   const endEditing = useCallback(() => setIsEditing(false), []);
 
   const fluid = { colStart: 1, colEnd: gridColumns + 1, rowStart: 1, rowEnd: 3, zIndex: 0, ...(placement || {}) };
@@ -230,6 +235,7 @@ export default function FluidBlock({
       {interactive && (
         <>
           <button onClick={() => handleLayering('forward')} title="Bring forward" aria-label="Bring forward" className={btn}><ArrowUp className="w-4 h-4" /></button>
+          <button onClick={() => handleLayering('backward')} title="Send backward" aria-label="Send backward" className={btn}><ArrowDown className="w-4 h-4" /></button>
           <button onClick={() => handleLayering('front')} title="Bring to front" aria-label="Bring to front" className={btn}><ChevronsUp className="w-4 h-4" /></button>
           <button onClick={() => handleLayering('back')} title="Send to back" aria-label="Send to back" className={btn}><ChevronsDown className="w-4 h-4" /></button>
         </>
@@ -347,6 +353,8 @@ export default function FluidBlock({
               pointer-events:none so clicks reach the editable text below. */}
           <div
             style={{ position: 'absolute', inset: 0, pointerEvents: selected ? 'none' : 'auto' }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             onMouseDown={(e) => {
               // Don't stopPropagation — let react-draggable also handle it for drag
               onSelect(e.metaKey || e.ctrlKey);

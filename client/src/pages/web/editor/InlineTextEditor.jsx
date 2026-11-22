@@ -25,6 +25,7 @@ import {
  */
 const TOOLBAR_HEIGHT = 40; // approximate, used for initial placement
 const VIEWPORT_MARGIN = 8; // px from viewport edge
+const TOP_SAFE_MARGIN = 60; // stay below the 52px sticky editor toolbar
 const GAP = 10; // px between toolbar and selection
 
 export default function InlineTextEditor({
@@ -205,8 +206,8 @@ export default function InlineTextEditor({
     const tbHeight = tbEl ? tbEl.offsetHeight : TOOLBAR_HEIGHT;
 
     // Vertical: prefer above, flip below if not enough room.
-    const spaceAbove = rect.top;
-    const spaceBelow = vh - rect.bottom;
+    const spaceAbove = rect.top - TOP_SAFE_MARGIN;
+    const spaceBelow = vh - rect.bottom - VIEWPORT_MARGIN;
     let top;
     let flip = false;
     if (spaceAbove >= tbHeight + GAP && spaceAbove >= spaceBelow) {
@@ -217,7 +218,7 @@ export default function InlineTextEditor({
     } else {
       // Not enough room on either side — pick whichever has more and clamp.
       if (spaceAbove >= spaceBelow) {
-        top = Math.max(VIEWPORT_MARGIN, rect.top - tbHeight - GAP);
+        top = Math.max(TOP_SAFE_MARGIN, rect.top - tbHeight - GAP);
       } else {
         top = Math.min(vh - tbHeight - VIEWPORT_MARGIN, rect.bottom + GAP);
         flip = true;
@@ -241,13 +242,19 @@ export default function InlineTextEditor({
   const computePosition = useCallback(() => {
     if (plainOnly) { setVisible(false); return; }
     if (linkOpenRef.current) return; // selection is in the link input
+    const target = ref.current;
+    // Browsers keep the last Selection range inside a contentEditable even
+    // after blur; without an activeElement check, scrolling resurrects the
+    // toolbar over unrelated sections.
+    if (!target || docOf().activeElement !== target) {
+      setVisible(false);
+      return;
+    }
     const sel = winOf().getSelection();
     if (!sel || sel.rangeCount === 0) {
       setVisible(false);
       return;
     }
-    const target = ref.current;
-    if (!target) return;
 
     let range;
     try {
@@ -320,14 +327,15 @@ export default function InlineTextEditor({
       const ed = ref.current;
       if (tb?.contains(e.target)) return;
       if (ed?.contains(e.target)) return;
+      if (ed && docOf().activeElement === ed) ed.blur();
       setVisible(false);
     };
     const cdoc = docOf();
-    document.addEventListener('mousedown', onMouseDown);
-    if (cdoc !== document) cdoc.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousedown', onMouseDown, true);
+    if (cdoc !== document) cdoc.addEventListener('mousedown', onMouseDown, true);
     return () => {
-      document.removeEventListener('mousedown', onMouseDown);
-      if (cdoc !== document) cdoc.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousedown', onMouseDown, true);
+      if (cdoc !== document) cdoc.removeEventListener('mousedown', onMouseDown, true);
     };
   }, []);
 

@@ -367,64 +367,99 @@ export default function FluidSection({
         </div>
       )}
 
-      {/* ── Top-right: section menu ────────────────────────────────────── */}
+      {/* ── Top-right: section menu (compact bar on mobile so it doesn't cover 375px content) */}
       {!readOnly && (
         <div className="site-editor-chrome absolute right-4 flex flex-col gap-2 z-[2000] transition-opacity duration-100" style={{ top: sectionIndex === 0 ? 56 : 16, ...chromeStyle }}>
-          <div className={`bg-white rounded-lg ${pillShadow} overflow-hidden min-w-[168px]`}>
-            <button
-              onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold text-text-base hover:bg-surface-raised w-full text-left border-b border-border"
-            >
-              <Pencil className="w-[15px] h-[15px]" /> Edit Section
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold text-text-base hover:bg-surface-raised w-full text-left border-b border-border"
-              title="Add a new section below this one"
-            >
-              <LayoutGrid className="w-[15px] h-[15px]" /> Add Section Below
-            </button>
-            <div className="flex border-b border-border">
-              <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="flex-1 h-10 flex items-center justify-center hover:bg-surface-raised border-r border-border">
-                <Copy className="w-[15px] h-[15px]" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, fillScreen: !cfg.fillScreen } }); }}
-                title={cfg.fillScreen ? 'Tall section — click to hug content' : 'Hug content — click to make tall'}
-                aria-label={cfg.fillScreen ? 'Switch to hug content height' : 'Switch to full screen height'}
-                className="flex-1 h-10 flex items-center justify-center hover:bg-surface-raised border-r border-border"
-              >
-                {cfg.fillScreen ? <Minimize2 className="w-[15px] h-[15px]" /> : <Maximize2 className="w-[15px] h-[15px]" />}
+          {isMobile ? (
+            <div className={`bg-white rounded-lg ${pillShadow} flex items-center p-0.5`}>
+              <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="w-8 h-8 flex items-center justify-center rounded text-text-base hover:bg-surface-raised">
+                <Copy className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onMoveSectionUp(sectionIndex); }}
                 disabled={sectionIndex === 0}
                 title="Move section up"
                 aria-label="Move section up"
-                className={`flex-1 h-10 flex items-center justify-center border-r border-border ${sectionIndex === 0 ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
+                className={`w-8 h-8 flex items-center justify-center rounded text-text-base ${sectionIndex === 0 ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
               >
-                <MoveUp className="w-[15px] h-[15px]" />
+                <MoveUp className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onMoveSectionDown(sectionIndex); }}
                 disabled={isLastSection}
                 title="Move section down"
                 aria-label="Move section down"
-                className={`flex-1 h-10 flex items-center justify-center ${isLastSection ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
+                className={`w-8 h-8 flex items-center justify-center rounded text-text-base ${isLastSection ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
               >
-                <MoveDown className="w-[15px] h-[15px]" />
+                <MoveDown className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteSection(sectionIndex); }}
+                title="Remove section"
+                aria-label="Remove section"
+                className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised"
+                style={{ color: 'hsl(var(--danger, 0 84% 60%))' }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDeleteSection(sectionIndex); }}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold w-full text-left hover:bg-surface-raised"
-              style={{ color: 'hsl(var(--danger, 0 84% 60%))' }}
-              title="Remove section"
-              aria-label="Remove section"
-            >
-              <Trash2 className="w-[15px] h-[15px]" /> Remove
-            </button>
-          </div>
+          ) : (
+            <div className={`bg-white rounded-lg ${pillShadow} overflow-hidden min-w-[168px]`}>
+              <button
+                onClick={(e) => { e.stopPropagation(); onSelectSection(sectionIndex); onOpenInspector?.(); }}
+                className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold text-text-base hover:bg-surface-raised w-full text-left border-b border-border"
+              >
+                <Pencil className="w-[15px] h-[15px]" /> Edit Section
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}
+                className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold text-text-base hover:bg-surface-raised w-full text-left border-b border-border"
+                title="Add a new section below this one"
+              >
+                <LayoutGrid className="w-[15px] h-[15px]" /> Add Section Below
+              </button>
+              <div className="flex border-b border-border">
+                <button onClick={(e) => { e.stopPropagation(); onDuplicateSection(sectionIndex); }} title="Duplicate section" aria-label="Duplicate section" className="flex-1 h-10 flex items-center justify-center hover:bg-surface-raised border-r border-border">
+                  <Copy className="w-[15px] h-[15px]" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onUpdateSection(sectionIndex, { fluidConfig: { ...cfg, fillScreen: !cfg.fillScreen } }); }}
+                  title={cfg.fillScreen ? 'Tall section — click to hug content' : 'Hug content — click to make tall'}
+                  aria-label={cfg.fillScreen ? 'Switch to hug content height' : 'Switch to full screen height'}
+                  className="flex-1 h-10 flex items-center justify-center hover:bg-surface-raised border-r border-border"
+                >
+                  {cfg.fillScreen ? <Minimize2 className="w-[15px] h-[15px]" /> : <Maximize2 className="w-[15px] h-[15px]" />}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onMoveSectionUp(sectionIndex); }}
+                  disabled={sectionIndex === 0}
+                  title="Move section up"
+                  aria-label="Move section up"
+                  className={`flex-1 h-10 flex items-center justify-center border-r border-border ${sectionIndex === 0 ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
+                >
+                  <MoveUp className="w-[15px] h-[15px]" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onMoveSectionDown(sectionIndex); }}
+                  disabled={isLastSection}
+                  title="Move section down"
+                  aria-label="Move section down"
+                  className={`flex-1 h-10 flex items-center justify-center ${isLastSection ? 'opacity-30 cursor-default' : 'hover:bg-surface-raised'}`}
+                >
+                  <MoveDown className="w-[15px] h-[15px]" />
+                </button>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteSection(sectionIndex); }}
+                className="flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-semibold w-full text-left hover:bg-surface-raised"
+                style={{ color: 'hsl(var(--danger, 0 84% 60%))' }}
+                title="Remove section"
+                aria-label="Remove section"
+              >
+                <Trash2 className="w-[15px] h-[15px]" /> Remove
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -451,8 +486,8 @@ export default function FluidSection({
         </div>
       )}
 
-      {/* ── Bottom-center: + Add Section (below) ───────────────────────── */}
-      {!readOnly && (
+      {/* ── Bottom-center: + Add Section (below; omitted on last section where the page-level CTA sits) */}
+      {!readOnly && !isLastSection && (
         <div className="site-editor-chrome absolute left-1/2 -translate-x-1/2 z-[2000] transition-opacity duration-100" style={{ bottom: -14, ...chromeStyle }}>
           <button
             onClick={(e) => { e.stopPropagation(); onAddSectionBelow(sectionIndex); }}

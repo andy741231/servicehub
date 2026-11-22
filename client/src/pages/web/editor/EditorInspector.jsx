@@ -70,7 +70,16 @@ function ColorField({ label, value, onCommit, placeholder = 'Default' }) {
     <div>
       <span className={labelCls}>{label}</span>
       <div className="flex items-center gap-2">
-        <input ref={swatchRef} type="color" defaultValue={isHex ? value : '#ffffff'} key={value || 'none'} className="mt-1 h-8 w-10 rounded border border-border bg-surface p-0.5" aria-label={`${label} picker`} />
+        <div className="relative mt-1 h-8 w-10 rounded border border-border bg-surface overflow-hidden" title={isHex ? value : `${label}: theme default`}>
+          {!isHex && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0"
+              style={{ background: 'repeating-conic-gradient(hsl(var(--border-strong, 215 16% 47%) / 0.45) 0% 25%, transparent 0% 50%)', backgroundSize: '8px 8px' }}
+            />
+          )}
+          <input ref={swatchRef} type="color" defaultValue={isHex ? value : '#ffffff'} key={value || 'none'} className={`h-full w-full p-0.5 bg-transparent ${isHex ? '' : 'opacity-0'}`} aria-label={`${label} picker`} />
+        </div>
         <div className="flex-1"><CommitInput value={value} onCommit={onCommit} placeholder={placeholder} ariaLabel={label} /></div>
         {value && (
           <button type="button" onClick={() => onCommit(undefined)} className="mt-1 text-xs text-muted hover:text-text-base" aria-label={`Clear ${label}`}>Reset</button>

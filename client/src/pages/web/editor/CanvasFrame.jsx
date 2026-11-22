@@ -36,7 +36,18 @@ export default function CanvasFrame({ width = '100%', minHeight, onDocument, tit
       doc.body.dataset.canvasReady = '1';
       doc.body.style.margin = '0';
 
-      // Mirror stylesheets + theme class from the editor document.
+      // Contain horizontal overflow at the document level. Block resize
+      // handles protrude a few px past the canvas edge; without a clip they
+      // grow document.scrollWidth, a scrollbar appears, the layout reflows,
+      // the scrollbar disappears — an endless ~8px jitter across the canvas.
+      // `clip` (not `hidden`) doesn't create a scroll container.
+      doc.documentElement.style.overflowX = 'clip';
+      doc.body.style.overflowX = 'clip';
+
+      // Mirror stylesheets from the editor document. Public site routes and
+      // floating canvas chrome are always light (admin dark mode is internal
+      // only — mirroring `dark` turns `text-text-base` white on `bg-white`
+      // pills and light-gray on public feature cards).
       const sync = () => {
         doc.head.querySelectorAll('[data-canvas-mirror]').forEach((n) => n.remove());
         document.head.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
@@ -44,15 +55,13 @@ export default function CanvasFrame({ width = '100%', minHeight, onDocument, tit
           copy.setAttribute('data-canvas-mirror', '');
           doc.head.appendChild(copy);
         });
-        doc.documentElement.className = document.documentElement.className;
-        const theme = document.documentElement.getAttribute('data-theme');
-        if (theme) doc.documentElement.setAttribute('data-theme', theme); else doc.documentElement.removeAttribute('data-theme');
+        doc.documentElement.classList.remove('dark');
+        doc.documentElement.classList.add('light');
+        doc.documentElement.style.colorScheme = 'light';
       };
       sync();
       const headObserver = new MutationObserver(sync);
       headObserver.observe(document.head, { childList: true, subtree: true, characterData: true, attributes: true });
-      const rootObserver = new MutationObserver(sync);
-      rootObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
 
       const root = doc.createElement('div');
       root.id = 'canvas-root';
@@ -67,7 +76,6 @@ export default function CanvasFrame({ width = '100%', minHeight, onDocument, tit
       onDocument?.(doc);
       cleanup = () => {
         headObserver.disconnect();
-        rootObserver.disconnect();
         ro.disconnect();
         onDocument?.(null);
       };

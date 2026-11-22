@@ -6,8 +6,8 @@
  * text/images/links become editable in place while the surrounding markup,
  * classes and theme stay identical to what visitors see.
  */
-import { useMemo } from 'react';
-import { Plus, Link2 } from 'lucide-react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { Plus, Link2, Check, X } from 'lucide-react';
 import { SiteEditContext, useSiteEdit } from '../../../site/fields';
 import { renderRichText } from '../../../site/siteRichText';
 import InlineTextEditor from './InlineTextEditor';
@@ -100,16 +100,67 @@ function EditImage({ path, value, alt, className }) {
   );
 }
 
+function isSafeHref(raw) {
+  const url = raw.trim();
+  if (!url) return true; // empty clears the link
+  if (url.startsWith('/') || url.startsWith('#')) return true;
+  if (/^(https?:|mailto:|tel:)/i.test(url)) return true;
+  return !url.includes(':');
+}
+
 function EditLink({ textPath, hrefPath, text, href, className, after, placeholder }) {
   const { update, startEditing, endEditing } = useSiteEdit();
-  const editHref = (e) => {
+  const [editingHref, setEditingHref] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState('');
+  const popRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const openHref = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const next = window.prompt('Link URL (https://…, /page, mailto:…):', href || '');
-    if (next != null) update(hrefPath, next.trim());
+    setDraft(href || '');
+    setError('');
+    setEditingHref(true);
+    startEditing?.();
   };
+
+  const closeHref = () => {
+    setEditingHref(false);
+    setError('');
+    endEditing?.();
+  };
+
+  const saveHref = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const trimmed = draft.trim();
+    if (!isSafeHref(trimmed)) {
+      setError('Use https://, /page, #section, or mailto:');
+      return;
+    }
+    update(hrefPath, trimmed);
+    closeHref();
+  };
+
+  useEffect(() => {
+    if (!editingHref) return undefined;
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
+    const doc = popRef.current?.ownerDocument || document;
+    const onDown = (e) => {
+      if (popRef.current?.contains(e.target)) return;
+      closeHref();
+    };
+    doc.addEventListener('mousedown', onDown, true);
+    if (doc !== document) document.addEventListener('mousedown', onDown, true);
+    return () => {
+      doc.removeEventListener('mousedown', onDown, true);
+      if (doc !== document) document.removeEventListener('mousedown', onDown, true);
+    };
+  }, [editingHref]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <span className="site-edit-link">
+    <span className="site-edit-link relative inline-flex items-center">
       {/* preventDefault: clicking into the label must not follow the link */}
       <a href={href || '#'} className={className} onClick={(e) => e.preventDefault()}>
         <InlineTextEditor
@@ -127,12 +178,44 @@ function EditLink({ textPath, hrefPath, text, href, className, after, placeholde
         type="button"
         className="site-edit-link-btn site-editor-chrome"
         onMouseDown={(e) => e.stopPropagation()}
-        onClick={editHref}
+        onClick={openHref}
         title={`Link: ${href || '(none)'} — click to change`}
         aria-label="Edit link URL"
+        aria-expanded={editingHref}
       >
         <Link2 className="w-3.5 h-3.5" />
       </button>
+      {editingHref && (
+        <form
+          ref={popRef}
+          onSubmit={saveHref}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          className="site-editor-chrome absolute left-0 top-full mt-2 z-[2500] bg-[#181b22] text-white rounded-lg shadow-xl p-2 flex flex-col gap-1 min-w-[260px]"
+          role="dialog"
+          aria-label="Edit link URL"
+        >
+          <div className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={draft}
+              onChange={(e) => { setDraft(e.target.value); setError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeHref(); } }}
+              placeholder="https://…, /page, mailto:…"
+              aria-label="Link URL"
+              className="flex-1 bg-white/10 text-white placeholder-white/40 text-xs px-2 py-1.5 rounded border border-white/15 focus:outline-none focus:border-primary"
+            />
+            <button type="submit" title="Apply link" aria-label="Apply link" className="w-7 h-7 rounded bg-primary text-white flex items-center justify-center shrink-0">
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button type="button" onClick={closeHref} title="Cancel" aria-label="Cancel link edit" className="w-7 h-7 rounded hover:bg-white/10 text-white/70 flex items-center justify-center shrink-0">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {error && <span className="text-[11px] text-red-400 px-1">{error}</span>}
+        </form>
+      )}
     </span>
   );
 }
