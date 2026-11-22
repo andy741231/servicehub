@@ -36,6 +36,8 @@ export default function FluidBlock({
   onSelect,
   onUpdate,
   onLayer,
+  columnCells = null, // column mode: grid columns per column (snap step)
+  onMoveToSection, // drop over another section → move the block there
   onGrow,
   onFit,
   onUpdateContent,
@@ -197,8 +199,9 @@ export default function FluidBlock({
   const corner = { width: '9px', height: '9px', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto', scale: 'var(--ui-scale, 1)' };
   const edge = 'calc(12px * var(--ui-scale, 1))';
 
-  const dragGrid = [Math.round(cellW), Math.round(cellH)];
-  const resizeGrid = [Math.round(cellW), Math.round(cellH)];
+  // Column mode snaps horizontally to whole columns.
+  const dragGrid = [Math.round(cellW * (columnCells || 1)), Math.round(cellH)];
+  const resizeGrid = [Math.round(cellW * (columnCells || 1)), Math.round(cellH)];
 
   // ── Drag handlers ───────────────────────────────────────────────────────
   const handleDragStart = useCallback(() => {
@@ -235,6 +238,26 @@ export default function FluidBlock({
   const handleDragStop = (e, d) => {
     onHideGrid();
     onGuidesChange?.({ vertical: [], horizontal: [] });
+    // Released over a different section? Move the block there (the target
+    // section places it at the column/row under the pointer).
+    if (onMoveToSection) {
+      const pt = e?.changedTouches?.[0] || e;
+      const doc = itemRef.current?.ownerDocument;
+      if (doc && pt && Number.isFinite(pt.clientX)) {
+        const target = doc.elementsFromPoint(pt.clientX, pt.clientY)
+          .find((el) => el.dataset?.sectionIndex != null && Number(el.dataset.sectionIndex) !== sectionIndex);
+        const grid = target?.querySelector('[data-fluid-grid]');
+        if (grid) {
+          const r = grid.getBoundingClientRect();
+          const cols = Number(grid.dataset.gridColumns) || 24;
+          const step = Number(grid.dataset.rowStep) || cellH;
+          const span = fluid.colEnd - fluid.colStart;
+          const col = Math.min(cols + 1 - Math.min(span, cols), Math.max(1, Math.floor(((pt.clientX - r.left) / r.width) * cols) + 1));
+          onMoveToSection({ sectionIndex: Number(target.dataset.sectionIndex), colStart: col, rowStart: Math.max(1, Math.floor((pt.clientY - r.top) / step) + 1) });
+          return;
+        }
+      }
+    }
     // Keep the block inside the grid (same width, shifted back if needed).
     const span = fluid.colEnd - fluid.colStart;
     const newColStart = Math.min(Math.max(1, Math.round(d.x / cellW) + 1), gridColumns + 1 - span);
@@ -307,7 +330,7 @@ export default function FluidBlock({
   const toolbar = selected && !isEditing && (
     <div
       className="site-editor-chrome site-editor-ui absolute z-[100] flex items-center gap-0.5 bg-white rounded-lg shadow-[0_2px_8px_rgba(16,20,30,0.15),0_1px_2px_rgba(16,20,30,0.08)] p-1"
-      style={{ ...(chromeInside ? { top: 8, right: 8, transformOrigin: 'top right' } : { top: -46, left: 0, transformOrigin: 'bottom left' }), pointerEvents: 'auto' }}
+      style={{ ...(chromeInside ? { top: 8, right: 8, transformOrigin: 'top right' } : { top: -46, left: 'calc(42px * var(--ui-scale, 1))', transformOrigin: 'bottom left' }), pointerEvents: 'auto' }}
       role="toolbar"
       aria-label="Block actions"
       onMouseDown={(e) => e.stopPropagation()}
@@ -319,7 +342,7 @@ export default function FluidBlock({
       <button onClick={() => onOpenInspector?.()} title="Block settings" aria-label="Block settings" className={btn}>
         <SlidersHorizontal className="w-4 h-4" />
       </button>
-      {interactive && (
+      {interactive && onLayer && (
         <>
           <div className="relative" ref={arrangeRef} onKeyDown={arrangeKeys}>
             <button
@@ -478,14 +501,17 @@ export default function FluidBlock({
               handles and content) so nothing covers them. */}
           {toolbar}
           {hoverLabel}
-          {/* Drag handle — keeps pointer events while the overlay body doesn't. */}
+          {/* Drag handle — keeps pointer events while the overlay body doesn't.
+              It sits at the left end of the toolbar row (its own grip, as in the
+              reference): centred above the block, it was hidden under the
+              toolbar on narrow blocks (one column of three or six). */}
           {selected && !isEditing && (
             <div
-              className={`fluid-drag-handle site-editor-chrome site-editor-ui absolute ${chromeInside ? 'top-2' : '-top-7'} left-1/2 -translate-x-1/2 flex items-center justify-center w-10 h-6 bg-primary text-primary-foreground rounded-md shadow-lg cursor-grab active:cursor-grabbing`}
-              style={{ pointerEvents: 'auto', transformOrigin: chromeInside ? 'top center' : 'bottom center' }}
+              className="fluid-drag-handle site-editor-chrome site-editor-ui absolute flex items-center justify-center w-9 h-10 bg-primary text-primary-foreground rounded-lg shadow-lg cursor-grab active:cursor-grabbing"
+              style={{ pointerEvents: 'auto', ...(chromeInside ? { top: 56, left: 8, transformOrigin: 'top left' } : { top: -46, left: 0, transformOrigin: 'bottom left' }) }}
               title="Drag to move"
             >
-              <GripVertical className="w-3.5 h-3.5" />
+              <GripVertical className="w-4 h-4" />
             </div>
           )}
         </Rnd>

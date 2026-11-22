@@ -14,9 +14,10 @@
  * value typed as "120" is one undo step (and one autosave), not three.
  */
 import { useEffect, useRef, useState } from 'react';
-import { X, LayoutPanelTop, AlertTriangle, ChevronDown, ChevronRight, LayoutTemplate } from 'lucide-react';
+import { X, LayoutPanelTop, AlertTriangle, ChevronDown, ChevronRight, LayoutTemplate, ArrowUp, ArrowDown } from 'lucide-react';
 import { BlockContentSettings, blockTypeLabel, ImageField } from './BlockSettingsPanel';
 import { isTextEntryTarget } from './editorUtils';
+import { COLUMN_OPTIONS, sectionColumns, columnOf, applyColumns } from './fluid/columnLayout';
 
 const inputCls = 'w-full h-9 px-2.5 text-sm border border-border rounded-md bg-surface text-text-base focus:outline-none focus:ring-2 focus:ring-primary';
 const labelCls = 'block text-xs font-medium text-muted';
@@ -255,6 +256,50 @@ function BlockDesign({ block, onStyle }) {
   );
 }
 
+// ── Block: Layout tab in a column section ───────────────────────────────────
+// Column, width (in columns) and position in the column's stack — not raw
+// grid numbers. Changes are re-stacked by WebEditor.placeInColumns.
+function ColumnLayout({ section, bIdx, onPlace }) {
+  const n = sectionColumns(section);
+  const grid = section.fluidConfig?.gridColumns || 24;
+  const blocks = section.blocks || [];
+  const f = blocks[bIdx]?.fluid;
+  if (!f) return null;
+  const { col, span } = columnOf(f, n, grid);
+  const shares = (g) => g && g.colStart < f.colEnd && g.colEnd > f.colStart;
+  const stack = blocks.map((b, i) => ({ g: b.fluid, i })).filter(({ g }) => shares(g)).sort((a, b) => a.g.rowStart - b.g.rowStart);
+  const pos = stack.findIndex(({ i }) => i === bIdx) + 1;
+  const btn = 'inline-flex items-center gap-1 h-9 px-2.5 rounded-md border border-border text-xs font-medium text-text-base hover:bg-surface-raised disabled:opacity-40 disabled:hover:bg-transparent';
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-subtle">This section has {n} column{n > 1 ? 's' : ''}. Blocks stack inside their columns — drag a block to another column or section, or set it here.</p>
+      <div className="grid grid-cols-2 gap-3">
+        <label className={labelCls}>Column
+          <select className={`${inputCls} mt-1`} value={col} onChange={(e) => onPlace({ col: Number(e.target.value) })}>
+            {Array.from({ length: n }, (_, c) => <option key={c} value={c}>{c + 1} of {n}</option>)}
+          </select>
+        </label>
+        <label className={labelCls}>Width
+          <select className={`${inputCls} mt-1`} value={span} onChange={(e) => onPlace({ span: Number(e.target.value) })}>
+            {Array.from({ length: n - col }, (_, k) => <option key={k} value={k + 1}>{k + 1} column{k ? 's' : ''}</option>)}
+          </select>
+        </label>
+      </div>
+      <div>
+        <span className={labelCls}>Position in the column</span>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-sm text-text-base flex-1">{pos} of {stack.length}</span>
+          <button type="button" className={btn} disabled={pos <= 1} onClick={() => onPlace({ move: -1 })}><ArrowUp className="w-3.5 h-3.5" /> Move up</button>
+          <button type="button" className={btn} disabled={pos >= stack.length} onClick={() => onPlace({ move: 1 })}><ArrowDown className="w-3.5 h-3.5" /> Move down</button>
+        </div>
+      </div>
+      <label className={labelCls}>Height (rows)
+        <CommitInput type="number" min={1} max={60} value={f.rowEnd - f.rowStart} onCommit={(v) => v && onPlace({ rows: v })} />
+      </label>
+    </div>
+  );
+}
+
 // ── Block: Layout tab ──────────────────────────────────────────────────────
 function BlockLayout({ placement, columns, mobileAuto, isMobile, onPlace }) {
   if (mobileAuto) {
@@ -388,6 +433,20 @@ function SectionSettings({ section, onUpdate }) {
         )}
       </div>
 
+      <Group title="Layout">
+        <Segmented
+          label="Columns"
+          value={sectionColumns(section)}
+          options={[[null, 'Free'], ...COLUMN_OPTIONS.map((n) => [n, String(n)])]}
+          onChange={(v) => onUpdate(applyColumns(section, v))}
+        />
+        <p className="text-xs text-subtle">
+          {sectionColumns(section)
+            ? 'Blocks snap to the columns and stack inside them — no overlapping.'
+            : 'Freeform: blocks stay exactly where you put them and may overlap. Pick a column count to line them up in columns.'}
+        </p>
+      </Group>
+
       <Group title="Spacing">
         <div className="grid grid-cols-2 gap-3">
           <label className={labelCls}>Top
@@ -479,6 +538,7 @@ export default function EditorInspector({
   onClose,
   page, // { id, title, slug }
   onUpdatePageMeta,
+  onPlaceInColumns,
 }) {
   const [tab, setTab] = useState('content');
   const [sectionTab, setSectionTab] = useState('section');
@@ -571,7 +631,10 @@ export default function EditorInspector({
                 }}
               />
             )}
-            {tab === 'layout' && (
+            {tab === 'layout' && !isMobile && sectionColumns(selection.section) && (
+              <ColumnLayout section={selection.section} bIdx={selection.bIdx} onPlace={(change) => onPlaceInColumns?.(selection.sIdx, selection.bIdx, change)} />
+            )}
+            {tab === 'layout' && (isMobile || !sectionColumns(selection.section)) && (
               <BlockLayout
                 placement={selection.placement}
                 columns={selection.columns}

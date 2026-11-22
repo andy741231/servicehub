@@ -9,6 +9,7 @@ import EditorDialogs from './EditorDialogs';
 import BlockPicker from './BlockPicker';
 import SectionPicker from './SectionPicker';
 import { sectionFromTemplate, sectionToSaved } from './sectionTemplates';
+import { sectionColumns, columnSpan, restack, restackSection, shortestColumn, fitColumns, columnOf, DEFAULT_COLUMNS } from './fluid/columnLayout';
 import LayersPanel from './LayersPanel';
 import EditorInspector from './EditorInspector';
 import CanvasFrame from './CanvasFrame';
@@ -598,7 +599,17 @@ export default function WebEditor() {
 
   /** Insert a ready-made section (from the section picker) after `afterIndex`. */
   const addSectionFromTemplate = (template, afterIndex) => {
-    const newSection = sectionFromTemplate(template);
+    let newSection = sectionFromTemplate(template);
+    // Column layout: new sections use columns (default 3). A ready-made
+    // section gets the count that represents its layout exactly (halves → 2),
+    // or stays freeform if none does. Saved sections keep their own setting.
+    if (!template.saved) {
+      const n = fitColumns((newSection.blocks || []).map((b) => b.fluid || {}), newSection.fluidConfig?.gridColumns || 24);
+      if (n) {
+        newSection = { ...newSection, fluidConfig: { ...newSection.fluidConfig, columns: n } };
+        newSection = { ...newSection, blocks: restackSection(newSection) };
+      }
+    }
     const insertAt = afterIndex == null ? sections.length : afterIndex + 1;
     const newSections = [...sections.slice(0, insertAt), newSection, ...sections.slice(insertAt)];
     markJustAdded(newSection.blocks.map((b) => b.id));
@@ -713,12 +724,12 @@ export default function WebEditor() {
    * otherwise (dropped on the page) it goes in at that row and blocks at or
    * below it move down to make room — never on top of another block.
    */
-  const addBlockToSection = (sIdx, type, row = null) => {
+  const addBlockToSection = (sIdx, type, row = null, col = null) => {
     let targetIdx = sIdx;
     let workingSections = sections;
     if (!sections[targetIdx]) {
       // No sections yet — create a blank one to hold the block.
-      const blank = createSection({ fluidConfig: { ...DEFAULT_SECTION.fluidConfig } });
+      const blank = createSection({ fluidConfig: { ...DEFAULT_SECTION.fluidConfig, columns: DEFAULT_COLUMNS } });
       workingSections = [...sections, blank];
       targetIdx = workingSections.length - 1;
     }
@@ -728,7 +739,19 @@ export default function WebEditor() {
     const rows = blockCatalogEntry(type)?.rows ?? 2;
     let newBlocks;
     let newBlock;
-    if (row == null) {
+    const n = sectionColumns(sec);
+    if (n) {
+      // Column mode: one column wide, stacked into its column at the drop row
+      // (or at the bottom); blocks below are pushed down.
+      const w = columnSpan(n, gridColumns);
+      const placed = blocks.map((b) => b.fluid || { colStart: 1, colEnd: gridColumns + 1, rowStart: 1, rowEnd: 3 });
+      const c = col ?? shortestColumn(placed, n, gridColumns).col;
+      const at = row ?? 100000;
+      newBlock = createBlock(type, { fluid: { colStart: c * w + 1, colEnd: (c + 1) * w + 1, rowStart: at, rowEnd: at + rows, zIndex: 0 } });
+      const next = restack([...placed, newBlock.fluid], n, gridColumns, { movedIndex: placed.length });
+      newBlock = { ...newBlock, fluid: next[placed.length] };
+      newBlocks = [...blocks.map((b, i) => ({ ...b, fluid: next[i] })), newBlock];
+    } else if (row == null) {
       newBlock = createBlock(type, { fluid: autoStackFluid(blocks, gridColumns, rows) });
       newBlocks = [...blocks, newBlock];
     } else {
@@ -778,7 +801,8 @@ export default function WebEditor() {
     const sec = sections[sIdx];
     const deletedBlock = sec?.blocks?.[bIdx];
     if (!deletedBlock) return;
-    updateSectionBlocks(sIdx, (sec.blocks || []).filter((_, i) => i !== bIdx));
+    const remaining = (sec.blocks || []).filter((_, i) => i !== bIdx);
+    updateSectionBlocks(sIdx, sectionColumns(sec) ? restackSection({ ...sec, blocks: remaining }) : remaining);
     // Undo toast — same as Ctrl+Z when nothing else changed since the delete,
     // otherwise re-insert the block at its original position.
     const deleteEntryIndex = historyRef.current.index;
@@ -822,10 +846,79 @@ export default function WebEditor() {
     };
     if (newBlock.fluid) newBlock.fluid = shiftDown(newBlock.fluid);
     if (newBlock.fluidMobile) newBlock.fluidMobile = shiftDown(newBlock.fluidMobile);
-    const newBlocks = [...sec.blocks.slice(0, bIdx + 1), newBlock, ...sec.blocks.slice(bIdx + 1)];
+    let newBlocks = [...sec.blocks.slice(0, bIdx + 1), newBlock, ...sec.blocks.slice(bIdx + 1)];
+    if (sectionColumns(sec)) newBlocks = restackSection({ ...sec, blocks: newBlocks }, { movedIndex: bIdx + 1 });
     updateSectionBlocks(sIdx, newBlocks);
     setSelectedBlockIds(new Set([newBlock.id]));
     setAnnouncement(`${blockTypeLabel(block.type) || 'Block'} duplicated`);
+  };
+
+  /** A block dragged onto another section: moves there (one undo step). */
+  const moveBlockToSection = (fromS, bIdx, target) => {
+    const src = sections[fromS];
+    const dst = sections[target.sectionIndex];
+    const block = src?.blocks?.[bIdx];
+    if (!block || !dst || fromS === target.sectionIndex) return;
+    const grid = dst.fluidConfig?.gridColumns || 24;
+    const f = block.fluid || { colStart: 1, colEnd: grid + 1, rowStart: 1, rowEnd: 3 };
+    const span = Math.min(grid, f.colEnd - f.colStart);
+    const rows = Math.max(1, f.rowEnd - f.rowStart);
+    const colStart = Math.min(Math.max(1, target.colStart), grid + 1 - span);
+    // A phone layout made for the old section doesn't fit the new one.
+    const moved = { ...block, fluid: { ...f, colStart, colEnd: colStart + span, rowStart: target.rowStart, rowEnd: target.rowStart + rows, zIndex: 0 }, fluidMobile: null };
+    let dstBlocks = [...(dst.blocks || []), moved];
+    if (sectionColumns(dst)) dstBlocks = restackSection({ ...dst, blocks: dstBlocks }, { movedIndex: dstBlocks.length - 1 });
+    let srcBlocks = src.blocks.filter((_, i) => i !== bIdx);
+    if (sectionColumns(src)) srcBlocks = restackSection({ ...src, blocks: srcBlocks });
+    const newSections = sections.map((s, i) => (i === fromS ? { ...s, blocks: srcBlocks } : i === target.sectionIndex ? { ...s, blocks: dstBlocks } : s));
+    setSections(newSections);
+    saveToHistory(newSections, header, footer);
+    setSelectedBlockIds(new Set([block.id]));
+    setAnnouncement(`${blockTypeLabel(block.type) || 'Block'} moved to section ${target.sectionIndex + 1}`);
+  };
+
+  /**
+   * Column-mode placement from the inspector: { col, span } (0-based column,
+   * width in columns), { rows } (height) or { move: -1 | 1 } (up/down within
+   * its column). Everything is re-stacked afterwards.
+   */
+  const placeInColumns = (sIdx, bIdx, change) => {
+    const sec = sections[sIdx];
+    const n = sectionColumns(sec);
+    if (!n) return;
+    const grid = sec.fluidConfig?.gridColumns || 24;
+    const w = columnSpan(n, grid);
+    const placed = sec.blocks.map((b) => b.fluid || { colStart: 1, colEnd: grid + 1, rowStart: 1, rowEnd: 3 });
+    const f = { ...placed[bIdx] };
+    const { col, span } = columnOf(f, n, grid);
+    if (change.col != null || change.span != null) {
+      const c = Math.min(n - 1, change.col ?? col);
+      const sp = Math.max(1, Math.min(n - c, change.span ?? span));
+      f.colStart = c * w + 1;
+      f.colEnd = (c + sp) * w + 1;
+    }
+    if (change.rows != null) f.rowEnd = f.rowStart + Math.max(1, change.rows);
+    if (change.move) {
+      // Neighbours sharing a column with this block, top to bottom.
+      const shares = (g) => g.colStart < f.colEnd && g.colEnd > f.colStart;
+      const stack = placed.map((g, i) => ({ g, i })).filter(({ g, i }) => i !== bIdx && shares(g)).sort((a, b) => a.g.rowStart - b.g.rowStart);
+      if (change.move < 0) {
+        const prev = [...stack].reverse().find(({ g }) => g.rowStart < f.rowStart);
+        if (!prev) return;
+        const h = f.rowEnd - f.rowStart;
+        f.rowStart = prev.g.rowStart;
+        f.rowEnd = f.rowStart + h;
+      } else {
+        const next = stack.find(({ g }) => g.rowStart > f.rowStart);
+        if (!next) return;
+        const h = f.rowEnd - f.rowStart;
+        f.rowStart = next.g.rowEnd;
+        f.rowEnd = f.rowStart + h;
+      }
+    }
+    placed[bIdx] = f;
+    const next = restack(placed, n, grid, { movedIndex: bIdx });
+    updateSectionBlocks(sIdx, sec.blocks.map((b, i) => ({ ...b, fluid: next[i] })));
   };
 
   const addNestedBlock = (sIdx, parentBIdx, colIndex, type) => {
@@ -977,7 +1070,7 @@ export default function WebEditor() {
             ? mobilePlacements(blocks)[bIdx]
             : { colStart: 1, colEnd: columns + 1, rowStart: 1, rowEnd: 3, zIndex: 0, ...(blocks[bIdx].fluid || {}) };
           return {
-            kind: 'block', sIdx, bIdx, block: blocks[bIdx], placement, columns,
+            kind: 'block', sIdx, bIdx, block: blocks[bIdx], placement, columns, section: sections[sIdx],
             mobileAuto: isMobileView && isMobileAuto(blocks),
           };
         }
@@ -1197,7 +1290,8 @@ export default function WebEditor() {
                   onDeleteBlock={deleteBlock}
                   onDuplicateBlock={duplicateBlock}
                   onAddBlock={(sIdx) => { setShowLayersPanel(false); setBlockPaletteTarget({ sectionIndex: sIdx }); }}
-                  onDropBlock={(sIdx, type, row) => addBlockToSection(sIdx, type, row)}
+                  onDropBlock={(sIdx, type, row, col) => addBlockToSection(sIdx, type, row, col)}
+                  onMoveBlockToSection={moveBlockToSection}
                   isJustAdded={isJustAdded}
                   onDeleteSection={deleteSection}
                   onDuplicateSection={duplicateSection}
@@ -1246,6 +1340,7 @@ export default function WebEditor() {
             onClose={() => setInspectorOpen(false)}
             page={pageData ? { id: pageData.id, title: pageData.title, slug: pageData.slug } : null}
             onUpdatePageMeta={updatePageMeta}
+            onPlaceInColumns={placeInColumns}
           />
         )}
       </div>

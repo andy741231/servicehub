@@ -511,3 +511,30 @@ Brief: `docs/editor-ui-reskin-prompt.md`. Evidence: `docs/ui-test-evidence/reski
   else runs in a sandbox without same-origin; code stored verbatim), Audio (the server now accepts
   audio uploads), Social links, Spacer (labelled in the editor), Form (Forms app).
   **Skipped:** Columns (the 24-column grid does it), the Section tile, empty categories, button rows.
+
+### Column layout model (same branch)
+
+Logic in `client/src/pages/web/editor/fluid/columnLayout.js` (+ unit tests); e2e CM1–CM7;
+before/after conversion shots in `docs/ui-test-evidence/reskin/columns/`.
+
+- **Storage unchanged.** `fluidConfig.columns` ∈ {1,2,3,4,6} is a constraint layer: every
+  placement change in a column section re-derives colStart/colEnd (snapped to columns) and
+  rowStart/rowEnd (each column a top-down stack, a multi-column block below the deepest column it
+  spans), and the derived coordinates are saved as usual — the public renderer is unchanged.
+- **Where it applies:** drag (snaps to columns; insert at the drop row, the column pushes down),
+  resize (whole columns; height pushes blocks below), auto-grow/fit, add (one column wide, into
+  the column under the drop or the shortest column), duplicate (directly below the original),
+  delete (gap closes), and **drag a block onto another section** (new — works for freeform
+  targets too; both sections re-stack).
+- **Layers:** the Arrange menu is hidden in column sections (no overlap to order).
+- **Inspector:** Section → Layout → Columns (Free / 1 / 2 / 3 / 4 / 6). Block → Layout shows
+  column, width in columns, position in the column (Move up / down) and height.
+- **Defaults:** a new blank section has 3 columns; a ready-made section gets the count that
+  matches its layout exactly (halves → 2) or stays freeform. Existing sections have no
+  `columns` and keep rendering their stored freeform coordinates — nothing on the live site
+  changes until someone picks a column count. **"Free" is kept** as an escape hatch per section.
+- **Mobile unaffected** (columns collapse to the existing auto-stack).
+- Found while testing: the block drag handle sat under the block toolbar on narrow blocks; it is
+  now its own grip at the left of the toolbar row.
+- Known limit: a block whose content already overflows its rows can paint over the block stacked
+  under it until its content changes (auto-grow is triggered by edits and width changes).

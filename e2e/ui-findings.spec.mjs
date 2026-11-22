@@ -908,6 +908,181 @@ test('RS8: section video background — set in the inspector, plays on the site'
   });
 });
 
+// ── Column layout model ────────────────────────────────────────────────────
+
+/** Section 1 in 3 columns (Text + Button stacked in column 1, Quote in column 2) above a freeform section. */
+async function columnFixture() {
+  const col = (c, r0, r1) => ({ colStart: c * 8 + 1, colEnd: c * 8 + 9, rowStart: r0, rowEnd: r1, zIndex: 0 });
+  const sections = [
+    { fluidConfig: { gridColumns: 24, rowHeight: 80, gap: { horizontal: 8, vertical: 8 }, columns: 3 }, paddingTop: 40, paddingBottom: 40, blocks: [
+      { type: 'text', fluid: col(0, 1, 3), content: { content: '<p>Column one, first.</p>' } },
+      { type: 'button', fluid: col(0, 3, 5), content: { buttonText: 'Give', buttonLink: '/give', buttonVariant: 'gold', align: 'center' } },
+      { type: 'quote', fluid: col(1, 1, 4), content: { quote: 'Column two.', citation: 'Q' } },
+    ] },
+    FIXTURE_SECTIONS[1],
+  ];
+  await api('PUT', `/${fixture.slug}`, { header: {}, footer: {}, sections });
+}
+const fluids = async (sIdx = 0) => (await saved())[sIdx].blocks.map((b) => ({ type: b.type, ...b.fluid }));
+const noOverlap = (list) => {
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      const a = list[i]; const b = list[j];
+      const overlap = a.colStart < b.colEnd && b.colStart < a.colEnd && a.rowStart < b.rowEnd && b.rowStart < a.rowEnd;
+      if (overlap) return `${a.type} overlaps ${b.type}`;
+    }
+  }
+  return null;
+};
+const byType = (list, t) => list.find((f) => f.type === t);
+async function dragBy(page, label, dx, dy) {
+  await selectBlock(page, label);
+  const handle = canvas(page).locator('.fluid-drag-handle').first(); // only the selected block shows one
+  const hb = await handle.boundingBox();
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(hb.x + hb.width / 2 + dx, hb.y + hb.height / 2 + dy, { steps: 12 });
+  await page.mouse.up();
+}
+
+test('CM1: switch a section to columns and back — freeform stays exactly as it was', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const before = (await saved())[2].blocks[0].fluid;
+  const s3 = section(page, 3);
+  await s3.hover();
+  await s3.getByRole('button', { name: 'Section settings' }).click();
+  const cols = inspector(page).getByRole('radiogroup', { name: 'Columns' });
+  await expect(cols.getByRole('radio', { name: 'Free' })).toHaveAttribute('aria-checked', 'true'); // existing sections
+  let save = nextSave(page, fixture.slug);
+  await cols.getByRole('radio', { name: '3' }).click();
+  await save;
+  const s = (await saved())[2];
+  expect(s.fluidConfig.columns).toBe(3);
+  expect(s.blocks[0].fluid).toMatchObject({ colStart: 1, colEnd: 25, rowStart: 1 }); // full width = all 3 columns
+  save = nextSave(page, fixture.slug);
+  await cols.getByRole('radio', { name: 'Free' }).click();
+  await save;
+  expect((await saved())[2].fluidConfig.columns).toBeUndefined();
+  expect((await saved())[2].blocks[0].fluid).toMatchObject({ colStart: before.colStart, colEnd: before.colEnd });
+});
+
+test('CM2: new blocks are one column wide and go to the shortest column; no layer controls', async ({ page }) => {
+  await columnFixture();
+  await openEditor(page, fixture.slug);
+  const s1 = section(page, 1);
+  await s1.hover();
+  await s1.getByRole('button', { name: 'Add Block', exact: true }).click();
+  let save = nextSave(page, fixture.slug);
+  await (await pickBlock(page, 'Image')).click();
+  await save;
+  let list = await fluids();
+  expect(byType(list, 'image')).toMatchObject({ colStart: 17, colEnd: 25, rowStart: 1 }); // column 3 was empty
+  save = nextSave(page, fixture.slug);
+  await (await pickBlock(page, 'Divider')).click();
+  await save;
+  list = await fluids();
+  // Column heights now: 1 → row 5, 2 → row 4, 3 → below the image. Column 2 is shortest.
+  expect(byType(list, 'divider')).toMatchObject({ colStart: 9, colEnd: 17, rowStart: 4 });
+  expect(noOverlap(list)).toBeNull();
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Close add block panel' }).click();
+  // Layers don't apply in column mode; the freeform section still has them.
+  await selectBlock(page, 'Quote');
+  await expect(canvas(page).getByRole('toolbar', { name: 'Block actions' }).getByRole('button', { name: 'Arrange' })).toHaveCount(0);
+  await selectBlock(page, 'Trust bar');
+  await expect(canvas(page).getByRole('toolbar', { name: 'Block actions' }).getByRole('button', { name: 'Arrange' })).toHaveCount(1);
+});
+
+test('CM3: dragging a block into another column inserts it there and pushes the column down', async ({ page }) => {
+  await columnFixture();
+  await openEditor(page, fixture.slug);
+  const btn = await block(page, 'Button').boundingBox();
+  const quote = await block(page, 'Quote').boundingBox();
+  const save = nextSave(page, fixture.slug);
+  await dragBy(page, 'Button', quote.x - btn.x, quote.y - btn.y); // onto the top of column 2
+  await save;
+  const list = await fluids();
+  expect(byType(list, 'button')).toMatchObject({ colStart: 9, colEnd: 17, rowStart: 1, rowEnd: 3 });
+  expect(byType(list, 'quote')).toMatchObject({ colStart: 9, rowStart: 3, rowEnd: 6 }); // pushed down
+  expect(byType(list, 'text')).toMatchObject({ colStart: 1, rowStart: 1 }); // column 1 closed up
+  expect(noOverlap(list)).toBeNull();
+});
+
+test('CM4: horizontal resize snaps to whole columns; nothing overlaps', async ({ page }) => {
+  await columnFixture();
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Text');
+  const tb = await block(page, 'Text').boundingBox();
+  const handle = section(page, 1).locator('.fluid-resize-r').first();
+  const hb = await handle.boundingBox();
+  const save = nextSave(page, fixture.slug);
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(hb.x + tb.width * 1.1, hb.y + hb.height / 2, { steps: 12 }); // ~2.1 columns wide
+  await page.mouse.up();
+  await save;
+  const list = await fluids();
+  const text = byType(list, 'text');
+  expect((text.colStart - 1) % 8).toBe(0);
+  expect((text.colEnd - 1) % 8).toBe(0);
+  expect(text.colEnd - text.colStart).toBe(16); // two columns
+  // Spanning columns 1–2, it now sits above the quote, which moved down.
+  expect(noOverlap(list)).toBeNull();
+});
+
+test('CM5: Layout tab — column, width and position in the column', async ({ page }) => {
+  await columnFixture();
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Quote');
+  await inspector(page).getByRole('tab', { name: 'Layout' }).click();
+  let save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('combobox', { name: /^Column/ }).selectOption({ label: '3 of 3' });
+  await save;
+  expect(byType(await fluids(), 'quote')).toMatchObject({ colStart: 17, rowStart: 1 });
+
+  await selectBlock(page, 'Button');
+  await inspector(page).getByRole('tab', { name: 'Layout' }).click();
+  await expect(inspector(page).getByText('2 of 2')).toBeVisible();
+  save = nextSave(page, fixture.slug);
+  await inspector(page).getByRole('button', { name: 'Move up' }).click();
+  await save;
+  const list = await fluids();
+  expect(byType(list, 'button')).toMatchObject({ rowStart: 1, rowEnd: 3 });
+  expect(byType(list, 'text')).toMatchObject({ rowStart: 3, rowEnd: 5 });
+  await expect(inspector(page).getByText('1 of 2')).toBeVisible();
+});
+
+test('CM6: drag a block onto another section to move it there', async ({ page }) => {
+  await columnFixture();
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Button');
+  const hb = await canvas(page).locator('.fluid-drag-handle').first().boundingBox();
+  const save = nextSave(page, fixture.slug);
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(hb.x + hb.width / 2 + 10, hb.y + hb.height / 2 + 10, { steps: 3 });
+  // Measure the target now: while dragging, the source section shows two
+  // spare rows, which moves the sections below it down.
+  const target = await section(page, 2).boundingBox();
+  await page.mouse.move(target.x + target.width / 2, target.y + 40, { steps: 12 });
+  await page.mouse.up();
+  await save;
+  const secs = await saved();
+  expect(secs[0].blocks.map((b) => b.type)).toEqual(['text', 'quote']);
+  expect(secs[1].blocks.map((b) => b.type)).toEqual(['trust-bar', 'button']);
+  expect(noOverlap(await fluids(0))).toBeNull();
+});
+
+test('CM7: a new blank section starts with 3 columns', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const save = nextSave(page, fixture.slug);
+  await canvas(page).getByRole('button', { name: /^Add Section$/ }).last().click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Add Blank section' }).click();
+  await save;
+  const secs = await saved();
+  expect(secs.at(-1).fluidConfig.columns).toBe(3);
+  expect(secs.slice(0, -1).every((s) => s.fluidConfig.columns === undefined)).toBe(true); // existing ones untouched
+});
+
 test('U37: visiting an unknown URL or editor link does not create a page', async ({ request }) => {
   const slug = `e2e-unknown-${Date.now()}`;
   const res = await request.get(`/api/web/${slug}`);

@@ -61,6 +61,7 @@ function SectionMenu({ label, items }) {
   );
 }
 import FluidBlock from './FluidBlock.jsx';
+import { sectionColumns, restack, columnSpan } from './columnLayout.js';
 import {
   fluidGridMetrics, sectionBoxStyle, fluidSectionMinHeight, isMobileAuto, mobileAutoFlow,
   sectionContentWidthStyle, SectionVideo,
@@ -113,6 +114,7 @@ export default function FluidSection({
   onAddNestedBlock,
   onOpenInspector,
   onDropBlock,
+  onMoveBlockToSection,
   isJustAdded,
   isLastSection,
   viewport = 'desktop',
@@ -129,6 +131,10 @@ export default function FluidSection({
   const metrics = fluidGridMetrics({ ...section, fluidConfig: cfg }, { mobile: isMobile, extraRows: showGrid ? 2 : 0 });
   const { columns: gridColumns, rowHeight, gapH, gapV, placements } = metrics;
   const layoutKey = isMobile ? 'fluidMobile' : 'fluid';
+  // Column mode (fluidConfig.columns): blocks snap to columns and stack in
+  // them (columnLayout.js). Desktop only — phones keep the auto-stack.
+  const columns = isMobile ? null : sectionColumns(section);
+  const colSpanCells = columns ? columnSpan(columns, gridColumns) : 1;
 
   const [isHovered, setIsHovered] = useState(false);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
@@ -184,6 +190,11 @@ export default function FluidSection({
    *  current positions, so customising one block doesn't reshuffle the rest. */
   const updatePlacement = (bIdx, updates) => {
     const current = placements.map((p, i) => (blocks[i][layoutKey] ? blocks[i][layoutKey] : p));
+    if (columns) {
+      // Locked into a column: snap, insert at the drop row, push the rest down.
+      writePlacements(restack(current.map((p, i) => (i === bIdx ? { ...p, ...updates } : p)), columns, gridColumns, { movedIndex: bIdx }));
+      return;
+    }
     if (isMobile && blocks.some((b) => !b.fluidMobile)) {
       writePlacements(current.map((p, i) => (i === bIdx ? { ...p, ...updates } : p)));
       return;
@@ -204,6 +215,17 @@ export default function FluidSection({
       const requests = growQueueRef.current;
       growQueueRef.current = [];
       const next = placements.map((p, i) => ({ ...(blocks[i][layoutKey] ? blocks[i][layoutKey] : p) }));
+      if (columns) {
+        // Column stacks: change the heights, then re-derive the rows.
+        let changedCols = false;
+        for (const { bIdx: i, newRowEnd: wanted, shrink } of requests) {
+          const t = next[i];
+          const end = t.rowStart + (wanted - placements[i].rowStart);
+          if (end > t.rowEnd || (shrink && end < t.rowEnd)) { t.rowEnd = Math.max(t.rowStart + 1, end); changedCols = true; }
+        }
+        if (changedCols) writePlacements(restack(next, columns, gridColumns));
+        return;
+      }
       // Top-most first, so pushes cascade downwards correctly.
       requests.sort((a, b) => next[a.bIdx].rowStart - next[b.bIdx].rowStart);
       let changed = false;
@@ -313,7 +335,9 @@ export default function FluidSection({
       onSelect={(additive) => onSelectBlock(block.id, { additive })}
       onClearSelection={onClearSelection}
       onUpdate={(updates) => updatePlacement(bIdx, updates)}
-      onLayer={(action) => layerBlock(bIdx, action)}
+      onLayer={columns ? undefined : (action) => layerBlock(bIdx, action)}
+      columnCells={columns ? colSpanCells : null}
+      onMoveToSection={!isMobile && onMoveBlockToSection ? (target) => onMoveBlockToSection(sectionIndex, bIdx, target) : undefined}
       onGrow={(newRowEnd) => growBlock(bIdx, newRowEnd)}
       onFit={(newRowEnd) => growBlock(bIdx, newRowEnd, { shrink: true })}
       onUpdateContent={(updates) => onUpdateBlockContent(sectionIndex, bIdx, updates)}
@@ -340,6 +364,13 @@ export default function FluidSection({
     const rect = gridRef.current.getBoundingClientRect();
     return Math.max(1, Math.floor((e.clientY - rect.top) / (rowHeight + gapV)) + 1);
   };
+  // Column mode: which column (0-based) the pointer is over.
+  const [dropCol, setDropCol] = useState(null);
+  const colFromEvent = (e) => {
+    if (!columns) return null;
+    const rect = gridRef.current.getBoundingClientRect();
+    return Math.min(columns - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * columns)));
+  };
   const dropHandlers = onDropBlock && !readOnly ? {
     onDragOver: (e) => {
       if (!isBlockDrag(e)) return;
@@ -347,6 +378,8 @@ export default function FluidSection({
       e.dataTransfer.dropEffect = 'copy';
       const r = mobileAuto ? null : rowFromEvent(e);
       if (r !== dropRow) setDropRow(r ?? 0);
+      const c = colFromEvent(e);
+      if (c !== dropCol) setDropCol(c);
     },
     onDragLeave: (e) => {
       if (!e.currentTarget.contains(e.relatedTarget)) setDropRow(null);
@@ -356,9 +389,11 @@ export default function FluidSection({
       e.preventDefault();
       const type = e.dataTransfer.getData(DRAG_TYPE);
       const r = mobileAuto ? null : rowFromEvent(e);
+      const c = colFromEvent(e);
       setDropRow(null);
+      setDropCol(null);
       // Phone view auto-stacks, so a drop there just appends.
-      onDropBlock(sectionIndex, type, r);
+      onDropBlock(sectionIndex, type, r, c);
     },
   } : {};
 
@@ -391,6 +426,7 @@ export default function FluidSection({
       }}
       tabIndex={0}
       role="group"
+      data-section-index={sectionIndex}
       aria-label={sectionAccessibleName}
       aria-current={selected ? 'true' : undefined}
     >
@@ -532,6 +568,10 @@ export default function FluidSection({
       {/* The layout container: grid, or the auto mobile flow */}
       <div
         ref={gridRef}
+        data-fluid-grid=""
+        data-row-step={rowHeight + gapV}
+        data-grid-columns={gridColumns}
+        data-columns={columns || ''}
         // Content width, the video layer and the hidden look apply only when set.
         style={{ ...gridStyle, ...sectionContentWidthStyle(cfg), ...(cfg.backgroundVideo ? { zIndex: 1 } : {}), ...(hidden ? { opacity: 0.45 } : {}) }}
         {...dropHandlers}
@@ -546,11 +586,14 @@ export default function FluidSection({
           <div
             className="absolute inset-0 pointer-events-none z-0"
             style={{
-              backgroundImage: `
+              backgroundImage: columns
+                ? `linear-gradient(to right, rgba(99, 102, 241, 0.10) 0, rgba(99, 102, 241, 0.10) calc(100% - ${gapH}px), transparent calc(100% - ${gapH}px)),
+                   linear-gradient(to bottom, rgba(99, 102, 241, 0.10) 1px, transparent 1px)`
+                : `
                 linear-gradient(to right, rgba(99, 102, 241, 0.12) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(99, 102, 241, 0.12) 1px, transparent 1px)
               `,
-              backgroundSize: `${colWidth}px ${rowHeight + gapV}px`,
+              backgroundSize: columns ? `${colWidth * colSpanCells}px 100%, 100% ${rowHeight + gapV}px` : `${colWidth}px ${rowHeight + gapV}px`,
               backgroundPosition: '0 0',
             }}
           />
@@ -565,7 +608,7 @@ export default function FluidSection({
           <div
             className="site-editor-chrome pointer-events-none z-[150] rounded-md border-2 border-dashed flex items-center justify-center text-xs font-semibold"
             style={dropRow > 0
-              ? { gridColumn: '1 / -1', gridRow: `${dropRow} / span 2`, borderColor: 'hsl(var(--admin-primary))', background: 'hsl(var(--admin-primary) / .08)', color: 'hsl(var(--admin-primary))' }
+              ? { gridColumn: columns && dropCol != null ? `${dropCol * colSpanCells + 1} / span ${colSpanCells}` : '1 / -1', gridRow: `${dropRow} / span 2`, borderColor: 'hsl(var(--admin-primary))', background: 'hsl(var(--admin-primary) / .08)', color: 'hsl(var(--admin-primary))' }
               : { position: 'absolute', left: 0, right: 0, bottom: 0, height: 64, borderColor: 'hsl(var(--admin-primary))', background: 'hsl(var(--admin-primary) / .08)', color: 'hsl(var(--admin-primary))' }}
           >
             Drop to add block here
