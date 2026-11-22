@@ -445,6 +445,22 @@ optional empty titles, unset images).
 - **Done (1d61638):** R6–R9 below. **Waiting on the owner:** apply migration
   `20261122_web_json_columns_nvarchar_max` (U42) to the local database.
 
+### UI review 2 (2026-11-22)
+
+Fresh pass after U1–U42 and R1–R9, on temp pages at 1440, 1280×800 and 1024. Fixed in a7f6199: V1, V3, V5.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| V1 | blocker | Canvas scaled down to 0.53 (1280, Add block + inspector) / 0.30 (three panels) / 0.13 at 1024; editor controls shrank with it (17px toolbar buttons); selecting a block zoomed the page in and out | **Fixed** (a7f6199): scale never below 0.8 (narrower layout below that); toolbars, labels and handles counter-scaled (`--ui-scale`) to stay 32px; Add block and Layers are exclusive; inspector column stays ("Nothing selected") so selection doesn't zoom |
+| V2 | blocker | Long content can't be saved (U42) | Waiting on the migration |
+| V3 | major | Shared header/footer switched to the page's own after the first autosave (U28 regression) | **Fixed** (a7f6199): save/restore responses keep the site context |
+| V4 | major | Preview shows the page's own header/footer, not the shared ones | Open |
+| V5 | major | A refused save: "Save failed" with no reason, retried every 10 s forever, one bad block blocked every later edit | **Fixed** (a7f6199): server returns 422 TOO_LONG with the block; a bar says what failed and since when, with Show block / Undo last change / Retry; no futile auto-retry |
+| V6 | major | Keyboard-focused block has no visible focus ring | Open |
+| V7 | major | 11 hidden admin-nav tab stops before the editor; focusable links inside the aria-hidden header/footer frame | Open |
+| V8 | major | Header & Footer: default colours shown as black swatches with raw CSS; 10 unlabeled inputs; 26px inputs | Open |
+| V9–V18 | minor | Slideshow add-slide/empty slides/phone overlap; embedded form styling; editor-only optional-button placeholders; invisible spacer; contrast warning only in Design; saved-section dialog/trash polish; Done + ✕ duplicate | Open |
+
 #### Roadmap items done in 6774498
 
 | ID | Item | What changed | Test |
