@@ -37,6 +37,7 @@ export default function FluidBlock({
   onUpdate,
   onLayer,
   onGrow,
+  onFit,
   onUpdateContent,
   onAddNestedBlock,
   onDelete,
@@ -110,24 +111,67 @@ export default function FluidBlock({
   // StrictMode runs effects twice on mount, and a flag made the second run
   // look like an edit — opening the editor then silently grew and saved
   // any block that already overflowed).
+  //
+  // Measuring once is not enough: web fonts can finish loading after the
+  // first measurement, and a field re-renders (e.g. its HTML is normalised)
+  // when editing ends — both change the height without a content change.
+  // So after an edit/insert the block stays "armed" for a few seconds and a
+  // ResizeObserver re-measures whenever the rendered content changes size.
+  // A freshly inserted block is fitted both ways (grow or shrink) so it
+  // doesn't start with a band of empty rows; edits only ever grow.
   const seenContentRef = useRef(block.content);
   const autoFitDoneRef = useRef(false);
+  const armRef = useRef({ until: 0, mode: 'grow' });
+  const measureRef = useRef(null);
+  measureRef.current = () => {
+    const el = itemRef.current;
+    if (!el || !interactive || !onGrow) return;
+    const { until, mode } = armRef.current;
+    if (Date.now() > until) return;
+    // Natural content height: the bottom of the lowest child (the grid item
+    // itself is stretched to its rows, so its own height says nothing).
+    const top = el.getBoundingClientRect().top;
+    let needed = 0;
+    for (const child of el.children) {
+      if (child.classList?.contains('site-editor-chrome')) continue;
+      needed = Math.max(needed, child.getBoundingClientRect().bottom - top);
+    }
+    needed = Math.max(needed, mode === 'grow' ? el.scrollHeight : 0);
+    if (needed <= 0) return;
+    const rows = Math.max(1, Math.ceil((needed - 2 + gapV) / (rowHeight + gapV)));
+    const newRowEnd = fluid.rowStart + rows;
+    if (newRowEnd > fluid.rowEnd) onGrow(newRowEnd);
+    else if (mode === 'fit' && newRowEnd < fluid.rowEnd && onFit) onFit(newRowEnd);
+  };
   useLayoutEffect(() => {
     const changed = block.content !== seenContentRef.current;
     seenContentRef.current = block.content;
     const fitNow = autoFit && !autoFitDoneRef.current;
-    if (fitNow) autoFitDoneRef.current = true;
-    if (!interactive || !onGrow) return;
-    if (!changed && !fitNow) return;
-    const el = itemRef.current;
-    if (!el) return;
-    const needed = el.scrollHeight;
-    const available = el.clientHeight;
-    if (needed <= available + 2) return;
-    const rows = Math.ceil((needed + gapV) / (rowHeight + gapV));
-    const newRowEnd = fluid.rowStart + rows;
-    if (newRowEnd > fluid.rowEnd) onGrow(newRowEnd);
+    if (fitNow) {
+      autoFitDoneRef.current = true;
+      armRef.current = { until: Date.now() + 5000, mode: 'fit' };
+    } else if (changed) {
+      armRef.current = { until: Date.now() + 3000, mode: armRef.current.mode === 'fit' && Date.now() < armRef.current.until ? 'fit' : 'grow' };
+    } else {
+      return;
+    }
+    measureRef.current?.();
   }, [block.content]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const el = itemRef.current;
+    if (!el || !interactive) return undefined;
+    const win = el.ownerDocument.defaultView;
+    const RO = win?.ResizeObserver || ResizeObserver;
+    const ro = new RO(() => measureRef.current?.());
+    const observeChildren = () => { for (const child of el.children) ro.observe(child); };
+    observeChildren();
+    const mo = new (win?.MutationObserver || MutationObserver)(observeChildren);
+    mo.observe(el, { childList: true });
+    const fonts = el.ownerDocument.fonts;
+    const onFonts = () => measureRef.current?.();
+    fonts?.addEventListener?.('loadingdone', onFonts);
+    return () => { ro.disconnect(); mo.disconnect(); fonts?.removeEventListener?.('loadingdone', onFonts); };
+  }, [interactive]);
 
   // Toolbar, drag handle and hover label sit just ABOVE the block so they
   // never cover its content. (Sections are separate stacking contexts and the
@@ -136,6 +180,10 @@ export default function FluidBlock({
   // the page (above = under the editor toolbar) and the overlay-less mobile
   // flow — there the chrome goes inside, toolbar in the top-right corner.
   const chromeInside = !interactive || (sectionIndex === 0 && fluid.rowStart <= 1);
+
+  const atLeftEdge = fluid.colStart <= 1;
+  const atRightEdge = fluid.colEnd >= gridColumns + 1;
+  const corner = { width: '9px', height: '9px', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto' };
 
   const dragGrid = [Math.round(cellW), Math.round(cellH)];
   const resizeGrid = [Math.round(cellW), Math.round(cellH)];
@@ -329,15 +377,18 @@ export default function FluidBlock({
             topLeft: true, topRight: true, bottomLeft: true, bottomRight: true,
           }}
           resizeHandleClasses={{ right: 'fluid-resize-r', bottom: 'fluid-resize-b', bottomRight: 'fluid-resize-br' }}
+          // Handles sit just outside the block, except at the canvas edges:
+          // the canvas clips horizontal overflow (B16), which cut a full-width
+          // block's side handle in half and hid its corner handles entirely.
           resizeHandleStyles={{
             top:    { height: '12px', top: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
             bottom: { height: '12px', bottom: '-6px', cursor: 'ns-resize', pointerEvents: 'auto', background: 'transparent' },
-            left:   { width: '12px', left: '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
-            right:  { width: '12px', right: '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
-            topLeft:    { width: '9px', height: '9px', top: '-11px', left: '-11px', cursor: 'nwse-resize', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto' },
-            topRight:   { width: '9px', height: '9px', top: '-11px', right: '-11px', cursor: 'nesw-resize', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto' },
-            bottomLeft: { width: '9px', height: '9px', bottom: '-11px', left: '-11px', cursor: 'nesw-resize', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto' },
-            bottomRight:{ width: '9px', height: '9px', bottom: '-11px', right: '-11px', cursor: 'nwse-resize', background: '#fff', border: '2px solid hsl(var(--admin-primary))', borderRadius: '2px', pointerEvents: 'auto' },
+            left:   { width: '12px', left: atLeftEdge ? '0px' : '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
+            right:  { width: '12px', right: atRightEdge ? '0px' : '-6px', cursor: 'ew-resize', pointerEvents: 'auto', background: 'transparent' },
+            topLeft:    { ...corner, top: '-11px', left: atLeftEdge ? '1px' : '-11px', cursor: 'nwse-resize' },
+            topRight:   { ...corner, top: '-11px', right: atRightEdge ? '1px' : '-11px', cursor: 'nesw-resize' },
+            bottomLeft: { ...corner, bottom: '-11px', left: atLeftEdge ? '1px' : '-11px', cursor: 'nesw-resize' },
+            bottomRight:{ ...corner, bottom: '-11px', right: atRightEdge ? '1px' : '-11px', cursor: 'nwse-resize' },
           }}
           style={{
             zIndex: (fluid.zIndex ?? 0) + 100,

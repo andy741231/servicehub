@@ -1,6 +1,6 @@
 import {
-  AlignLeft, Star, Hand, Rows3, Quote, LayoutGrid,
-  Sparkles, MessageSquare, Mail, Video
+  AlignLeft, Star, Hand, Quote, Award, LayoutList, Clock, CalendarDays,
+  MapPin, Images, Sparkles, MessageSquare, Mail, Video
 } from 'lucide-react';
 
 /**
@@ -26,15 +26,15 @@ export const BLOCK_TYPES = [
   { id: 'text',         name: 'Text',         Icon: AlignLeft,     category: 'Basics',           rows: 3, description: 'Paragraphs, headings and lists', keywords: 'paragraph copy body rich' },
   { id: 'intro',        name: 'Introduction', Icon: Hand,          category: 'Basics',           rows: 5, description: 'Colored band with a title and button', keywords: 'call to action cta button' },
   { id: 'quote',        name: 'Quote',        Icon: Quote,         category: 'Basics',           rows: 3, description: 'Large pull quote', keywords: 'testimonial citation' },
-  { id: 'trust-bar',    name: 'Trust bar',    Icon: Star,          category: 'Lists & features', rows: 2, description: 'Short numbered proof points', keywords: 'stats numbers points' },
+  { id: 'trust-bar',    name: 'Trust bar',    Icon: Award,          category: 'Lists & features', rows: 2, description: 'Short numbered proof points', keywords: 'stats numbers points' },
   { id: 'features',     name: 'Features',     Icon: Star,          category: 'Lists & features', rows: 7, description: 'Cards with an icon or number', keywords: 'cards grid services ministries' },
-  { id: 'highlights',   name: 'Highlights',   Icon: Sparkles,      category: 'Lists & features', rows: 7, description: 'Image cards with a button', keywords: 'cards images programs' },
+  { id: 'highlights',   name: 'Highlights',   Icon: LayoutList,      category: 'Lists & features', rows: 7, description: 'Image cards with a button', keywords: 'cards images programs' },
   { id: 'testimonials', name: 'Testimonials', Icon: MessageSquare, category: 'Lists & features', rows: 5, description: 'What people say', keywords: 'quotes reviews stories' },
-  { id: 'split-banner', name: 'Service times',Icon: Rows3,         category: 'Community',        rows: 5, description: 'Callout with a list of times', keywords: 'split banner sunday schedule worship' },
-  { id: 'events',       name: 'Events',       Icon: Rows3,         category: 'Community',        rows: 6, description: 'Upcoming events list', keywords: 'calendar dates' },
+  { id: 'split-banner', name: 'Service times',Icon: Clock,         category: 'Community',        rows: 5, description: 'Callout with a list of times', keywords: 'split banner sunday schedule worship' },
+  { id: 'events',       name: 'Events',       Icon: CalendarDays,         category: 'Community',        rows: 6, description: 'Upcoming events list', keywords: 'calendar dates' },
   { id: 'contact',      name: 'Contact',      Icon: Mail,          category: 'Community',        rows: 6, description: 'Email, phone, address and a form', keywords: 'email phone address form' },
-  { id: 'map',          name: 'Map',          Icon: LayoutGrid,    category: 'Community',        rows: 5, description: 'Location with an embedded map', keywords: 'address directions location' },
-  { id: 'gallery',      name: 'Gallery',      Icon: LayoutGrid,    category: 'Media',            rows: 6, description: 'Grid of images with captions', keywords: 'photos images pictures' },
+  { id: 'map',          name: 'Map',          Icon: MapPin,    category: 'Community',        rows: 5, description: 'Location with an embedded map', keywords: 'address directions location' },
+  { id: 'gallery',      name: 'Gallery',      Icon: Images,    category: 'Media',            rows: 6, description: 'Grid of images with captions', keywords: 'photos images pictures' },
   { id: 'video',        name: 'Video',        Icon: Video,         category: 'Media',            rows: 7, description: 'YouTube or Vimeo video', keywords: 'youtube vimeo sermon' },
 ];
 export const blockCatalogEntry = (type) => BLOCK_TYPES.find((b) => b.id === type);
@@ -69,10 +69,22 @@ export const makeDefaultBlockContent = (type) => {
     case 'quote':        return { quote: 'A church should be a place where people can come as they are.', citation: 'The community' };
     case 'map':          return { address: '128 Harbor Street, Your City', embedUrl: '' };
     case 'intro':        return { title: 'Introduction', content: 'Add your introduction text here...', buttonText: 'Learn More', buttonLink: '#', buttonVariant: 'gold' };
-    case 'features':     return { eyebrow: 'Why Harbor', title: 'A place to belong.', subtitle: 'Highlight what makes your community unique', numbered: false, items: [] };
-    case 'highlights':   return { title: 'Highlights', items: [] };
-    case 'gallery':      return { title: 'Gallery', images: [] };
-    case 'testimonials': return { title: 'Testimonials', testimonials: [] };
+    case 'features':     return { eyebrow: 'Why Harbor', title: 'A place to belong.', subtitle: 'Highlight what makes your community unique', numbered: false, items: [
+      { icon: 'lucide-star', number: '01', title: 'Sunday worship', text: 'Gather with us for music, teaching and prayer.' },
+      { icon: 'lucide-star', number: '02', title: 'Groups', text: 'Meaningful friendships around shared meals.' },
+      { icon: 'lucide-star', number: '03', title: 'Serve the city', text: 'Partner with neighbors to make a difference.' },
+    ] };
+    case 'highlights':   return { title: 'Highlights', items: [
+      { image: '', title: 'Kids & families', text: 'A safe, joyful place for every age.', buttonText: 'Learn more', buttonLink: '#' },
+      { image: '', title: 'Groups', text: 'Find people to walk with through the week.', buttonText: 'Find a group', buttonLink: '#' },
+      { image: '', title: 'Serve', text: 'Use your gifts to care for our neighbors.', buttonText: 'Get involved', buttonLink: '#' },
+    ] };
+    case 'gallery':      return { title: 'Gallery', images: [{ url: '', caption: '' }, { url: '', caption: '' }, { url: '', caption: '' }] };
+    case 'testimonials': return { title: 'Testimonials', testimonials: [
+      { name: 'Maria', role: 'Member since 2019', quote: 'I came looking for answers and found a family.' },
+      { name: 'James', role: 'Volunteer', quote: 'Serving here has changed how I see my neighbors.' },
+      { name: 'Aisha', role: 'Small group leader', quote: 'There is always room at the table.' },
+    ] };
     case 'contact':      return { title: 'Contact Us', subtitle: 'Get in touch with our team', email: 'contact@example.com', phone: '+1 (555) 123-4567', address: '123 Main St, City, State 12345', emailLabel: 'Email', phoneLabel: 'Phone', addressLabel: 'Address', reasonOptions: ['General question', 'Visit planning', 'Community care'] };
     case 'video':        return { title: 'Featured Video', videoUrl: '', description: 'Add a video description...' };
     case 'grid':         return { columns: 3, gap: 24, items: [{ width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }, { width: '33.33%', blocks: [] }] };

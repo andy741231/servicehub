@@ -5,8 +5,10 @@
  * link labels are edited directly on the block (see siteEditBridge.jsx).
  *
  */
-import { useEffect, useState } from 'react';
-import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowUp, ArrowDown, Trash2, Upload, Loader2 } from 'lucide-react';
+import api from '../../../utils/api';
+import { blockCatalogEntry } from './editorUtils';
 
 const BUTTON_VARIANTS = [['gold', 'Gold'], ['outline', 'Outline'], ['default', 'Navy']];
 
@@ -14,7 +16,7 @@ const stripTags = (s) => String(s || '').replace(/<[^>]*>/g, '').replace(/\s+/g,
 
 /** Per block type: non-inline settings. `list` entries manage array items. */
 export const BLOCK_SETTINGS = {
-  hero: [{ key: 'backgroundImage', label: 'Background image URL', type: 'text', placeholder: 'https://… or uploaded file name' }],
+  hero: [{ key: 'backgroundImage', label: 'Background image', type: 'image' }],
   'trust-bar': [{ key: 'items', label: 'Items', type: 'list', summary: (i) => `${i.number || ''} ${stripTags(i.label)}` }],
   'split-banner': [
     { key: 'buttonLink', label: 'Button link', type: 'text', placeholder: '/contact' },
@@ -22,7 +24,7 @@ export const BLOCK_SETTINGS = {
     { key: 'times', label: 'Service times', type: 'list', summary: (t) => `${t.label || ''} — ${t.value || ''}` },
   ],
   events: [{ key: 'items', label: 'Events', type: 'list', summary: (e) => `${e.date || ''} · ${stripTags(e.title)}` }],
-  quote: [{ key: 'backgroundColor', label: 'Background color', type: 'text', placeholder: '#eadfc9' }],
+  // Quote background is set in the Design tab (one place for every block).
   map: [
     { key: 'address', label: 'Address', type: 'text' },
     { key: 'embedUrl', label: 'Map embed URL (optional)', type: 'text', placeholder: 'https://www.google.com/maps/embed?…' },
@@ -74,6 +76,57 @@ function CsvInput({ value, onCommit }) {
   );
 }
 
+/**
+ * Image setting (e.g. a hero background): preview, upload to the asset
+ * library, or paste an address. Uploading used to be impossible here — the
+ * only option was typing a URL.
+ */
+function ImageField({ label, value, onChange }) {
+  const inputRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [text, setText] = useState(value || '');
+  useEffect(() => { setText(value || ''); }, [value]);
+  const upload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true); setError('');
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { data } = await api.post('/web/assets', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      onChange(data.url);
+    } catch {
+      setError('Upload failed — check the file type and size.');
+    } finally { setBusy(false); }
+  };
+  const commit = () => { if (text.trim() !== (value || '')) onChange(text.trim() || undefined); };
+  return (
+    <div>
+      <div className="text-xs font-medium text-muted mb-1">{label}</div>
+      {value && <img src={value} alt="" className="w-full h-28 object-cover rounded-md border border-border mb-2" />}
+      <div className="flex gap-2">
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-[36px] text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} {value ? 'Replace' : 'Upload image'}
+        </button>
+        {value && <button type="button" onClick={() => onChange(undefined)} className="px-3 py-2 min-h-[36px] text-sm rounded-md border border-border text-muted hover:bg-surface-raised">Remove</button>}
+      </div>
+      <input
+        className={`${inputCls} mt-2`}
+        value={text}
+        placeholder="or paste an image address"
+        aria-label={`${label} URL`}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+      />
+      {error && <p className="mt-1 text-xs text-danger" role="alert">{error}</p>}
+      <input ref={inputRef} type="file" accept="image/*" onChange={upload} className="hidden" aria-hidden="true" tabIndex={-1} />
+    </div>
+  );
+}
+
 function ListField({ field, items, onChange }) {
   const move = (i, d) => {
     const j = i + d;
@@ -91,9 +144,9 @@ function ListField({ field, items, onChange }) {
           <li key={i} className="border border-border rounded-md p-2">
             <div className="flex items-center gap-1">
               <span className="flex-1 text-sm text-text-base truncate" title={field.summary(item, i)}>{field.summary(item, i) || `Item ${i + 1}`}</span>
-              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-surface-raised disabled:opacity-30" aria-label="Move up"><ArrowUp className="w-3.5 h-3.5" /></button>
-              <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="p-1 rounded hover:bg-surface-raised disabled:opacity-30" aria-label="Move down"><ArrowDown className="w-3.5 h-3.5" /></button>
-              <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="p-1 rounded hover:bg-danger-light text-danger" aria-label="Remove item"><Trash2 className="w-3.5 h-3.5" /></button>
+              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised disabled:opacity-30" aria-label="Move up" title="Move up"><ArrowUp className="w-3.5 h-3.5" /></button>
+              <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised disabled:opacity-30" aria-label="Move down" title="Move down"><ArrowDown className="w-3.5 h-3.5" /></button>
+              <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} className="w-8 h-8 flex items-center justify-center rounded hover:bg-danger-light text-danger" aria-label="Remove item" title="Remove item"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
             {field.itemFields?.map((f) => (
               <label key={f.key} className="block mt-1.5 text-xs text-muted">{f.label}
@@ -113,6 +166,10 @@ function ListField({ field, items, onChange }) {
 
 /** Human-readable block type name, e.g. "split-banner" → "Split banner". */
 export const blockTypeLabel = (type) => {
+  // Same name as the block picker (e.g. split-banner → "Service times");
+  // the hover label, inspector and layers used to say "Split banner".
+  const named = blockCatalogEntry(type)?.name;
+  if (named) return named;
   const t = String(type || 'block').replace(/-/g, ' ');
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
@@ -130,6 +187,7 @@ export function BlockContentSettings({ block, onUpdateContent }) {
     <div className="space-y-3">
       <p className="text-xs text-subtle">Text, images and button labels are edited directly on the block.</p>
       {fields.map((f) => {
+        if (f.type === 'image') return <ImageField key={f.key} label={f.label} value={c[f.key]} onChange={(v) => set(f.key, v)} />;
         if (f.type === 'list') return <ListField key={f.key} field={f} items={c[f.key] || []} onChange={(v) => set(f.key, v)} />;
         if (f.type === 'checkbox') {
           return (

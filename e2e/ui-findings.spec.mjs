@@ -1,0 +1,217 @@
+/**
+ * Regression tests for the 2026-11-21 UI test findings (docs/web-editor-plan.md,
+ * "UI test findings"). Same fixture page approach as web-editor.spec.mjs:
+ * a temporary unpublished, hidden page, reset before every test.
+ */
+import { test, expect } from '@playwright/test';
+import {
+  authenticate, createFixturePage, resetFixturePage, deleteFixturePage, getPage,
+  canvas, openEditor, block, section, selectBlock, inspectorTitle, nextSave,
+} from './helpers.mjs';
+
+test.describe.configure({ mode: 'serial' });
+
+let fixture;
+test.beforeAll(async () => { fixture = await createFixturePage(); });
+test.afterAll(async () => { if (fixture) await deleteFixturePage(fixture.id); });
+let pageErrors = [];
+test.beforeEach(async ({ context, page }) => {
+  await resetFixturePage(fixture.slug);
+  await authenticate(context);
+  pageErrors = [];
+  page.on('pageerror', (e) => pageErrors.push(e.message));
+  // Never send uploads to real asset storage.
+  await page.route('**/api/web/assets', (route) => (route.request().method() !== 'POST' ? route.continue()
+    : route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'e2e', url: '/uploads/e2e-bg.png' }) })));
+});
+test.afterEach(() => { expect(pageErrors, 'uncaught errors in the page').toEqual([]); });
+
+const saved = async () => (await getPage(fixture.slug)).sections;
+const inspector = (page) => page.getByRole('complementary', { name: 'Inspector' });
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+
+async function addSection(page, name) {
+  await canvas(page).getByRole('button', { name: /^Add Section$/ }).last().click();
+  await page.getByRole('dialog').getByRole('button', { name: `Add ${name} section` }).click();
+}
+async function addBlock(page, n, name) {
+  const s = section(page, n);
+  await s.scrollIntoViewIfNeeded();
+  await s.hover();
+  await s.getByRole('button', { name: 'Add Block', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Add block' })).toBeVisible();
+  await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: `Add ${name} block` }).click();
+}
+/** Bottom of the block's rendered content minus the block's own bottom (≤ 0 = fits). */
+const overflowPx = (loc) => loc.evaluate((el) => {
+  const r = el.getBoundingClientRect();
+  return Math.max(...[...el.children].map((c) => c.getBoundingClientRect().bottom)) - r.bottom;
+});
+/** WCAG contrast of an element's text colour against a background colour. */
+const contrast = (fg, bg) => {
+  const lum = (c) => { const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const [a, b] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+  return (a + 0.05) / (b + 0.05);
+};
+
+test('U1/U2: a long quote stays inside its block; marks sit inline like the site', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  let save = nextSave(page, fixture.slug);
+  await addSection(page, 'Quote');
+  await save;
+  const q = block(page, 'Quote');
+  // Quote marks are inline: the editable text is not a separate <p> paragraph.
+  await expect(q.locator('blockquote p')).toHaveCount(0);
+  await expect.poll(() => overflowPx(q), { timeout: 8000 }).toBeLessThanOrEqual(2);
+  // Type a long quote, then leave the field (the field re-renders on blur).
+  const text = q.locator('blockquote [contenteditable="true"]');
+  await selectBlock(page, 'Quote');
+  await text.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('Fresh out of the oven, each loaf has a shell of blistered mahogany and an interior so chewy and preternaturally moist that it shimmers in the light');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => overflowPx(q), { timeout: 8000 }).toBeLessThanOrEqual(2);
+  // The page-level "Add Section" button is not covered by the quote.
+  const cta = canvas(page).getByRole('button', { name: /^Add Section$/ }).last();
+  await cta.scrollIntoViewIfNeeded();
+  await cta.click({ trial: true, timeout: 5000 });
+});
+
+test('U3: a block added from the picker is fitted to its content (no empty rows)', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Hero');
+  await save;
+  const heroes = canvas(page).locator('[role="group"][aria-label^="Hero block"]');
+  const added = heroes.nth(1);
+  await expect.poll(async () => {
+    const box = await added.boundingBox();
+    const content = await added.evaluate((el) => el.firstElementChild.getBoundingClientRect().height);
+    return box.height - content;
+  }, { timeout: 8000 }).toBeLessThan(90); // at most one row of slack
+  await expect.poll(async () => { const f = (await saved())[0].blocks[1].fluid; return f.rowEnd - f.rowStart; }, { timeout: 8000 }).toBeLessThan(6);
+});
+
+test('U4: section actions are one compact row; clicking near a block edge selects the block', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const s2 = section(page, 2);
+  await s2.scrollIntoViewIfNeeded();
+  await s2.hover();
+  const bar = s2.getByRole('toolbar', { name: 'Section actions' });
+  await expect(bar).toBeVisible();
+  expect((await bar.boundingBox()).height).toBeLessThan(44);
+  await expect(s2.getByRole('button', { name: /Add Section Below/ })).toHaveCount(0);
+  // Where the old 170px menu sat (right edge, inside the trust bar) is now the block.
+  const tb = await block(page, 'Trust bar').boundingBox();
+  const b = await bar.boundingBox();
+  await page.mouse.click(tb.x + tb.width - 60, Math.max(b.y + b.height + 12, tb.y + tb.height - 14));
+  await expect.poll(() => inspectorTitle(page)).toMatch(/Trust bar block/);
+  expect(await saved()).toHaveLength(5); // nothing removed
+});
+
+test('U5: resize handles of a full-width block are inside the canvas', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Trust bar');
+  const frame = await page.locator('iframe[title="Page canvas"]').boundingBox();
+  for (const cls of ['.fluid-resize-r', '.fluid-resize-br']) {
+    const h = await section(page, 2).locator(cls).first().boundingBox();
+    expect(h.x + h.width).toBeLessThanOrEqual(frame.x + frame.width + 0.5);
+  }
+});
+
+test('U6: Contact block text is readable on its background', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const save = nextSave(page, fixture.slug);
+  await addSection(page, 'Contact');
+  await save;
+  const sec = block(page, 'Contact').locator('section').first();
+  const bg = await sec.evaluate((el) => getComputedStyle(el).backgroundColor);
+  for (const el of [sec.locator('h2'), sec.locator('h3').first()]) {
+    const fg = await el.evaluate((n) => getComputedStyle(n).color);
+    expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
+test('U7/U9/U10: hero background image uploads from the inspector, fills the block, subtitle readable', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Hero');
+  const save = nextSave(page, fixture.slug);
+  await inspector(page).locator('input[type="file"]').setInputFiles({ name: 'bg.png', mimeType: 'image/png', buffer: png });
+  await save;
+  expect((await saved())[0].blocks[0].content.backgroundImage).toBe('/uploads/e2e-bg.png');
+  const hero = block(page, 'Hero');
+  const sec = hero.locator('section').first();
+  await expect.poll(async () => Math.abs((await sec.boundingBox()).height - (await hero.boundingBox()).height)).toBeLessThan(2);
+  const subColor = await hero.locator('p').first().evaluate((el) => getComputedStyle(el).color);
+  const [r, g, b] = subColor.match(/\d+/g).map(Number);
+  expect(r + g + b).toBeGreaterThan(600); // light text on the photo
+});
+
+test('U11: Quote Design background applies (content-level colour no longer overrides it)', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await addSection(page, 'Quote');
+  await selectBlock(page, 'Quote');
+  await inspector(page).getByRole('tab', { name: 'Design' }).click();
+  const bg = inspector(page).getByRole('textbox', { name: 'Background', exact: true });
+  await bg.fill('#111111');
+  await bg.press('Enter');
+  await expect(block(page, 'Quote').locator('section').first()).toHaveCSS('background-color', 'rgb(17, 17, 17)');
+  await page.getByRole('tab', { name: 'Content' }).click();
+  await expect(inspector(page).getByText('Background color')).toHaveCount(0);
+});
+
+test('U12/U13: Esc from the inspector walks the selection up; version history closes on Esc', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Trust bar');
+  await inspector(page).getByRole('tab', { name: 'Design' }).click(); // focus is now in the inspector
+  await page.keyboard.press('Escape');
+  await expect.poll(() => inspectorTitle(page)).toMatch(/Section 2/);
+  await page.getByRole('button', { name: 'Version history' }).click();
+  await expect(page.getByRole('dialog', { name: 'Page version history' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Page version history' })).toHaveCount(0);
+});
+
+test('U14: preview is full screen (no admin navigation)', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('button', { name: /Back to editor/ }).first()).toBeVisible();
+  const box = await page.locator('.public-site').first().boundingBox();
+  expect(box.x).toBe(0);
+  expect(box.width).toBeGreaterThanOrEqual(1400);
+});
+
+test('U15/U16: layers panel selects sections, uses picker names, has no fake hide toggle', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await page.getByRole('button', { name: 'Toggle layers panel' }).click();
+  const layers = page.getByRole('complementary', { name: 'Layers panel' });
+  await expect(layers.getByText('Service times 1')).toBeVisible();
+  await expect(layers.getByRole('button', { name: /Hide block on canvas/ })).toHaveCount(0);
+  await layers.getByText(/^Section 3/).click();
+  await expect.poll(() => inspectorTitle(page)).toMatch(/Section 3/);
+  await layers.getByText('Service times 1').click();
+  await expect.poll(() => inspectorTitle(page)).toMatch(/Service times block/);
+});
+
+test('U17: Delete key offers Undo like the toolbar', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  await selectBlock(page, 'Trust bar');
+  await page.evaluate(() => document.activeElement?.blur());
+  let save = nextSave(page, fixture.slug);
+  await page.keyboard.press('Delete');
+  await save;
+  expect((await saved())[1].blocks).toHaveLength(0);
+  save = nextSave(page, fixture.slug);
+  await page.getByRole('button', { name: 'Undo' }).last().click();
+  await save;
+  expect((await saved())[1].blocks).toHaveLength(1);
+});
+
+test('U8: list blocks from the picker start with content', async ({ page }) => {
+  await openEditor(page, fixture.slug);
+  const save = nextSave(page, fixture.slug);
+  await addBlock(page, 1, 'Features');
+  await save;
+  await expect(block(page, 'Features').locator('.public-feature-card')).toHaveCount(3);
+});

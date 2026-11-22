@@ -26,6 +26,13 @@ export default function WebVersionHistoryPanel({ slug, onClose, onRestored }) {
 
   useEffect(() => { loadVersions(); }, [loadVersions]);
 
+  // Esc closes the panel, like the editor's other dialogs.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [onClose]);
+
   const restore = async (versionId) => {
     setRestoringId(versionId);
     setError('');

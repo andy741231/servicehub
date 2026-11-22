@@ -33,7 +33,7 @@ export default function BlockPicker({ targetSectionIndex, sectionCount, onAdd, o
       <div className="sticky top-0 bg-surface z-10 border-b border-border">
         <div className="flex items-center justify-between px-4 h-12">
           <h2 className="text-sm font-semibold text-text-base">Add block</h2>
-          <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-surface-raised text-muted" aria-label="Close add block panel"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised text-muted" aria-label="Close add block panel" title="Close"><X className="w-4 h-4" /></button>
         </div>
         <div className="px-4 pb-3">
           <label className="relative block">

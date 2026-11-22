@@ -296,11 +296,11 @@ test('image upload saves the uploaded asset URL (not a temporary blob: URL)', as
   await page.getByRole('complementary', { name: 'Add block' }).getByRole('button', { name: 'Add Gallery block' }).click();
   await save;
   const gallery = block(page, 'Gallery');
-  await gallery.getByRole('button', { name: /Add image/ }).click();
-  await expect(gallery.getByRole('button', { name: /^Add image: / })).toHaveCount(1);
+  // New galleries start with three empty image tiles.
+  await expect(gallery.getByRole('button', { name: /^Add image: / })).toHaveCount(3);
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
   save = nextSave(page, fixture.slug);
-  await gallery.locator('input[type="file"]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: png });
+  await gallery.locator('input[type="file"]').first().setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: png });
   await save;
   expect(uploaded).toBe(1);
   const images = (await saved())[4].blocks.find((b) => b.type === 'gallery').content.images;

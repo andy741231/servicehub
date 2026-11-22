@@ -8,7 +8,7 @@
  * focus restoration, and scroll locking.
  */
 
-import { Type, X, Sparkles } from 'lucide-react';
+import { Keyboard, X, Sparkles } from 'lucide-react';
 import { AccessibleModal } from '../../../components/Dialog';
 
 export default function EditorDialogs({ showKeyboardHelp, onCloseKeyboardHelp }) {
@@ -21,7 +21,7 @@ export default function EditorDialogs({ showKeyboardHelp, onCloseKeyboardHelp })
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-info-light flex items-center justify-center">
-                  <Type className="w-5 h-5 text-info" />
+                  <Keyboard className="w-5 h-5 text-info" />
                 </div>
                 <div>
                   <h3 id="keyboard-help-title" className="text-xl font-semibold text-text-base">Keyboard Shortcuts</h3>

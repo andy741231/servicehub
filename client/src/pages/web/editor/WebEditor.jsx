@@ -476,6 +476,14 @@ export default function WebEditor() {
       // Delete/Backspace: Delete selected block(s)
       if (selectedBlockIds.size > 0 && (e.key === 'Delete' || e.key === 'Backspace')) {
         e.preventDefault();
+        // One block: same path as the toolbar's Delete (with the Undo toast).
+        if (selectedBlockIds.size === 1) {
+          const [id] = selectedBlockIds;
+          const sIdx = sections.findIndex((sec) => (sec.blocks || []).some((b) => b.id === id));
+          if (sIdx >= 0) deleteBlock(sIdx, sections[sIdx].blocks.findIndex((b) => b.id === id));
+          setSelectedBlockIds(new Set());
+          return;
+        }
         const newSections = sections.map((sec) => ({
           ...sec,
           blocks: (sec.blocks || []).filter((b) => !selectedBlockIds.has(b.id)),
@@ -483,6 +491,7 @@ export default function WebEditor() {
         setSections(newSections);
         saveToHistory(newSections, header, footer);
         setSelectedBlockIds(new Set());
+        toast(`${selectedBlockIds.size} blocks deleted`, { type: 'info', duration: 6000, action: { label: 'Undo', onClick: () => handleUndo() } });
       }
 
       // Ctrl/Cmd + P: toggle in-editor Preview (matches the Preview toolbar button)
@@ -820,7 +829,7 @@ export default function WebEditor() {
     };
 
     return (
-      <div className="min-h-screen bg-surface">
+      <div className="fixed inset-0 z-[100] overflow-y-auto bg-surface">{/* full screen, like the editor — not inside the admin shell */}
         {/* Minimal live view toolbar */}
         <div className="bg-surface border-b border-border px-6 py-3 sticky top-0 z-40 shadow-sm">
           <div className="flex items-center justify-between">
@@ -1005,7 +1014,7 @@ export default function WebEditor() {
           <LayersPanel
             sections={sections}
             selectedBlockIds={selectedBlockIds}
-            onSelectSection={(sIdx) => { setSelectedBlockIds(new Set()); }}
+            onSelectSection={(sIdx) => { selectSection(sIdx); setInspectorOpen(true); revealAfterRender(`[role="group"][aria-label^="Section ${sIdx + 1}"]`); }}
             onSelectBlock={(sIdx, bIdx) => {
               const block = sections[sIdx]?.blocks?.[bIdx];
               if (block) setSelectedBlockIds(new Set([block.id]));

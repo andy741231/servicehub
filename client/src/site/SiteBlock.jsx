@@ -60,7 +60,9 @@ export default function SiteBlock({ block }) {
   switch (block.type) {
     case 'hero': return (
       <section
-        className={`py-20 px-6 text-center relative bg-cover bg-center bg-no-repeat ${c.backgroundImage ? 'w-full' : 'max-w-5xl mx-auto'} ${cc}`}
+        // With a photo, the hero fills its whole block (the image used to
+        // cover only the padded text area, leaving bands of page colour).
+        className={`py-20 px-6 text-center relative bg-cover bg-center bg-no-repeat ${c.backgroundImage ? 'w-full h-full flex flex-col justify-center' : 'max-w-5xl mx-auto'} ${cc}`}
         style={{
           ...sStyle,
           backgroundImage: c.backgroundImage ? `url(${resolveUrl(c.backgroundImage)})` : sStyle?.backgroundImage,
@@ -87,7 +89,8 @@ export default function SiteBlock({ block }) {
             as="p" path="subtitle" value={c.subtitle} placeholder="Hero subtitle" multiline
             className="text-xl max-w-2xl mx-auto"
             style={{
-              color: sStyle?.color || 'hsl(var(--text-muted))',
+              // Muted grey is unreadable on a photo — use light text there.
+              color: sStyle?.color || (c.backgroundImage ? 'hsl(var(--text-inverse) / 0.9)' : 'hsl(var(--text-muted))'),
               fontFamily: cs.subtitleFontFamily || undefined,
               fontSize: cs.subtitleFontSize ? `${cs.subtitleFontSize}px` : undefined,
               textAlign: cs.subtitleTextAlign || undefined,
@@ -174,10 +177,13 @@ export default function SiteBlock({ block }) {
     );
 
     case 'quote': return (
-      <section className={`public-quote ${cc}`} style={{ ...sStyle, backgroundColor: c.backgroundColor || '#eadfc9' }}>
+      // Design-tab background wins over the older content-level colour (which
+      // used to override it, so the Design setting did nothing).
+      <section className={`public-quote ${cc}`} style={{ ...sStyle, backgroundColor: sStyle.backgroundColor || c.backgroundColor || '#eadfc9' }}>
         <div className="max-w-6xl mx-auto px-6">
           <Text as="blockquote" path="quote" value={c.quote} prefix="“" suffix="”" placeholder="Quote" multiline />
-          <Text as="cite" path="citation" value={c.citation} prefix="— " placeholder="Citation" />
+          {/* With a custom text colour the citation follows it (it is muted grey otherwise). */}
+          <Text as="cite" path="citation" value={c.citation} prefix="— " placeholder="Citation" style={cs.color ? { color: 'inherit', opacity: 0.75 } : undefined} />
         </div>
       </section>
     );
@@ -236,7 +242,7 @@ export default function SiteBlock({ block }) {
     case 'highlights': return (
       <section className={`bg-surface-raised py-20 px-6 ${cc}`} style={sStyle}>
         <div className="max-w-6xl mx-auto">
-          <Text as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
+          <Text optional as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {c.items?.map((item, i) => (
               <div key={i} className="bg-surface rounded-xl overflow-hidden shadow-sm hover:shadow-md transition pb-6 text-center">
@@ -255,9 +261,9 @@ export default function SiteBlock({ block }) {
     case 'gallery': return (
       <section className={`py-20 px-6 bg-surface-raised ${cc}`} style={sStyle}>
         <div className="max-w-6xl mx-auto">
-          <Text as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
+          <Text optional as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {c.images?.map((image, i) => (
+            {c.images?.map((image, i) => (!image.url && !edit) ? null : (
               <div key={i} className="group relative overflow-hidden rounded-lg shadow-md">
                 <Image path={`images.${i}.url`} value={image.url} alt={image.caption || `Gallery ${i + 1}`} className="w-full h-64 object-cover group-hover:scale-105 transition duration-300" />
                 {(image.caption || edit) && (
@@ -276,7 +282,7 @@ export default function SiteBlock({ block }) {
     case 'testimonials': return (
       <section className={`py-20 px-6 bg-surface ${cc}`} style={sStyle}>
         <div className="max-w-6xl mx-auto">
-          <Text as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
+          <Text optional as="h2" className="text-3xl font-bold text-center mb-12" path="title" value={c.title} placeholder="Title" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {c.testimonials?.map((t, i) => (
               <div key={i} className="bg-surface-raised rounded-lg p-6 shadow-sm">
@@ -297,31 +303,38 @@ export default function SiteBlock({ block }) {
     );
 
     case 'contact': {
+      // Colours come from the site theme variables directly. (The Tailwind
+      // token classes used before — bg-surface-tertiary, text-primary —
+      // resolve to the admin palette, which put white text on pale mint.)
+      const onDark = { color: 'inherit' };
       const contactItem = (key, labelKey, defaultLabel, icon, valueNode) => (
         <div className="text-center">
-          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">{icon}</div>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'hsl(var(--accent))', color: 'hsl(var(--text-inverse))' }}>{icon}</div>
           <h3 className="font-semibold mb-2">{c[labelKey] || defaultLabel}</h3>
           {valueNode}
         </div>
       );
       const editValue = (key, placeholder, multiline) => (
-        <Text as="p" plain multiline={multiline} className={key === 'address' ? 'text-subtle' : 'text-primary'} path={key} value={c[key]} placeholder={placeholder} />
+        <Text as="p" plain multiline={multiline} className="opacity-90" style={onDark} path={key} value={c[key]} placeholder={placeholder} />
       );
       return (
-        <section className={`py-20 px-6 bg-surface-tertiary text-inverse ${cc}`} style={sStyle}>
+        <section
+          className={`py-20 px-6 ${cc}`}
+          style={{ ...sStyle, backgroundColor: sStyle.backgroundColor || 'hsl(var(--primary))', color: sStyle.color || 'hsl(var(--text-inverse))' }}
+        >
           <div className="max-w-4xl mx-auto text-center">
-            <Text as="h2" className="text-3xl font-bold mb-4" path="title" value={c.title} placeholder="Title" />
-            <Text as="p" className="text-xl text-subtle mb-12" path="subtitle" value={c.subtitle} placeholder="Subtitle" />
+            <Text as="h2" className="text-3xl font-bold mb-4" style={onDark} path="title" value={c.title} placeholder="Title" />
+            <Text as="p" className="text-xl opacity-80 mb-12" style={onDark} path="subtitle" value={c.subtitle} placeholder="Subtitle" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {(c.email || edit) && contactItem('email', 'emailLabel', 'Email',
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-                edit ? editValue('email', 'email@example.com') : <a href={`mailto:${c.email}`} className="text-primary hover:text-primary-hover">{c.email}</a>)}
+                edit ? editValue('email', 'email@example.com') : <a href={`mailto:${c.email}`} className="underline underline-offset-4 opacity-90 hover:opacity-100" style={onDark}>{c.email}</a>)}
               {(c.phone || edit) && contactItem('phone', 'phoneLabel', 'Phone',
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>,
-                edit ? editValue('phone', '+1 (555) 123-4567') : <a href={`tel:${c.phone}`} className="text-primary hover:text-primary-hover">{c.phone}</a>)}
+                edit ? editValue('phone', '+1 (555) 123-4567') : <a href={`tel:${c.phone}`} className="underline underline-offset-4 opacity-90 hover:opacity-100" style={onDark}>{c.phone}</a>)}
               {(c.address || edit) && contactItem('address', 'addressLabel', 'Address',
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
-                edit ? editValue('address', '123 Main St', true) : <p className="text-subtle">{c.address}</p>)}
+                edit ? editValue('address', '123 Main St', true) : <p className="opacity-90">{c.address}</p>)}
             </div>
             {c.showForm && (
               <form className="public-contact-form mt-12 mx-auto max-w-2xl" onSubmit={event => event.preventDefault()} style={edit ? { pointerEvents: 'none' } : undefined}>
@@ -366,7 +379,7 @@ export default function SiteBlock({ block }) {
       return (
         <section className={`py-20 px-6 bg-surface-raised ${cc}`} style={sStyle}>
           <div className="max-w-4xl mx-auto text-center">
-            <Text as="h2" className="text-3xl font-bold text-text-base mb-4" path="title" value={c.title} placeholder="Title" />
+            <Text optional as="h2" className="text-3xl font-bold text-text-base mb-4" path="title" value={c.title} placeholder="Title" />
             <Text optional as="p" className="text-xl text-muted mb-12" path="description" value={c.description} placeholder="Description" multiline />
             {embedUrl ? (
               <div className="aspect-video rounded-lg overflow-hidden shadow-lg">

@@ -46,6 +46,8 @@ export function Text({ as: Tag = 'div', path, value, className, style, placehold
 export function Image({ path, value, alt, className }) {
   const edit = useSiteEdit();
   if (edit?.Image) return <edit.Image path={path} value={value} alt={alt} className={className} />;
+  // An image nobody has chosen yet renders nothing (not a broken <img>).
+  if (!value) return null;
   return <img src={value} alt={alt} className={className} />;
 }
 

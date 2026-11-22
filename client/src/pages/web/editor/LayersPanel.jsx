@@ -17,9 +17,10 @@
 
 import { useState } from 'react';
 import {
-  ChevronDown, ChevronRight, Copy, Trash2, Eye, EyeOff,
+  ChevronDown, ChevronRight, Copy, Trash2,
   ArrowUp, ArrowDown, Layers,
 } from 'lucide-react';
+import { blockTypeLabel } from './BlockSettingsPanel';
 
 export default function LayersPanel({
   sections = [],
@@ -40,7 +41,6 @@ export default function LayersPanel({
     sections.forEach((_, i) => set.add(i));
     return set;
   });
-  const [hiddenBlocks, setHiddenBlocks] = useState(new Set());
 
   const toggleSection = (sIdx) => {
     setExpandedSections((prev) => {
@@ -51,23 +51,11 @@ export default function LayersPanel({
     });
   };
 
-  const toggleBlockVisibility = (blockId) => {
-    setHiddenBlocks((prev) => {
-      const next = new Set(prev);
-      if (next.has(blockId)) next.delete(blockId);
-      else next.add(blockId);
-      return next;
-    });
-  };
-
-  const getBlockLabel = (block, sIdx, bIdx) => {
-    const type = block?.type ? block.type.charAt(0).toUpperCase() + block.type.slice(1) : 'Block';
-    return `${type} block ${bIdx + 1}`;
-  };
+  const getBlockLabel = (block, sIdx, bIdx) => `${blockTypeLabel(block?.type)} ${bIdx + 1}`;
 
   return (
     <aside
-      className="w-72 bg-surface border-r border-border flex flex-col h-full"
+      className="w-72 shrink-0 bg-surface border-r border-border flex flex-col sticky top-[52px] self-start h-[calc(100vh-52px)]"
       aria-label="Layers panel"
     >
       {/* Header */}
@@ -154,11 +142,10 @@ export default function LayersPanel({
               {/* Block rows */}
               {isExpanded && sectionBlocks.map((block, bIdx) => {
                 const isSelected = selectedBlockIds.has(block.id);
-                const isHidden = hiddenBlocks.has(block.id);
                 return (
                   <div
                     key={block.id || bIdx}
-                    className="flex items-center gap-1 px-2 py-1.5 ml-4 rounded hover:bg-surface-raised group cursor-pointer min-h-[36px] ${isSelected ? 'bg-primary-light' : ''}"
+                    className={`flex items-center gap-1 px-2 py-1.5 ml-4 rounded hover:bg-surface-raised group cursor-pointer min-h-[36px] ${isSelected ? 'bg-primary-light font-semibold' : ''}`}
                     style={{ marginLeft: 16 }}
                     onClick={() => onSelectBlock?.(sIdx, bIdx)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectBlock?.(sIdx, bIdx); } }}
@@ -168,18 +155,10 @@ export default function LayersPanel({
                     aria-selected={isSelected}
                   >
                     <span className="w-4 flex-shrink-0" />
-                    <span className={`flex-1 text-sm truncate ${isHidden ? 'text-muted line-through' : 'text-text-base'}`}>
+                    <span className={`flex-1 text-sm truncate text-text-base`}>
                       {getBlockLabel(block, sIdx, bIdx)}
                     </span>
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleBlockVisibility(block.id); }}
-                        className="p-1 hover:bg-surface rounded transition-colors"
-                        aria-label={isHidden ? 'Show block on canvas' : 'Hide block on canvas'}
-                        title={isHidden ? 'Show on canvas' : 'Hide on canvas'}
-                      >
-                        {isHidden ? <EyeOff className="w-3.5 h-3.5 text-muted" /> : <Eye className="w-3.5 h-3.5 text-muted" />}
-                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onMoveBlock?.(sIdx, bIdx, -1); }}
                         disabled={bIdx === 0}

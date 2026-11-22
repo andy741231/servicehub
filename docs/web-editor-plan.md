@@ -320,3 +320,111 @@ overflow across Desktop `1578px`, Tablet `768px`, Mobile `375px`) · `?` / `+` /
 - Section 3's `"Find your place."` `<h2>` is saved with `#ffffff` text on cream even on the live `/`
   page (likely an artifact from the pre-B19 white-default color picker) — content data issue, not an
   editor bug.
+
+## UI test findings (2026-11-21)
+
+_Builder-style test of `/hub-admin/web/editor/<slug>` on temporary `e2e-` pages only (created
+unpublished + hidden, deleted afterwards; uploads intercepted). Four real homepages were rebuilt
+through the editor UI, every block and ready-made section was used, and every control was
+inventoried (188 controls, `docs/ui-test-evidence/p3-inventory.json`). Evidence paths below are
+relative to `docs/ui-test-evidence/` (`ref/` = the reference sites)._
+
+### Rebuilds (Phase 1)
+
+| Reference | Type | How close | What blocked it |
+|---|---|---|---|
+| King, kingrestaurant.nyc (`ref/king-*`) | Squarespace-built restaurant | ~50% (`r-king-desktop.jpg`) | No Image block: full-bleed photos only via a Hero background (typed URL); the photo didn't fill the block (U9); no letter-spacing or serif heading control; footer links are site-wide only |
+| Trinity Church Wall St (`ref/trinity-*`) | Church | ~45% (`r-trinity-desktop.jpg`) | Hero has no button; subtitle unreadable on the photo (U10); cards cramp when narrowed (U27); Quote has no button; no newsletter form |
+| Houston Food Bank (`ref/foodbank-*`) | Community org | ~35% (`r-foodbank-desktop.jpg`) | Split hero (text + photo) impossible without an Image block; logo strip impossible (Gallery is 3 big tiles); no carousel; no sign-up form. Video + text side by side **was** possible through the Layout tab |
+| Tartine Bakery (`ref/tartine-*`) | Small business | ~40% (`r-tartine-desktop-after.jpg`) | Text + photo split, photo mosaic and monospace brand type impossible; the first attempt broke on U1 (the quote spilled over the page) |
+
+Steps: 34 (King) to 65 (Food Bank) UI actions for 4–5 sections each. What worked well: the section
+picker, inline text editing, the Layout tab's column/width/row for side-by-side blocks, section colours.
+
+### Findings
+
+| ID | Area | Finding | Evidence | Severity | Proposed fix | Effort | Status |
+|---|---|---|---|---|---|---|---|
+| U1 | Canvas / auto-grow | Content that grows after the first measurement (web font loads, field re-render when editing ends) spills out of the block and over the next section; a long Quote covered the page's "Add Section" button | `u1-quote-overflow-before.png` → `r-tartine-desktop-after.jpg` | blocker | Re-measure with a ResizeObserver (+ font `loadingdone`) for a few seconds after an edit or insert | M | **Fixed** (this branch) |
+| U2 | Quote block | In the editor the “ ” marks sat on their own lines (editable `<p>` inside the mark `<span>`); the site renders them inline. The block jumped ~250px taller when editing ended | `p2-quote-trust-default.png` | major | Unwrap a single `<p>` for decorated fields | S | **Fixed** |
+| U3 | New blocks/sections | Blocks keep the picker's preset height and never shrink: a new Hero is ~520px for ~200px of content; bands of empty rows everywhere | `u3-hero-preset-height-before.png`, `p2-twocol-trust.png` | major | Fit just-inserted blocks to their content (grow or shrink); edits only grow | S | **Fixed** |
+| U4 | Section chrome | The desktop section menu (168×170px) covered blocks; a click meant for a short block's right side hit **Remove** (one click, no confirm) | `p3-section-chrome.png` → `p3-section-chrome-after.png` | major | One-row bar (Duplicate · Up · Down · Remove), as on mobile; settings and height live in the inspector | S | **Fixed** |
+| U5 | Resize | A full-width block's right and corner handles were clipped by the canvas edge (B16's `overflow-x: clip`); the baseline e2e resize test failed | baseline `npm run e2e` (1 failed, 11 not run) | major | Pull edge handles inside the block when it touches the canvas edge | S | **Fixed** |
+| U6 | Contact block | Title and labels white on pale mint (contrast 1.13:1), in the editor and on the site | `p2-contact-default.png` → `r-tartine-public-after.jpg` | major | Colours from the site theme (primary background, accent icons, inverse text); the Design tab still overrides | S | **Fixed** |
+| U7 | Hero inspector | Background image only by typing a URL — no upload | `p2-insp-hero-content.png` | major | Image setting with preview, Upload/Replace, Remove, or paste a URL | S | **Fixed** |
+| U8 | Block picker | Features, Highlights, Gallery and Testimonials started **empty** (a title and "+ Add") | `p2-all-blocks-desktop.jpg` | major | Starter items, as in the section templates | S | **Fixed** |
+| U9 | Hero | The photo covered only the padded text area, leaving page-colour bands inside the block | `r-king-desktop.jpg` → `u9-u10-photo-hero-after.png` | major | A photo hero fills its block, content centred vertically | S | **Fixed** |
+| U10 | Hero | The subtitle stayed muted grey on a photo — unreadable | `r-trinity-desktop.jpg` → `u9-u10-photo-hero-after.png` | major | Light subtitle when there is a background image | S | **Fixed** |
+| U11 | Quote | Design-tab Background was ignored (the content `backgroundColor` overrode it); two background controls; the citation ignored Text colour | `r-trinity-desktop.jpg` | minor | Design wins; Content-tab field removed; citation follows the text colour | S | **Fixed** |
+| U12 | Inspector | Esc did nothing once focus was in the inspector (e.g. after clicking a tab) | `u12-esc-swallowed-by-inspector.png` | minor | Esc only blurs text fields; elsewhere it walks the selection up | S | **Fixed** |
+| U13 | Version history | The panel ignored Esc | `u13-history-ignores-esc.png` | minor | Esc closes it | S | **Fixed** |
+| U14 | Preview | Preview rendered inside the admin shell (sidebar, search), ~1160px wide — not what visitors see | `p3-preview.png` | major | Full-screen preview | S | **Fixed** |
+| U15 | Layers | Clicking a section did nothing; the selected-row highlight never applied (`${…}` inside a plain string); the panel scrolled away; names like "Split-banner block 1" | `p3-layers.png` → `p3-layers-after.png` | minor | Select and reveal the section; fix the class; sticky panel; picker names | S | **Fixed** |
+| U16 | Layers | "Hide block on canvas" (eye) only struck the name through — nothing was hidden | `p3-layers.png` | major | Removed (there is no real hide feature) | S | **Fixed** |
+| U17 | Keyboard | Delete/Backspace removed a block with no Undo toast (the toolbar Delete has one) | code + e2e U17 | minor | Same path as the toolbar Delete | S | **Fixed** |
+| U18 | Naming | The picker says "Service times"; the hover label, inspector and layers said "Split banner" | `p2-insp-service-times-content.png` | minor | One name source (the block catalog) | S | **Fixed** |
+| U19 | Block picker | Duplicate icons (star ×2, rows ×2, grid ×2, sparkles ×2) | `p2-block-picker.png` | minor | Distinct icons | S | **Fixed** |
+| U20 | Toolbar | The keyboard-shortcuts button used a "T" (text) icon | `p3-keyboard-help.png` | minor | Keyboard icon | S | **Fixed** |
+| U21 | Touch targets | 63 controls under 32px: inspector list buttons 22px, close buttons 28px, segmented controls and the breakpoint switcher 25–28px tall | `p3-inventory.json` | minor | ≥32px | S | **Partly fixed** (list and close buttons). Segmented controls and breakpoint switcher deferred (toolbar height budget) |
+| U22 | Section picker | Live thumbnails contained keyboard-focusable links and buttons | `p3-inventory.json` | minor | `inert` thumbnails | S | **Fixed** |
+| U23 | Empty section | Two "Add Block" buttons (pill + empty state) | `p2-block-picker.png` | minor | Hide the pill when the section is empty | S | **Fixed** |
+| U24 | Titles | Gallery/Highlights/Testimonials/Video titles couldn't be removed (a blank title left an empty heading and its margin) | Tartine rebuild | minor | Optional titles | S | **Fixed** |
+| U25 | Images | An unset image rendered a broken `<img>` on the site | code | minor | Render nothing; the gallery skips empty tiles | S | **Fixed** |
+| U26 | Theme | Site Styles colours never reach Tailwind token classes in blocks (`bg-primary`, `bg-surface-raised`, `bg-primary-light`…): `--color-*` is resolved at `:root` with the **admin** palette. The live site shows admin teal/mint (Intro band, Highlights/Gallery backgrounds, feature icon circles) | `p2-all-templates-desktop.jpg`, `r-tartine-public-after.jpg` | major | Redefine `--color-*` inside `.public-site` and revisit the site token mapping | M | Deferred — it changes the live home page (feature icons would turn slate on navy); needs a design decision on the token map |
+| U27 | Responsive | Blocks narrowed on the grid keep viewport breakpoints (3 cards in a 14-column block) | `r-trinity-sidebyside.png`, `r-foodbank-split-hero.png` | major | Container queries in `SiteBlock` | M | Deferred — touches every list block's public CSS |
+| U28 | Header/footer | The editor's header/footer differ from the published page for a page with an empty own header (editor: page-title logo, light footer; site: site header, dark footer) | `r-tartine-desktop-after.jpg` vs `r-tartine-public-after.jpg` | major | Resolve header/footer the way `pages/public/Home.jsx` does | M | Deferred — needs tracing of the public fallback chain |
+| U29 | Hero / Quote | No button in Hero or Quote ("See schedule", "Give now", "Learn more") | rebuild notes | major | Button block, or an optional button field | M | Deferred → Button block |
+| U30 | Images | No Image block: full-bleed photos, image + text splits and logo strips are impossible | `r-king-desktop.jpg`, `r-foodbank-split-hero.png` | blocker (capability) | Image block (fit/fill, focal point, link, alt) | L | Deferred — new block, top of the roadmap |
+| U31 | Hero | "Left" alignment leaves the subtitle in a centred max-width box | `r-tartine-desktop-after.jpg` | minor | Align the subtitle box too | S | Deferred (changes left-aligned heroes on the site) |
+| U32 | Block picker | Closes after every add (3 blocks = 3 round trips) | probe | minor | Keep it open with "Done", or Shift-click to add several | S | Deferred — the new block is auto-selected; a behaviour change that wants owner input |
+| U33 | Image dialog | No alt text, no asset-library browse, no crop/focal point | `r-trinity-image-dialog.png` | major | Alt field, library picker, focal point | M | Deferred |
+| U34 | Text | A grey DOM selection highlight stays on a field after Esc | `r-king-desktop.jpg` | minor | Clear the selection on blur | S | Deferred |
+| U35 | Layers | "Move block up/down" only reorders the array — no visible effect on the desktop grid | code | minor | Remove, or relabel as mobile order | S | Deferred (recommend removing) |
+| U36 | Preview | Site nav links in Preview navigate away from the editor | `p3-preview.png` | minor | Intercept links in preview | S | Deferred |
+
+**Counts:** 2 blockers (U1, U30), 16 majors, 18 minors. **Fixed:** 25 (U1–U25; U21 partly).
+Public-site check: all 9 published pages, desktop + mobile, **pixel-identical** before vs after
+(`public-before/` vs `public-after/`). The intended public changes apply only to things no published
+page uses today (Contact colours, photo hero fill and subtitle, Quote background precedence,
+optional empty titles, unset images).
+
+### Merge / remove controls
+
+- **Add Section (4 entry points → 3):** removed the section menu's "Add Section Below" (same as the
+  bottom pill). Keep the between-section pills (they show *where* the section goes) and the page-end
+  button (the only option below the last section). The empty-page button is separate and fine.
+- **Height toggle in the section menu → removed.** Its arrows icon read as "full-screen preview";
+  the inspector's labelled *Height: Fit content / Tall* is now the one place.
+- **"Edit Section" (menu) vs the sliders button (top-left) → merged** into the sliders button.
+- **Block toolbar ✎ vs clicking text:** keep — it is the keyboard route into text. Low priority.
+- **Eye/Preview vs external-link button:** different jobs (draft preview vs live page). Keep both,
+  but relabel the external link "View live page" and hide it until the page has been published (on a
+  draft it opens a 404). Not done yet.
+- **"T" keyboard-help button:** now a keyboard icon. Could also move into a single "?" help menu.
+- **Layers toolbar button:** keep — it now selects sections and blocks and stays in view.
+- **Bring forward / Send backward / Bring to front / Send to back:** four always-visible buttons on
+  every block toolbar for a rare action (the Layout tab already has *Layer*). Recommend one
+  "Arrange" menu. Not done.
+- **Layers "hide on canvas" eye → removed** (it did nothing).
+
+### Missing capabilities (ranked by impact on what a site owner can make)
+
+1. **Image block** — full-bleed photos, image + text splits, logo strips. Blocked part of every rebuild.
+2. **Button block / buttons in Hero and Quote** — every reference hero has a call to action.
+3. **Section background image (+ overlay)** — text over photos without abusing the Hero block.
+4. **Global styles that reach blocks** (U26) plus per-block type controls (font family, size,
+   letter-spacing for headings) — needed for any brand that isn't the default.
+5. **Form block** (newsletter / sign-up with chosen fields and a destination).
+6. Container-aware block layouts (U27) and Gallery layouts (grid, masonry, logo strip, aspect ratio).
+7. Spacer/divider block; image alt text, focal point and asset library (U33).
+8. Reusable saved sections (save-as-template covers whole pages only); carousel/slider.
+9. Duplicate-to-mobile and animation: low priority for this audience (alignment guides already exist).
+
+### Prioritised plan
+
+- **Now (done on branch `web-editor-ui-test-findings`):** U1–U25.
+- **Next:** Image block (U30) → Button block / hero button (U29) → section background image →
+  theme token scoping (U26, with a visual check of the live home page) → header/footer parity (U28).
+- **Later:** container queries (U27), image dialog alt/library/focal point (U33), Arrange menu,
+  form block, gallery layouts, the remaining minors (U31–U36).
+- Tests: `e2e/ui-findings.spec.mjs` covers U1–U8, U9/U10, U11–U17 (12 tests).

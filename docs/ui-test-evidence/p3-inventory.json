@@ -1,0 +1,1882 @@
+[
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Exit editor",
+  "title": "Save and return to Pages",
+  "w": 44,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Preview",
+  "title": "Preview this page without editor controls",
+  "w": 90,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Desktop",
+  "title": "Desktop — editable (Full width)",
+  "w": 81,
+  "h": 25,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Tablet",
+  "title": "Tablet — preview only (768 px)",
+  "w": 70,
+  "h": 25,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Mobile",
+  "title": "Mobile — editable (375 px)",
+  "w": 75,
+  "h": 25,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Undo",
+  "title": "Undo (Ctrl+Z)",
+  "w": 40,
+  "h": 40,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Redo",
+  "title": "Redo (Ctrl+Shift+Z)",
+  "w": 40,
+  "h": 40,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Publish",
+  "title": "Publish current draft to public site",
+  "w": 52,
+  "h": 18,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Save as template",
+  "title": "Save this page as a reusable template",
+  "w": 44,
+  "h": 44,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Version history",
+  "title": "Version history",
+  "w": 44,
+  "h": 44,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Keyboard shortcuts",
+  "title": "Keyboard shortcuts",
+  "w": 44,
+  "h": 44,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Toggle layers panel",
+  "title": "Toggle layers panel",
+  "w": 44,
+  "h": 44,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "top toolbar",
+  "tag": "button",
+  "name": "Open published page in a new tab",
+  "title": "Open published page in a new tab",
+  "w": 44,
+  "h": 44,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Add Section",
+  "title": "Add section above",
+  "w": 130,
+  "h": 33,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Section settings",
+  "title": "Section settings",
+  "w": 36,
+  "h": 36,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Add Block",
+  "title": "Add block to this section",
+  "w": 114,
+  "h": 33,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Edit Section",
+  "title": "",
+  "w": 168,
+  "h": 40,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Add Section Below",
+  "title": "Add a new section below this one",
+  "w": 168,
+  "h": 40,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Duplicate section",
+  "title": "Duplicate section",
+  "w": 42,
+  "h": 40,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Switch to full screen height",
+  "title": "Hug content — click to make tall",
+  "w": 42,
+  "h": 40,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Move section up",
+  "title": "Move section up",
+  "w": 42,
+  "h": 40,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Move section down",
+  "title": "Move section down",
+  "w": 41,
+  "h": 40,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Remove section",
+  "title": "Remove section",
+  "w": 168,
+  "h": 39,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Add Section",
+  "title": "Add section below",
+  "w": 130,
+  "h": 33,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome",
+  "tag": "button",
+  "name": "Add item",
+  "title": "",
+  "w": 96,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Edit text",
+  "title": "Edit text",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Block settings",
+  "title": "Block settings",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Bring forward",
+  "title": "Bring forward",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Send backward",
+  "title": "Send backward",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Bring to front",
+  "title": "Bring to front",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Send to back",
+  "title": "Send to back",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Duplicate block",
+  "title": "Duplicate",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block toolbar",
+  "tag": "button",
+  "name": "Delete block",
+  "title": "Delete",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Close inspector",
+  "title": "",
+  "w": 28,
+  "h": 28,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Content",
+  "title": "",
+  "w": 68,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Design",
+  "title": "",
+  "w": 62,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Layout",
+  "title": "",
+  "w": 61,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Move up",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Move down",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Remove item",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Move up",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Move down",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Remove item",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Move up",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Move down",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/content)",
+  "tag": "button",
+  "name": "Remove item",
+  "title": "",
+  "w": 22,
+  "h": 22,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Close inspector",
+  "title": "",
+  "w": 28,
+  "h": 28,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Content",
+  "title": "",
+  "w": 68,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Design",
+  "title": "",
+  "w": 62,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Layout",
+  "title": "",
+  "w": 61,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "input",
+  "name": "Background",
+  "title": "",
+  "w": 239,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "input",
+  "name": "Text color",
+  "title": "",
+  "w": 239,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "input",
+  "name": "Default",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "input",
+  "name": "Default",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Default",
+  "title": "",
+  "w": 71,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Left",
+  "title": "",
+  "w": 71,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Center",
+  "title": "",
+  "w": 71,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/design)",
+  "tag": "button",
+  "name": "Right",
+  "title": "",
+  "w": 71,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "button",
+  "name": "Close inspector",
+  "title": "",
+  "w": 28,
+  "h": 28,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "button",
+  "name": "Content",
+  "title": "",
+  "w": 68,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "button",
+  "name": "Design",
+  "title": "",
+  "w": 62,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "button",
+  "name": "Layout",
+  "title": "",
+  "w": 61,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (block/layout)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 287,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "button",
+  "name": "Close inspector",
+  "title": "",
+  "w": 28,
+  "h": 28,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "input",
+  "name": "Background",
+  "title": "",
+  "w": 239,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 138,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "button",
+  "name": "Fit content",
+  "title": "",
+  "w": 143,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "button",
+  "name": "Tall",
+  "title": "",
+  "w": 143,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "button",
+  "name": "Top",
+  "title": "",
+  "w": 95,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "button",
+  "name": "Middle",
+  "title": "",
+  "w": 95,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "button",
+  "name": "Bottom",
+  "title": "",
+  "w": 95,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 88,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 88,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "inspector (section)",
+  "tag": "input",
+  "name": "",
+  "title": "",
+  "w": 88,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (title)",
+  "tag": "button",
+  "name": "Bold",
+  "title": "Bold",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (title)",
+  "tag": "button",
+  "name": "Italic",
+  "title": "Italic",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (title)",
+  "tag": "button",
+  "name": "Underline",
+  "title": "Underline",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (title)",
+  "tag": "button",
+  "name": "Strikethrough",
+  "title": "Strikethrough",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (title)",
+  "tag": "button",
+  "name": "Link",
+  "title": "Link",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (title)",
+  "tag": "button",
+  "name": "Clear formatting",
+  "title": "Clear formatting",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "link field",
+  "tag": "input",
+  "name": "Link URL",
+  "title": "",
+  "w": 224,
+  "h": 28,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "link field",
+  "tag": "button",
+  "name": "Apply link",
+  "title": "Apply link",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Paragraph",
+  "title": "Paragraph",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Heading",
+  "title": "Heading",
+  "w": 33,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Subheading",
+  "title": "Subheading",
+  "w": 33,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Bold",
+  "title": "Bold",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Italic",
+  "title": "Italic",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Underline",
+  "title": "Underline",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Strikethrough",
+  "title": "Strikethrough",
+  "w": 30,
+  "h": 30,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Bullet list",
+  "title": "Bullet list",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Numbered list",
+  "title": "Numbered list",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Quote",
+  "title": "Quote",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Align left",
+  "title": "Align left",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Align center",
+  "title": "Align center",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Align right",
+  "title": "Align right",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Link",
+  "title": "Link",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "text toolbar (text block)",
+  "tag": "button",
+  "name": "Clear formatting",
+  "title": "Clear formatting",
+  "w": 30,
+  "h": 30,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Service Hub",
+  "title": "",
+  "w": 102,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "button",
+  "name": "Back to all apps",
+  "title": "",
+  "w": 87,
+  "h": 36,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Dashboard",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Pages",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Header & Footer",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Styles",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Assets",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Draft Templates",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "layers panel",
+  "tag": "a",
+  "name": "Page Templates",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "version history",
+  "tag": "button",
+  "name": "Refresh history",
+  "title": "",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "version history",
+  "tag": "button",
+  "name": "Close history",
+  "title": "",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "version history",
+  "tag": "button",
+  "name": "v3E2E editor pageNov 21, 2026, 7:27 PM",
+  "title": "",
+  "w": 413,
+  "h": 64,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "version history",
+  "tag": "button",
+  "name": "v2E2E editor pageNov 21, 2026, 7:27 PM",
+  "title": "",
+  "w": 413,
+  "h": 64,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "version history",
+  "tag": "button",
+  "name": "v1E2E editor pageNov 21, 2026, 7:27 PM",
+  "title": "",
+  "w": 413,
+  "h": 64,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "keyboard help",
+  "tag": "button",
+  "name": "Close",
+  "title": "",
+  "w": 36,
+  "h": 36,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "save template",
+  "tag": "input",
+  "name": "Template name",
+  "title": "",
+  "w": 284,
+  "h": 38,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "save template",
+  "tag": "button",
+  "name": "Close",
+  "title": "",
+  "w": 44,
+  "h": 44,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "save template",
+  "tag": "button",
+  "name": "Cancel",
+  "title": "",
+  "w": 76,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "save template",
+  "tag": "button",
+  "name": "Save template",
+  "title": "",
+  "w": 122,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Close add block panel",
+  "title": "",
+  "w": 28,
+  "h": 28,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "input",
+  "name": "Search blocks",
+  "title": "",
+  "w": 255,
+  "h": 34,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Hero block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Text block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Introduction block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Quote block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Trust bar block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Features block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Highlights block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Testimonials block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Service times block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Events block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Contact block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Map block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Gallery block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "block picker",
+  "tag": "button",
+  "name": "Add Video block",
+  "title": "",
+  "w": 263,
+  "h": 52,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Close",
+  "title": "",
+  "w": 36,
+  "h": 36,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "All",
+  "title": "",
+  "w": 38,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Start",
+  "title": "",
+  "w": 50,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Content",
+  "title": "",
+  "w": 68,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Community",
+  "title": "",
+  "w": 87,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Blank section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Welcome section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Call to action section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "a",
+  "name": "Plan a visit →",
+  "title": "",
+  "w": 26,
+  "h": 9,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Two columns of text section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Proof points section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Three features section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Quote section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Stories section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Service times section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "a",
+  "name": "What to expect→",
+  "title": "",
+  "w": 32,
+  "h": 9,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Upcoming events section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Contact section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "a",
+  "name": "contact@example.com",
+  "title": "",
+  "w": 35,
+  "h": 4,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "a",
+  "name": "+1 (555) 123-4567",
+  "title": "",
+  "w": 27,
+  "h": 4,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Location section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section picker",
+  "tag": "button",
+  "name": "Add Video section",
+  "title": "",
+  "w": 312,
+  "h": 210,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Service Hub",
+  "title": "",
+  "w": 102,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "button",
+  "name": "Back to all apps",
+  "title": "",
+  "w": 87,
+  "h": 36,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Dashboard",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Pages",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Header & Footer",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Styles",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Assets",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Draft Templates",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Page Templates",
+  "title": "",
+  "w": 263,
+  "h": 44,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "input",
+  "name": "Global search",
+  "title": "",
+  "w": 448,
+  "h": 39,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "button",
+  "name": "Account menu",
+  "title": "",
+  "w": 215,
+  "h": 48,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "button",
+  "name": "Back to editor",
+  "title": "",
+  "w": 153,
+  "h": 40,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "EE2E editor pageYour City, USA",
+  "title": "",
+  "w": 162,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Home Page",
+  "title": "",
+  "w": 102,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "TEST",
+  "title": "",
+  "w": 60,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "What to expect→",
+  "title": "",
+  "w": 158,
+  "h": 45,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "EE2E editor pageYour City, USA",
+  "title": "",
+  "w": 344,
+  "h": 38,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "Home Page",
+  "title": "",
+  "w": 344,
+  "h": 21,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "preview mode",
+  "tag": "a",
+  "name": "TEST",
+  "title": "",
+  "w": 344,
+  "h": 21,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Add Section",
+  "title": "Add section above",
+  "w": 130,
+  "h": 33,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Section settings",
+  "title": "Section settings",
+  "w": 36,
+  "h": 36,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Add Block",
+  "title": "Add block to this section",
+  "w": 114,
+  "h": 33,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Duplicate section",
+  "title": "Duplicate section",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Move section up",
+  "title": "Move section up",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Move section down",
+  "title": "Move section down",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Remove section",
+  "title": "Remove section",
+  "w": 32,
+  "h": 32,
+  "visibleText": false,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Auto layout · Customize",
+  "title": "Blocks stack automatically on phones. Customize to drag and resize them.",
+  "w": 207,
+  "h": 33,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Add Section",
+  "title": "Add section below",
+  "w": 130,
+  "h": 33,
+  "visibleText": true,
+  "focusable": true
+ },
+ {
+  "region": "section chrome (mobile)",
+  "tag": "button",
+  "name": "Add item",
+  "title": "",
+  "w": 96,
+  "h": 28,
+  "visibleText": true,
+  "focusable": true
+ }
+]

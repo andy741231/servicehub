@@ -60,9 +60,16 @@ function EditText({ as: Tag, path, value, className, style, placeholder, multili
   // field looks the same while editing as it does on the published page.
   // (trim: marked appends "\n" after </p>, which would become a stray text
   // node outside the paragraph where End/typing lands.)
-  const html = plain ? plainToHtml(value) : renderRichText(value).trim();
-  const onChange = (next) => update(path, plain ? htmlToPlain(next) : next);
   const wrapped = !!(prefix || suffix);
+  let html = plain ? plainToHtml(value) : renderRichText(value).trim();
+  // Decorated fields (quote marks) render inline on the site: `“text”` is one
+  // paragraph. Editing a lone <p> inside the decoration's <span> put each mark
+  // on its own line (and made the block jump in height when editing ended).
+  if (wrapped && !plain) {
+    const single = html.match(/^<p>([\s\S]*)<\/p>$/);
+    if (single && !/<\/?p[\s>]/i.test(single[1])) html = single[1];
+  }
+  const onChange = (next) => update(path, plain ? htmlToPlain(next) : next);
   const editor = (
     <InlineTextEditor
       tag={wrapped ? 'span' : Tag}

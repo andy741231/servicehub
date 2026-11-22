@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, LayoutPanelTop } from 'lucide-react';
 import { BlockContentSettings, blockTypeLabel } from './BlockSettingsPanel';
+import { isTextEntryTarget } from './editorUtils';
 
 const inputCls = 'w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-surface text-text-base focus:outline-none focus:ring-2 focus:ring-primary';
 const labelCls = 'block text-xs font-medium text-muted';
@@ -275,13 +276,16 @@ export default function EditorInspector({
     <aside
       className="w-80 shrink-0 border-l border-border bg-surface sticky top-[52px] self-start h-[calc(100vh-52px)] overflow-y-auto"
       aria-label="Inspector"
-      onKeyDown={(e) => { if (e.key === 'Escape') e.stopPropagation(); }}
+      // Esc in a text field just leaves the field (so a half-typed value isn't
+      // lost to a selection change); anywhere else it walks the selection up
+      // like on the canvas — the panel used to swallow it entirely.
+      onKeyDown={(e) => { if (e.key === 'Escape' && isTextEntryTarget(e.target)) { e.stopPropagation(); e.target.blur(); } }}
     >
       <div className="flex items-center justify-between px-4 h-12 border-b border-border sticky top-0 bg-surface z-10">
         <h2 className="text-sm font-semibold text-text-base flex items-center gap-2 truncate">
           <LayoutPanelTop className="w-4 h-4 text-muted shrink-0" />{title}
         </h2>
-        <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-surface-raised text-muted" aria-label="Close inspector"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-raised text-muted" aria-label="Close inspector" title="Close"><X className="w-4 h-4" /></button>
       </div>
 
       {selection.kind === 'block' ? (

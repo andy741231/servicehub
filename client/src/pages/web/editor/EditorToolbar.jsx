@@ -9,7 +9,7 @@
  * All icon buttons have 44px touch targets and aria-labels.
  */
 
-import { Type, Copy, History, Eye, Layers, ExternalLink } from 'lucide-react';
+import { Keyboard, Copy, History, Eye, Layers, ExternalLink } from 'lucide-react';
 import BuilderBreakpointSelector from '../../../components/builder/BuilderBreakpointSelector';
 import BuilderHistoryControls from '../../../components/builder/BuilderHistoryControls';
 import BuilderSaveStatus from '../../../components/builder/BuilderSaveStatus';
@@ -124,7 +124,7 @@ export default function EditorToolbar({
           title="Keyboard shortcuts"
           aria-label="Keyboard shortcuts"
         >
-          <Type className="w-4 h-4" />
+          <Keyboard className="w-4 h-4" />
         </button>
         <button
           onClick={onToggleLayersPanel}

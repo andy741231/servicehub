@@ -26,7 +26,7 @@ function Thumbnail({ template, themeStyle }) {
     );
   }
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-white" style={{ width: THUMB_W, height: THUMB_H }} aria-hidden="true">
+    <div className="overflow-hidden rounded-md border border-border bg-white" style={{ width: THUMB_W, height: THUMB_H }} aria-hidden="true" inert="">
       <div style={{ width: RENDER_W, transform: `scale(${SCALE})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
         <div className="public-site site-editor bg-surface text-text-base" style={themeStyle}>
           <SiteSections pageData={{ sections: [previewSection(template)] }} />
