@@ -365,7 +365,7 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U18 | Naming | The picker says "Service times"; the hover label, inspector and layers said "Split banner" | `p2-insp-service-times-content.png` | minor | One name source (the block catalog) | S | **Fixed** (b26a3aa) |
 | U19 | Block picker | Duplicate icons (star ×2, rows ×2, grid ×2, sparkles ×2) | `p2-block-picker.png` | minor | Distinct icons | S | **Fixed** (b26a3aa) |
 | U20 | Toolbar | The keyboard-shortcuts button used a "T" (text) icon | `p3-keyboard-help.png` | minor | Keyboard icon | S | **Fixed** (b26a3aa) |
-| U21 | Touch targets | 63 controls under 32px: inspector list buttons 22px, close buttons 28px, segmented controls and the breakpoint switcher 25–28px tall | `p3-inventory.json` | minor | ≥32px | S | **Fixed** (ROUND7) (list and close buttons in b26a3aa): segmented controls, breakpoint switcher (32px buttons, caption tightened to fit the 52px toolbar), text-format buttons, Publish, "Add item", section-picker filters. Inventory: 63 → 8 under 32px, and those 8 are not editor controls (links inside the inert section previews, the site's own nav in Preview, the admin brand link). Tooltips added to the remaining icon-only close/refresh buttons |
+| U21 | Touch targets | 63 controls under 32px: inspector list buttons 22px, close buttons 28px, segmented controls and the breakpoint switcher 25–28px tall | `p3-inventory.json` | minor | ≥32px | S | **Fixed** (0cee2b5) (list and close buttons in b26a3aa): segmented controls, breakpoint switcher (32px buttons, caption tightened to fit the 52px toolbar), text-format buttons, Publish, "Add item", section-picker filters. Inventory: 63 → 8 under 32px, and those 8 are not editor controls (links inside the inert section previews, the site's own nav in Preview, the admin brand link). Tooltips added to the remaining icon-only close/refresh buttons |
 | U22 | Section picker | Live thumbnails contained keyboard-focusable links and buttons | `p3-inventory.json` | minor | `inert` thumbnails | S | **Fixed** (b26a3aa) |
 | U23 | Empty section | Two "Add Block" buttons (pill + empty state) | `p2-block-picker.png` | minor | Hide the pill when the section is empty | S | **Fixed** (b26a3aa) |
 | U24 | Titles | Gallery/Highlights/Testimonials/Video titles couldn't be removed (a blank title left an empty heading and its margin) | Tartine rebuild | minor | Optional titles | S | **Fixed** (b26a3aa) |
@@ -376,7 +376,7 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U29 | Hero / Quote | No button in Hero or Quote ("See schedule", "Give now", "Learn more") | rebuild notes | major | Button block, or an optional button field | M | **Fixed** (1de8621): Button block + optional hero button (renders nothing until labelled). Quote button not added |
 | U30 | Images | No Image block: full-bleed photos, image + text splits and logo strips are impossible | `r-king-desktop.jpg`, `r-foodbank-split-hero.png` | blocker (capability) | Image block (fit/fill, focal point, link, alt) | L | **Fixed** (1de8621): Image block (upload, fill/fit, focus, alt, caption, link; fills its cell, keeps its height when stacked on phones) |
 | U31 | Hero | "Left" alignment leaves the subtitle in a centred max-width box | `r-tartine-desktop-after.jpg` | minor | Align the subtitle box too | S | **Fixed** (1de8621) |
-| U32 | Block picker | Closes after every add (3 blocks = 3 round trips) | probe | minor | Keep it open with "Done", or Shift-click to add several | S | **Fixed** (ROUND7): the Add block panel stays open after adding (new block still selected and scrolled to), targets the section just used, announces "Added X to section N", and closes with Done / X / Esc |
+| U32 | Block picker | Closes after every add (3 blocks = 3 round trips) | probe | minor | Keep it open with "Done", or Shift-click to add several | S | **Fixed** (0cee2b5): the Add block panel stays open after adding (new block still selected and scrolled to), targets the section just used, announces "Added X to section N", and closes with Done / X / Esc |
 | U33 | Image dialog | No alt text, no asset-library browse, no crop/focal point | `r-trinity-image-dialog.png` | major | Alt field, library picker, focal point | M | **Partly fixed** (1de8621): the Image block has alt text and a crop focus. Library browse and alt for images inside other blocks deferred |
 | U34 | Text | A grey DOM selection highlight stays on a field after Esc | `r-king-desktop.jpg` | minor | Clear the selection on blur | S | **Fixed** (1de8621) |
 | U35 | Layers | "Move block up/down" only reorders the array — no visible effect on the desktop grid | code | minor | Remove, or relabel as mobile order | S | **Fixed** (1de8621): removed |
@@ -388,7 +388,7 @@ picker, inline text editing, the Layout tab's column/width/row for side-by-side 
 | U41 | Server | `GET /api/web/admin/:slug` created any unknown page with the schema defaults: **published and in the site navigation**. A typo'd editor URL, or a late request for a just-deleted page, put a placeholder page on the live nav. Found when a deleted e2e temp page reappeared published in the nav (removed at once) | probe | blocker | Only auto-create `home` (unpublished); other slugs 404 (the editor shows "Page not found") | S | **Fixed** (a3f3633) |
 
 **Counts:** 3 blockers (U1, U30, U41), 18 majors, 20 minors (U37–U39 added in round 4, U40 in round 5, U41 in round 6). **Fixed:** 32 (U1–U25 in b26a3aa; U29–U31, U34–U36 in 1de8621;
-U21 and U33 partly). **Open:** the rest of U33. U21 and U32 fixed in ROUND7. U39–U41 fixed in a3f3633. U27 fixed in 66dc35a. U26 fixed in d310ff4; U28, U37, U38 in e044188.
+U21 and U33 partly). **Open:** the rest of U33. U21 and U32 fixed in 0cee2b5. U39–U41 fixed in a3f3633. U27 fixed in 66dc35a. U26 fixed in d310ff4; U28, U37, U38 in e044188.
 Public-site check: all 9 published pages, desktop + mobile, **pixel-identical** before vs after
 (`public-before/` vs `public-after/`). The intended public changes apply only to things no published
 page uses today (Contact colours, photo hero fill and subtitle, Quote background precedence,
@@ -437,7 +437,7 @@ optional empty titles, unset images).
 - **Done (66dc35a):** container queries (U27).
 - **Done (a3f3633):** Header & Footer publish on their own (U39), canvas keeps the window width
   beside panels (U40), no auto-created live pages (U41).
-- **Done (ROUND7):** U21 touch targets, U32 picker stays open.
+- **Done (0cee2b5):** U21 touch targets, U32 picker stays open.
 - **Next:** asset-library browse and alt text for images inside other blocks (rest of U33).
 - **Content note (not a code bug):** the live home page's "Find your place." Features block has a
   saved text colour of #ffffff, so its heading is white on cream. Fix by clearing the text colour in the
